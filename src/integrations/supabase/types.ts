@@ -17,6 +17,7 @@ export type Database = {
       channels: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           name: string
           updated_at: string
@@ -25,6 +26,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           name: string
           updated_at?: string
@@ -33,6 +35,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
           updated_at?: string
@@ -53,6 +56,7 @@ export type Database = {
         Row: {
           created_at: string
           dimension: string | null
+          dimensions: Json | null
           duration: string | null
           format: string
           id: string
@@ -65,6 +69,7 @@ export type Database = {
         Insert: {
           created_at?: string
           dimension?: string | null
+          dimensions?: Json | null
           duration?: string | null
           format: string
           id?: string
@@ -77,6 +82,7 @@ export type Database = {
         Update: {
           created_at?: string
           dimension?: string | null
+          dimensions?: Json | null
           duration?: string | null
           format?: string
           id?: string
@@ -91,6 +97,7 @@ export type Database = {
       funnel_stages: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           name: string
           order_index: number
@@ -99,6 +106,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           name: string
           order_index?: number
@@ -107,6 +115,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
           order_index?: number
@@ -305,6 +314,7 @@ export type Database = {
       mediums: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           name: string
           updated_at: string
@@ -312,6 +322,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           name: string
           updated_at?: string
@@ -319,6 +330,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
           updated_at?: string
@@ -329,6 +341,7 @@ export type Database = {
       moments: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           name: string
           updated_at: string
@@ -336,6 +349,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           name: string
           updated_at?: string
@@ -343,6 +357,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
           updated_at?: string
@@ -353,6 +368,7 @@ export type Database = {
       plan_subdivisions: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           name: string
           parent_id: string | null
@@ -361,6 +377,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           name: string
           parent_id?: string | null
@@ -369,6 +386,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           name?: string
           parent_id?: string | null
@@ -448,6 +466,7 @@ export type Database = {
       vehicles: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           medium_id: string | null
           name: string
@@ -456,6 +475,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           medium_id?: string | null
           name: string
@@ -464,6 +484,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           medium_id?: string | null
           name?: string

@@ -1,0 +1,202 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Plus, Pencil, Trash2, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
+import { useVehicles, useChannels } from '@/hooks/useConfigData';
+import { VehicleDialog } from '@/components/config/VehicleDialog';
+import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+export default function VehiclesPage() {
+  const { data: vehicles, create: createVehicle, update: updateVehicle, remove: removeVehicle } = useVehicles();
+  const { data: channels, create: createChannel, update: updateChannel, remove: removeChannel } = useChannels();
+  
+  const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
+  const [channelDialogOpen, setChannelDialogOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<any>(null);
+  const [editingChannel, setEditingChannel] = useState<any>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<{ type: 'vehicle' | 'channel'; id: string } | null>(null);
+  const [openItems, setOpenItems] = useState<Record<string, boolean>>({});
+
+  const getVehicleChannels = (vehicleId: string) => channels?.filter(c => c.vehicle_id === vehicleId) || [];
+  const existingVehicleNames = vehicles?.map(v => v.name) || [];
+
+  const handleCreateVehicle = (data: { name: string; description: string; channels: { name: string; description: string }[] }) => {
+    createVehicle.mutate({ name: data.name, description: data.description }, {
+      onSuccess: (newVehicle: any) => {
+        data.channels.forEach(ch => {
+          createChannel.mutate({ name: ch.name, description: ch.description, vehicle_id: newVehicle.id });
+        });
+      }
+    });
+  };
+
+  const handleCreateChannel = (data: { name: string; description: string }) => {
+    if (!selectedVehicleId) return;
+    createChannel.mutate({ name: data.name, description: data.description, vehicle_id: selectedVehicleId });
+  };
+
+  const toggleItem = (id: string) => {
+    setOpenItems(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="p-6">
+        <div className="flex items-center gap-4 mb-6">
+          <Link to="/media-plans">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-display font-bold">Veículos e Canais</h1>
+            <p className="text-muted-foreground">Gerencie os veículos e seus canais de comunicação</p>
+          </div>
+        </div>
+
+        <div className="flex justify-end mb-4">
+          <Button onClick={() => { setEditingVehicle(null); setVehicleDialogOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Criar novo veículo
+          </Button>
+        </div>
+
+        <div className="space-y-3">
+          {vehicles?.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Nenhum veículo criado ainda
+              </CardContent>
+            </Card>
+          ) : (
+            vehicles?.map(vehicle => {
+              const vehicleChannels = getVehicleChannels(vehicle.id);
+              return (
+                <Card key={vehicle.id}>
+                  <Collapsible open={openItems[vehicle.id]} onOpenChange={() => toggleItem(vehicle.id)}>
+                    <CardHeader className="py-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                              {openItems[vehicle.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            </Button>
+                          </CollapsibleTrigger>
+                          <div>
+                            <CardTitle className="text-base">{vehicle.name}</CardTitle>
+                            {(vehicle as any).description && (
+                              <p className="text-sm text-muted-foreground">{(vehicle as any).description}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => { setEditingVehicle(vehicle); setVehicleDialogOpen(true); }}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteId({ type: 'vehicle', id: vehicle.id })} className="text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CollapsibleContent>
+                      <CardContent className="pt-0 pb-3">
+                        <div className="pl-8 space-y-2">
+                          {vehicleChannels.map(channel => (
+                            <div key={channel.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                              <div>
+                                <span className="text-sm">{channel.name}</span>
+                                {(channel as any).description && (
+                                  <p className="text-xs text-muted-foreground">{(channel as any).description}</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingChannel(channel); setChannelDialogOpen(true); }}>
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteId({ type: 'channel', id: channel.id })}>
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full mt-2"
+                            onClick={() => { setSelectedVehicleId(vehicle.id); setEditingChannel(null); setChannelDialogOpen(true); }}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Criar novo canal no veículo
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </Card>
+              );
+            })
+          )}
+        </div>
+
+        <VehicleDialog
+          open={vehicleDialogOpen}
+          onOpenChange={setVehicleDialogOpen}
+          onSave={handleCreateVehicle}
+          existingNames={existingVehicleNames}
+          initialData={editingVehicle}
+          mode={editingVehicle ? 'edit' : 'create'}
+        />
+
+        <SimpleConfigDialog
+          open={channelDialogOpen}
+          onOpenChange={setChannelDialogOpen}
+          onSave={editingChannel ? (data) => { updateChannel.mutate({ id: editingChannel.id, name: data.name, description: data.description }); setEditingChannel(null); } : handleCreateChannel}
+          title={editingChannel ? 'Editar canal' : 'Criar novo canal no veículo'}
+          nameLabel="Nome do canal"
+          namePlaceholder="Ex: Search"
+          initialData={editingChannel}
+          mode={editingChannel ? 'edit' : 'create'}
+        />
+
+        <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir {deleteId?.type === 'vehicle' ? 'veículo' : 'canal'}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. Se estiver vinculado a algum plano, a exclusão falhará.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (deleteId?.type === 'vehicle') removeVehicle.mutate(deleteId.id);
+                  else if (deleteId?.type === 'channel') removeChannel.mutate(deleteId.id);
+                  setDeleteId(null);
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </DashboardLayout>
+  );
+}
