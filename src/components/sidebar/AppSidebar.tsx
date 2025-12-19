@@ -17,7 +17,8 @@ import {
   Trash2,
   LogOut,
   User,
-  Library
+  Library,
+  Eye
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates } from '@/hooks/useConfigData';
@@ -77,6 +78,15 @@ export function AppSidebar() {
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [targetDialogOpen, setTargetDialogOpen] = useState(false);
   const [creativeDialogOpen, setCreativeDialogOpen] = useState(false);
+
+  // Editing states - track which item is being edited
+  const [editingSubdivision, setEditingSubdivision] = useState<any>(null);
+  const [editingMoment, setEditingMoment] = useState<any>(null);
+  const [editingFunnelStage, setEditingFunnelStage] = useState<any>(null);
+  const [editingMedium, setEditingMedium] = useState<any>(null);
+  const [editingVehicle, setEditingVehicle] = useState<any>(null);
+  const [editingTarget, setEditingTarget] = useState<any>(null);
+  const [editingCreative, setEditingCreative] = useState<any>(null);
 
   const toggleSection = (key: string) => {
     setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
@@ -230,13 +240,20 @@ export function AppSidebar() {
 
           {/* Subdivisões de Plano */}
           <Collapsible open={openSections.subdivisions} onOpenChange={() => toggleSection('subdivisions')}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
-                {openSections.subdivisions ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                <Layers className="h-3.5 w-3.5" />
-                Subdivisões de Plano
-              </Button>
-            </CollapsibleTrigger>
+            <div className="group flex items-center">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
+                  {openSections.subdivisions ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  <Layers className="h-3.5 w-3.5" />
+                  Subdivisões de Plano
+                </Button>
+              </CollapsibleTrigger>
+              <Link to="/config/subdivisions" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </Link>
+            </div>
             <CollapsibleContent className="pl-4">
               {parentSubdivisions.slice(0, MAX_ITEMS).map(sub => (
                 <Collapsible 
@@ -252,7 +269,10 @@ export function AppSidebar() {
                     </CollapsibleTrigger>
                     <ConfigItemRow
                       name={sub.name}
-                      onEdit={(name) => subdivisions.update.mutate({ id: sub.id, name })}
+                      onEdit={() => {
+                        setEditingSubdivision(sub);
+                        setSubdivisionDialogOpen(true);
+                      }}
                       onDelete={() => subdivisions.remove.mutate(sub.id)}
                       className="flex-1"
                     />
@@ -262,7 +282,10 @@ export function AppSidebar() {
                       <ConfigItemRow
                         key={child.id}
                         name={child.name}
-                        onEdit={(name) => subdivisions.update.mutate({ id: child.id, name })}
+                        onEdit={() => {
+                          setEditingSubdivision(child);
+                          setSubdivisionDialogOpen(true);
+                        }}
                         onDelete={() => subdivisions.remove.mutate(child.id)}
                       />
                     ))}
@@ -290,19 +313,29 @@ export function AppSidebar() {
 
           {/* Momentos de Campanha */}
           <Collapsible open={openSections.moments} onOpenChange={() => toggleSection('moments')}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
-                {openSections.moments ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                <Clock className="h-3.5 w-3.5" />
-                Momentos de Campanha
-              </Button>
-            </CollapsibleTrigger>
+            <div className="group flex items-center">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
+                  {openSections.moments ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  <Clock className="h-3.5 w-3.5" />
+                  Momentos de Campanha
+                </Button>
+              </CollapsibleTrigger>
+              <Link to="/config/moments" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </Link>
+            </div>
             <CollapsibleContent className="pl-4">
               {moments.data?.slice(0, MAX_ITEMS).map(moment => (
                 <ConfigItemRow
                   key={moment.id}
                   name={moment.name}
-                  onEdit={(name) => moments.update.mutate({ id: moment.id, name })}
+                  onEdit={() => {
+                    setEditingMoment(moment);
+                    setMomentDialogOpen(true);
+                  }}
                   onDelete={() => moments.remove.mutate(moment.id)}
                 />
               ))}
@@ -327,19 +360,29 @@ export function AppSidebar() {
 
           {/* Fases do Funil */}
           <Collapsible open={openSections.funnelStages} onOpenChange={() => toggleSection('funnelStages')}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
-                {openSections.funnelStages ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                <Filter className="h-3.5 w-3.5" />
-                Fases do Funil
-              </Button>
-            </CollapsibleTrigger>
+            <div className="group flex items-center">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
+                  {openSections.funnelStages ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  <Filter className="h-3.5 w-3.5" />
+                  Fases do Funil
+                </Button>
+              </CollapsibleTrigger>
+              <Link to="/config/funnel-stages" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </Link>
+            </div>
             <CollapsibleContent className="pl-4">
               {funnelStages.data?.slice(0, MAX_ITEMS).map(stage => (
                 <ConfigItemRow
                   key={stage.id}
                   name={stage.name}
-                  onEdit={(name) => funnelStages.update.mutate({ id: stage.id, name })}
+                  onEdit={() => {
+                    setEditingFunnelStage(stage);
+                    setFunnelStageDialogOpen(true);
+                  }}
                   onDelete={() => funnelStages.remove.mutate(stage.id)}
                 />
               ))}
@@ -364,19 +407,29 @@ export function AppSidebar() {
 
           {/* Meio */}
           <Collapsible open={openSections.mediums} onOpenChange={() => toggleSection('mediums')}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
-                {openSections.mediums ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                <Radio className="h-3.5 w-3.5" />
-                Meio
-              </Button>
-            </CollapsibleTrigger>
+            <div className="group flex items-center">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
+                  {openSections.mediums ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  <Radio className="h-3.5 w-3.5" />
+                  Meio
+                </Button>
+              </CollapsibleTrigger>
+              <Link to="/config/mediums" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </Link>
+            </div>
             <CollapsibleContent className="pl-4">
               {mediums.data?.slice(0, MAX_ITEMS).map(medium => (
                 <ConfigItemRow
                   key={medium.id}
                   name={medium.name}
-                  onEdit={(name) => mediums.update.mutate({ id: medium.id, name })}
+                  onEdit={() => {
+                    setEditingMedium(medium);
+                    setMediumDialogOpen(true);
+                  }}
                   onDelete={() => mediums.remove.mutate(medium.id)}
                 />
               ))}
@@ -401,13 +454,20 @@ export function AppSidebar() {
 
           {/* Veículos e Canais */}
           <Collapsible open={openSections.vehicles} onOpenChange={() => toggleSection('vehicles')}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
-                {openSections.vehicles ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                <Tv className="h-3.5 w-3.5" />
-                Veículos e Canais
-              </Button>
-            </CollapsibleTrigger>
+            <div className="group flex items-center">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
+                  {openSections.vehicles ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  <Tv className="h-3.5 w-3.5" />
+                  Veículos e Canais
+                </Button>
+              </CollapsibleTrigger>
+              <Link to="/config/vehicles" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </Link>
+            </div>
             <CollapsibleContent className="pl-4">
               {vehicles.data?.slice(0, MAX_ITEMS).map(vehicle => (
                 <Collapsible 
@@ -423,7 +483,10 @@ export function AppSidebar() {
                     </CollapsibleTrigger>
                     <ConfigItemRow
                       name={vehicle.name}
-                      onEdit={(name) => vehicles.update.mutate({ id: vehicle.id, name })}
+                      onEdit={() => {
+                        setEditingVehicle(vehicle);
+                        setVehicleDialogOpen(true);
+                      }}
                       onDelete={() => vehicles.remove.mutate(vehicle.id)}
                       className="flex-1"
                     />
@@ -433,7 +496,10 @@ export function AppSidebar() {
                       <ConfigItemRow
                         key={channel.id}
                         name={channel.name}
-                        onEdit={(name) => channels.update.mutate({ id: channel.id, name })}
+                        onEdit={() => {
+                          // For channels, navigate to the vehicles page
+                          navigate('/config/vehicles');
+                        }}
                         onDelete={() => channels.remove.mutate(channel.id)}
                       />
                     ))}
@@ -461,19 +527,29 @@ export function AppSidebar() {
 
           {/* Segmentação e Target */}
           <Collapsible open={openSections.targets} onOpenChange={() => toggleSection('targets')}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
-                {openSections.targets ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                <Users className="h-3.5 w-3.5" />
-                Segmentação e Target
-              </Button>
-            </CollapsibleTrigger>
+            <div className="group flex items-center">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
+                  {openSections.targets ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  <Users className="h-3.5 w-3.5" />
+                  Segmentação e Target
+                </Button>
+              </CollapsibleTrigger>
+              <Link to="/config/targets" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </Link>
+            </div>
             <CollapsibleContent className="pl-4">
               {targets.data?.slice(0, MAX_ITEMS).map(target => (
                 <ConfigItemRow
                   key={target.id}
                   name={target.name}
-                  onEdit={(name) => targets.update.mutate({ id: target.id, name })}
+                  onEdit={() => {
+                    setEditingTarget(target);
+                    setTargetDialogOpen(true);
+                  }}
                   onDelete={() => targets.remove.mutate(target.id)}
                 />
               ))}
@@ -498,19 +574,29 @@ export function AppSidebar() {
 
           {/* Criativos */}
           <Collapsible open={openSections.creatives} onOpenChange={() => toggleSection('creatives')}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
-                {openSections.creatives ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                <Image className="h-3.5 w-3.5" />
-                Criativos
-              </Button>
-            </CollapsibleTrigger>
+            <div className="group flex items-center">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
+                  {openSections.creatives ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  <Image className="h-3.5 w-3.5" />
+                  Criativos
+                </Button>
+              </CollapsibleTrigger>
+              <Link to="/config/creatives" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </Link>
+            </div>
             <CollapsibleContent className="pl-4">
               {creativeTemplates.data?.slice(0, MAX_ITEMS).map(template => (
                 <ConfigItemRow
                   key={template.id}
                   name={template.name}
-                  onEdit={(name) => creativeTemplates.update.mutate({ id: template.id, name })}
+                  onEdit={() => {
+                    setEditingCreative(template);
+                    setCreativeDialogOpen(true);
+                  }}
                   onDelete={() => creativeTemplates.remove.mutate(template.id)}
                 />
               ))}
