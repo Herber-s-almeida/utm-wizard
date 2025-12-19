@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      media_creatives: {
+        Row: {
+          asset_url: string | null
+          copy_text: string | null
+          created_at: string | null
+          creative_type: string | null
+          id: string
+          media_line_id: string
+          name: string
+          notes: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          asset_url?: string | null
+          copy_text?: string | null
+          created_at?: string | null
+          creative_type?: string | null
+          id?: string
+          media_line_id: string
+          name: string
+          notes?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          asset_url?: string | null
+          copy_text?: string | null
+          created_at?: string | null
+          creative_type?: string | null
+          id?: string
+          media_line_id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_creatives_media_line_id_fkey"
+            columns: ["media_line_id"]
+            isOneToOne: false
+            referencedRelation: "media_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_lines: {
         Row: {
           budget: number | null
@@ -26,6 +73,7 @@ export type Database = {
           destination_url: string | null
           end_date: string | null
           format: string | null
+          funnel_stage: string | null
           id: string
           impressions: number | null
           media_plan_id: string
@@ -53,6 +101,7 @@ export type Database = {
           destination_url?: string | null
           end_date?: string | null
           format?: string | null
+          funnel_stage?: string | null
           id?: string
           impressions?: number | null
           media_plan_id: string
@@ -80,6 +129,7 @@ export type Database = {
           destination_url?: string | null
           end_date?: string | null
           format?: string | null
+          funnel_stage?: string | null
           id?: string
           impressions?: number | null
           media_plan_id?: string
