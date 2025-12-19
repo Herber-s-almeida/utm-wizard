@@ -33,17 +33,19 @@ export function ConfigItemRow({
   children,
 }: ConfigItemRowProps) {
   return (
-    <div className={cn("group flex items-center gap-1 py-1 px-2 rounded-md hover:bg-sidebar-accent/50 min-w-0", className)}>
-      <span className="flex-1 text-xs truncate min-w-0">
+    <div className={cn("group flex items-center justify-between gap-1 py-1 px-2 rounded-md hover:bg-sidebar-accent/50", className)}>
+      <span className="text-xs truncate flex-1 min-w-0">
         {name}
       </span>
-      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-      
+      <div className="flex items-center gap-0.5 shrink-0 ml-1">
         <Button 
           size="icon" 
           variant="ghost" 
-          className="h-5 w-5" 
-          onClick={onEdit}
+          className="h-6 w-6 opacity-60 hover:opacity-100" 
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
         >
           <Pencil className="h-3 w-3 text-muted-foreground" />
         </Button>
@@ -51,7 +53,12 @@ export function ConfigItemRow({
         {canDelete ? (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-5 w-5">
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                className="h-6 w-6 opacity-60 hover:opacity-100"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
               </Button>
             </AlertDialogTrigger>
@@ -73,7 +80,12 @@ export function ConfigItemRow({
         ) : (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-5 w-5">
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                className="h-6 w-6 opacity-40"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <Trash2 className="h-3 w-3 text-muted-foreground/50" />
               </Button>
             </AlertDialogTrigger>
