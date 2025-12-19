@@ -33,8 +33,8 @@ export function ConfigItemRow({
   children,
 }: ConfigItemRowProps) {
   return (
-    <div className={cn("group flex w-full min-w-0 items-center gap-1 py-1 pl-2 pr-3 rounded-md hover:bg-sidebar-accent/50", className)}>
-      <span className="text-xs truncate min-w-0 flex-1">
+    <div className={cn("group grid grid-cols-[1fr_auto] items-start gap-1 py-1 pl-2 pr-1 rounded-md hover:bg-sidebar-accent/50", className)}>
+      <span className="text-xs leading-snug break-words min-w-0">
         {name}
       </span>
       <div className="flex items-center gap-0 shrink-0">
