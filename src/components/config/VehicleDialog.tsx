@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Medium } from '@/hooks/useConfigData';
 
 interface Channel {
   name: string;
@@ -15,10 +17,12 @@ interface Channel {
 interface VehicleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: { name: string; description: string; channels: Channel[] }) => void;
+  onSave: (data: { name: string; description: string; medium_id: string; channels: Channel[] }) => void;
   existingNames?: string[];
-  initialData?: { name: string; description: string; channels: Channel[] };
+  initialData?: { name: string; description: string; medium_id?: string; channels: Channel[] };
   mode?: 'create' | 'edit';
+  mediums: Medium[];
+  onCreateMedium: (data: { name: string; description: string }) => Promise<Medium | undefined>;
 }
 
 export function VehicleDialog({
@@ -27,17 +31,28 @@ export function VehicleDialog({
   onSave,
   existingNames = [],
   initialData,
-  mode = 'create'
+  mode = 'create',
+  mediums,
+  onCreateMedium
 }: VehicleDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [mediumId, setMediumId] = useState<string>('');
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [showNewMediumForm, setShowNewMediumForm] = useState(false);
+  const [newMediumName, setNewMediumName] = useState('');
+  const [newMediumDescription, setNewMediumDescription] = useState('');
+  const [isCreatingMedium, setIsCreatingMedium] = useState(false);
 
   useEffect(() => {
     if (open) {
       setName(initialData?.name || '');
       setDescription(initialData?.description || '');
+      setMediumId(initialData?.medium_id || '');
       setChannels(initialData?.channels || []);
+      setShowNewMediumForm(false);
+      setNewMediumName('');
+      setNewMediumDescription('');
     }
   }, [open, initialData]);
 
@@ -55,9 +70,45 @@ export function VehicleDialog({
     setChannels(newChannels);
   };
 
+  const handleCreateNewMedium = async () => {
+    const trimmedName = newMediumName.trim();
+    if (!trimmedName) {
+      toast.error('Nome do meio é obrigatório');
+      return;
+    }
+
+    const existingMedium = mediums.find(m => m.name.toLowerCase() === trimmedName.toLowerCase());
+    if (existingMedium) {
+      toast.error('Já existe um meio com este nome');
+      return;
+    }
+
+    setIsCreatingMedium(true);
+    try {
+      const newMedium = await onCreateMedium({
+        name: trimmedName,
+        description: newMediumDescription.slice(0, 180)
+      });
+      
+      if (newMedium) {
+        setMediumId(newMedium.id);
+        setShowNewMediumForm(false);
+        setNewMediumName('');
+        setNewMediumDescription('');
+      }
+    } finally {
+      setIsCreatingMedium(false);
+    }
+  };
+
   const handleSave = () => {
     const trimmedName = name.trim();
     
+    if (!mediumId) {
+      toast.error('Selecione um meio');
+      return;
+    }
+
     if (!trimmedName) {
       toast.error('Nome do veículo é obrigatório');
       return;
@@ -81,11 +132,13 @@ export function VehicleDialog({
     onSave({
       name: trimmedName,
       description: description.slice(0, 180),
+      medium_id: mediumId,
       channels: channels.filter(c => c.name.trim())
     });
 
     setName('');
     setDescription('');
+    setMediumId('');
     setChannels([]);
     onOpenChange(false);
   };
@@ -100,6 +153,83 @@ export function VehicleDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Meio Selection - First and Required */}
+          <div className="space-y-2">
+            <Label>Meio *</Label>
+            {!showNewMediumForm ? (
+              <div className="flex gap-2">
+                <Select value={mediumId} onValueChange={setMediumId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione um meio" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border z-50">
+                    {mediums.map((medium) => (
+                      <SelectItem key={medium.id} value={medium.id}>
+                        {medium.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowNewMediumForm(true)}
+                  className="whitespace-nowrap"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Criar novo meio
+                </Button>
+              </div>
+            ) : (
+              <div className="p-3 border rounded-lg space-y-3 bg-muted/30">
+                <div className="space-y-2">
+                  <Label htmlFor="newMediumName">Nome do meio *</Label>
+                  <Input
+                    id="newMediumName"
+                    value={newMediumName}
+                    onChange={(e) => setNewMediumName(e.target.value.slice(0, 25))}
+                    placeholder="Ex: Digital"
+                    maxLength={25}
+                  />
+                  <p className="text-xs text-muted-foreground">{newMediumName.length}/25 caracteres</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newMediumDescription">Descrição</Label>
+                  <Textarea
+                    id="newMediumDescription"
+                    value={newMediumDescription}
+                    onChange={(e) => setNewMediumDescription(e.target.value.slice(0, 180))}
+                    placeholder="Descrição opcional..."
+                    rows={2}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowNewMediumForm(false);
+                      setNewMediumName('');
+                      setNewMediumDescription('');
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleCreateNewMedium}
+                    disabled={isCreatingMedium}
+                  >
+                    {isCreatingMedium ? 'Criando...' : 'Criar meio'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="name">Nome do veículo *</Label>
             <Input

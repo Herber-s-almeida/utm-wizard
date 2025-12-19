@@ -4,7 +4,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Pencil, Trash2, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
-import { useVehicles, useChannels } from '@/hooks/useConfigData';
+import { useVehicles, useChannels, useMediums, Medium } from '@/hooks/useConfigData';
 import { VehicleDialog } from '@/components/config/VehicleDialog';
 import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -22,6 +22,7 @@ import {
 export default function VehiclesPage() {
   const { data: vehicles, create: createVehicle, update: updateVehicle, remove: removeVehicle } = useVehicles();
   const { data: channels, create: createChannel, update: updateChannel, remove: removeChannel } = useChannels();
+  const { data: mediums, create: createMedium } = useMediums();
   
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [channelDialogOpen, setChannelDialogOpen] = useState(false);
@@ -34,13 +35,27 @@ export default function VehiclesPage() {
   const getVehicleChannels = (vehicleId: string) => channels?.filter(c => c.vehicle_id === vehicleId) || [];
   const existingVehicleNames = vehicles?.map(v => v.name) || [];
 
-  const handleCreateVehicle = (data: { name: string; description: string; channels: { name: string; description: string }[] }) => {
-    createVehicle.mutate({ name: data.name, description: data.description }, {
+  const handleCreateVehicle = (data: { name: string; description: string; medium_id: string; channels: { name: string; description: string }[] }) => {
+    createVehicle.mutate({ name: data.name, description: data.description, medium_id: data.medium_id }, {
       onSuccess: (newVehicle: any) => {
         data.channels.forEach(ch => {
           createChannel.mutate({ name: ch.name, description: ch.description, vehicle_id: newVehicle.id });
         });
       }
+    });
+  };
+
+  const handleUpdateVehicle = (data: { name: string; description: string; medium_id: string; channels: { name: string; description: string }[] }) => {
+    if (!editingVehicle) return;
+    updateVehicle.mutate({ id: editingVehicle.id, name: data.name, description: data.description });
+  };
+
+  const handleCreateMedium = async (data: { name: string; description: string }): Promise<Medium | undefined> => {
+    return new Promise((resolve) => {
+      createMedium.mutate(data, {
+        onSuccess: (newMedium) => resolve(newMedium as Medium),
+        onError: () => resolve(undefined)
+      });
     });
   };
 
@@ -51,6 +66,11 @@ export default function VehiclesPage() {
 
   const toggleItem = (id: string) => {
     setOpenItems(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const getMediumName = (mediumId: string | null) => {
+    if (!mediumId) return null;
+    return mediums?.find(m => m.id === mediumId)?.name;
   };
 
   return (
@@ -85,6 +105,7 @@ export default function VehiclesPage() {
           ) : (
             vehicles?.map(vehicle => {
               const vehicleChannels = getVehicleChannels(vehicle.id);
+              const mediumName = getMediumName(vehicle.medium_id);
               return (
                 <Card key={vehicle.id}>
                   <Collapsible open={openItems[vehicle.id]} onOpenChange={() => toggleItem(vehicle.id)}>
@@ -97,7 +118,12 @@ export default function VehiclesPage() {
                             </Button>
                           </CollapsibleTrigger>
                           <div>
-                            <CardTitle className="text-base">{vehicle.name}</CardTitle>
+                            <div className="flex items-center gap-2">
+                              <CardTitle className="text-base">{vehicle.name}</CardTitle>
+                              {mediumName && (
+                                <span className="text-xs bg-muted px-2 py-0.5 rounded">{mediumName}</span>
+                              )}
+                            </div>
                             {(vehicle as any).description && (
                               <p className="text-sm text-muted-foreground">{(vehicle as any).description}</p>
                             )}
@@ -156,10 +182,17 @@ export default function VehiclesPage() {
         <VehicleDialog
           open={vehicleDialogOpen}
           onOpenChange={setVehicleDialogOpen}
-          onSave={handleCreateVehicle}
+          onSave={editingVehicle ? handleUpdateVehicle : handleCreateVehicle}
           existingNames={existingVehicleNames}
-          initialData={editingVehicle}
+          initialData={editingVehicle ? {
+            name: editingVehicle.name,
+            description: editingVehicle.description || '',
+            medium_id: editingVehicle.medium_id || '',
+            channels: getVehicleChannels(editingVehicle.id).map(c => ({ name: c.name, description: (c as any).description || '' }))
+          } : undefined}
           mode={editingVehicle ? 'edit' : 'create'}
+          mediums={mediums || []}
+          onCreateMedium={handleCreateMedium}
         />
 
         <SimpleConfigDialog
