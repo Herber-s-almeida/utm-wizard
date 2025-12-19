@@ -55,12 +55,14 @@ export function useBrazilianCities() {
 
           const data: IBGEMunicipio[] = await response.json();
           
-          const formattedCities: BrazilianCity[] = data.map((m) => ({
-            city: m.nome,
-            state: m.microrregiao.mesorregiao.UF.nome,
-            stateCode: m.microrregiao.mesorregiao.UF.sigla,
-            country: 'Brasil',
-          }));
+          const formattedCities: BrazilianCity[] = data
+            .filter((m) => m.microrregiao?.mesorregiao?.UF)
+            .map((m) => ({
+              city: m.nome,
+              state: m.microrregiao.mesorregiao.UF.nome,
+              stateCode: m.microrregiao.mesorregiao.UF.sigla,
+              country: 'Brasil',
+            }));
 
           cachedCities = formattedCities;
           return formattedCities;
