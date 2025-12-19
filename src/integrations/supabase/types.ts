@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      behavioral_segmentations: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       channels: {
         Row: {
           created_at: string
@@ -435,6 +462,7 @@ export type Database = {
           age_range: string | null
           behavior: string | null
           created_at: string
+          description: string | null
           geolocation: Json | null
           id: string
           name: string
@@ -445,6 +473,7 @@ export type Database = {
           age_range?: string | null
           behavior?: string | null
           created_at?: string
+          description?: string | null
           geolocation?: Json | null
           id?: string
           name: string
@@ -455,6 +484,7 @@ export type Database = {
           age_range?: string | null
           behavior?: string | null
           created_at?: string
+          description?: string | null
           geolocation?: Json | null
           id?: string
           name?: string

@@ -7,9 +7,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Plus, Trash2, Search, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Search, Loader2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBrazilianCities, BrazilianCity } from '@/hooks/useBrazilianCities';
+import { useBehavioralSegmentations, BehavioralSegmentation } from '@/hooks/useConfigData';
 
 interface Location {
   city: string;
@@ -21,19 +22,6 @@ interface Location {
   locationType?: 'country' | 'state' | 'city';
 }
 
-interface SegmentationType {
-  name: string;
-  description: string;
-}
-
-const DEFAULT_SEGMENTATION_TYPES: SegmentationType[] = [
-  { name: 'remarketing', description: '' },
-  { name: 'comportamento', description: '' },
-  { name: 'bases proprietárias', description: '' },
-  { name: 'look a like', description: '' },
-  { name: 'site', description: '' }
-];
-
 interface TargetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -42,6 +30,7 @@ interface TargetDialogProps {
     age_range: string;
     geolocation: Location[];
     behavior: string;
+    description: string;
   }) => void;
   existingNames?: string[];
   initialData?: {
@@ -49,6 +38,7 @@ interface TargetDialogProps {
     age_range: string;
     geolocation: Location[];
     behavior: string;
+    description?: string;
   };
   mode?: 'create' | 'edit';
 }
@@ -66,6 +56,7 @@ export function TargetDialog({
   const [ageMax, setAgeMax] = useState('');
   const [noMaxAge, setNoMaxAge] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [description, setDescription] = useState('');
   
   // Country selection
   const [countryType, setCountryType] = useState<'brasil' | 'outros'>('brasil');
@@ -86,17 +77,25 @@ export function TargetDialog({
   const { cities, searchCities, loading: loadingCities } = useBrazilianCities();
   const cityResults = cities.length > 0 ? searchCities(citySearch) : [];
   
-  // Segmentation
-  const [segmentationTypes, setSegmentationTypes] = useState<SegmentationType[]>(DEFAULT_SEGMENTATION_TYPES);
+  // Behavioral Segmentations from database
+  const { data: behavioralSegmentations = [], create: createBehavioral, update: updateBehavioral, remove: removeBehavioral } = useBehavioralSegmentations();
+  
+  // Segmentation state
   const [selectedSegmentation, setSelectedSegmentation] = useState('');
   const [customSegmentation, setCustomSegmentation] = useState('');
   const [showNewSegmentationType, setShowNewSegmentationType] = useState(false);
   const [newSegmentationName, setNewSegmentationName] = useState('');
   const [newSegmentationDescription, setNewSegmentationDescription] = useState('');
+  
+  // Edit segmentation state
+  const [editingSegmentation, setEditingSegmentation] = useState<BehavioralSegmentation | null>(null);
+  const [editSegmentationName, setEditSegmentationName] = useState('');
+  const [editSegmentationDescription, setEditSegmentationDescription] = useState('');
 
   useEffect(() => {
     if (open) {
       setName(initialData?.name || '');
+      setDescription(initialData?.description || '');
       
       // Parse age range
       const ageRangeParts = (initialData?.age_range || '').split('-');
@@ -123,7 +122,7 @@ export function TargetDialog({
       
       // Check if behavior matches existing types
       const behaviorValue = initialData?.behavior || '';
-      const existingType = segmentationTypes.find(t => t.name === behaviorValue);
+      const existingType = behavioralSegmentations.find(t => t.name === behaviorValue);
       if (existingType) {
         setSelectedSegmentation(behaviorValue);
         setCustomSegmentation('');
@@ -147,8 +146,9 @@ export function TargetDialog({
       setShowNewSegmentationType(false);
       setNewSegmentationName('');
       setNewSegmentationDescription('');
+      setEditingSegmentation(null);
     }
-  }, [open, initialData]);
+  }, [open, initialData, behavioralSegmentations]);
 
   const handleAgeChange = (type: 'min' | 'max', value: string) => {
     const numValue = value.replace(/\D/g, '').slice(0, 2);
@@ -238,7 +238,7 @@ export function TargetDialog({
     setLocations(locations.filter((_, i) => i !== index));
   };
 
-  const handleAddSegmentationType = () => {
+  const handleAddSegmentationType = async () => {
     const trimmedName = newSegmentationName.trim();
     if (!trimmedName) {
       toast.error('Nome é obrigatório');
@@ -248,22 +248,75 @@ export function TargetDialog({
       toast.error('Nome deve ter no máximo 35 caracteres');
       return;
     }
-    if (segmentationTypes.some(t => t.name.toLowerCase() === trimmedName.toLowerCase())) {
+    if (behavioralSegmentations.some(t => t.name.toLowerCase() === trimmedName.toLowerCase())) {
       toast.error('Este tipo de segmentação já existe');
       return;
     }
     
-    const newType: SegmentationType = {
-      name: trimmedName.toLowerCase(),
-      description: newSegmentationDescription.trim().slice(0, 180)
-    };
+    try {
+      await createBehavioral.mutateAsync({
+        name: trimmedName.toLowerCase(),
+        description: newSegmentationDescription.trim().slice(0, 180) || undefined
+      });
+      setNewSegmentationName('');
+      setNewSegmentationDescription('');
+      setShowNewSegmentationType(false);
+      setSelectedSegmentation(trimmedName.toLowerCase());
+    } catch (error) {
+      toast.error('Erro ao criar segmentação comportamental');
+    }
+  };
+
+  const handleEditSegmentation = (seg: BehavioralSegmentation) => {
+    setEditingSegmentation(seg);
+    setEditSegmentationName(seg.name);
+    setEditSegmentationDescription(seg.description || '');
+  };
+
+  const handleSaveEditSegmentation = async () => {
+    if (!editingSegmentation) return;
     
-    setSegmentationTypes([...segmentationTypes, newType]);
-    setNewSegmentationName('');
-    setNewSegmentationDescription('');
-    setShowNewSegmentationType(false);
-    setSelectedSegmentation(newType.name);
-    toast.success('Tipo de segmentação adicionado');
+    const trimmedName = editSegmentationName.trim();
+    if (!trimmedName) {
+      toast.error('Nome é obrigatório');
+      return;
+    }
+    if (trimmedName.length > 35) {
+      toast.error('Nome deve ter no máximo 35 caracteres');
+      return;
+    }
+    if (behavioralSegmentations.some(t => t.id !== editingSegmentation.id && t.name.toLowerCase() === trimmedName.toLowerCase())) {
+      toast.error('Este tipo de segmentação já existe');
+      return;
+    }
+    
+    try {
+      await updateBehavioral.mutateAsync({
+        id: editingSegmentation.id,
+        name: trimmedName.toLowerCase(),
+        description: editSegmentationDescription.trim().slice(0, 180) || undefined
+      });
+      
+      // Update selection if we were using this one
+      if (selectedSegmentation === editingSegmentation.name) {
+        setSelectedSegmentation(trimmedName.toLowerCase());
+      }
+      
+      setEditingSegmentation(null);
+    } catch (error) {
+      toast.error('Erro ao atualizar segmentação comportamental');
+    }
+  };
+
+  const handleDeleteSegmentation = async (seg: BehavioralSegmentation) => {
+    try {
+      await removeBehavioral.mutateAsync(seg.id);
+      if (selectedSegmentation === seg.name) {
+        setSelectedSegmentation('');
+      }
+    } catch (error) {
+      toast.error('Erro ao remover segmentação comportamental');
+    }
   };
 
   const handleSave = () => {
@@ -301,7 +354,8 @@ export function TargetDialog({
       name: trimmedName,
       age_range: ageRange,
       geolocation: locations.filter(l => l.city.trim()),
-      behavior: finalBehavior
+      behavior: finalBehavior,
+      description: description.trim()
     });
 
     setName('');
@@ -311,6 +365,7 @@ export function TargetDialog({
     setLocations([]);
     setSelectedSegmentation('');
     setCustomSegmentation('');
+    setDescription('');
     onOpenChange(false);
   };
 
@@ -560,7 +615,7 @@ export function TargetDialog({
             )}
           </div>
 
-          {/* Segmentation Types */}
+          {/* Behavioral Segmentation Types */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Segmentação comportamental</Label>
@@ -582,8 +637,8 @@ export function TargetDialog({
                 <SelectValue placeholder="Selecione o tipo de segmentação" />
               </SelectTrigger>
               <SelectContent>
-                {segmentationTypes.map((type) => (
-                  <SelectItem key={type.name} value={type.name}>
+                {behavioralSegmentations.map((type) => (
+                  <SelectItem key={type.id} value={type.name}>
                     <div className="flex flex-col">
                       <span className="capitalize">{type.name}</span>
                       {type.description && (
@@ -595,6 +650,81 @@ export function TargetDialog({
                 <SelectItem value="custom">Outro (personalizado)</SelectItem>
               </SelectContent>
             </Select>
+
+            {/* Show list of behavioral segmentations with edit/delete */}
+            {behavioralSegmentations.length > 0 && (
+              <div className="border rounded-lg divide-y max-h-40 overflow-y-auto">
+                {behavioralSegmentations.map((seg) => (
+                  <div key={seg.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                    <div className="flex-1 min-w-0">
+                      <span className="capitalize font-medium">{seg.name}</span>
+                      {seg.description && (
+                        <p className="text-xs text-muted-foreground truncate">{seg.description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleEditSegmentation(seg)}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => handleDeleteSegmentation(seg)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Edit segmentation form */}
+            {editingSegmentation && (
+              <div className="p-3 border rounded-lg bg-muted/30 space-y-3">
+                <div className="space-y-2">
+                  <Label className="text-xs">Editando: {editingSegmentation.name}</Label>
+                  <Input
+                    value={editSegmentationName}
+                    onChange={(e) => setEditSegmentationName(e.target.value.slice(0, 35))}
+                    placeholder="Nome do tipo de segmentação"
+                    maxLength={35}
+                  />
+                  <p className="text-xs text-muted-foreground">{editSegmentationName.length}/35 caracteres</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Descrição (opcional)</Label>
+                  <Textarea
+                    value={editSegmentationDescription}
+                    onChange={(e) => setEditSegmentationDescription(e.target.value.slice(0, 180))}
+                    placeholder="Descrição do tipo de segmentação"
+                    rows={2}
+                    maxLength={180}
+                  />
+                  <p className="text-xs text-muted-foreground">{editSegmentationDescription.length}/180 caracteres</p>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setEditingSegmentation(null)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button size="sm" onClick={handleSaveEditSegmentation}>
+                    Salvar
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* New segmentation type form */}
             {showNewSegmentationType && (
@@ -647,6 +777,20 @@ export function TargetDialog({
                 rows={2}
               />
             )}
+          </div>
+
+          {/* Description Field */}
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição da segmentação</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value.slice(0, 180))}
+              placeholder="Uma descrição curta sobre esta segmentação..."
+              rows={2}
+              maxLength={180}
+            />
+            <p className="text-xs text-muted-foreground">{description.length}/180 caracteres</p>
           </div>
         </div>
 

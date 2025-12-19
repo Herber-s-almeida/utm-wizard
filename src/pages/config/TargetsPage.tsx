@@ -72,8 +72,11 @@ export default function TargetsPage() {
                 <Card key={target.id}>
                   <CardHeader className="py-3">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-2">
+                      <div className="space-y-2 flex-1 min-w-0">
                         <CardTitle className="text-base">{target.name}</CardTitle>
+                        {target.description && (
+                          <p className="text-sm text-muted-foreground">{target.description}</p>
+                        )}
                         <div className="flex flex-wrap gap-2">
                           {target.age_range && (
                             <Badge variant="secondary">{target.age_range}</Badge>
@@ -89,7 +92,7 @@ export default function TargetsPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 shrink-0">
                         <Button variant="ghost" size="icon" onClick={() => { setEditingItem(target); setDialogOpen(true); }}>
                           <Pencil className="h-4 w-4" />
                         </Button>
