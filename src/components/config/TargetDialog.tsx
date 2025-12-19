@@ -5,8 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Upload, Pencil, Check, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Trash2, Pencil, Check, X, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useBrazilianCities, BrazilianCity } from '@/hooks/useBrazilianCities';
 
 interface Location {
   city: string;
@@ -52,12 +54,22 @@ export function TargetDialog({
   mode = 'create'
 }: TargetDialogProps) {
   const [name, setName] = useState('');
-  const [ageRange, setAgeRange] = useState('');
+  const [ageMin, setAgeMin] = useState('');
+  const [ageMax, setAgeMax] = useState('');
+  const [noMaxAge, setNoMaxAge] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [segmentationType, setSegmentationType] = useState('');
   const [customSegmentation, setCustomSegmentation] = useState('');
-  const [showBulkImport, setShowBulkImport] = useState(false);
-  const [bulkImportText, setBulkImportText] = useState('');
+  
+  // City search
+  const [citySearch, setCitySearch] = useState('');
+  const [showCityResults, setShowCityResults] = useState(false);
+  const [pendingLocation, setPendingLocation] = useState<BrazilianCity | null>(null);
+  const [pendingRadius, setPendingRadius] = useState('');
+  const [pendingRadiusUnit, setPendingRadiusUnit] = useState<'km' | 'miles'>('km');
+  
+  const { searchCities, loading: loadingCities } = useBrazilianCities();
+  const cityResults = searchCities(citySearch);
   
   // Segmentation types management
   const [segmentationTypes, setSegmentationTypes] = useState<string[]>(DEFAULT_SEGMENTATION_TYPES);
@@ -69,7 +81,24 @@ export function TargetDialog({
   useEffect(() => {
     if (open) {
       setName(initialData?.name || '');
-      setAgeRange(initialData?.age_range || '');
+      
+      // Parse age range
+      const ageRangeParts = (initialData?.age_range || '').split('-');
+      if (ageRangeParts.length === 2) {
+        setAgeMin(ageRangeParts[0].trim());
+        if (ageRangeParts[1].trim() === '+' || ageRangeParts[1].trim() === '') {
+          setAgeMax('');
+          setNoMaxAge(true);
+        } else {
+          setAgeMax(ageRangeParts[1].trim());
+          setNoMaxAge(false);
+        }
+      } else {
+        setAgeMin('');
+        setAgeMax('');
+        setNoMaxAge(false);
+      }
+      
       setLocations(initialData?.geolocation || []);
       const behaviorValue = initialData?.behavior || '';
       if (segmentationTypes.includes(behaviorValue)) {
@@ -82,72 +111,68 @@ export function TargetDialog({
         setSegmentationType('');
         setCustomSegmentation('');
       }
-      setShowBulkImport(false);
-      setBulkImportText('');
+      
+      // Reset city search
+      setCitySearch('');
+      setShowCityResults(false);
+      setPendingLocation(null);
+      setPendingRadius('');
+      setPendingRadiusUnit('km');
     }
   }, [open, initialData]);
 
+  const handleAgeChange = (type: 'min' | 'max', value: string) => {
+    const numValue = value.replace(/\D/g, '').slice(0, 2);
+    const numericValue = parseInt(numValue, 10);
+    
+    if (numValue === '' || (numericValue >= 0 && numericValue <= 99)) {
+      if (type === 'min') {
+        setAgeMin(numValue);
+      } else {
+        setAgeMax(numValue);
+      }
+    }
+  };
+
+  const handleSelectCity = (city: BrazilianCity) => {
+    setPendingLocation(city);
+    setCitySearch(`${city.city}, ${city.stateCode}`);
+    setShowCityResults(false);
+  };
+
   const handleAddLocation = () => {
+    if (!pendingLocation) {
+      toast.error('Selecione uma cidade da lista');
+      return;
+    }
+    
+    if (!pendingRadius) {
+      toast.error('Informe o raio');
+      return;
+    }
+
     if (locations.length >= 100) {
       toast.error('Limite máximo de 100 localizações atingido');
       return;
     }
-    setLocations([...locations, { city: '', state: '', country: '', radius: '', radiusUnit: 'km' }]);
+
+    const newLocation: Location = {
+      city: pendingLocation.city,
+      state: pendingLocation.state,
+      country: pendingLocation.country,
+      radius: pendingRadius,
+      radiusUnit: pendingRadiusUnit
+    };
+
+    setLocations([...locations, newLocation]);
+    setCitySearch('');
+    setPendingLocation(null);
+    setPendingRadius('');
+    setPendingRadiusUnit('km');
   };
 
   const handleRemoveLocation = (index: number) => {
     setLocations(locations.filter((_, i) => i !== index));
-  };
-
-  const handleLocationChange = (index: number, field: keyof Location, value: string) => {
-    const newLocations = [...locations];
-    if (field === 'radius') {
-      const numValue = value.replace(/\D/g, '').slice(0, 3);
-      newLocations[index][field] = numValue;
-    } else {
-      newLocations[index][field] = value as any;
-    }
-    setLocations(newLocations);
-  };
-
-  const handleBulkImport = () => {
-    if (!bulkImportText.trim()) {
-      toast.error('Cole as localizações no formato especificado');
-      return;
-    }
-
-    const lines = bulkImportText.trim().split('\n');
-    const newLocations: Location[] = [];
-    
-    for (const line of lines) {
-      const parts = line.split(',').map(p => p.trim());
-      if (parts.length >= 4) {
-        const [city, state, country, radius, unit] = parts;
-        const radiusUnit = unit?.toLowerCase() === 'miles' ? 'miles' : 'km';
-        newLocations.push({
-          city: city || '',
-          state: state || '',
-          country: country || '',
-          radius: radius?.replace(/\D/g, '').slice(0, 3) || '',
-          radiusUnit
-        });
-      }
-    }
-
-    if (newLocations.length === 0) {
-      toast.error('Nenhuma localização válida encontrada. Use o formato: cidade,estado,país,raio,km');
-      return;
-    }
-
-    if (locations.length + newLocations.length > 100) {
-      toast.error('Limite máximo de 100 localizações seria excedido');
-      return;
-    }
-
-    setLocations([...locations, ...newLocations]);
-    setBulkImportText('');
-    setShowBulkImport(false);
-    toast.success(`${newLocations.length} localizações importadas`);
   };
 
   const handleAddSegmentationType = () => {
@@ -196,8 +221,8 @@ export function TargetDialog({
       return;
     }
 
-    if (trimmedName.length > 25) {
-      toast.error('Nome deve ter no máximo 25 caracteres');
+    if (trimmedName.length > 35) {
+      toast.error('Nome deve ter no máximo 35 caracteres');
       return;
     }
 
@@ -211,17 +236,25 @@ export function TargetDialog({
       return;
     }
 
+    // Build age range string
+    let ageRange = '';
+    if (ageMin) {
+      ageRange = noMaxAge ? `${ageMin}+` : (ageMax ? `${ageMin}-${ageMax}` : ageMin);
+    }
+
     const finalBehavior = segmentationType === 'custom' ? customSegmentation : segmentationType;
 
     onSave({
       name: trimmedName,
       age_range: ageRange,
-      geolocation: locations.filter(l => l.city.trim() || l.state.trim()),
+      geolocation: locations.filter(l => l.city.trim()),
       behavior: finalBehavior
     });
 
     setName('');
-    setAgeRange('');
+    setAgeMin('');
+    setAgeMax('');
+    setNoMaxAge(false);
     setLocations([]);
     setSegmentationType('');
     setCustomSegmentation('');
@@ -238,103 +271,118 @@ export function TargetDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Name Field */}
           <div className="space-y-2">
             <Label htmlFor="name">Nome da segmentação *</Label>
             <Input
               id="name"
               value={name}
-              onChange={(e) => setName(e.target.value.slice(0, 25))}
+              onChange={(e) => setName(e.target.value.slice(0, 35))}
               placeholder="Ex: Jovens Urbanos"
-              maxLength={25}
+              maxLength={35}
             />
-            <p className="text-xs text-muted-foreground">{name.length}/25 caracteres</p>
+            <p className="text-xs text-muted-foreground">{name.length}/35 caracteres</p>
           </div>
 
+          {/* Age Field */}
           <div className="space-y-2">
-            <Label htmlFor="age">Idade</Label>
-            <Input
-              id="age"
-              value={ageRange}
-              onChange={(e) => setAgeRange(e.target.value)}
-              placeholder="Ex: 18-34"
-            />
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Localização</Label>
-              <div className="flex gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setShowBulkImport(!showBulkImport)}
-                >
-                  <Upload className="h-3 w-3 mr-1" />
-                  Importar em massa
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={handleAddLocation}>
-                  <Plus className="h-3 w-3 mr-1" />
-                  Adicionar
-                </Button>
+            <Label>Idade</Label>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">De</span>
+                <Input
+                  value={ageMin}
+                  onChange={(e) => handleAgeChange('min', e.target.value)}
+                  placeholder="18"
+                  className="w-16 text-center"
+                  maxLength={2}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Até</span>
+                <Input
+                  value={ageMax}
+                  onChange={(e) => handleAgeChange('max', e.target.value)}
+                  placeholder="65"
+                  className="w-16 text-center"
+                  maxLength={2}
+                  disabled={noMaxAge}
+                />
+              </div>
+              <div className="flex items-center gap-2 ml-2">
+                <Checkbox
+                  id="noMaxAge"
+                  checked={noMaxAge}
+                  onCheckedChange={(checked) => {
+                    setNoMaxAge(checked === true);
+                    if (checked) setAgeMax('');
+                  }}
+                />
+                <Label htmlFor="noMaxAge" className="text-sm font-normal cursor-pointer">
+                  Sem máximo
+                </Label>
               </div>
             </div>
+          </div>
 
-            {showBulkImport && (
-              <div className="p-3 border rounded-lg space-y-2 bg-muted/30">
-                <p className="text-xs text-muted-foreground">
-                  Cole uma localização por linha no formato: <strong>cidade,estado,país,raio,unidade</strong>
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Exemplo: curitiba,paraná,brasil,30,km
-                </p>
-                <Textarea
-                  value={bulkImportText}
-                  onChange={(e) => setBulkImportText(e.target.value)}
-                  placeholder="curitiba,paraná,brasil,30,km&#10;são paulo,são paulo,brasil,50,km"
-                  rows={4}
+          {/* Location Field */}
+          <div className="space-y-3">
+            <Label>Localização</Label>
+            
+            {/* City Search */}
+            <div className="p-3 border rounded-lg space-y-3 bg-muted/30">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={citySearch}
+                  onChange={(e) => {
+                    setCitySearch(e.target.value);
+                    setShowCityResults(true);
+                    setPendingLocation(null);
+                  }}
+                  onFocus={() => setShowCityResults(true)}
+                  placeholder="Digite o nome da cidade..."
+                  className="pl-9"
                 />
-                <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setShowBulkImport(false)}>
-                    Cancelar
-                  </Button>
-                  <Button size="sm" onClick={handleBulkImport}>
-                    Importar
-                  </Button>
-                </div>
+                {loadingCities && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
               </div>
-            )}
-
-            {locations.map((location, index) => (
-              <div key={index} className="p-3 border rounded-lg space-y-2 bg-muted/30">
-                <div className="grid grid-cols-3 gap-2">
-                  <Input
-                    value={location.city}
-                    onChange={(e) => handleLocationChange(index, 'city', e.target.value)}
-                    placeholder="Cidade"
-                  />
-                  <Input
-                    value={location.state}
-                    onChange={(e) => handleLocationChange(index, 'state', e.target.value)}
-                    placeholder="Estado"
-                  />
-                  <Input
-                    value={location.country}
-                    onChange={(e) => handleLocationChange(index, 'country', e.target.value)}
-                    placeholder="País"
-                  />
+              
+              {/* City Results Dropdown */}
+              {showCityResults && cityResults.length > 0 && !pendingLocation && (
+                <div className="max-h-40 overflow-y-auto border rounded-md bg-background">
+                  {cityResults.map((city, idx) => (
+                    <button
+                      key={`${city.city}-${city.stateCode}-${idx}`}
+                      type="button"
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
+                      onClick={() => handleSelectCity(city)}
+                    >
+                      {city.city}, {city.stateCode} - {city.country}
+                    </button>
+                  ))}
                 </div>
-                <div className="flex items-center gap-2">
+              )}
+              
+              {citySearch.length >= 2 && cityResults.length === 0 && !pendingLocation && !loadingCities && (
+                <p className="text-xs text-muted-foreground">Nenhuma cidade encontrada</p>
+              )}
+
+              {/* Radius Selection */}
+              {pendingLocation && (
+                <div className="flex items-center gap-2 pt-2 border-t">
+                  <span className="text-sm text-muted-foreground">Raio:</span>
                   <Input
-                    value={location.radius}
-                    onChange={(e) => handleLocationChange(index, 'radius', e.target.value)}
-                    placeholder="Raio"
+                    value={pendingRadius}
+                    onChange={(e) => setPendingRadius(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                    placeholder="30"
                     className="w-20"
                     maxLength={3}
                   />
                   <Select
-                    value={location.radiusUnit}
-                    onValueChange={(value) => handleLocationChange(index, 'radiusUnit', value)}
+                    value={pendingRadiusUnit}
+                    onValueChange={(value: 'km' | 'miles') => setPendingRadiusUnit(value)}
                   >
                     <SelectTrigger className="w-24">
                       <SelectValue />
@@ -344,16 +392,29 @@ export function TargetDialog({
                       <SelectItem value="miles">milhas</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveLocation(index)}
-                    className="h-8 w-8 text-destructive ml-auto"
-                  >
-                    <Trash2 className="h-4 w-4" />
+                  <Button type="button" size="sm" onClick={handleAddLocation}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar
                   </Button>
                 </div>
+              )}
+            </div>
+
+            {/* Added Locations */}
+            {locations.map((location, index) => (
+              <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                <span className="text-sm">
+                  {location.city}, {location.state} - {location.radius} {location.radiusUnit}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveLocation(index)}
+                  className="h-8 w-8 text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             ))}
 
@@ -362,6 +423,7 @@ export function TargetDialog({
             )}
           </div>
 
+          {/* Segmentation Types */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Segmentação</Label>
@@ -476,8 +538,12 @@ export function TargetDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave}>{mode === 'create' ? 'Criar' : 'Salvar'}</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave}>
+            {mode === 'create' ? 'Criar' : 'Salvar'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
