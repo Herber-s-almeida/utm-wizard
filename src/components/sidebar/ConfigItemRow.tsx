@@ -33,21 +33,21 @@ export function ConfigItemRow({
   children,
 }: ConfigItemRowProps) {
   return (
-    <div className={cn("group flex items-center justify-between gap-1 py-1 px-2 rounded-md hover:bg-sidebar-accent/50", className)}>
-      <span className="text-xs truncate flex-1 min-w-0">
+    <div className={cn("group flex items-center gap-1 py-1 px-1 rounded-md hover:bg-sidebar-accent/50", className)}>
+      <span className="text-xs truncate min-w-0 flex-1">
         {name}
       </span>
-      <div className="flex items-center gap-0.5 shrink-0 ml-1">
+      <div className="flex items-center gap-0 shrink-0">
         <Button 
           size="icon" 
           variant="ghost" 
-          className="h-6 w-6 opacity-60 hover:opacity-100" 
+          className="h-5 w-5 opacity-50 hover:opacity-100" 
           onClick={(e) => {
             e.stopPropagation();
             onEdit();
           }}
         >
-          <Pencil className="h-3 w-3 text-muted-foreground" />
+          <Pencil className="h-2.5 w-2.5 text-muted-foreground" />
         </Button>
         
         {canDelete ? (
@@ -56,10 +56,10 @@ export function ConfigItemRow({
               <Button 
                 size="icon" 
                 variant="ghost" 
-                className="h-6 w-6 opacity-60 hover:opacity-100"
+                className="h-5 w-5 opacity-50 hover:opacity-100"
                 onClick={(e) => e.stopPropagation()}
               >
-                <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                <Trash2 className="h-2.5 w-2.5 text-muted-foreground hover:text-destructive" />
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -83,10 +83,10 @@ export function ConfigItemRow({
               <Button 
                 size="icon" 
                 variant="ghost" 
-                className="h-6 w-6 opacity-40"
+                className="h-5 w-5 opacity-30"
                 onClick={(e) => e.stopPropagation()}
               >
-                <Trash2 className="h-3 w-3 text-muted-foreground/50" />
+                <Trash2 className="h-2.5 w-2.5 text-muted-foreground/50" />
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
