@@ -272,7 +272,7 @@ export function AppSidebar() {
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
               <CreateItemButton 
-                onCreate={(name) => moments.create.mutate(name)} 
+                onCreate={(name) => moments.create.mutate({ name })} 
                 placeholder="Nome do momento..."
               />
               {moments.data?.slice(0, MAX_ITEMS).map(moment => (
@@ -302,7 +302,7 @@ export function AppSidebar() {
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
               <CreateItemButton 
-                onCreate={(name) => funnelStages.create.mutate(name)} 
+                onCreate={(name) => funnelStages.create.mutate({ name })} 
                 placeholder="Nome da fase..."
               />
               {funnelStages.data?.slice(0, MAX_ITEMS).map(stage => (
@@ -332,7 +332,7 @@ export function AppSidebar() {
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
               <CreateItemButton 
-                onCreate={(name) => mediums.create.mutate(name)} 
+                onCreate={(name) => mediums.create.mutate({ name })} 
                 placeholder="Nome do meio..."
               />
               {mediums.data?.slice(0, MAX_ITEMS).map(medium => (
