@@ -33,7 +33,7 @@ export function ConfigItemRow({
   children,
 }: ConfigItemRowProps) {
   return (
-    <div className={cn("group flex items-center gap-1 py-1 px-1 rounded-md hover:bg-sidebar-accent/50", className)}>
+    <div className={cn("group flex w-full min-w-0 items-center gap-1 py-1 px-1 rounded-md hover:bg-sidebar-accent/50", className)}>
       <span className="text-xs truncate min-w-0 flex-1">
         {name}
       </span>
