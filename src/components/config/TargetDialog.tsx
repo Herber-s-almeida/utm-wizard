@@ -18,6 +18,7 @@ interface Location {
   radius: string;
   radiusUnit: 'km' | 'miles';
   exactRegion?: boolean;
+  locationType?: 'country' | 'state' | 'city';
 }
 
 interface SegmentationType {
@@ -164,7 +165,13 @@ export function TargetDialog({
 
   const handleSelectCity = (city: BrazilianCity) => {
     setPendingBrazilCity(city);
-    setCitySearch(`${city.city}, ${city.stateCode}`);
+    if (city.type === 'country') {
+      setCitySearch(city.city);
+    } else if (city.type === 'state') {
+      setCitySearch(`${city.city}, Brasil`);
+    } else {
+      setCitySearch(`${city.city}, ${city.stateCode}`);
+    }
     setShowCityResults(false);
   };
 
@@ -176,7 +183,7 @@ export function TargetDialog({
 
     if (countryType === 'brasil') {
       if (!pendingBrazilCity) {
-        toast.error('Selecione uma cidade da lista');
+        toast.error('Selecione uma localização da lista');
         return;
       }
       
@@ -187,11 +194,12 @@ export function TargetDialog({
 
       const newLocation: Location = {
         city: pendingBrazilCity.city,
-        state: pendingBrazilCity.state,
+        state: pendingBrazilCity.type === 'city' ? pendingBrazilCity.state : '',
         country: 'Brasil',
         radius: radiusType === 'exact' ? '' : pendingRadius,
         radiusUnit: pendingRadiusUnit,
-        exactRegion: radiusType === 'exact'
+        exactRegion: radiusType === 'exact',
+        locationType: pendingBrazilCity.type
       };
 
       setLocations([...locations, newLocation]);
@@ -307,16 +315,28 @@ export function TargetDialog({
   };
 
   const getLocationDisplay = (location: Location) => {
-    const parts = [location.city];
-    if (location.state) parts.push(location.state);
-    if (location.country !== 'Outro') parts.push(location.country);
+    let locationStr = '';
     
-    const locationStr = parts.join(', ');
+    if (location.locationType === 'country') {
+      locationStr = `${location.city} (País)`;
+    } else if (location.locationType === 'state') {
+      locationStr = `${location.city}, Brasil (Estado)`;
+    } else if (location.country === 'Outro') {
+      locationStr = location.city;
+    } else {
+      const parts = [location.city];
+      if (location.state) parts.push(location.state);
+      parts.push(location.country);
+      locationStr = parts.join(', ');
+    }
     
     if (location.exactRegion) {
       return `${locationStr} - Região Exata`;
     }
-    return `${locationStr} - ${location.radius} ${location.radiusUnit}`;
+    if (location.radius) {
+      return `${locationStr} - ${location.radius} ${location.radiusUnit}`;
+    }
+    return locationStr;
   };
 
   return (
@@ -435,12 +455,20 @@ export function TargetDialog({
                     <div className="max-h-40 overflow-y-auto border rounded-md bg-background z-50">
                       {cityResults.map((city, idx) => (
                         <button
-                          key={`${city.city}-${city.stateCode}-${idx}`}
+                          key={`${city.type}-${city.city}-${city.stateCode}-${idx}`}
                           type="button"
                           className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
                           onClick={() => handleSelectCity(city)}
                         >
-                          {city.city}, {city.stateCode} - {city.country}
+                          {city.type === 'country' && (
+                            <span className="font-medium">{city.city} (País)</span>
+                          )}
+                          {city.type === 'state' && (
+                            <span>{city.city}, Brasil (Estado)</span>
+                          )}
+                          {city.type === 'city' && (
+                            <span>{city.city}, {city.stateCode} - {city.country}</span>
+                          )}
                         </button>
                       ))}
                     </div>
