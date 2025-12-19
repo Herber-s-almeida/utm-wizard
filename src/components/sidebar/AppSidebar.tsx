@@ -133,7 +133,7 @@ export function AppSidebar() {
   const getSegmentNames = () => behavioralSegmentations.data?.map(s => s.name) || [];
 
   return (
-    <div className="flex flex-col h-full w-64 border-r border-sidebar-border bg-sidebar-background">
+    <div className="flex flex-col h-full w-64 border-r border-sidebar-border bg-sidebar-background overflow-x-hidden">
       {/* Header */}
       <div className="p-4 border-b border-sidebar-border">
         <Link to="/dashboard" className="flex items-center gap-2">
@@ -144,7 +144,7 @@ export function AppSidebar() {
         </Link>
       </div>
 
-      <ScrollArea className="flex-1 py-3 pl-2 pr-6">
+      <ScrollArea className="flex-1 py-3 px-2 overflow-x-hidden">
         {/* PLANOS DE MÍDIA */}
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
