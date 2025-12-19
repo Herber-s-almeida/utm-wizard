@@ -6,7 +6,6 @@ import {
   Plus, 
   ChevronDown,
   ChevronRight,
-  Settings,
   Layers,
   Clock,
   Target,
@@ -17,7 +16,8 @@ import {
   Filter,
   Trash2,
   LogOut,
-  User
+  User,
+  Library
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates } from '@/hooks/useConfigData';
@@ -25,9 +25,15 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ConfigItemRow } from './ConfigItemRow';
-import { CreateItemButton } from './CreateItemButton';
 import { PlanItemRow } from './PlanItemRow';
 import { cn } from '@/lib/utils';
+
+// Dialogs
+import { SubdivisionDialog } from '@/components/config/SubdivisionDialog';
+import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
+import { VehicleDialog } from '@/components/config/VehicleDialog';
+import { TargetDialog } from '@/components/config/TargetDialog';
+import { CreativeDialog } from '@/components/config/CreativeDialog';
 
 export function AppSidebar() {
   const { user, signOut } = useAuth();
@@ -63,6 +69,15 @@ export function AppSidebar() {
   // Subdivisions subsections
   const [openSubdivisions, setOpenSubdivisions] = useState<Record<string, boolean>>({});
 
+  // Dialog states
+  const [subdivisionDialogOpen, setSubdivisionDialogOpen] = useState(false);
+  const [momentDialogOpen, setMomentDialogOpen] = useState(false);
+  const [funnelStageDialogOpen, setFunnelStageDialogOpen] = useState(false);
+  const [mediumDialogOpen, setMediumDialogOpen] = useState(false);
+  const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
+  const [targetDialogOpen, setTargetDialogOpen] = useState(false);
+  const [creativeDialogOpen, setCreativeDialogOpen] = useState(false);
+
   const toggleSection = (key: string) => {
     setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
   };
@@ -84,6 +99,15 @@ export function AppSidebar() {
     channels.data?.filter(c => c.vehicle_id === vehicleId) || [];
 
   const MAX_ITEMS = 3;
+
+  // Helper to get existing names for validation
+  const getSubdivisionNames = () => parentSubdivisions.map(s => s.name);
+  const getMomentNames = () => moments.data?.map(m => m.name) || [];
+  const getFunnelStageNames = () => funnelStages.data?.map(s => s.name) || [];
+  const getMediumNames = () => mediums.data?.map(m => m.name) || [];
+  const getVehicleNames = () => vehicles.data?.map(v => v.name) || [];
+  const getTargetNames = () => targets.data?.map(t => t.name) || [];
+  const getCreativeNames = () => creativeTemplates.data?.map(c => c.name) || [];
 
   return (
     <div className="flex flex-col h-full w-64 border-r border-sidebar-border bg-sidebar-background">
@@ -197,27 +221,23 @@ export function AppSidebar() {
           </Collapsible>
         </div>
 
-        {/* CONFIGURAÇÕES */}
+        {/* BIBLIOTECA */}
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-            <Settings className="h-3 w-3" />
-            Configurações
+            <Library className="h-3 w-3" />
+            Biblioteca
           </h3>
 
-          {/* Subdivisões */}
+          {/* Subdivisões de Plano */}
           <Collapsible open={openSections.subdivisions} onOpenChange={() => toggleSection('subdivisions')}>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
                 {openSections.subdivisions ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                 <Layers className="h-3.5 w-3.5" />
-                Subdivisões de plano
+                Subdivisões de Plano
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
-              <CreateItemButton 
-                onCreate={(name) => subdivisions.create.mutate({ name })} 
-                placeholder="Nome da subdivisão..."
-              />
               {parentSubdivisions.slice(0, MAX_ITEMS).map(sub => (
                 <Collapsible 
                   key={sub.id} 
@@ -238,10 +258,6 @@ export function AppSidebar() {
                     />
                   </div>
                   <CollapsibleContent className="pl-6">
-                    <CreateItemButton 
-                      onCreate={(name) => subdivisions.create.mutate({ name, parent_id: sub.id })} 
-                      placeholder="Detalhe..."
-                    />
                     {getChildSubdivisions(sub.id).map(child => (
                       <ConfigItemRow
                         key={child.id}
@@ -253,28 +269,35 @@ export function AppSidebar() {
                   </CollapsibleContent>
                 </Collapsible>
               ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                onClick={() => setSubdivisionDialogOpen(true)}
+              >
+                <Plus className="h-3 w-3" />
+                Criar nova subdivisão de plano
+              </Button>
               {parentSubdivisions.length > MAX_ITEMS && (
-                <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                  ... ver todos ({parentSubdivisions.length})
-                </Button>
+                <Link to="/config/subdivisions">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                    ... ver todos ({parentSubdivisions.length})
+                  </Button>
+                </Link>
               )}
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Momentos */}
+          {/* Momentos de Campanha */}
           <Collapsible open={openSections.moments} onOpenChange={() => toggleSection('moments')}>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
                 {openSections.moments ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                 <Clock className="h-3.5 w-3.5" />
-                Momentos
+                Momentos de Campanha
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
-              <CreateItemButton 
-                onCreate={(name) => moments.create.mutate({ name })} 
-                placeholder="Nome do momento..."
-              />
               {moments.data?.slice(0, MAX_ITEMS).map(moment => (
                 <ConfigItemRow
                   key={moment.id}
@@ -283,10 +306,21 @@ export function AppSidebar() {
                   onDelete={() => moments.remove.mutate(moment.id)}
                 />
               ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                onClick={() => setMomentDialogOpen(true)}
+              >
+                <Plus className="h-3 w-3" />
+                Criar novo momento de campanha
+              </Button>
               {(moments.data?.length || 0) > MAX_ITEMS && (
-                <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                  ... ver todos ({moments.data?.length})
-                </Button>
+                <Link to="/config/moments">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                    ... ver todos ({moments.data?.length})
+                  </Button>
+                </Link>
               )}
             </CollapsibleContent>
           </Collapsible>
@@ -301,10 +335,6 @@ export function AppSidebar() {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
-              <CreateItemButton 
-                onCreate={(name) => funnelStages.create.mutate({ name })} 
-                placeholder="Nome da fase..."
-              />
               {funnelStages.data?.slice(0, MAX_ITEMS).map(stage => (
                 <ConfigItemRow
                   key={stage.id}
@@ -313,10 +343,21 @@ export function AppSidebar() {
                   onDelete={() => funnelStages.remove.mutate(stage.id)}
                 />
               ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                onClick={() => setFunnelStageDialogOpen(true)}
+              >
+                <Plus className="h-3 w-3" />
+                Criar nova fase de funil
+              </Button>
               {(funnelStages.data?.length || 0) > MAX_ITEMS && (
-                <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                  ... ver todos ({funnelStages.data?.length})
-                </Button>
+                <Link to="/config/funnel-stages">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                    ... ver todos ({funnelStages.data?.length})
+                  </Button>
+                </Link>
               )}
             </CollapsibleContent>
           </Collapsible>
@@ -331,10 +372,6 @@ export function AppSidebar() {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
-              <CreateItemButton 
-                onCreate={(name) => mediums.create.mutate({ name })} 
-                placeholder="Nome do meio..."
-              />
               {mediums.data?.slice(0, MAX_ITEMS).map(medium => (
                 <ConfigItemRow
                   key={medium.id}
@@ -343,10 +380,21 @@ export function AppSidebar() {
                   onDelete={() => mediums.remove.mutate(medium.id)}
                 />
               ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                onClick={() => setMediumDialogOpen(true)}
+              >
+                <Plus className="h-3 w-3" />
+                Criar novo meio
+              </Button>
               {(mediums.data?.length || 0) > MAX_ITEMS && (
-                <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                  ... ver todos ({mediums.data?.length})
-                </Button>
+                <Link to="/config/mediums">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                    ... ver todos ({mediums.data?.length})
+                  </Button>
+                </Link>
               )}
             </CollapsibleContent>
           </Collapsible>
@@ -361,10 +409,6 @@ export function AppSidebar() {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
-              <CreateItemButton 
-                onCreate={(name) => vehicles.create.mutate({ name })} 
-                placeholder="Nome do veículo..."
-              />
               {vehicles.data?.slice(0, MAX_ITEMS).map(vehicle => (
                 <Collapsible 
                   key={vehicle.id} 
@@ -385,10 +429,6 @@ export function AppSidebar() {
                     />
                   </div>
                   <CollapsibleContent className="pl-6">
-                    <CreateItemButton 
-                      onCreate={(name) => channels.create.mutate({ name, vehicle_id: vehicle.id })} 
-                      placeholder="Nome do canal..."
-                    />
                     {getVehicleChannels(vehicle.id).map(channel => (
                       <ConfigItemRow
                         key={channel.id}
@@ -400,28 +440,35 @@ export function AppSidebar() {
                   </CollapsibleContent>
                 </Collapsible>
               ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                onClick={() => setVehicleDialogOpen(true)}
+              >
+                <Plus className="h-3 w-3" />
+                Criar novo veículo
+              </Button>
               {(vehicles.data?.length || 0) > MAX_ITEMS && (
-                <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                  ... ver todos ({vehicles.data?.length})
-                </Button>
+                <Link to="/config/vehicles">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                    ... ver todos ({vehicles.data?.length})
+                  </Button>
+                </Link>
               )}
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Target/Segmentações */}
+          {/* Segmentação e Target */}
           <Collapsible open={openSections.targets} onOpenChange={() => toggleSection('targets')}>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
                 {openSections.targets ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                 <Users className="h-3.5 w-3.5" />
-                Target
+                Segmentação e Target
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
-              <CreateItemButton 
-                onCreate={(name) => targets.create.mutate({ name })} 
-                placeholder="Nome da segmentação..."
-              />
               {targets.data?.slice(0, MAX_ITEMS).map(target => (
                 <ConfigItemRow
                   key={target.id}
@@ -430,10 +477,21 @@ export function AppSidebar() {
                   onDelete={() => targets.remove.mutate(target.id)}
                 />
               ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                onClick={() => setTargetDialogOpen(true)}
+              >
+                <Plus className="h-3 w-3" />
+                Criar nova segmentação
+              </Button>
               {(targets.data?.length || 0) > MAX_ITEMS && (
-                <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                  ... ver todos ({targets.data?.length})
-                </Button>
+                <Link to="/config/targets">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                    ... ver todos ({targets.data?.length})
+                  </Button>
+                </Link>
               )}
             </CollapsibleContent>
           </Collapsible>
@@ -448,10 +506,6 @@ export function AppSidebar() {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
-              <CreateItemButton 
-                onCreate={(name) => creativeTemplates.create.mutate({ name, format: 'Estático' })} 
-                placeholder="Nome do criativo..."
-              />
               {creativeTemplates.data?.slice(0, MAX_ITEMS).map(template => (
                 <ConfigItemRow
                   key={template.id}
@@ -460,10 +514,21 @@ export function AppSidebar() {
                   onDelete={() => creativeTemplates.remove.mutate(template.id)}
                 />
               ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                onClick={() => setCreativeDialogOpen(true)}
+              >
+                <Plus className="h-3 w-3" />
+                Criar novo criativo
+              </Button>
               {(creativeTemplates.data?.length || 0) > MAX_ITEMS && (
-                <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                  ... ver todos ({creativeTemplates.data?.length})
-                </Button>
+                <Link to="/config/creatives">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                    ... ver todos ({creativeTemplates.data?.length})
+                  </Button>
+                </Link>
               )}
             </CollapsibleContent>
           </Collapsible>
@@ -521,6 +586,101 @@ export function AppSidebar() {
           Sair
         </Button>
       </div>
+
+      {/* Dialogs */}
+      <SubdivisionDialog
+        open={subdivisionDialogOpen}
+        onOpenChange={setSubdivisionDialogOpen}
+        onSave={(data) => {
+          subdivisions.create.mutate({ name: data.name, description: data.description }, {
+            onSuccess: (newSub: any) => {
+              data.details.forEach(detail => {
+                subdivisions.create.mutate({ name: detail.name, description: detail.description, parent_id: newSub.id });
+              });
+            }
+          });
+        }}
+        existingNames={getSubdivisionNames()}
+        mode="create"
+      />
+
+      <SimpleConfigDialog
+        open={momentDialogOpen}
+        onOpenChange={setMomentDialogOpen}
+        onSave={(data) => moments.create.mutate({ name: data.name, description: data.description })}
+        existingNames={getMomentNames()}
+        title="Criar novo momento de campanha"
+        nameLabel="Nome do momento"
+        namePlaceholder="Ex: Black Friday"
+        mode="create"
+      />
+
+      <SimpleConfigDialog
+        open={funnelStageDialogOpen}
+        onOpenChange={setFunnelStageDialogOpen}
+        onSave={(data) => funnelStages.create.mutate({ name: data.name, description: data.description })}
+        existingNames={getFunnelStageNames()}
+        title="Criar nova fase de funil"
+        nameLabel="Nome da fase"
+        namePlaceholder="Ex: Awareness"
+        mode="create"
+      />
+
+      <SimpleConfigDialog
+        open={mediumDialogOpen}
+        onOpenChange={setMediumDialogOpen}
+        onSave={(data) => mediums.create.mutate({ name: data.name, description: data.description })}
+        existingNames={getMediumNames()}
+        title="Criar novo meio"
+        nameLabel="Nome do meio"
+        namePlaceholder="Ex: Digital"
+        mode="create"
+      />
+
+      <VehicleDialog
+        open={vehicleDialogOpen}
+        onOpenChange={setVehicleDialogOpen}
+        onSave={(data) => {
+          vehicles.create.mutate({ name: data.name, description: data.description }, {
+            onSuccess: (newVehicle: any) => {
+              data.channels.forEach(channel => {
+                if (channel.name.trim()) {
+                  channels.create.mutate({ name: channel.name, description: channel.description, vehicle_id: newVehicle.id });
+                }
+              });
+            }
+          });
+        }}
+        existingNames={getVehicleNames()}
+        mode="create"
+      />
+
+      <TargetDialog
+        open={targetDialogOpen}
+        onOpenChange={setTargetDialogOpen}
+        onSave={(data) => targets.create.mutate(data)}
+        existingNames={getTargetNames()}
+        mode="create"
+      />
+
+      <CreativeDialog
+        open={creativeDialogOpen}
+        onOpenChange={setCreativeDialogOpen}
+        onSave={(data) => {
+          creativeTemplates.create.mutate({
+            name: data.name,
+            format: data.format,
+            dimension: data.dimensions.length > 0 
+              ? data.dimensions.map(d => `${d.width}x${d.height}${d.unit}`).join(', ')
+              : null,
+            duration: data.duration || null,
+            message: data.message || null,
+            objective: data.objective || null
+          });
+        }}
+        existingNames={getCreativeNames()}
+        mode="create"
+      />
     </div>
   );
 }
