@@ -8,6 +8,8 @@ export interface MediaPlan {
   end_date: string | null;
   total_budget: number;
   status: 'draft' | 'active' | 'completed' | 'paused';
+  objectives: string[] | null;
+  kpis: Record<string, number> | null;
   created_at: string;
   updated_at: string;
 }
@@ -39,6 +41,17 @@ export interface MediaLine {
   utm_term: string | null;
   destination_url: string | null;
   notes: string | null;
+  // New fields referencing library entities
+  subdivision_id: string | null;
+  moment_id: string | null;
+  funnel_stage_id: string | null;
+  medium_id: string | null;
+  vehicle_id: string | null;
+  channel_id: string | null;
+  target_id: string | null;
+  creative_template_id: string | null;
+  budget_allocation: 'campaign' | 'creative';
+  percentage_of_plan: number;
   created_at: string;
   updated_at: string;
 }
@@ -52,6 +65,21 @@ export interface MediaCreative {
   creative_type: string;
   asset_url: string | null;
   notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlanBudgetDistribution {
+  id: string;
+  media_plan_id: string;
+  user_id: string;
+  distribution_type: 'subdivision' | 'moment' | 'funnel_stage' | 'temporal';
+  reference_id: string | null;
+  parent_distribution_id: string | null;
+  percentage: number;
+  amount: number;
+  temporal_period: string | null;
+  temporal_date: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -125,6 +153,22 @@ export const STATUS_COLORS: Record<MediaPlan['status'], string> = {
   completed: 'bg-primary/10 text-primary',
   paused: 'bg-warning/10 text-warning',
 };
+
+export const KPI_OPTIONS = [
+  { key: 'cpc', label: 'CPC (Custo por Clique)', unit: 'R$' },
+  { key: 'cpl', label: 'CPL (Custo por Lead)', unit: 'R$' },
+  { key: 'ctr', label: 'CTR (Taxa de Clique)', unit: '%' },
+  { key: 'cpa', label: 'CPA (Custo por Aquisição)', unit: 'R$' },
+  { key: 'cpm', label: 'CPM (Custo por Mil)', unit: 'R$' },
+  { key: 'roas', label: 'ROAS (Retorno sobre Investimento)', unit: 'x' },
+  { key: 'conversion_rate', label: 'Taxa de Conversão', unit: '%' },
+];
+
+export const TEMPORAL_GRANULARITY = [
+  { value: 'daily', label: 'Diária' },
+  { value: 'weekly', label: 'Semanal' },
+  { value: 'monthly', label: 'Mensal' },
+];
 
 // UTM generation helpers
 export const getPlatformUtmDefaults = (platform: string): { source: string; medium: string } => {
