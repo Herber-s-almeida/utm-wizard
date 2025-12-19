@@ -1,7 +1,5 @@
-import { useState } from 'react';
-import { Pencil, Trash2, Check, X } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,13 +15,12 @@ import { cn } from '@/lib/utils';
 
 interface ConfigItemRowProps {
   name: string;
-  onEdit: (newName: string) => void;
+  onEdit: () => void;
   onDelete: () => void;
   canDelete?: boolean;
   deleteWarning?: string;
   className?: string;
   children?: React.ReactNode;
-  onClick?: () => void;
 }
 
 export function ConfigItemRow({
@@ -34,52 +31,10 @@ export function ConfigItemRow({
   deleteWarning,
   className,
   children,
-  onClick,
 }: ConfigItemRowProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(name);
-
-  const handleSave = () => {
-    if (editValue.trim()) {
-      onEdit(editValue.trim());
-      setIsEditing(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditValue(name);
-    setIsEditing(false);
-  };
-
-  if (isEditing) {
-    return (
-      <div className={cn("flex items-center gap-1 py-1 px-2", className)}>
-        <Input
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          className="h-7 text-xs flex-1"
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSave();
-            if (e.key === 'Escape') handleCancel();
-          }}
-        />
-        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleSave}>
-          <Check className="h-3 w-3 text-success" />
-        </Button>
-        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleCancel}>
-          <X className="h-3 w-3 text-destructive" />
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className={cn("group flex items-center gap-1 py-1 px-2 rounded-md hover:bg-sidebar-accent/50", className)}>
-      <span 
-        className={cn("flex-1 text-xs truncate", onClick && "cursor-pointer hover:text-primary")}
-        onClick={onClick}
-      >
+      <span className="flex-1 text-xs truncate">
         {name}
       </span>
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -87,7 +42,7 @@ export function ConfigItemRow({
           size="icon" 
           variant="ghost" 
           className="h-5 w-5" 
-          onClick={() => setIsEditing(true)}
+          onClick={onEdit}
         >
           <Pencil className="h-3 w-3 text-muted-foreground" />
         </Button>
