@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, Pencil, Check, X, Search, Loader2 } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Plus, Trash2, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBrazilianCities, BrazilianCity } from '@/hooks/useBrazilianCities';
 
@@ -16,14 +17,20 @@ interface Location {
   country: string;
   radius: string;
   radiusUnit: 'km' | 'miles';
+  exactRegion?: boolean;
 }
 
-const DEFAULT_SEGMENTATION_TYPES = [
-  'remarketing',
-  'comportamento',
-  'bases proprietárias',
-  'look a like',
-  'site'
+interface SegmentationType {
+  name: string;
+  description: string;
+}
+
+const DEFAULT_SEGMENTATION_TYPES: SegmentationType[] = [
+  { name: 'remarketing', description: '' },
+  { name: 'comportamento', description: '' },
+  { name: 'bases proprietárias', description: '' },
+  { name: 'look a like', description: '' },
+  { name: 'site', description: '' }
 ];
 
 interface TargetDialogProps {
@@ -58,25 +65,33 @@ export function TargetDialog({
   const [ageMax, setAgeMax] = useState('');
   const [noMaxAge, setNoMaxAge] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [segmentationType, setSegmentationType] = useState('');
-  const [customSegmentation, setCustomSegmentation] = useState('');
   
-  // City search
+  // Country selection
+  const [countryType, setCountryType] = useState<'brasil' | 'outros'>('brasil');
+  
+  // Brazil city search
   const [citySearch, setCitySearch] = useState('');
   const [showCityResults, setShowCityResults] = useState(false);
-  const [pendingLocation, setPendingLocation] = useState<BrazilianCity | null>(null);
+  const [pendingBrazilCity, setPendingBrazilCity] = useState<BrazilianCity | null>(null);
+  
+  // Other countries
+  const [otherCountryLocation, setOtherCountryLocation] = useState('');
+  
+  // Radius options
+  const [radiusType, setRadiusType] = useState<'radius' | 'exact'>('radius');
   const [pendingRadius, setPendingRadius] = useState('');
   const [pendingRadiusUnit, setPendingRadiusUnit] = useState<'km' | 'miles'>('km');
   
   const { searchCities, loading: loadingCities } = useBrazilianCities();
   const cityResults = searchCities(citySearch);
   
-  // Segmentation types management
-  const [segmentationTypes, setSegmentationTypes] = useState<string[]>(DEFAULT_SEGMENTATION_TYPES);
-  const [editingSegmentationType, setEditingSegmentationType] = useState<string | null>(null);
-  const [editingSegmentationValue, setEditingSegmentationValue] = useState('');
+  // Segmentation
+  const [segmentationTypes, setSegmentationTypes] = useState<SegmentationType[]>(DEFAULT_SEGMENTATION_TYPES);
+  const [selectedSegmentation, setSelectedSegmentation] = useState('');
+  const [customSegmentation, setCustomSegmentation] = useState('');
   const [showNewSegmentationType, setShowNewSegmentationType] = useState(false);
-  const [newSegmentationTypeName, setNewSegmentationTypeName] = useState('');
+  const [newSegmentationName, setNewSegmentationName] = useState('');
+  const [newSegmentationDescription, setNewSegmentationDescription] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -93,6 +108,10 @@ export function TargetDialog({
           setAgeMax(ageRangeParts[1].trim());
           setNoMaxAge(false);
         }
+      } else if (initialData?.age_range?.endsWith('+')) {
+        setAgeMin(initialData.age_range.replace('+', ''));
+        setAgeMax('');
+        setNoMaxAge(true);
       } else {
         setAgeMin('');
         setAgeMax('');
@@ -100,24 +119,33 @@ export function TargetDialog({
       }
       
       setLocations(initialData?.geolocation || []);
+      
+      // Check if behavior matches existing types
       const behaviorValue = initialData?.behavior || '';
-      if (segmentationTypes.includes(behaviorValue)) {
-        setSegmentationType(behaviorValue);
+      const existingType = segmentationTypes.find(t => t.name === behaviorValue);
+      if (existingType) {
+        setSelectedSegmentation(behaviorValue);
         setCustomSegmentation('');
       } else if (behaviorValue) {
-        setSegmentationType('custom');
+        setSelectedSegmentation('custom');
         setCustomSegmentation(behaviorValue);
       } else {
-        setSegmentationType('');
+        setSelectedSegmentation('');
         setCustomSegmentation('');
       }
       
-      // Reset city search
+      // Reset location form
+      setCountryType('brasil');
       setCitySearch('');
       setShowCityResults(false);
-      setPendingLocation(null);
+      setPendingBrazilCity(null);
+      setOtherCountryLocation('');
+      setRadiusType('radius');
       setPendingRadius('');
       setPendingRadiusUnit('km');
+      setShowNewSegmentationType(false);
+      setNewSegmentationName('');
+      setNewSegmentationDescription('');
     }
   }, [open, initialData]);
 
@@ -135,38 +163,65 @@ export function TargetDialog({
   };
 
   const handleSelectCity = (city: BrazilianCity) => {
-    setPendingLocation(city);
+    setPendingBrazilCity(city);
     setCitySearch(`${city.city}, ${city.stateCode}`);
     setShowCityResults(false);
   };
 
   const handleAddLocation = () => {
-    if (!pendingLocation) {
-      toast.error('Selecione uma cidade da lista');
-      return;
-    }
-    
-    if (!pendingRadius) {
-      toast.error('Informe o raio');
-      return;
-    }
-
     if (locations.length >= 100) {
       toast.error('Limite máximo de 100 localizações atingido');
       return;
     }
 
-    const newLocation: Location = {
-      city: pendingLocation.city,
-      state: pendingLocation.state,
-      country: pendingLocation.country,
-      radius: pendingRadius,
-      radiusUnit: pendingRadiusUnit
-    };
+    if (countryType === 'brasil') {
+      if (!pendingBrazilCity) {
+        toast.error('Selecione uma cidade da lista');
+        return;
+      }
+      
+      if (radiusType === 'radius' && !pendingRadius) {
+        toast.error('Informe o raio');
+        return;
+      }
 
-    setLocations([...locations, newLocation]);
-    setCitySearch('');
-    setPendingLocation(null);
+      const newLocation: Location = {
+        city: pendingBrazilCity.city,
+        state: pendingBrazilCity.state,
+        country: 'Brasil',
+        radius: radiusType === 'exact' ? '' : pendingRadius,
+        radiusUnit: pendingRadiusUnit,
+        exactRegion: radiusType === 'exact'
+      };
+
+      setLocations([...locations, newLocation]);
+      setCitySearch('');
+      setPendingBrazilCity(null);
+    } else {
+      if (!otherCountryLocation.trim()) {
+        toast.error('Informe a localização');
+        return;
+      }
+
+      if (radiusType === 'radius' && !pendingRadius) {
+        toast.error('Informe o raio');
+        return;
+      }
+
+      const newLocation: Location = {
+        city: otherCountryLocation.trim(),
+        state: '',
+        country: 'Outro',
+        radius: radiusType === 'exact' ? '' : pendingRadius,
+        radiusUnit: pendingRadiusUnit,
+        exactRegion: radiusType === 'exact'
+      };
+
+      setLocations([...locations, newLocation]);
+      setOtherCountryLocation('');
+    }
+
+    setRadiusType('radius');
     setPendingRadius('');
     setPendingRadiusUnit('km');
   };
@@ -176,41 +231,31 @@ export function TargetDialog({
   };
 
   const handleAddSegmentationType = () => {
-    const trimmedName = newSegmentationTypeName.trim();
-    if (!trimmedName) return;
-    if (trimmedName.length > 25) {
-      toast.error('Nome deve ter no máximo 25 caracteres');
+    const trimmedName = newSegmentationName.trim();
+    if (!trimmedName) {
+      toast.error('Nome é obrigatório');
       return;
     }
-    if (segmentationTypes.includes(trimmedName.toLowerCase())) {
+    if (trimmedName.length > 35) {
+      toast.error('Nome deve ter no máximo 35 caracteres');
+      return;
+    }
+    if (segmentationTypes.some(t => t.name.toLowerCase() === trimmedName.toLowerCase())) {
       toast.error('Este tipo de segmentação já existe');
       return;
     }
-    setSegmentationTypes([...segmentationTypes, trimmedName.toLowerCase()]);
-    setNewSegmentationTypeName('');
+    
+    const newType: SegmentationType = {
+      name: trimmedName.toLowerCase(),
+      description: newSegmentationDescription.trim().slice(0, 180)
+    };
+    
+    setSegmentationTypes([...segmentationTypes, newType]);
+    setNewSegmentationName('');
+    setNewSegmentationDescription('');
     setShowNewSegmentationType(false);
-    setSegmentationType(trimmedName.toLowerCase());
+    setSelectedSegmentation(newType.name);
     toast.success('Tipo de segmentação adicionado');
-  };
-
-  const handleEditSegmentationType = (oldName: string) => {
-    const trimmedName = editingSegmentationValue.trim();
-    if (!trimmedName) return;
-    if (trimmedName.length > 25) {
-      toast.error('Nome deve ter no máximo 25 caracteres');
-      return;
-    }
-    if (trimmedName.toLowerCase() !== oldName && segmentationTypes.includes(trimmedName.toLowerCase())) {
-      toast.error('Este tipo de segmentação já existe');
-      return;
-    }
-    const newTypes = segmentationTypes.map(t => t === oldName ? trimmedName.toLowerCase() : t);
-    setSegmentationTypes(newTypes);
-    if (segmentationType === oldName) {
-      setSegmentationType(trimmedName.toLowerCase());
-    }
-    setEditingSegmentationType(null);
-    setEditingSegmentationValue('');
   };
 
   const handleSave = () => {
@@ -242,7 +287,7 @@ export function TargetDialog({
       ageRange = noMaxAge ? `${ageMin}+` : (ageMax ? `${ageMin}-${ageMax}` : ageMin);
     }
 
-    const finalBehavior = segmentationType === 'custom' ? customSegmentation : segmentationType;
+    const finalBehavior = selectedSegmentation === 'custom' ? customSegmentation : selectedSegmentation;
 
     onSave({
       name: trimmedName,
@@ -256,9 +301,22 @@ export function TargetDialog({
     setAgeMax('');
     setNoMaxAge(false);
     setLocations([]);
-    setSegmentationType('');
+    setSelectedSegmentation('');
     setCustomSegmentation('');
     onOpenChange(false);
+  };
+
+  const getLocationDisplay = (location: Location) => {
+    const parts = [location.city];
+    if (location.state) parts.push(location.state);
+    if (location.country !== 'Outro') parts.push(location.country);
+    
+    const locationStr = parts.join(', ');
+    
+    if (location.exactRegion) {
+      return `${locationStr} - Região Exata`;
+    }
+    return `${locationStr} - ${location.radius} ${location.radiusUnit}`;
   };
 
   return (
@@ -329,73 +387,126 @@ export function TargetDialog({
           <div className="space-y-3">
             <Label>Localização</Label>
             
-            {/* City Search */}
-            <div className="p-3 border rounded-lg space-y-3 bg-muted/30">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={citySearch}
-                  onChange={(e) => {
-                    setCitySearch(e.target.value);
-                    setShowCityResults(true);
-                    setPendingLocation(null);
-                  }}
-                  onFocus={() => setShowCityResults(true)}
-                  placeholder="Digite o nome da cidade..."
-                  className="pl-9"
-                />
-                {loadingCities && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                )}
+            {/* Country Type Selection */}
+            <RadioGroup
+              value={countryType}
+              onValueChange={(value: 'brasil' | 'outros') => {
+                setCountryType(value);
+                setCitySearch('');
+                setPendingBrazilCity(null);
+                setOtherCountryLocation('');
+              }}
+              className="flex gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="brasil" id="brasil" />
+                <Label htmlFor="brasil" className="font-normal cursor-pointer">Brasil</Label>
               </div>
-              
-              {/* City Results Dropdown */}
-              {showCityResults && cityResults.length > 0 && !pendingLocation && (
-                <div className="max-h-40 overflow-y-auto border rounded-md bg-background">
-                  {cityResults.map((city, idx) => (
-                    <button
-                      key={`${city.city}-${city.stateCode}-${idx}`}
-                      type="button"
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
-                      onClick={() => handleSelectCity(city)}
-                    >
-                      {city.city}, {city.stateCode} - {city.country}
-                    </button>
-                  ))}
-                </div>
-              )}
-              
-              {citySearch.length >= 2 && cityResults.length === 0 && !pendingLocation && !loadingCities && (
-                <p className="text-xs text-muted-foreground">Nenhuma cidade encontrada</p>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="outros" id="outros" />
+                <Label htmlFor="outros" className="font-normal cursor-pointer">Outros países</Label>
+              </div>
+            </RadioGroup>
+            
+            {/* Location Input */}
+            <div className="p-3 border rounded-lg space-y-3 bg-muted/30">
+              {countryType === 'brasil' ? (
+                <>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      value={citySearch}
+                      onChange={(e) => {
+                        setCitySearch(e.target.value);
+                        setShowCityResults(true);
+                        setPendingBrazilCity(null);
+                      }}
+                      onFocus={() => setShowCityResults(true)}
+                      placeholder="Digite o nome da cidade..."
+                      className="pl-9"
+                    />
+                    {loadingCities && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
+                  
+                  {/* City Results Dropdown */}
+                  {showCityResults && cityResults.length > 0 && !pendingBrazilCity && (
+                    <div className="max-h-40 overflow-y-auto border rounded-md bg-background z-50">
+                      {cityResults.map((city, idx) => (
+                        <button
+                          key={`${city.city}-${city.stateCode}-${idx}`}
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
+                          onClick={() => handleSelectCity(city)}
+                        >
+                          {city.city}, {city.stateCode} - {city.country}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {citySearch.length >= 2 && cityResults.length === 0 && !pendingBrazilCity && !loadingCities && (
+                    <p className="text-xs text-muted-foreground">Nenhuma cidade encontrada</p>
+                  )}
+                </>
+              ) : (
+                <Input
+                  value={otherCountryLocation}
+                  onChange={(e) => setOtherCountryLocation(e.target.value.slice(0, 45))}
+                  placeholder="Ex: Miami, FL, Estados Unidos"
+                  maxLength={45}
+                />
               )}
 
               {/* Radius Selection */}
-              {pendingLocation && (
-                <div className="flex items-center gap-2 pt-2 border-t">
-                  <span className="text-sm text-muted-foreground">Raio:</span>
-                  <Input
-                    value={pendingRadius}
-                    onChange={(e) => setPendingRadius(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                    placeholder="30"
-                    className="w-20"
-                    maxLength={3}
-                  />
-                  <Select
-                    value={pendingRadiusUnit}
-                    onValueChange={(value: 'km' | 'miles') => setPendingRadiusUnit(value)}
+              {(pendingBrazilCity || (countryType === 'outros' && otherCountryLocation)) && (
+                <div className="space-y-3 pt-2 border-t">
+                  <RadioGroup
+                    value={radiusType}
+                    onValueChange={(value: 'radius' | 'exact') => setRadiusType(value)}
+                    className="flex gap-4"
                   >
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="km">km</SelectItem>
-                      <SelectItem value="miles">milhas</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button type="button" size="sm" onClick={handleAddLocation}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Adicionar
-                  </Button>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="radius" id="radius" />
+                      <Label htmlFor="radius" className="font-normal cursor-pointer">Com raio</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="exact" id="exact" />
+                      <Label htmlFor="exact" className="font-normal cursor-pointer">Região Exata</Label>
+                    </div>
+                  </RadioGroup>
+
+                  <div className="flex items-center gap-2">
+                    {radiusType === 'radius' && (
+                      <>
+                        <span className="text-sm text-muted-foreground">Raio:</span>
+                        <Input
+                          value={pendingRadius}
+                          onChange={(e) => setPendingRadius(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                          placeholder="30"
+                          className="w-20"
+                          maxLength={3}
+                        />
+                        <Select
+                          value={pendingRadiusUnit}
+                          onValueChange={(value: 'km' | 'miles') => setPendingRadiusUnit(value)}
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="km">km</SelectItem>
+                            <SelectItem value="miles">milhas</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </>
+                    )}
+                    <Button type="button" size="sm" onClick={handleAddLocation} className="ml-auto">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Adicionar
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -403,15 +514,13 @@ export function TargetDialog({
             {/* Added Locations */}
             {locations.map((location, index) => (
               <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
-                <span className="text-sm">
-                  {location.city}, {location.state} - {location.radius} {location.radiusUnit}
-                </span>
+                <span className="text-sm">{getLocationDisplay(location)}</span>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   onClick={() => handleRemoveLocation(index)}
-                  className="h-8 w-8 text-destructive"
+                  className="h-8 w-8 text-destructive shrink-0"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -426,7 +535,7 @@ export function TargetDialog({
           {/* Segmentation Types */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Segmentação</Label>
+              <Label>Segmentação comportamental</Label>
               <Button 
                 type="button" 
                 variant="ghost" 
@@ -439,94 +548,70 @@ export function TargetDialog({
               </Button>
             </div>
 
+            {/* Dropdown for existing types */}
+            <Select value={selectedSegmentation} onValueChange={setSelectedSegmentation}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo de segmentação" />
+              </SelectTrigger>
+              <SelectContent>
+                {segmentationTypes.map((type) => (
+                  <SelectItem key={type.name} value={type.name}>
+                    <div className="flex flex-col">
+                      <span className="capitalize">{type.name}</span>
+                      {type.description && (
+                        <span className="text-xs text-muted-foreground">{type.description}</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+                <SelectItem value="custom">Outro (personalizado)</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* New segmentation type form */}
             {showNewSegmentationType && (
-              <div className="flex items-center gap-2 p-2 border rounded-lg bg-muted/30">
-                <Input
-                  value={newSegmentationTypeName}
-                  onChange={(e) => setNewSegmentationTypeName(e.target.value.slice(0, 25))}
-                  placeholder="Nome do novo tipo"
-                  maxLength={25}
-                  className="flex-1 h-8 text-sm"
-                />
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleAddSegmentationType}>
-                  <Check className="h-3 w-3 text-green-600" />
-                </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setShowNewSegmentationType(false); setNewSegmentationTypeName(''); }}>
-                  <X className="h-3 w-3 text-destructive" />
-                </Button>
+              <div className="p-3 border rounded-lg bg-muted/30 space-y-3">
+                <div className="space-y-2">
+                  <Label className="text-xs">Nome do novo tipo *</Label>
+                  <Input
+                    value={newSegmentationName}
+                    onChange={(e) => setNewSegmentationName(e.target.value.slice(0, 35))}
+                    placeholder="Nome do tipo de segmentação"
+                    maxLength={35}
+                  />
+                  <p className="text-xs text-muted-foreground">{newSegmentationName.length}/35 caracteres</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Descrição (opcional)</Label>
+                  <Textarea
+                    value={newSegmentationDescription}
+                    onChange={(e) => setNewSegmentationDescription(e.target.value.slice(0, 180))}
+                    placeholder="Descrição do tipo de segmentação"
+                    rows={2}
+                    maxLength={180}
+                  />
+                  <p className="text-xs text-muted-foreground">{newSegmentationDescription.length}/180 caracteres</p>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      setShowNewSegmentationType(false);
+                      setNewSegmentationName('');
+                      setNewSegmentationDescription('');
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button size="sm" onClick={handleAddSegmentationType}>
+                    Adicionar tipo
+                  </Button>
+                </div>
               </div>
             )}
 
-            <div className="space-y-1">
-              {segmentationTypes.map((type) => (
-                <div 
-                  key={type} 
-                  className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
-                    segmentationType === type ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted/50'
-                  }`}
-                  onClick={() => {
-                    if (editingSegmentationType !== type) {
-                      setSegmentationType(type);
-                    }
-                  }}
-                >
-                  {editingSegmentationType === type ? (
-                    <>
-                      <Input
-                        value={editingSegmentationValue}
-                        onChange={(e) => setEditingSegmentationValue(e.target.value.slice(0, 25))}
-                        maxLength={25}
-                        className="flex-1 h-7 text-sm"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-6 w-6" 
-                        onClick={(e) => { e.stopPropagation(); handleEditSegmentationType(type); }}
-                      >
-                        <Check className="h-3 w-3 text-green-600" />
-                      </Button>
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-6 w-6" 
-                        onClick={(e) => { e.stopPropagation(); setEditingSegmentationType(null); }}
-                      >
-                        <X className="h-3 w-3 text-destructive" />
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="flex-1 text-sm capitalize">{type}</span>
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          setEditingSegmentationType(type); 
-                          setEditingSegmentationValue(type); 
-                        }}
-                      >
-                        <Pencil className="h-3 w-3 text-muted-foreground" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-              ))}
-              
-              <div 
-                className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
-                  segmentationType === 'custom' ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted/50'
-                }`}
-                onClick={() => setSegmentationType('custom')}
-              >
-                <span className="flex-1 text-sm">Outro (personalizado)</span>
-              </div>
-            </div>
-
-            {segmentationType === 'custom' && (
+            {selectedSegmentation === 'custom' && (
               <Textarea
                 value={customSegmentation}
                 onChange={(e) => setCustomSegmentation(e.target.value)}
