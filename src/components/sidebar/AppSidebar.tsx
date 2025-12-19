@@ -240,15 +240,15 @@ export function AppSidebar() {
 
           {/* Subdivisões de Plano */}
           <Collapsible open={openSections.subdivisions} onOpenChange={() => toggleSection('subdivisions')}>
-            <div className="group flex items-center">
+            <div className="group flex items-center min-w-0">
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
-                  {openSections.subdivisions ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                  <Layers className="h-3.5 w-3.5" />
-                  Subdivisões de Plano
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs min-w-0 overflow-hidden">
+                  {openSections.subdivisions ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                  <Layers className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Subdivisões de Plano</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/subdivisions" className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <Link to="/config/subdivisions" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -313,15 +313,15 @@ export function AppSidebar() {
 
           {/* Momentos de Campanha */}
           <Collapsible open={openSections.moments} onOpenChange={() => toggleSection('moments')}>
-            <div className="group flex items-center">
+            <div className="group flex items-center min-w-0">
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
-                  {openSections.moments ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                  <Clock className="h-3.5 w-3.5" />
-                  Momentos de Campanha
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs min-w-0 overflow-hidden">
+                  {openSections.moments ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Momentos de Campanha</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/moments" className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <Link to="/config/moments" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -360,15 +360,15 @@ export function AppSidebar() {
 
           {/* Fases do Funil */}
           <Collapsible open={openSections.funnelStages} onOpenChange={() => toggleSection('funnelStages')}>
-            <div className="group flex items-center">
+            <div className="group flex items-center min-w-0">
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
-                  {openSections.funnelStages ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                  <Filter className="h-3.5 w-3.5" />
-                  Fases do Funil
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs min-w-0 overflow-hidden">
+                  {openSections.funnelStages ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                  <Filter className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Fases do Funil</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/funnel-stages" className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <Link to="/config/funnel-stages" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -407,15 +407,15 @@ export function AppSidebar() {
 
           {/* Meio */}
           <Collapsible open={openSections.mediums} onOpenChange={() => toggleSection('mediums')}>
-            <div className="group flex items-center">
+            <div className="group flex items-center min-w-0">
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
-                  {openSections.mediums ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                  <Radio className="h-3.5 w-3.5" />
-                  Meio
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs min-w-0 overflow-hidden">
+                  {openSections.mediums ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                  <Radio className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Meio</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/mediums" className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <Link to="/config/mediums" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -454,15 +454,15 @@ export function AppSidebar() {
 
           {/* Veículos e Canais */}
           <Collapsible open={openSections.vehicles} onOpenChange={() => toggleSection('vehicles')}>
-            <div className="group flex items-center">
+            <div className="group flex items-center min-w-0">
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
-                  {openSections.vehicles ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                  <Tv className="h-3.5 w-3.5" />
-                  Veículos e Canais
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs min-w-0 overflow-hidden">
+                  {openSections.vehicles ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                  <Tv className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Veículos e Canais</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/vehicles" className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <Link to="/config/vehicles" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -527,15 +527,15 @@ export function AppSidebar() {
 
           {/* Segmentação e Target */}
           <Collapsible open={openSections.targets} onOpenChange={() => toggleSection('targets')}>
-            <div className="group flex items-center">
+            <div className="group flex items-center min-w-0">
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
-                  {openSections.targets ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                  <Users className="h-3.5 w-3.5" />
-                  Segmentação e Target
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs min-w-0 overflow-hidden">
+                  {openSections.targets ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                  <Users className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Segmentação e Target</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/targets" className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <Link to="/config/targets" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -574,15 +574,15 @@ export function AppSidebar() {
 
           {/* Criativos */}
           <Collapsible open={openSections.creatives} onOpenChange={() => toggleSection('creatives')}>
-            <div className="group flex items-center">
+            <div className="group flex items-center min-w-0">
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs">
-                  {openSections.creatives ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                  <Image className="h-3.5 w-3.5" />
-                  Criativos
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs min-w-0 overflow-hidden">
+                  {openSections.creatives ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                  <Image className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Criativos</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/creatives" className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <Link to="/config/creatives" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
