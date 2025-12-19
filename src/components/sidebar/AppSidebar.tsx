@@ -287,7 +287,7 @@ export function AppSidebar() {
                         setSubdivisionDialogOpen(true);
                       }}
                       onDelete={() => subdivisions.remove.mutate(sub.id)}
-                      className="flex-1"
+                      className="flex-1 min-w-0"
                     />
                   </div>
                   <CollapsibleContent className="pl-6">
@@ -501,7 +501,7 @@ export function AppSidebar() {
                         setVehicleDialogOpen(true);
                       }}
                       onDelete={() => vehicles.remove.mutate(vehicle.id)}
-                      className="flex-1"
+                      className="flex-1 min-w-0"
                     />
                   </div>
                   <CollapsibleContent className="pl-6">
