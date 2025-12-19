@@ -21,7 +21,7 @@ import {
   Eye
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates } from '@/hooks/useConfigData';
+import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates, useBehavioralSegmentations } from '@/hooks/useConfigData';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -36,6 +36,7 @@ import { VehicleDialog } from '@/components/config/VehicleDialog';
 import { ChannelDialog } from '@/components/config/ChannelDialog';
 import { TargetDialog } from '@/components/config/TargetDialog';
 import { CreativeDialog } from '@/components/config/CreativeDialog';
+import { SegmentDialog } from '@/components/config/SegmentDialog';
 
 export function AppSidebar() {
   const { user, signOut } = useAuth();
@@ -51,6 +52,7 @@ export function AppSidebar() {
   const channels = useChannels();
   const targets = useTargets();
   const creativeTemplates = useCreativeTemplates();
+  const behavioralSegmentations = useBehavioralSegmentations();
 
   // Section open states
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -62,6 +64,8 @@ export function AppSidebar() {
     mediums: false,
     vehicles: false,
     targets: false,
+    segments: false,
+    targetsList: false,
     creatives: false,
     trash: false,
   });
@@ -80,6 +84,7 @@ export function AppSidebar() {
   const [channelDialogOpen, setChannelDialogOpen] = useState(false);
   const [targetDialogOpen, setTargetDialogOpen] = useState(false);
   const [creativeDialogOpen, setCreativeDialogOpen] = useState(false);
+  const [segmentDialogOpen, setSegmentDialogOpen] = useState(false);
 
   // Editing states - track which item is being edited
   const [editingSubdivision, setEditingSubdivision] = useState<any>(null);
@@ -90,6 +95,7 @@ export function AppSidebar() {
   const [editingChannel, setEditingChannel] = useState<any>(null);
   const [editingTarget, setEditingTarget] = useState<any>(null);
   const [editingCreative, setEditingCreative] = useState<any>(null);
+  const [editingSegment, setEditingSegment] = useState<any>(null);
 
   // Track which vehicle is selected for creating a new channel
   const [selectedVehicleForChannel, setSelectedVehicleForChannel] = useState<{ id: string; name: string } | null>(null);
@@ -124,6 +130,7 @@ export function AppSidebar() {
   const getVehicleNames = () => vehicles.data?.map(v => v.name) || [];
   const getTargetNames = () => targets.data?.map(t => t.name) || [];
   const getCreativeNames = () => creativeTemplates.data?.map(c => c.name) || [];
+  const getSegmentNames = () => behavioralSegmentations.data?.map(s => s.name) || [];
 
   return (
     <div className="flex flex-col h-full w-64 border-r border-sidebar-border bg-sidebar-background">
@@ -562,33 +569,89 @@ export function AppSidebar() {
               </Link>
             </div>
             <CollapsibleContent className="pl-4">
-              {targets.data?.slice(0, MAX_ITEMS).map(target => (
-                <ConfigItemRow
-                  key={target.id}
-                  name={target.name}
-                  onEdit={() => {
-                    setEditingTarget(target);
-                    setTargetDialogOpen(true);
-                  }}
-                  onDelete={() => targets.remove.mutate(target.id)}
-                />
-              ))}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
-                onClick={() => setTargetDialogOpen(true)}
-              >
-                <Plus className="h-3 w-3" />
-                Criar nova segmentação
-              </Button>
-              {(targets.data?.length || 0) > MAX_ITEMS && (
-                <Link to="/config/targets">
-                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                    ... ver todos ({targets.data?.length})
+              {/* Segmentos subsection */}
+              <Collapsible open={openSections.segments} onOpenChange={() => toggleSection('segments')}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-7 text-xs">
+                    {openSections.segments ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
+                    <span className="font-medium">Segmentos</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{behavioralSegmentations.data?.length || 0}</span>
                   </Button>
-                </Link>
-              )}
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-4">
+                  {behavioralSegmentations.data?.slice(0, MAX_ITEMS).map(segment => (
+                    <ConfigItemRow
+                      key={segment.id}
+                      name={segment.name}
+                      onEdit={() => {
+                        setEditingSegment(segment);
+                        setSegmentDialogOpen(true);
+                      }}
+                      onDelete={() => behavioralSegmentations.remove.mutate(segment.id)}
+                    />
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start gap-2 h-6 text-[10px] text-primary hover:text-primary"
+                    onClick={() => {
+                      setEditingSegment(null);
+                      setSegmentDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="h-2.5 w-2.5" />
+                    Criar novo segmento
+                  </Button>
+                  {(behavioralSegmentations.data?.length || 0) > MAX_ITEMS && (
+                    <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                      ... ver todos ({behavioralSegmentations.data?.length})
+                    </Button>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Target subsection */}
+              <Collapsible open={openSections.targetsList} onOpenChange={() => toggleSection('targetsList')}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-7 text-xs">
+                    {openSections.targetsList ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
+                    <span className="font-medium">Target</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{targets.data?.length || 0}</span>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-4">
+                  {targets.data?.slice(0, MAX_ITEMS).map(target => (
+                    <ConfigItemRow
+                      key={target.id}
+                      name={target.name}
+                      onEdit={() => {
+                        setEditingTarget(target);
+                        setTargetDialogOpen(true);
+                      }}
+                      onDelete={() => targets.remove.mutate(target.id)}
+                    />
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start gap-2 h-6 text-[10px] text-primary hover:text-primary"
+                    onClick={() => {
+                      setEditingTarget(null);
+                      setTargetDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="h-2.5 w-2.5" />
+                    Criar novo target
+                  </Button>
+                  {(targets.data?.length || 0) > MAX_ITEMS && (
+                    <Link to="/config/targets">
+                      <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                        ... ver todos ({targets.data?.length})
+                      </Button>
+                    </Link>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
             </CollapsibleContent>
           </Collapsible>
 
@@ -814,6 +877,24 @@ export function AppSidebar() {
         }}
         existingNames={getCreativeNames()}
         mode="create"
+      />
+
+      <SegmentDialog
+        open={segmentDialogOpen}
+        onOpenChange={(open) => {
+          setSegmentDialogOpen(open);
+          if (!open) setEditingSegment(null);
+        }}
+        onSave={(data) => {
+          if (editingSegment) {
+            behavioralSegmentations.update.mutate({ id: editingSegment.id, ...data });
+          } else {
+            behavioralSegmentations.create.mutate(data);
+          }
+        }}
+        existingNames={getSegmentNames()}
+        initialData={editingSegment || undefined}
+        mode={editingSegment ? 'edit' : 'create'}
       />
     </div>
   );

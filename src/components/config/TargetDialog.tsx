@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Plus, Trash2, Search, Loader2, Pencil } from 'lucide-react';
+import { Plus, Trash2, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBrazilianCities, BrazilianCity } from '@/hooks/useBrazilianCities';
 import { useBehavioralSegmentations, BehavioralSegmentation } from '@/hooks/useConfigData';
@@ -78,19 +78,13 @@ export function TargetDialog({
   const cityResults = cities.length > 0 ? searchCities(citySearch) : [];
   
   // Behavioral Segmentations from database
-  const { data: behavioralSegmentations = [], create: createBehavioral, update: updateBehavioral, remove: removeBehavioral } = useBehavioralSegmentations();
+  const { data: behavioralSegmentations = [], create: createBehavioral } = useBehavioralSegmentations();
   
   // Segmentation state
   const [selectedSegmentation, setSelectedSegmentation] = useState('');
-  const [customSegmentation, setCustomSegmentation] = useState('');
   const [showNewSegmentationType, setShowNewSegmentationType] = useState(false);
   const [newSegmentationName, setNewSegmentationName] = useState('');
   const [newSegmentationDescription, setNewSegmentationDescription] = useState('');
-  
-  // Edit segmentation state
-  const [editingSegmentation, setEditingSegmentation] = useState<BehavioralSegmentation | null>(null);
-  const [editSegmentationName, setEditSegmentationName] = useState('');
-  const [editSegmentationDescription, setEditSegmentationDescription] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -125,13 +119,8 @@ export function TargetDialog({
       const existingType = behavioralSegmentations.find(t => t.name === behaviorValue);
       if (existingType) {
         setSelectedSegmentation(behaviorValue);
-        setCustomSegmentation('');
-      } else if (behaviorValue) {
-        setSelectedSegmentation('custom');
-        setCustomSegmentation(behaviorValue);
       } else {
         setSelectedSegmentation('');
-        setCustomSegmentation('');
       }
       
       // Reset location form
@@ -146,7 +135,6 @@ export function TargetDialog({
       setShowNewSegmentationType(false);
       setNewSegmentationName('');
       setNewSegmentationDescription('');
-      setEditingSegmentation(null);
     }
   }, [open, initialData, behavioralSegmentations]);
 
@@ -267,58 +255,6 @@ export function TargetDialog({
     }
   };
 
-  const handleEditSegmentation = (seg: BehavioralSegmentation) => {
-    setEditingSegmentation(seg);
-    setEditSegmentationName(seg.name);
-    setEditSegmentationDescription(seg.description || '');
-  };
-
-  const handleSaveEditSegmentation = async () => {
-    if (!editingSegmentation) return;
-    
-    const trimmedName = editSegmentationName.trim();
-    if (!trimmedName) {
-      toast.error('Nome é obrigatório');
-      return;
-    }
-    if (trimmedName.length > 35) {
-      toast.error('Nome deve ter no máximo 35 caracteres');
-      return;
-    }
-    if (behavioralSegmentations.some(t => t.id !== editingSegmentation.id && t.name.toLowerCase() === trimmedName.toLowerCase())) {
-      toast.error('Este tipo de segmentação já existe');
-      return;
-    }
-    
-    try {
-      await updateBehavioral.mutateAsync({
-        id: editingSegmentation.id,
-        name: trimmedName.toLowerCase(),
-        description: editSegmentationDescription.trim().slice(0, 180) || undefined
-      });
-      
-      // Update selection if we were using this one
-      if (selectedSegmentation === editingSegmentation.name) {
-        setSelectedSegmentation(trimmedName.toLowerCase());
-      }
-      
-      setEditingSegmentation(null);
-    } catch (error) {
-      toast.error('Erro ao atualizar segmentação comportamental');
-    }
-  };
-
-  const handleDeleteSegmentation = async (seg: BehavioralSegmentation) => {
-    try {
-      await removeBehavioral.mutateAsync(seg.id);
-      if (selectedSegmentation === seg.name) {
-        setSelectedSegmentation('');
-      }
-    } catch (error) {
-      toast.error('Erro ao remover segmentação comportamental');
-    }
-  };
-
   const handleSave = () => {
     const trimmedName = name.trim();
     
@@ -348,7 +284,7 @@ export function TargetDialog({
       ageRange = noMaxAge ? `${ageMin}+` : (ageMax ? `${ageMin}-${ageMax}` : ageMin);
     }
 
-    const finalBehavior = selectedSegmentation === 'custom' ? customSegmentation : selectedSegmentation;
+    const finalBehavior = selectedSegmentation;
 
     onSave({
       name: trimmedName,
@@ -364,7 +300,6 @@ export function TargetDialog({
     setNoMaxAge(false);
     setLocations([]);
     setSelectedSegmentation('');
-    setCustomSegmentation('');
     setDescription('');
     onOpenChange(false);
   };
@@ -615,126 +550,46 @@ export function TargetDialog({
             )}
           </div>
 
-          {/* Behavioral Segmentation Types */}
+          {/* Behavioral Segmentation - Simple Dropdown */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Segmentação comportamental</Label>
+            </div>
+
+            <div className="flex gap-2">
+              <Select value={selectedSegmentation} onValueChange={setSelectedSegmentation}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecione o segmento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {behavioralSegmentations.map((type) => (
+                    <SelectItem key={type.id} value={type.name}>
+                      <span className="capitalize">{type.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button 
                 type="button" 
-                variant="ghost" 
+                variant="outline" 
                 size="sm"
                 onClick={() => setShowNewSegmentationType(true)}
-                className="text-xs"
+                className="shrink-0"
               >
                 <Plus className="h-3 w-3 mr-1" />
-                Novo tipo
+                Novo segmento
               </Button>
             </div>
 
-            {/* Dropdown for existing types */}
-            <Select value={selectedSegmentation} onValueChange={setSelectedSegmentation}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo de segmentação" />
-              </SelectTrigger>
-              <SelectContent>
-                {behavioralSegmentations.map((type) => (
-                  <SelectItem key={type.id} value={type.name}>
-                    <div className="flex flex-col">
-                      <span className="capitalize">{type.name}</span>
-                      {type.description && (
-                        <span className="text-xs text-muted-foreground">{type.description}</span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-                <SelectItem value="custom">Outro (personalizado)</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Show list of behavioral segmentations with edit/delete */}
-            {behavioralSegmentations.length > 0 && (
-              <div className="border rounded-lg divide-y max-h-40 overflow-y-auto">
-                {behavioralSegmentations.map((seg) => (
-                  <div key={seg.id} className="flex items-center justify-between px-3 py-2 text-sm">
-                    <div className="flex-1 min-w-0">
-                      <span className="capitalize font-medium">{seg.name}</span>
-                      {seg.description && (
-                        <p className="text-xs text-muted-foreground truncate">{seg.description}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0 ml-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleEditSegmentation(seg)}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive"
-                        onClick={() => handleDeleteSegmentation(seg)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Edit segmentation form */}
-            {editingSegmentation && (
-              <div className="p-3 border rounded-lg bg-muted/30 space-y-3">
-                <div className="space-y-2">
-                  <Label className="text-xs">Editando: {editingSegmentation.name}</Label>
-                  <Input
-                    value={editSegmentationName}
-                    onChange={(e) => setEditSegmentationName(e.target.value.slice(0, 35))}
-                    placeholder="Nome do tipo de segmentação"
-                    maxLength={35}
-                  />
-                  <p className="text-xs text-muted-foreground">{editSegmentationName.length}/35 caracteres</p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Descrição (opcional)</Label>
-                  <Textarea
-                    value={editSegmentationDescription}
-                    onChange={(e) => setEditSegmentationDescription(e.target.value.slice(0, 180))}
-                    placeholder="Descrição do tipo de segmentação"
-                    rows={2}
-                    maxLength={180}
-                  />
-                  <p className="text-xs text-muted-foreground">{editSegmentationDescription.length}/180 caracteres</p>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setEditingSegmentation(null)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button size="sm" onClick={handleSaveEditSegmentation}>
-                    Salvar
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* New segmentation type form */}
+            {/* New segmentation form - inline */}
             {showNewSegmentationType && (
               <div className="p-3 border rounded-lg bg-muted/30 space-y-3">
                 <div className="space-y-2">
-                  <Label className="text-xs">Nome do novo tipo *</Label>
+                  <Label className="text-xs">Nome do novo segmento *</Label>
                   <Input
                     value={newSegmentationName}
                     onChange={(e) => setNewSegmentationName(e.target.value.slice(0, 35))}
-                    placeholder="Nome do tipo de segmentação"
+                    placeholder="Ex: Remarketing"
                     maxLength={35}
                   />
                   <p className="text-xs text-muted-foreground">{newSegmentationName.length}/35 caracteres</p>
@@ -744,7 +599,7 @@ export function TargetDialog({
                   <Textarea
                     value={newSegmentationDescription}
                     onChange={(e) => setNewSegmentationDescription(e.target.value.slice(0, 180))}
-                    placeholder="Descrição do tipo de segmentação"
+                    placeholder="Descrição do segmento"
                     rows={2}
                     maxLength={180}
                   />
@@ -763,19 +618,10 @@ export function TargetDialog({
                     Cancelar
                   </Button>
                   <Button size="sm" onClick={handleAddSegmentationType}>
-                    Adicionar tipo
+                    Criar segmento
                   </Button>
                 </div>
               </div>
-            )}
-
-            {selectedSegmentation === 'custom' && (
-              <Textarea
-                value={customSegmentation}
-                onChange={(e) => setCustomSegmentation(e.target.value)}
-                placeholder="Descreva a segmentação personalizada..."
-                rows={2}
-              />
             )}
           </div>
 
