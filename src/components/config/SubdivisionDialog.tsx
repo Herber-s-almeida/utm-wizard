@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,9 +29,17 @@ export function SubdivisionDialog({
   initialData,
   mode = 'create'
 }: SubdivisionDialogProps) {
-  const [name, setName] = useState(initialData?.name || '');
-  const [description, setDescription] = useState(initialData?.description || '');
-  const [details, setDetails] = useState<Detail[]>(initialData?.details || []);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [details, setDetails] = useState<Detail[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      setName(initialData?.name || '');
+      setDescription(initialData?.description || '');
+      setDetails(initialData?.details || []);
+    }
+  }, [open, initialData]);
 
   const handleAddDetail = () => {
     if (details.length >= 100) {
