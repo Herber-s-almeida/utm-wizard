@@ -14,6 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
+      channels: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channels_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creative_templates: {
+        Row: {
+          created_at: string
+          dimension: string | null
+          duration: string | null
+          format: string
+          id: string
+          message: string | null
+          name: string
+          objective: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dimension?: string | null
+          duration?: string | null
+          format: string
+          id?: string
+          message?: string | null
+          name: string
+          objective?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dimension?: string | null
+          duration?: string | null
+          format?: string
+          id?: string
+          message?: string | null
+          name?: string
+          objective?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      funnel_stages: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          order_index: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          order_index?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          order_index?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       media_creatives: {
         Row: {
           asset_url: string | null
@@ -161,6 +262,7 @@ export type Database = {
           campaign: string | null
           client: string | null
           created_at: string | null
+          deleted_at: string | null
           end_date: string | null
           id: string
           name: string
@@ -174,6 +276,7 @@ export type Database = {
           campaign?: string | null
           client?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           end_date?: string | null
           id?: string
           name: string
@@ -187,6 +290,7 @@ export type Database = {
           campaign?: string | null
           client?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           end_date?: string | null
           id?: string
           name?: string
@@ -197,6 +301,89 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      mediums: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      moments: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      plan_subdivisions: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_subdivisions_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "plan_subdivisions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -224,6 +411,74 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      targets: {
+        Row: {
+          age_range: string | null
+          behavior: string | null
+          created_at: string
+          geolocation: Json | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          age_range?: string | null
+          behavior?: string | null
+          created_at?: string
+          geolocation?: Json | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          age_range?: string | null
+          behavior?: string | null
+          created_at?: string
+          geolocation?: Json | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vehicles: {
+        Row: {
+          created_at: string
+          id: string
+          medium_id: string | null
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          medium_id?: string | null
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          medium_id?: string | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_medium_id_fkey"
+            columns: ["medium_id"]
+            isOneToOne: false
+            referencedRelation: "mediums"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
