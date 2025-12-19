@@ -82,8 +82,8 @@ export function TargetDialog({
   const [pendingRadius, setPendingRadius] = useState('');
   const [pendingRadiusUnit, setPendingRadiusUnit] = useState<'km' | 'miles'>('km');
   
-  const { searchCities, loading: loadingCities } = useBrazilianCities();
-  const cityResults = searchCities(citySearch);
+  const { cities, searchCities, loading: loadingCities } = useBrazilianCities();
+  const cityResults = cities.length > 0 ? searchCities(citySearch) : [];
   
   // Segmentation
   const [segmentationTypes, setSegmentationTypes] = useState<SegmentationType[]>(DEFAULT_SEGMENTATION_TYPES);
