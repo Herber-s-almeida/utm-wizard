@@ -57,7 +57,17 @@ export interface Target {
   age_range: string | null;
   geolocation: any;
   behavior: string | null;
+  description: string | null;
   user_id: string;
+}
+
+export interface BehavioralSegmentation {
+  id: string;
+  name: string;
+  description: string | null;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CreativeTemplate {
@@ -334,6 +344,46 @@ export function useChannels() {
   return { ...query, create, update, remove };
 }
 
+// Hook for Behavioral Segmentations
+export function useBehavioralSegmentations() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['behavioral_segmentations', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('behavioral_segmentations').select('*').order('created_at', { ascending: true });
+      if (error) throw error;
+      return data as BehavioralSegmentation[];
+    },
+    enabled: !!user,
+  });
+
+  const create = useMutation({
+    mutationFn: async ({ name, description }: { name: string; description?: string }) => {
+      const { data, error } = await supabase.from('behavioral_segmentations').insert({ name, description: description || null, user_id: user!.id }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['behavioral_segmentations'] }); toast.success('Segmentação comportamental criada!'); },
+  });
+
+  const update = useMutation({
+    mutationFn: async ({ id, name, description }: { id: string; name: string; description?: string }) => {
+      const { error } = await supabase.from('behavioral_segmentations').update({ name, description: description || null }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['behavioral_segmentations'] }); toast.success('Segmentação comportamental atualizada!'); },
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => { const { error } = await supabase.from('behavioral_segmentations').delete().eq('id', id); if (error) throw error; },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['behavioral_segmentations'] }); toast.success('Segmentação comportamental removida!'); },
+  });
+
+  return { ...query, create, update, remove };
+}
+
 // Hook for Targets
 export function useTargets() {
   const { user } = useAuth();
@@ -350,8 +400,8 @@ export function useTargets() {
   });
 
   const create = useMutation({
-    mutationFn: async (target: { name: string; age_range?: string; geolocation?: any; behavior?: string }) => {
-      const { data, error } = await supabase.from('targets').insert({ name: target.name, age_range: target.age_range || null, geolocation: target.geolocation || [], behavior: target.behavior || null, user_id: user!.id }).select().single();
+    mutationFn: async (target: { name: string; age_range?: string; geolocation?: any; behavior?: string; description?: string }) => {
+      const { data, error } = await supabase.from('targets').insert({ name: target.name, age_range: target.age_range || null, geolocation: target.geolocation || [], behavior: target.behavior || null, description: target.description || null, user_id: user!.id }).select().single();
       if (error) throw error;
       return data;
     },
