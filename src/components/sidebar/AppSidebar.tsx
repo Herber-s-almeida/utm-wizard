@@ -175,15 +175,27 @@ export function AppSidebar() {
             </Button>
           </Link>
 
-          {/* Criar novo */}
-          <Link to="/media-plans/new">
+          {/* Criar novo - Por Budget */}
+          <Link to="/media-plans/new/budget">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full justify-start gap-2 h-8 text-xs text-primary hover:text-primary"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Novo plano (Budget)
+            </Button>
+          </Link>
+
+          {/* Criar novo - Manual */}
+          <Link to="/media-plans/new/manual">
             <Button 
               variant="ghost" 
               size="sm" 
               className="w-full justify-start gap-2 h-8 text-xs text-primary hover:text-primary mb-2"
             >
               <Plus className="h-3.5 w-3.5" />
-              Criar novo plano
+              Novo plano (Manual)
             </Button>
           </Link>
 

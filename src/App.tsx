@@ -10,6 +10,8 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import MediaPlans from "./pages/MediaPlans";
 import NewMediaPlan from "./pages/NewMediaPlan";
+import NewMediaPlanBudget from "./pages/NewMediaPlanBudget";
+import NewMediaPlanManual from "./pages/NewMediaPlanManual";
 import MediaPlanDetail from "./pages/MediaPlanDetail";
 import NotFound from "./pages/NotFound";
 import SubdivisionsPage from "./pages/config/SubdivisionsPage";
@@ -35,6 +37,8 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/media-plans" element={<ProtectedRoute><MediaPlans /></ProtectedRoute>} />
             <Route path="/media-plans/new" element={<ProtectedRoute><NewMediaPlan /></ProtectedRoute>} />
+            <Route path="/media-plans/new/budget" element={<ProtectedRoute><NewMediaPlanBudget /></ProtectedRoute>} />
+            <Route path="/media-plans/new/manual" element={<ProtectedRoute><NewMediaPlanManual /></ProtectedRoute>} />
             <Route path="/media-plans/:id" element={<ProtectedRoute><MediaPlanDetail /></ProtectedRoute>} />
             <Route path="/config/subdivisions" element={<ProtectedRoute><SubdivisionsPage /></ProtectedRoute>} />
             <Route path="/config/moments" element={<ProtectedRoute><MomentsPage /></ProtectedRoute>} />

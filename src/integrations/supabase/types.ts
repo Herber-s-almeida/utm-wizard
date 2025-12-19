@@ -201,24 +201,33 @@ export type Database = {
       media_lines: {
         Row: {
           budget: number | null
+          budget_allocation: string | null
+          channel_id: string | null
           clicks: number | null
           conversions: number | null
           cpc: number | null
           cpm: number | null
           created_at: string | null
+          creative_template_id: string | null
           ctr: number | null
           destination_url: string | null
           end_date: string | null
           format: string | null
           funnel_stage: string | null
+          funnel_stage_id: string | null
           id: string
           impressions: number | null
           media_plan_id: string
+          medium_id: string | null
+          moment_id: string | null
           notes: string | null
           objective: string | null
+          percentage_of_plan: number | null
           placement: string | null
           platform: string
           start_date: string | null
+          subdivision_id: string | null
+          target_id: string | null
           updated_at: string | null
           user_id: string
           utm_campaign: string | null
@@ -226,27 +235,37 @@ export type Database = {
           utm_medium: string | null
           utm_source: string | null
           utm_term: string | null
+          vehicle_id: string | null
         }
         Insert: {
           budget?: number | null
+          budget_allocation?: string | null
+          channel_id?: string | null
           clicks?: number | null
           conversions?: number | null
           cpc?: number | null
           cpm?: number | null
           created_at?: string | null
+          creative_template_id?: string | null
           ctr?: number | null
           destination_url?: string | null
           end_date?: string | null
           format?: string | null
           funnel_stage?: string | null
+          funnel_stage_id?: string | null
           id?: string
           impressions?: number | null
           media_plan_id: string
+          medium_id?: string | null
+          moment_id?: string | null
           notes?: string | null
           objective?: string | null
+          percentage_of_plan?: number | null
           placement?: string | null
           platform: string
           start_date?: string | null
+          subdivision_id?: string | null
+          target_id?: string | null
           updated_at?: string | null
           user_id: string
           utm_campaign?: string | null
@@ -254,27 +273,37 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           utm_term?: string | null
+          vehicle_id?: string | null
         }
         Update: {
           budget?: number | null
+          budget_allocation?: string | null
+          channel_id?: string | null
           clicks?: number | null
           conversions?: number | null
           cpc?: number | null
           cpm?: number | null
           created_at?: string | null
+          creative_template_id?: string | null
           ctr?: number | null
           destination_url?: string | null
           end_date?: string | null
           format?: string | null
           funnel_stage?: string | null
+          funnel_stage_id?: string | null
           id?: string
           impressions?: number | null
           media_plan_id?: string
+          medium_id?: string | null
+          moment_id?: string | null
           notes?: string | null
           objective?: string | null
+          percentage_of_plan?: number | null
           placement?: string | null
           platform?: string
           start_date?: string | null
+          subdivision_id?: string | null
+          target_id?: string | null
           updated_at?: string | null
           user_id?: string
           utm_campaign?: string | null
@@ -282,13 +311,70 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           utm_term?: string | null
+          vehicle_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "media_lines_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_lines_creative_template_id_fkey"
+            columns: ["creative_template_id"]
+            isOneToOne: false
+            referencedRelation: "creative_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_lines_funnel_stage_id_fkey"
+            columns: ["funnel_stage_id"]
+            isOneToOne: false
+            referencedRelation: "funnel_stages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "media_lines_media_plan_id_fkey"
             columns: ["media_plan_id"]
             isOneToOne: false
             referencedRelation: "media_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_lines_medium_id_fkey"
+            columns: ["medium_id"]
+            isOneToOne: false
+            referencedRelation: "mediums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_lines_moment_id_fkey"
+            columns: ["moment_id"]
+            isOneToOne: false
+            referencedRelation: "moments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_lines_subdivision_id_fkey"
+            columns: ["subdivision_id"]
+            isOneToOne: false
+            referencedRelation: "plan_subdivisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_lines_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "targets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_lines_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]
@@ -301,7 +387,9 @@ export type Database = {
           deleted_at: string | null
           end_date: string | null
           id: string
+          kpis: Json | null
           name: string
+          objectives: string[] | null
           start_date: string | null
           status: string | null
           total_budget: number | null
@@ -315,7 +403,9 @@ export type Database = {
           deleted_at?: string | null
           end_date?: string | null
           id?: string
+          kpis?: Json | null
           name: string
+          objectives?: string[] | null
           start_date?: string | null
           status?: string | null
           total_budget?: number | null
@@ -329,7 +419,9 @@ export type Database = {
           deleted_at?: string | null
           end_date?: string | null
           id?: string
+          kpis?: Json | null
           name?: string
+          objectives?: string[] | null
           start_date?: string | null
           status?: string | null
           total_budget?: number | null
@@ -391,6 +483,66 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      plan_budget_distributions: {
+        Row: {
+          amount: number
+          created_at: string
+          distribution_type: string
+          id: string
+          media_plan_id: string
+          parent_distribution_id: string | null
+          percentage: number
+          reference_id: string | null
+          temporal_date: string | null
+          temporal_period: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          distribution_type: string
+          id?: string
+          media_plan_id: string
+          parent_distribution_id?: string | null
+          percentage?: number
+          reference_id?: string | null
+          temporal_date?: string | null
+          temporal_period?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          distribution_type?: string
+          id?: string
+          media_plan_id?: string
+          parent_distribution_id?: string | null
+          percentage?: number
+          reference_id?: string | null
+          temporal_date?: string | null
+          temporal_period?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_budget_distributions_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "media_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_budget_distributions_parent_distribution_id_fkey"
+            columns: ["parent_distribution_id"]
+            isOneToOne: false
+            referencedRelation: "plan_budget_distributions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plan_subdivisions: {
         Row: {
