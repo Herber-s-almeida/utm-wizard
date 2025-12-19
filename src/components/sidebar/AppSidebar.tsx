@@ -144,7 +144,7 @@ export function AppSidebar() {
         </Link>
       </div>
 
-      <ScrollArea className="flex-1 px-2 py-3">
+      <ScrollArea className="flex-1 py-3 pl-2 pr-6">
         {/* PLANOS DE MÍDIA */}
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
