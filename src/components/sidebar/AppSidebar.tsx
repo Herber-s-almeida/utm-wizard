@@ -33,6 +33,7 @@ import { cn } from '@/lib/utils';
 import { SubdivisionDialog } from '@/components/config/SubdivisionDialog';
 import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
 import { VehicleDialog } from '@/components/config/VehicleDialog';
+import { ChannelDialog } from '@/components/config/ChannelDialog';
 import { TargetDialog } from '@/components/config/TargetDialog';
 import { CreativeDialog } from '@/components/config/CreativeDialog';
 
@@ -76,6 +77,7 @@ export function AppSidebar() {
   const [funnelStageDialogOpen, setFunnelStageDialogOpen] = useState(false);
   const [mediumDialogOpen, setMediumDialogOpen] = useState(false);
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
+  const [channelDialogOpen, setChannelDialogOpen] = useState(false);
   const [targetDialogOpen, setTargetDialogOpen] = useState(false);
   const [creativeDialogOpen, setCreativeDialogOpen] = useState(false);
 
@@ -85,8 +87,12 @@ export function AppSidebar() {
   const [editingFunnelStage, setEditingFunnelStage] = useState<any>(null);
   const [editingMedium, setEditingMedium] = useState<any>(null);
   const [editingVehicle, setEditingVehicle] = useState<any>(null);
+  const [editingChannel, setEditingChannel] = useState<any>(null);
   const [editingTarget, setEditingTarget] = useState<any>(null);
   const [editingCreative, setEditingCreative] = useState<any>(null);
+
+  // Track which vehicle is selected for creating a new channel
+  const [selectedVehicleForChannel, setSelectedVehicleForChannel] = useState<{ id: string; name: string } | null>(null);
 
   const toggleSection = (key: string) => {
     setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
@@ -497,12 +503,26 @@ export function AppSidebar() {
                         key={channel.id}
                         name={channel.name}
                         onEdit={() => {
-                          // For channels, navigate to the vehicles page
-                          navigate('/config/vehicles');
+                          setEditingChannel(channel);
+                          setSelectedVehicleForChannel({ id: vehicle.id, name: vehicle.name });
+                          setChannelDialogOpen(true);
                         }}
                         onDelete={() => channels.remove.mutate(channel.id)}
                       />
                     ))}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start gap-2 h-6 text-[10px] text-primary hover:text-primary"
+                      onClick={() => {
+                        setEditingChannel(null);
+                        setSelectedVehicleForChannel({ id: vehicle.id, name: vehicle.name });
+                        setChannelDialogOpen(true);
+                      }}
+                    >
+                      <Plus className="h-2.5 w-2.5" />
+                      Criar novo canal
+                    </Button>
                   </CollapsibleContent>
                 </Collapsible>
               ))}
@@ -749,6 +769,25 @@ export function AppSidebar() {
           });
         }}
       />
+
+      {selectedVehicleForChannel && (
+        <ChannelDialog
+          open={channelDialogOpen}
+          onOpenChange={(open) => {
+            setChannelDialogOpen(open);
+            if (!open) {
+              setSelectedVehicleForChannel(null);
+              setEditingChannel(null);
+            }
+          }}
+          onSave={(data) => channels.create.mutate(data)}
+          onUpdate={(data) => channels.update.mutate(data)}
+          editingChannel={editingChannel}
+          vehicleId={selectedVehicleForChannel.id}
+          vehicleName={selectedVehicleForChannel.name}
+          existingNames={getVehicleChannels(selectedVehicleForChannel.id).map(c => c.name)}
+        />
+      )}
 
       <TargetDialog
         open={targetDialogOpen}
