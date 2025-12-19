@@ -727,7 +727,7 @@ export function AppSidebar() {
         open={vehicleDialogOpen}
         onOpenChange={setVehicleDialogOpen}
         onSave={(data) => {
-          vehicles.create.mutate({ name: data.name, description: data.description }, {
+          vehicles.create.mutate({ name: data.name, description: data.description, medium_id: data.medium_id }, {
             onSuccess: (newVehicle: any) => {
               data.channels.forEach(channel => {
                 if (channel.name.trim()) {
@@ -739,6 +739,15 @@ export function AppSidebar() {
         }}
         existingNames={getVehicleNames()}
         mode="create"
+        mediums={mediums.data || []}
+        onCreateMedium={async (data) => {
+          return new Promise((resolve) => {
+            mediums.create.mutate(data, {
+              onSuccess: (newMedium) => resolve(newMedium as any),
+              onError: () => resolve(undefined)
+            });
+          });
+        }}
       />
 
       <TargetDialog
