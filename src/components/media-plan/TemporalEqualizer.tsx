@@ -35,12 +35,12 @@ export function TemporalEqualizer({
   onPeriodsChange,
   readonly = false,
 }: TemporalEqualizerProps) {
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, decimals: number = 0) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
     }).format(value);
   };
 
@@ -184,7 +184,7 @@ export function TemporalEqualizer({
                     )}
                   </td>
                   <td className="py-3 px-2 text-right text-muted-foreground">
-                    {formatCurrency(getDailyBudget(period, index))}/dia
+                    {formatCurrency(getDailyBudget(period, index), 2)}/dia
                   </td>
                 </tr>
               ))}
