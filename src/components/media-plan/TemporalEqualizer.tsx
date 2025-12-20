@@ -164,24 +164,8 @@ export function TemporalEqualizer({
                       />
                     )}
                   </td>
-                  <td className="py-3 px-2">
-                    {readonly ? (
-                      <span className="text-right block text-primary font-medium">{period.percentage.toFixed(1)}%</span>
-                    ) : (
-                      <div className="flex items-center justify-end gap-1">
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.1"
-                          className="w-20 text-right"
-                          value={period.percentage || ''}
-                          onChange={(e) => handlePercentageChange(index, e.target.value)}
-                          placeholder="0"
-                        />
-                        <span className="text-muted-foreground">%</span>
-                      </div>
-                    )}
+                  <td className="py-3 px-2 text-right">
+                    <span className="text-primary font-medium">{period.percentage.toFixed(1)}%</span>
                   </td>
                   <td className="py-3 px-2 text-right text-muted-foreground">
                     {formatCurrency(getDailyBudget(period, index), 2)}/dia
@@ -204,31 +188,33 @@ export function TemporalEqualizer({
         </div>
 
         {/* Bar Chart Visualization */}
-        <div className="pt-4 border-t">
-          <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Distribuição {granularity === 'monthly' ? 'mensal' : 'semanal'}</span>
+        {periods.length > 0 && maxAmount > 0 && (
+          <div className="pt-4 border-t">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Distribuição {granularity === 'monthly' ? 'mensal' : 'semanal'}</span>
+            </div>
+            <div className="flex items-end gap-1 h-32 bg-muted/20 rounded-lg p-2">
+              {periods.map((period) => {
+                const height = maxAmount > 0 ? (period.amount / maxAmount) * 100 : 0;
+                return (
+                  <div
+                    key={period.id}
+                    className="flex-1 flex flex-col items-center justify-end h-full"
+                  >
+                    <div 
+                      className="w-full bg-primary rounded-t transition-all duration-300 min-h-[4px]"
+                      style={{ height: `${Math.max(height, 2)}%` }}
+                    />
+                    <span className="text-[9px] text-muted-foreground text-center mt-1 whitespace-nowrap overflow-hidden max-w-full truncate">
+                      {granularity === 'monthly' ? period.label.slice(0, 3) : period.label.replace('Semana ', 'S')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex items-end gap-1 h-32">
-            {periods.map((period) => {
-              const height = (period.amount / maxAmount) * 100;
-              return (
-                <div
-                  key={period.id}
-                  className="flex-1 flex flex-col items-center gap-1"
-                >
-                  <div 
-                    className="w-full bg-primary rounded-t transition-all duration-300"
-                    style={{ height: `${Math.max(height, 2)}%` }}
-                  />
-                  <span className="text-[9px] text-muted-foreground text-center whitespace-nowrap overflow-hidden">
-                    {period.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        )}
 
         {!isValid && (
           <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
