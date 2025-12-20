@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { PercentageInput } from './PercentageInput';
 import { cn } from '@/lib/utils';
 
 interface AllocationItem {
@@ -28,6 +29,7 @@ interface BudgetAllocationTableProps {
   onCreate?: (name: string) => Promise<ExistingItem>;
   label: string;
   createLabel: string;
+  maxItems?: number;
 }
 
 export function BudgetAllocationTable({
@@ -40,6 +42,7 @@ export function BudgetAllocationTable({
   onCreate,
   label,
   createLabel,
+  maxItems,
 }: BudgetAllocationTableProps) {
   const [selectedItem, setSelectedItem] = useState<string>('');
   const [newItemName, setNewItemName] = useState('');
@@ -50,6 +53,7 @@ export function BudgetAllocationTable({
   const availableItems = existingItems.filter(
     e => !items.find(i => i.id === e.id)
   );
+  const canAddMore = maxItems === undefined || items.length < maxItems;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -59,6 +63,7 @@ export function BudgetAllocationTable({
   };
 
   const handleAddExisting = () => {
+    if (!canAddMore) return;
     const item = existingItems.find(e => e.id === selectedItem);
     if (item) {
       onAdd({
@@ -72,7 +77,7 @@ export function BudgetAllocationTable({
   };
 
   const handleCreateNew = async () => {
-    if (!onCreate || !newItemName.trim()) return;
+    if (!onCreate || !newItemName.trim() || !canAddMore) return;
     setIsCreating(true);
     try {
       const newItem = await onCreate(newItemName.trim());
@@ -90,44 +95,59 @@ export function BudgetAllocationTable({
 
   return (
     <div className="space-y-4">
+      {/* Limit message */}
+      {maxItems !== undefined && (
+        <p className="text-xs text-muted-foreground">
+          {items.length} de {maxItems} {label.toLowerCase()}(s) adicionado(s)
+        </p>
+      )}
+
       {/* Add from existing */}
-      <div className="flex gap-2">
-        <Select value={selectedItem} onValueChange={setSelectedItem}>
-          <SelectTrigger className="flex-1">
-            <SelectValue placeholder={`Selecione ${label}`} />
-          </SelectTrigger>
-          <SelectContent>
-            {availableItems.length === 0 ? (
-              <SelectItem value="_empty" disabled>
-                Nenhum disponível
-              </SelectItem>
-            ) : (
-              availableItems.map(item => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.name}
+      {canAddMore && (
+        <div className="flex gap-2">
+          <Select value={selectedItem} onValueChange={setSelectedItem}>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder={`Selecione ${label}`} />
+            </SelectTrigger>
+            <SelectContent>
+              {availableItems.length === 0 ? (
+                <SelectItem value="_empty" disabled>
+                  Nenhum disponível
                 </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-        <Button
-          type="button"
-          onClick={handleAddExisting}
-          disabled={!selectedItem}
-          size="icon"
-        >
-          <Plus className="w-4 h-4" />
-        </Button>
-      </div>
+              ) : (
+                availableItems.map(item => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.name}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            onClick={handleAddExisting}
+            disabled={!selectedItem}
+            size="icon"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
 
       {/* Create new */}
-      {onCreate && (
+      {onCreate && canAddMore && (
         <div className="flex gap-2">
           <Input
             placeholder={createLabel}
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
             className="flex-1"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleCreateNew();
+              }
+            }}
           />
           <Button
             type="button"
@@ -144,10 +164,10 @@ export function BudgetAllocationTable({
 
       {/* Table */}
       {items.length > 0 && (
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-muted/30">
                 <TableHead>{label}</TableHead>
                 <TableHead className="w-32 text-right">%</TableHead>
                 <TableHead className="w-40 text-right">Valor</TableHead>
@@ -156,20 +176,16 @@ export function BudgetAllocationTable({
             </TableHeader>
             <TableBody>
               {items.map(item => (
-                <TableRow key={item.id}>
+                <TableRow key={item.id} className="group">
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell className="text-right">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step={0.1}
+                    <PercentageInput
                       value={item.percentage}
-                      onChange={(e) => onUpdate(item.id, parseFloat(e.target.value) || 0)}
-                      className="w-24 text-right ml-auto"
+                      onChange={(value) => onUpdate(item.id, value)}
+                      className="w-24 ml-auto"
                     />
                   </TableCell>
-                  <TableCell className="text-right font-mono">
+                  <TableCell className="text-right font-mono text-muted-foreground">
                     {formatCurrency((totalBudget * item.percentage) / 100)}
                   </TableCell>
                   <TableCell>
@@ -177,7 +193,7 @@ export function BudgetAllocationTable({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => onRemove(item.id)}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -186,7 +202,7 @@ export function BudgetAllocationTable({
                 </TableRow>
               ))}
               {/* Total row */}
-              <TableRow className="bg-muted/50">
+              <TableRow className="bg-muted/50 border-t-2">
                 <TableCell className="font-semibold">Total</TableCell>
                 <TableCell className={cn(
                   "text-right font-semibold",
