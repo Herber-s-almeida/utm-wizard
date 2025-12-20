@@ -44,47 +44,46 @@ export function TemporalEqualizer({
     }).format(value);
   };
 
-  const totalPercentage = periods.reduce((sum, p) => sum + p.percentage, 0);
-  const totalAmount = periods.reduce((sum, p) => sum + p.amount, 0);
-  const isValid = Math.abs(totalPercentage - 100) < 0.01;
+  const totalPercentage = Math.round(periods.reduce((sum, p) => sum + p.percentage, 0) * 100) / 100;
+  const totalAmount = Math.round(periods.reduce((sum, p) => sum + p.amount, 0) * 100) / 100;
+  const isValid = totalPercentage === 100;
 
   const handleAmountChange = (index: number, value: string) => {
-    const numValue = parseFloat(value) || 0;
+    const numValue = Math.round((parseFloat(value) || 0) * 100) / 100;
     const newPeriods = [...periods];
-    const percentage = totalBudget > 0 ? (numValue / totalBudget) * 100 : 0;
+    const percentage = totalBudget > 0 ? Math.round((numValue / totalBudget) * 10000) / 100 : 0;
     newPeriods[index] = { 
       ...newPeriods[index], 
       amount: numValue,
-      percentage: Math.round(percentage * 100) / 100
-    };
-    onPeriodsChange(newPeriods);
-  };
-
-  const handlePercentageChange = (index: number, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    const newPeriods = [...periods];
-    const amount = (totalBudget * numValue) / 100;
-    newPeriods[index] = { 
-      ...newPeriods[index], 
-      percentage: numValue,
-      amount: Math.round(amount * 100) / 100
+      percentage
     };
     onPeriodsChange(newPeriods);
   };
 
   const distributeEvenly = () => {
     if (periods.length === 0) return;
-    const evenPercentage = 100 / periods.length;
-    const evenAmount = totalBudget / periods.length;
+    
+    const basePercentage = Math.floor((100 / periods.length) * 100) / 100;
+    const baseAmount = Math.floor((totalBudget / periods.length) * 100) / 100;
+    
     const newPeriods = periods.map((p, i) => {
-      const isLast = i === periods.length - 1;
-      const sum = periods.slice(0, -1).reduce((s, _) => s + evenPercentage, 0);
+      if (i === periods.length - 1) {
+        // Last item gets the remainder to ensure exact 100%
+        const sumPercentage = basePercentage * (periods.length - 1);
+        const sumAmount = baseAmount * (periods.length - 1);
+        return {
+          ...p,
+          percentage: Math.round((100 - sumPercentage) * 100) / 100,
+          amount: Math.round((totalBudget - sumAmount) * 100) / 100,
+        };
+      }
       return {
         ...p,
-        percentage: isLast ? Math.round((100 - sum) * 100) / 100 : Math.round(evenPercentage * 100) / 100,
-        amount: isLast ? Math.round((totalBudget - evenAmount * (periods.length - 1)) * 100) / 100 : Math.round(evenAmount * 100) / 100,
+        percentage: basePercentage,
+        amount: baseAmount,
       };
     });
+    
     onPeriodsChange(newPeriods);
   };
 
@@ -274,19 +273,21 @@ export function generateTemporalPeriods(
     }
   }
   
-  // Distribute evenly
+  // Distribute evenly with 2 decimal places
   if (periods.length > 0) {
-    const evenPercentage = 100 / periods.length;
-    const evenAmount = totalBudget / periods.length;
+    const basePercentage = Math.floor((100 / periods.length) * 100) / 100;
+    const baseAmount = Math.floor((totalBudget / periods.length) * 100) / 100;
+    
     periods.forEach((p, i) => {
-      const isLast = i === periods.length - 1;
-      const sum = evenPercentage * (periods.length - 1);
-      p.percentage = isLast 
-        ? Math.round((100 - sum) * 100) / 100
-        : Math.round(evenPercentage * 100) / 100;
-      p.amount = isLast
-        ? Math.round((totalBudget - evenAmount * (periods.length - 1)) * 100) / 100
-        : Math.round(evenAmount * 100) / 100;
+      if (i === periods.length - 1) {
+        const sumPercentage = basePercentage * (periods.length - 1);
+        const sumAmount = baseAmount * (periods.length - 1);
+        p.percentage = Math.round((100 - sumPercentage) * 100) / 100;
+        p.amount = Math.round((totalBudget - sumAmount) * 100) / 100;
+      } else {
+        p.percentage = basePercentage;
+        p.amount = baseAmount;
+      }
     });
   }
   
