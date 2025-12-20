@@ -165,7 +165,6 @@ export const KPI_OPTIONS = [
 ];
 
 export const TEMPORAL_GRANULARITY = [
-  { value: 'daily', label: 'Diária' },
   { value: 'weekly', label: 'Semanal' },
   { value: 'monthly', label: 'Mensal' },
 ];

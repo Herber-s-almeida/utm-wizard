@@ -36,9 +36,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/media-plans" element={<ProtectedRoute><MediaPlans /></ProtectedRoute>} />
-            <Route path="/media-plans/new" element={<ProtectedRoute><NewMediaPlan /></ProtectedRoute>} />
-            <Route path="/media-plans/new/budget" element={<ProtectedRoute><NewMediaPlanBudget /></ProtectedRoute>} />
-            <Route path="/media-plans/new/manual" element={<ProtectedRoute><NewMediaPlanManual /></ProtectedRoute>} />
+            <Route path="/media-plans/new" element={<ProtectedRoute><NewMediaPlanBudget /></ProtectedRoute>} />
             <Route path="/media-plans/:id" element={<ProtectedRoute><MediaPlanDetail /></ProtectedRoute>} />
             <Route path="/config/subdivisions" element={<ProtectedRoute><SubdivisionsPage /></ProtectedRoute>} />
             <Route path="/config/moments" element={<ProtectedRoute><MomentsPage /></ProtectedRoute>} />
