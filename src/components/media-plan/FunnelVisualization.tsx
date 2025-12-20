@@ -113,7 +113,8 @@ export function FunnelVisualization({
                       x="100"
                       y={y + height / 2 + 4}
                       textAnchor="middle"
-                      className="fill-primary-foreground text-[10px] font-semibold"
+                      fill="hsl(var(--foreground))"
+                      className="font-semibold"
                       style={{ fontSize: Math.max(8, 12 - funnelStages.length) }}
                     >
                       {stage.name}

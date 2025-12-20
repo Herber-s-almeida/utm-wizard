@@ -48,11 +48,12 @@ export default function NewMediaPlanBudget() {
       const periods = generateTemporalPeriods(
         state.planData.start_date,
         state.planData.end_date,
-        state.temporalGranularity
+        state.temporalGranularity,
+        state.planData.total_budget
       );
       setTemporalPeriods(periods);
     }
-  }, [state.planData.start_date, state.planData.end_date, state.temporalGranularity]);
+  }, [state.planData.start_date, state.planData.end_date, state.temporalGranularity, state.planData.total_budget]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
