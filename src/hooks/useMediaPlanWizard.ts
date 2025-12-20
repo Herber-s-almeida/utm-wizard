@@ -25,7 +25,7 @@ export interface WizardState {
   subdivisions: BudgetAllocation[];
   moments: Record<string, BudgetAllocation[]>; // keyed by subdivision id or 'root'
   funnelStages: Record<string, BudgetAllocation[]>; // keyed by moment path
-  temporalGranularity: 'weekly' | 'monthly';
+  temporalGranularity: 'monthly' | 'quarterly';
   temporalDistribution: Record<string, BudgetAllocation[]>;
 }
 
@@ -90,7 +90,7 @@ export function useMediaPlanWizard() {
     }));
   }, []);
 
-  const setTemporalGranularity = useCallback((granularity: 'weekly' | 'monthly') => {
+  const setTemporalGranularity = useCallback((granularity: 'monthly' | 'quarterly') => {
     setState(prev => ({
       ...prev,
       temporalGranularity: granularity,

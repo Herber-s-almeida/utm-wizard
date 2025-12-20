@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Calendar, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,15 +11,16 @@ interface TemporalPeriod {
   date: string;
   percentage: number;
   amount: number;
+  days: number;
 }
 
 interface TemporalEqualizerProps {
   startDate: string;
   endDate: string;
   totalBudget: number;
-  granularity: 'weekly' | 'monthly';
+  granularity: 'monthly' | 'quarterly';
   periods: TemporalPeriod[];
-  onGranularityChange: (granularity: 'weekly' | 'monthly') => void;
+  onGranularityChange: (granularity: 'monthly' | 'quarterly') => void;
   onPeriodsChange: (periods: TemporalPeriod[]) => void;
   readonly?: boolean;
 }
@@ -35,7 +35,7 @@ export function TemporalEqualizer({
   onPeriodsChange,
   readonly = false,
 }: TemporalEqualizerProps) {
-  const formatCurrency = (value: number, decimals: number = 0) => {
+  const formatCurrency = (value: number, decimals: number = 2) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -46,6 +46,7 @@ export function TemporalEqualizer({
 
   const totalPercentage = Math.round(periods.reduce((sum, p) => sum + p.percentage, 0) * 100) / 100;
   const totalAmount = Math.round(periods.reduce((sum, p) => sum + p.amount, 0) * 100) / 100;
+  const totalDays = periods.reduce((sum, p) => sum + p.days, 0);
   const isValid = totalPercentage === 100;
 
   const handleAmountChange = (index: number, value: string) => {
@@ -68,7 +69,6 @@ export function TemporalEqualizer({
     
     const newPeriods = periods.map((p, i) => {
       if (i === periods.length - 1) {
-        // Last item gets the remainder to ensure exact 100%
         const sumPercentage = basePercentage * (periods.length - 1);
         const sumAmount = baseAmount * (periods.length - 1);
         return {
@@ -88,9 +88,9 @@ export function TemporalEqualizer({
   };
 
   // Calculate daily budget for each period
-  const getDailyBudget = (period: TemporalPeriod, index: number) => {
-    const daysInPeriod = granularity === 'monthly' ? 30 : 7;
-    return period.amount / daysInPeriod;
+  const getDailyBudget = (period: TemporalPeriod) => {
+    if (period.days === 0) return 0;
+    return period.amount / period.days;
   };
 
   // Calculate max amount for chart
@@ -119,10 +119,10 @@ export function TemporalEqualizer({
       <CardContent className="space-y-6">
         {/* Granularity Selector */}
         {!readonly && (
-          <Tabs value={granularity} onValueChange={(v) => onGranularityChange(v as 'weekly' | 'monthly')}>
+          <Tabs value={granularity} onValueChange={(v) => onGranularityChange(v as 'monthly' | 'quarterly')}>
             <TabsList className="grid w-full max-w-[300px] grid-cols-2">
               <TabsTrigger value="monthly">Mensal</TabsTrigger>
-              <TabsTrigger value="weekly">Semanal</TabsTrigger>
+              <TabsTrigger value="quarterly">Trimestral</TabsTrigger>
             </TabsList>
           </Tabs>
         )}
@@ -133,12 +133,13 @@ export function TemporalEqualizer({
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-2 font-semibold text-foreground">
-                  {granularity === 'monthly' ? 'Mês' : 'Semana'}
+                  {granularity === 'monthly' ? 'Mês' : 'Trimestre'}
                 </th>
+                <th className="text-right py-3 px-2 font-semibold text-foreground">Dias</th>
                 <th className="text-right py-3 px-2 font-semibold text-foreground">Valor (R$)</th>
                 <th className="text-right py-3 px-2 font-semibold text-foreground">% do total</th>
                 <th className="text-right py-3 px-2 font-semibold text-muted-foreground">
-                  Orçamento/{granularity === 'monthly' ? 'dia' : 'dia'}
+                  Orçamento/dia
                 </th>
               </tr>
             </thead>
@@ -147,6 +148,9 @@ export function TemporalEqualizer({
                 <tr key={period.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                   <td className="py-3 px-2">
                     <span className="font-medium text-foreground">{period.label}</span>
+                  </td>
+                  <td className="py-3 px-2 text-right">
+                    <span className="text-muted-foreground">{period.days}</span>
                   </td>
                   <td className="py-3 px-2">
                     {readonly ? (
@@ -164,10 +168,10 @@ export function TemporalEqualizer({
                     )}
                   </td>
                   <td className="py-3 px-2 text-right">
-                    <span className="text-primary font-medium">{period.percentage.toFixed(1)}%</span>
+                    <span className="text-primary font-medium">{period.percentage.toFixed(2)}%</span>
                   </td>
                   <td className="py-3 px-2 text-right text-muted-foreground">
-                    {formatCurrency(getDailyBudget(period, index), 2)}/dia
+                    {formatCurrency(getDailyBudget(period), 2)}/dia
                   </td>
                 </tr>
               ))}
@@ -178,8 +182,9 @@ export function TemporalEqualizer({
                 isValid ? "text-success" : "text-destructive"
               )}>
                 <td className="py-3 px-2">Total</td>
+                <td className="py-3 px-2 text-right">{totalDays}</td>
                 <td className="py-3 px-2 text-right">{formatCurrency(totalAmount)}</td>
-                <td className="py-3 px-2 text-right">{totalPercentage.toFixed(1)}%</td>
+                <td className="py-3 px-2 text-right">{totalPercentage.toFixed(2)}%</td>
                 <td className="py-3 px-2"></td>
               </tr>
             </tfoot>
@@ -191,7 +196,9 @@ export function TemporalEqualizer({
           <div className="pt-4 border-t">
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Distribuição {granularity === 'monthly' ? 'mensal' : 'semanal'}</span>
+              <span className="text-sm text-muted-foreground">
+                Distribuição {granularity === 'monthly' ? 'mensal' : 'trimestral'}
+              </span>
             </div>
             <div className="flex items-end gap-1 h-32 bg-muted/20 rounded-lg p-2">
               {periods.map((period) => {
@@ -206,7 +213,7 @@ export function TemporalEqualizer({
                       style={{ height: `${Math.max(height, 2)}%` }}
                     />
                     <span className="text-[9px] text-muted-foreground text-center mt-1 whitespace-nowrap overflow-hidden max-w-full truncate">
-                      {granularity === 'monthly' ? period.label.slice(0, 3) : period.label.replace('Semana ', 'S')}
+                      {granularity === 'monthly' ? period.label.slice(0, 3) : period.label}
                     </span>
                   </div>
                 );
@@ -217,7 +224,7 @@ export function TemporalEqualizer({
 
         {!isValid && (
           <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">
-            A soma dos percentuais deve ser exatamente 100%. Atual: {totalPercentage.toFixed(1)}%
+            A soma dos percentuais deve ser exatamente 100%. Atual: {totalPercentage.toFixed(2)}%
           </p>
         )}
       </CardContent>
@@ -225,51 +232,92 @@ export function TemporalEqualizer({
   );
 }
 
+// Helper function to calculate days in a period considering campaign start/end dates
+function calculateDaysInPeriod(
+  periodStart: Date, 
+  periodEnd: Date, 
+  campaignStart: Date, 
+  campaignEnd: Date
+): number {
+  const effectiveStart = periodStart < campaignStart ? campaignStart : periodStart;
+  const effectiveEnd = periodEnd > campaignEnd ? campaignEnd : periodEnd;
+  
+  if (effectiveStart > effectiveEnd) return 0;
+  
+  const diffTime = effectiveEnd.getTime() - effectiveStart.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  return diffDays;
+}
+
 // Helper function to generate periods based on date range and granularity
 export function generateTemporalPeriods(
   startDate: string, 
   endDate: string, 
-  granularity: 'weekly' | 'monthly',
+  granularity: 'monthly' | 'quarterly',
   totalBudget: number = 0
 ): TemporalPeriod[] {
   if (!startDate || !endDate) return [];
   
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const campaignStart = new Date(startDate);
+  const campaignEnd = new Date(endDate);
   const periods: TemporalPeriod[] = [];
   
   if (granularity === 'monthly') {
-    let current = new Date(start.getFullYear(), start.getMonth(), 1);
-    while (current <= end) {
+    let current = new Date(campaignStart.getFullYear(), campaignStart.getMonth(), 1);
+    while (current <= campaignEnd) {
       const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-      periods.push({
-        id: `month-${current.getFullYear()}-${current.getMonth()}`,
-        label: monthNames[current.getMonth()],
-        date: current.toISOString().split('T')[0],
-        percentage: 0,
-        amount: 0,
-      });
+      
+      // Calculate the last day of the month
+      const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 0);
+      const monthStart = new Date(current.getFullYear(), current.getMonth(), 1);
+      
+      const days = calculateDaysInPeriod(monthStart, monthEnd, campaignStart, campaignEnd);
+      
+      if (days > 0) {
+        periods.push({
+          id: `month-${current.getFullYear()}-${current.getMonth()}`,
+          label: `${monthNames[current.getMonth()]} ${current.getFullYear()}`,
+          date: current.toISOString().split('T')[0],
+          percentage: 0,
+          amount: 0,
+          days,
+        });
+      }
       current.setMonth(current.getMonth() + 1);
     }
   } else {
-    // Weekly
-    let current = new Date(start);
-    // Find the start of the week (Monday)
-    const day = current.getDay();
-    const diff = current.getDate() - day + (day === 0 ? -6 : 1);
-    current.setDate(diff);
+    // Quarterly
+    const getQuarter = (month: number) => Math.floor(month / 3) + 1;
+    const quarterNames = ['Q1', 'Q2', 'Q3', 'Q4'];
     
-    let weekNum = 1;
-    while (current <= end) {
-      periods.push({
-        id: `week-${current.toISOString().split('T')[0]}`,
-        label: `Semana ${weekNum}`,
-        date: current.toISOString().split('T')[0],
-        percentage: 0,
-        amount: 0,
-      });
-      current.setDate(current.getDate() + 7);
-      weekNum++;
+    let currentYear = campaignStart.getFullYear();
+    let currentQuarter = getQuarter(campaignStart.getMonth());
+    
+    while (true) {
+      const quarterStartMonth = (currentQuarter - 1) * 3;
+      const quarterStart = new Date(currentYear, quarterStartMonth, 1);
+      const quarterEnd = new Date(currentYear, quarterStartMonth + 3, 0);
+      
+      if (quarterStart > campaignEnd) break;
+      
+      const days = calculateDaysInPeriod(quarterStart, quarterEnd, campaignStart, campaignEnd);
+      
+      if (days > 0) {
+        periods.push({
+          id: `quarter-${currentYear}-Q${currentQuarter}`,
+          label: `${quarterNames[currentQuarter - 1]} ${currentYear}`,
+          date: quarterStart.toISOString().split('T')[0],
+          percentage: 0,
+          amount: 0,
+          days,
+        });
+      }
+      
+      currentQuarter++;
+      if (currentQuarter > 4) {
+        currentQuarter = 1;
+        currentYear++;
+      }
     }
   }
   
