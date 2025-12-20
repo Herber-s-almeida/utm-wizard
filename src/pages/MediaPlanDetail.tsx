@@ -6,14 +6,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ArrowLeft, 
   Plus, 
-  Save, 
   Loader2, 
   Trash2, 
   Copy,
@@ -30,21 +26,10 @@ import {
   MediaLine, 
   MediaCreative,
   FunnelStage,
-  PLATFORMS, 
-  FORMATS, 
   FUNNEL_STAGES,
-  OBJECTIVES_BY_FUNNEL,
   STATUS_LABELS,
   STATUS_COLORS,
-  generateUtmParams
 } from '@/types/media';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,20 +41,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { FunnelStageSelector } from '@/components/media/FunnelStageSelector';
 import { CreativesManager } from '@/components/media/CreativesManager';
+import { MediaLineWizard } from '@/components/media-plan/MediaLineWizard';
+import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets } from '@/hooks/useConfigData';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -81,26 +59,20 @@ export default function MediaPlanDetail() {
   const [lines, setLines] = useState<MediaLine[]>([]);
   const [creatives, setCreatives] = useState<Record<string, MediaCreative[]>>({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [lineDialogOpen, setLineDialogOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lineToDelete, setLineToDelete] = useState<MediaLine | null>(null);
-  const [editingLine, setEditingLine] = useState<MediaLine | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
 
-  const [lineForm, setLineForm] = useState({
-    funnel_stage: 'top' as FunnelStage,
-    platform: '',
-    format: '',
-    objective: '',
-    placement: '',
-    start_date: '',
-    end_date: '',
-    budget: '',
-    destination_url: '',
-    notes: '',
-  });
+  // Library data for display
+  const subdivisions = useSubdivisions();
+  const moments = useMoments();
+  const funnelStages = useFunnelStages();
+  const mediums = useMediums();
+  const vehicles = useVehicles();
+  const channels = useChannels();
+  const targets = useTargets();
 
   useEffect(() => {
     if (user && id) {
@@ -157,108 +129,6 @@ export default function MediaPlanDetail() {
       toast.error('Erro ao carregar plano');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const resetLineForm = () => {
-    setLineForm({
-      funnel_stage: 'top',
-      platform: '',
-      format: '',
-      objective: '',
-      placement: '',
-      start_date: plan?.start_date || '',
-      end_date: plan?.end_date || '',
-      budget: '',
-      destination_url: '',
-      notes: '',
-    });
-    setEditingLine(null);
-  };
-
-  const openLineDialog = (line?: MediaLine) => {
-    if (line) {
-      setEditingLine(line);
-      setLineForm({
-        funnel_stage: line.funnel_stage || 'top',
-        platform: line.platform || '',
-        format: line.format || '',
-        objective: line.objective || '',
-        placement: line.placement || '',
-        start_date: line.start_date || '',
-        end_date: line.end_date || '',
-        budget: line.budget?.toString() || '',
-        destination_url: line.destination_url || '',
-        notes: line.notes || '',
-      });
-    } else {
-      resetLineForm();
-    }
-    setLineDialogOpen(true);
-  };
-
-  const handleSaveLine = async () => {
-    if (!lineForm.platform) {
-      toast.error('Plataforma é obrigatória');
-      return;
-    }
-
-    if (!lineForm.start_date || !lineForm.end_date) {
-      toast.error('Datas de início e fim são obrigatórias');
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      // Generate UTM params automatically
-      const utmParams = plan ? generateUtmParams(plan, {
-        platform: lineForm.platform,
-        funnel_stage: lineForm.funnel_stage,
-        format: lineForm.format,
-      }) : {};
-
-      const lineData = {
-        media_plan_id: id,
-        user_id: user?.id,
-        funnel_stage: lineForm.funnel_stage,
-        platform: lineForm.platform,
-        format: lineForm.format || null,
-        objective: lineForm.objective || null,
-        placement: lineForm.placement || null,
-        start_date: lineForm.start_date || null,
-        end_date: lineForm.end_date || null,
-        budget: lineForm.budget ? parseFloat(lineForm.budget) : 0,
-        destination_url: lineForm.destination_url || null,
-        notes: lineForm.notes || null,
-        ...utmParams,
-      };
-
-      if (editingLine) {
-        const { error } = await supabase
-          .from('media_lines')
-          .update(lineData)
-          .eq('id', editingLine.id);
-
-        if (error) throw error;
-        toast.success('Linha atualizada!');
-      } else {
-        const { error } = await supabase
-          .from('media_lines')
-          .insert(lineData);
-
-        if (error) throw error;
-        toast.success('Linha adicionada!');
-      }
-
-      setLineDialogOpen(false);
-      resetLineForm();
-      fetchData();
-    } catch (error) {
-      console.error('Error saving line:', error);
-      toast.error('Erro ao salvar linha');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -322,8 +192,31 @@ export default function MediaPlanDetail() {
     setExpandedLines(newExpanded);
   };
 
-  const getFunnelStageInfo = (stage: FunnelStage) => {
-    return FUNNEL_STAGES.find(s => s.value === stage) || FUNNEL_STAGES[0];
+  const getLineDisplayInfo = (line: MediaLine) => {
+    const subdivision = subdivisions.data?.find(s => s.id === line.subdivision_id);
+    const moment = moments.data?.find(m => m.id === line.moment_id);
+    const funnelStage = funnelStages.data?.find(f => f.id === line.funnel_stage_id);
+    const medium = mediums.data?.find(m => m.id === line.medium_id);
+    const vehicle = vehicles.data?.find(v => v.id === line.vehicle_id);
+    const channel = channels.data?.find(c => c.id === line.channel_id);
+    const target = targets.data?.find(t => t.id === line.target_id);
+
+    // Fallback to old funnel_stage field
+    const funnelInfo = funnelStage 
+      ? { label: funnelStage.name, color: 'bg-primary/10 text-primary border-primary/30' }
+      : FUNNEL_STAGES.find(s => s.value === line.funnel_stage) || FUNNEL_STAGES[0];
+
+    return {
+      subdivision,
+      moment,
+      funnelStage,
+      funnelInfo,
+      medium,
+      vehicle,
+      channel,
+      target,
+      displayName: vehicle?.name || line.platform || 'Sem veículo',
+    };
   };
 
   if (loading) {
@@ -339,6 +232,11 @@ export default function MediaPlanDetail() {
   if (!plan) return null;
 
   const totalLinesBudget = lines.reduce((acc, line) => acc + Number(line.budget || 0), 0);
+
+  // Get existing selections for wizard context
+  const existingSubdivisions = [...new Set(lines.map(l => l.subdivision_id).filter(Boolean))] as string[];
+  const existingMoments = [...new Set(lines.map(l => l.moment_id).filter(Boolean))] as string[];
+  const existingFunnelStages = [...new Set(lines.map(l => l.funnel_stage_id).filter(Boolean))] as string[];
 
   return (
     <DashboardLayout>
@@ -365,7 +263,7 @@ export default function MediaPlanDetail() {
               </p>
             </div>
           </div>
-          <Button onClick={() => openLineDialog()} className="gap-2">
+          <Button onClick={() => setWizardOpen(true)} className="gap-2">
             <Plus className="w-4 h-4" />
             Nova Linha
           </Button>
@@ -421,7 +319,7 @@ export default function MediaPlanDetail() {
                 <p className="text-muted-foreground mb-4">
                   Adicione linhas de mídia para detalhar seu plano
                 </p>
-                <Button onClick={() => openLineDialog()} className="gap-2">
+                <Button onClick={() => setWizardOpen(true)} className="gap-2">
                   <Plus className="w-4 h-4" />
                   Adicionar Linha
                 </Button>
@@ -430,7 +328,7 @@ export default function MediaPlanDetail() {
               <div className="space-y-3">
                 {lines.map((line, index) => {
                   const utmUrl = buildUtmUrl(line);
-                  const stageInfo = getFunnelStageInfo(line.funnel_stage);
+                  const lineInfo = getLineDisplayInfo(line);
                   const lineCreatives = creatives[line.id] || [];
                   const isExpanded = expandedLines.has(line.id);
 
@@ -445,21 +343,32 @@ export default function MediaPlanDetail() {
                         <div className="border rounded-lg overflow-hidden">
                           <CollapsibleTrigger asChild>
                             <div className="flex items-center gap-4 p-4 cursor-pointer hover:bg-muted/50 transition-colors">
-                              <div className={`px-2 py-1 rounded text-xs font-medium border ${stageInfo.color}`}>
-                                {stageInfo.label}
+                              <div className={`px-2 py-1 rounded text-xs font-medium border ${lineInfo.funnelInfo.color}`}>
+                                {lineInfo.funnelInfo.label}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium">{line.platform}</div>
-                                <div className="text-sm text-muted-foreground flex items-center gap-2">
-                                  <span>{line.format || '-'}</span>
+                                <div className="font-medium">{lineInfo.displayName}</div>
+                                <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-2">
+                                  {lineInfo.subdivision && (
+                                    <span className="bg-muted px-1.5 py-0.5 rounded text-xs">
+                                      {lineInfo.subdivision.name}
+                                    </span>
+                                  )}
+                                  {lineInfo.moment && (
+                                    <span className="bg-muted px-1.5 py-0.5 rounded text-xs">
+                                      {lineInfo.moment.name}
+                                    </span>
+                                  )}
+                                  {lineInfo.channel && (
+                                    <span className="bg-muted px-1.5 py-0.5 rounded text-xs">
+                                      {lineInfo.channel.name}
+                                    </span>
+                                  )}
                                   {line.start_date && line.end_date && (
-                                    <>
-                                      <span>•</span>
-                                      <span className="flex items-center gap-1">
-                                        <Calendar className="w-3 h-3" />
-                                        {format(new Date(line.start_date), 'dd/MM', { locale: ptBR })} - {format(new Date(line.end_date), 'dd/MM', { locale: ptBR })}
-                                      </span>
-                                    </>
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      {format(new Date(line.start_date), 'dd/MM', { locale: ptBR })} - {format(new Date(line.end_date), 'dd/MM', { locale: ptBR })}
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -490,17 +399,6 @@ export default function MediaPlanDetail() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openLineDialog(line);
-                                  }}
-                                >
-                                  <Settings className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
                                   className="h-8 w-8 text-destructive hover:text-destructive"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -520,6 +418,34 @@ export default function MediaPlanDetail() {
                           </CollapsibleTrigger>
                           <CollapsibleContent>
                             <div className="border-t p-4 bg-muted/30 space-y-4">
+                              {/* Line details summary */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                {lineInfo.subdivision && (
+                                  <div>
+                                    <span className="text-muted-foreground">Subdivisão:</span>{' '}
+                                    <span className="font-medium">{lineInfo.subdivision.name}</span>
+                                  </div>
+                                )}
+                                {lineInfo.moment && (
+                                  <div>
+                                    <span className="text-muted-foreground">Momento:</span>{' '}
+                                    <span className="font-medium">{lineInfo.moment.name}</span>
+                                  </div>
+                                )}
+                                {lineInfo.medium && (
+                                  <div>
+                                    <span className="text-muted-foreground">Meio:</span>{' '}
+                                    <span className="font-medium">{lineInfo.medium.name}</span>
+                                  </div>
+                                )}
+                                {lineInfo.target && (
+                                  <div>
+                                    <span className="text-muted-foreground">Target:</span>{' '}
+                                    <span className="font-medium">{lineInfo.target.name}</span>
+                                  </div>
+                                )}
+                              </div>
+
                               {/* UTM Preview */}
                               {utmUrl && (
                                 <div className="p-3 bg-background rounded-lg">
@@ -586,184 +512,18 @@ export default function MediaPlanDetail() {
         </Card>
       </div>
 
-      {/* Add/Edit Line Dialog */}
-      <Dialog open={lineDialogOpen} onOpenChange={setLineDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingLine ? 'Editar Linha de Mídia' : 'Nova Linha de Mídia'}
-            </DialogTitle>
-            <DialogDescription>
-              Configure os detalhes da linha. Os parâmetros UTM serão gerados automaticamente.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6 py-4">
-            {/* Funnel Stage - First Step */}
-            <FunnelStageSelector
-              value={lineForm.funnel_stage}
-              onChange={(stage) => {
-                setLineForm({ 
-                  ...lineForm, 
-                  funnel_stage: stage,
-                  objective: '' // Reset objective when funnel changes
-                });
-              }}
-            />
-
-            {/* Dates */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Data de Início *</Label>
-                <Input
-                  type="date"
-                  value={lineForm.start_date}
-                  onChange={(e) => setLineForm({ ...lineForm, start_date: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Data de Fim *</Label>
-                <Input
-                  type="date"
-                  value={lineForm.end_date}
-                  onChange={(e) => setLineForm({ ...lineForm, end_date: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Platform & Format */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Plataforma *</Label>
-                <Select
-                  value={lineForm.platform}
-                  onValueChange={(value) => setLineForm({ ...lineForm, platform: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PLATFORMS.map((p) => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Formato</Label>
-                <Select
-                  value={lineForm.format}
-                  onValueChange={(value) => setLineForm({ ...lineForm, format: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FORMATS.map((f) => (
-                      <SelectItem key={f} value={f}>{f}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Objective based on funnel stage */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Objetivo da Plataforma</Label>
-                <Select
-                  value={lineForm.objective}
-                  onValueChange={(value) => setLineForm({ ...lineForm, objective: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OBJECTIVES_BY_FUNNEL[lineForm.funnel_stage].map((o) => (
-                      <SelectItem key={o} value={o}>{o}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Investimento (R$)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0,00"
-                  value={lineForm.budget}
-                  onChange={(e) => setLineForm({ ...lineForm, budget: e.target.value })}
-                />
-              </div>
-            </div>
-
-            {/* Destination URL */}
-            <div className="space-y-2">
-              <Label>URL de Destino</Label>
-              <Input
-                placeholder="https://seusite.com/landing-page"
-                value={lineForm.destination_url}
-                onChange={(e) => setLineForm({ ...lineForm, destination_url: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">
-                Os parâmetros UTM serão adicionados automaticamente com base no plano e plataforma.
-              </p>
-            </div>
-
-            {/* UTM Preview */}
-            {lineForm.destination_url && lineForm.platform && plan && (
-              <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-                <Label className="text-xs text-muted-foreground">Prévia da URL Final</Label>
-                {(() => {
-                  const utmPreview = generateUtmParams(plan, {
-                    platform: lineForm.platform,
-                    funnel_stage: lineForm.funnel_stage,
-                    format: lineForm.format,
-                  });
-                  const params = new URLSearchParams();
-                  Object.entries(utmPreview).forEach(([key, value]) => {
-                    if (value) params.append(key, value);
-                  });
-                  const separator = lineForm.destination_url.includes('?') ? '&' : '?';
-                  return (
-                    <p className="text-sm break-all font-mono">
-                      {`${lineForm.destination_url}${separator}${params.toString()}`}
-                    </p>
-                  );
-                })()}
-              </div>
-            )}
-
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea
-                placeholder="Notas adicionais sobre esta linha..."
-                value={lineForm.notes}
-                onChange={(e) => setLineForm({ ...lineForm, notes: e.target.value })}
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-4">
-            <Button variant="outline" onClick={() => setLineDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveLine} disabled={saving} className="gap-2">
-              {saving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              {editingLine ? 'Salvar' : 'Adicionar'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Media Line Wizard */}
+      {plan && (
+        <MediaLineWizard
+          open={wizardOpen}
+          onOpenChange={setWizardOpen}
+          plan={plan}
+          onComplete={fetchData}
+          existingSubdivisions={existingSubdivisions}
+          existingMoments={existingMoments}
+          existingFunnelStages={existingFunnelStages}
+        />
+      )}
 
       {/* Delete Line Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
