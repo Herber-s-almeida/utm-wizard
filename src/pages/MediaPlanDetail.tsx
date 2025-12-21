@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { 
   ArrowLeft, 
   Plus, 
-  Loader2
+  Loader2,
+  Settings2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -32,6 +33,15 @@ import { MediaLineWizard } from '@/components/media-plan/MediaLineWizard';
 import { HierarchicalMediaTable } from '@/components/media-plan/HierarchicalMediaTable';
 import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets } from '@/hooks/useConfigData';
 
+interface BudgetDistribution {
+  id: string;
+  distribution_type: string;
+  reference_id: string | null;
+  percentage: number;
+  amount: number;
+  parent_distribution_id: string | null;
+}
+
 export default function MediaPlanDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -39,6 +49,7 @@ export default function MediaPlanDetail() {
   const [plan, setPlan] = useState<MediaPlan | null>(null);
   const [lines, setLines] = useState<MediaLine[]>([]);
   const [creatives, setCreatives] = useState<Record<string, MediaCreative[]>>({});
+  const [budgetDistributions, setBudgetDistributions] = useState<BudgetDistribution[]>([]);
   const [loading, setLoading] = useState(true);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editingLine, setEditingLine] = useState<MediaLine | null>(null);
@@ -89,6 +100,16 @@ export default function MediaPlanDetail() {
         .order('created_at', { ascending: true });
 
       if (linesError) throw linesError;
+
+      // Fetch budget distributions
+      const { data: distributionsData, error: distError } = await supabase
+        .from('plan_budget_distributions')
+        .select('*')
+        .eq('media_plan_id', id);
+      
+      if (!distError && distributionsData) {
+        setBudgetDistributions(distributionsData);
+      }
 
       const linesList = (linesData || []) as MediaLine[];
       setPlan(planData as MediaPlan);
@@ -208,10 +229,20 @@ export default function MediaPlanDetail() {
               </p>
             </div>
           </div>
-          <Button onClick={() => setWizardOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Nova Linha
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate(`/media-plans/${id}/edit`)} 
+              className="gap-2"
+            >
+              <Settings2 className="w-4 h-4" />
+              Editar Plano
+            </Button>
+            <Button onClick={() => setWizardOpen(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Nova Linha
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -253,9 +284,7 @@ export default function MediaPlanDetail() {
           plan={plan}
           lines={lines}
           creatives={creatives}
-          subdivisions={subdivisions.data || []}
-          moments={moments.data || []}
-          funnelStages={funnelStages.data || []}
+          budgetDistributions={budgetDistributions}
           mediums={mediums.data || []}
           vehicles={vehicles.data || []}
           channels={channels.data || []}
