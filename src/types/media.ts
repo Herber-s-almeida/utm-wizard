@@ -50,6 +50,7 @@ export interface MediaLine {
   channel_id: string | null;
   target_id: string | null;
   creative_template_id: string | null;
+  status_id: string | null;
   budget_allocation: 'campaign' | 'creative';
   percentage_of_plan: number;
   created_at: string;
