@@ -18,10 +18,12 @@ import {
   LogOut,
   User,
   Library,
-  Eye
+  Eye,
+  CircleDot
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates, useBehavioralSegmentations } from '@/hooks/useConfigData';
+import { useStatuses } from '@/hooks/useStatuses';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -53,6 +55,7 @@ export function AppSidebar() {
   const targets = useTargets();
   const creativeTemplates = useCreativeTemplates();
   const behavioralSegmentations = useBehavioralSegmentations();
+  const statuses = useStatuses();
 
   // Section open states
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -67,6 +70,7 @@ export function AppSidebar() {
     segments: false,
     targetsList: false,
     creatives: false,
+    statuses: false,
     trash: false,
   });
 
@@ -131,6 +135,7 @@ export function AppSidebar() {
   const getTargetNames = () => targets.data?.map(t => t.name) || [];
   const getCreativeNames = () => creativeTemplates.data?.map(c => c.name) || [];
   const getSegmentNames = () => behavioralSegmentations.data?.map(s => s.name) || [];
+  const getStatusNames = () => statuses.data?.map(s => s.name) || [];
 
   return (
     <div className="flex flex-col h-full w-64 border-r border-sidebar-border bg-sidebar overflow-x-hidden">
@@ -699,6 +704,50 @@ export function AppSidebar() {
                   </Button>
                 </Link>
               )}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Status */}
+          <Collapsible open={openSections.statuses} onOpenChange={() => toggleSection('statuses')}>
+            <div className="group flex items-center min-w-0">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs min-w-0 overflow-hidden">
+                  {openSections.statuses ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                  <CircleDot className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Status</span>
+                </Button>
+              </CollapsibleTrigger>
+              <Link to="/config/statuses" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </Link>
+            </div>
+            <CollapsibleContent className="pl-4">
+              {statuses.data?.filter(s => !s.is_system).slice(0, MAX_ITEMS).map(status => (
+                <ConfigItemRow
+                  key={status.id}
+                  name={status.name}
+                  onEdit={() => {}}
+                  onDelete={() => statuses.remove.mutate(status.id)}
+                />
+              ))}
+              {statuses.data?.filter(s => s.is_system).slice(0, MAX_ITEMS).map(status => (
+                <div key={status.id} className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
+                  <span className="truncate">{status.name}</span>
+                  <span className="text-[10px]">(padrão)</span>
+                </div>
+              ))}
+              <Link to="/config/statuses">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                >
+                  <Plus className="h-3 w-3" />
+                  + novo
+                </Button>
+              </Link>
             </CollapsibleContent>
           </Collapsible>
         </div>

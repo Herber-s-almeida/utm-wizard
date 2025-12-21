@@ -14,6 +14,7 @@ import {
   Moment,
   FunnelStage 
 } from '@/hooks/useConfigData';
+import { Status } from '@/hooks/useStatuses';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -22,6 +23,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface BudgetDistribution {
   id: string;
@@ -44,6 +52,7 @@ interface HierarchicalMediaTableProps {
   subdivisions?: Subdivision[];
   moments?: Moment[];
   funnelStages?: FunnelStage[];
+  statuses?: Status[];
   onEditLine: (line: MediaLine, initialStep?: string) => void;
   onDeleteLine: (line: MediaLine) => void;
   onAddLine: (prefill?: { subdivisionId?: string; momentId?: string; funnelStageId?: string }) => void;
@@ -102,6 +111,7 @@ export function HierarchicalMediaTable({
   subdivisions: subdivisionsList = [],
   moments: momentsList = [],
   funnelStages: funnelStagesList = [],
+  statuses: statusesList = [],
   onEditLine,
   onDeleteLine,
   onAddLine,
@@ -480,11 +490,21 @@ export function HierarchicalMediaTable({
 
   // Calculate dynamic column widths based on what's visible
   const getMinWidth = () => {
-    let width = 80 + 110 + 80 + 130 + 120 + 80 + 100 + 100 + 90; // base columns (widened)
+    let width = 80 + 110 + 80 + 130 + 120 + 80 + 100 + 100 + 100 + 90; // base columns + status
     if (showSubdivisionColumn) width += 180;
     if (showMomentColumn) width += 180;
     if (showFunnelColumn) width += 160;
     return width;
+  };
+
+  const getStatusName = (statusId: string | null) => {
+    if (!statusId) return null;
+    const found = statusesList.find(s => s.id === statusId);
+    return found?.name || null;
+  };
+
+  const handleStatusChange = async (lineId: string, statusId: string) => {
+    await onUpdateLine(lineId, { status_id: statusId === 'none' ? null : statusId });
   };
 
   return (
@@ -507,6 +527,7 @@ export function HierarchicalMediaTable({
           <div className="w-[130px] p-3 border-r shrink-0">Segmentação</div>
           <div className="w-[120px] p-3 border-r shrink-0">Orçamento</div>
           <div className="w-[80px] p-3 border-r shrink-0">Criativos</div>
+          <div className="w-[100px] p-3 border-r shrink-0">Status</div>
           <div className="w-[100px] p-3 border-r shrink-0">Início</div>
           <div className="w-[100px] p-3 border-r shrink-0">Fim</div>
           <div className="w-[90px] p-3 shrink-0">Ações</div>
@@ -612,6 +633,26 @@ export function HierarchicalMediaTable({
                                       </TooltipTrigger>
                                       <TooltipContent>Editar criativos</TooltipContent>
                                     </Tooltip>
+                                  </div>
+                                  
+                                  {/* Status select */}
+                                  <div className="w-[100px] p-2 border-r shrink-0">
+                                    <Select
+                                      value={line.status_id || 'none'}
+                                      onValueChange={(value) => handleStatusChange(line.id, value)}
+                                    >
+                                      <SelectTrigger className="h-6 text-xs">
+                                        <SelectValue placeholder="Status" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="none">-</SelectItem>
+                                        {statusesList.map(status => (
+                                          <SelectItem key={status.id} value={status.id}>
+                                            {status.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                   
                                   {/* Editable Start Date */}

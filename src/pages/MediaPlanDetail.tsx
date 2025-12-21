@@ -32,7 +32,7 @@ import {
 import { MediaLineWizard } from '@/components/media-plan/MediaLineWizard';
 import { HierarchicalMediaTable } from '@/components/media-plan/HierarchicalMediaTable';
 import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, Subdivision, Moment, FunnelStage } from '@/hooks/useConfigData';
-
+import { useStatuses } from '@/hooks/useStatuses';
 interface BudgetDistribution {
   id: string;
   distribution_type: string;
@@ -71,6 +71,7 @@ export default function MediaPlanDetail() {
   const vehicles = useVehicles();
   const channels = useChannels();
   const targets = useTargets();
+  const statuses = useStatuses();
 
   useEffect(() => {
     if (user && id) {
@@ -303,6 +304,7 @@ export default function MediaPlanDetail() {
           subdivisions={subdivisions.data || []}
           moments={moments.data || []}
           funnelStages={funnelStages.data || []}
+          statuses={statuses.data || []}
           onEditLine={(line, initialStep) => {
             setEditingLine(line);
             setEditInitialStep(initialStep);

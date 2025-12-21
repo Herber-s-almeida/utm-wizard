@@ -226,6 +226,7 @@ export type Database = {
           placement: string | null
           platform: string
           start_date: string | null
+          status_id: string | null
           subdivision_id: string | null
           target_id: string | null
           updated_at: string | null
@@ -264,6 +265,7 @@ export type Database = {
           placement?: string | null
           platform: string
           start_date?: string | null
+          status_id?: string | null
           subdivision_id?: string | null
           target_id?: string | null
           updated_at?: string | null
@@ -302,6 +304,7 @@ export type Database = {
           placement?: string | null
           platform?: string
           start_date?: string | null
+          status_id?: string | null
           subdivision_id?: string | null
           target_id?: string | null
           updated_at?: string | null
@@ -354,6 +357,13 @@ export type Database = {
             columns: ["moment_id"]
             isOneToOne: false
             referencedRelation: "moments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_lines_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "statuses"
             referencedColumns: ["id"]
           },
           {
@@ -605,6 +615,36 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      statuses: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          name?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
