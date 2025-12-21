@@ -9,7 +9,10 @@ import {
   Medium, 
   Vehicle, 
   Channel, 
-  Target 
+  Target,
+  Subdivision,
+  Moment,
+  FunnelStage 
 } from '@/hooks/useConfigData';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -38,6 +41,9 @@ interface HierarchicalMediaTableProps {
   vehicles: Vehicle[];
   channels: Channel[];
   targets: Target[];
+  subdivisions?: Subdivision[];
+  moments?: Moment[];
+  funnelStages?: FunnelStage[];
   onEditLine: (line: MediaLine, initialStep?: string) => void;
   onDeleteLine: (line: MediaLine) => void;
   onAddLine: (prefill?: { subdivisionId?: string; momentId?: string; funnelStageId?: string }) => void;
@@ -46,20 +52,26 @@ interface HierarchicalMediaTableProps {
 
 interface SubdivisionInfo {
   id: string | null;
+  distId: string;
   name: string;
   planned: number;
+  percentage: number;
 }
 
 interface MomentInfo {
   id: string | null;
+  distId: string;
   name: string;
   planned: number;
+  percentage: number;
 }
 
 interface FunnelStageInfo {
   id: string | null;
+  distId: string;
   name: string;
   planned: number;
+  percentage: number;
 }
 
 interface HierarchyNode {
@@ -87,6 +99,9 @@ export function HierarchicalMediaTable({
   vehicles,
   channels,
   targets,
+  subdivisions: subdivisionsList = [],
+  moments: momentsList = [],
+  funnelStages: funnelStagesList = [],
   onEditLine,
   onDeleteLine,
   onAddLine,
@@ -108,213 +123,180 @@ export function HierarchicalMediaTable({
     return format(new Date(date), 'dd/MM/yyyy', { locale: ptBR });
   };
 
+  // Helper to get name from library data
+  const getSubdivisionName = (refId: string | null): string => {
+    if (!refId) return 'Geral';
+    const found = subdivisionsList.find(s => s.id === refId);
+    return found?.name || 'Geral';
+  };
+
+  const getMomentName = (refId: string | null): string => {
+    if (!refId) return 'Geral';
+    const found = momentsList.find(m => m.id === refId);
+    return found?.name || 'Geral';
+  };
+
+  const getFunnelStageName = (refId: string | null): string => {
+    if (!refId) return 'Geral';
+    const found = funnelStagesList.find(f => f.id === refId);
+    return found?.name || 'Geral';
+  };
+
   // Build hierarchical structure based on saved budget distributions
-  const groupedData = useMemo((): HierarchyNode[] => {
-    const totalBudget = Number(plan.total_budget) || 0;
+  // Using the actual parent_distribution_id FK relationships
+  const { groupedData, showSubdivisionColumn, showMomentColumn, showFunnelColumn } = useMemo(() => {
     const nodes: HierarchyNode[] = [];
 
-    // Get unique subdivisions from distributions
+    // Get distributions by type
     const subdivisionDists = budgetDistributions.filter(d => d.distribution_type === 'subdivision');
     const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
     const funnelDists = budgetDistributions.filter(d => d.distribution_type === 'funnel_stage');
 
-    // If there are subdivision distributions, use them
-    if (subdivisionDists.length > 0) {
-      subdivisionDists.forEach(subDist => {
-        const subId = subDist.reference_id;
-        const subAllocated = lines
-          .filter(l => l.subdivision_id === subId)
-          .reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+    // Determine if columns should be shown (not all items are "Geral")
+    const allSubdivisionsAreGeral = subdivisionDists.length <= 1 && subdivisionDists.every(d => !d.reference_id);
+    const allMomentsAreGeral = momentDists.length <= 1 && momentDists.every(d => !d.reference_id);
+    const allFunnelStagesAreGeral = funnelDists.length <= 1 && funnelDists.every(d => !d.reference_id);
 
-        // Get moments for this subdivision
-        const subMomentDists = momentDists.filter(m => m.parent_distribution_id === subId);
-        const momentNodes: HierarchyNode['moments'] = [];
-
-        if (subMomentDists.length > 0) {
-          subMomentDists.forEach(momDist => {
-            const momId = momDist.reference_id;
-            const momAllocated = lines
-              .filter(l => l.subdivision_id === subId && l.moment_id === momId)
-              .reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-
-            // Get funnel stages for this moment
-            const momKey = `${subId}_${momId}`;
-            const momFunnelDists = funnelDists.filter(f => f.parent_distribution_id === momKey);
-            const funnelNodes: HierarchyNode['moments'][0]['funnelStages'] = [];
-
-            if (momFunnelDists.length > 0) {
-              momFunnelDists.forEach(funDist => {
-                const funId = funDist.reference_id;
-                const matchingLines = lines.filter(l => 
-                  l.subdivision_id === subId && l.moment_id === momId && l.funnel_stage_id === funId
-                );
-                const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-
-                funnelNodes.push({
-                  funnelStage: { id: funId, name: `Fase ${funId?.slice(0,4) || ''}`, planned: funDist.amount },
-                  funnelStageAllocated: funAllocated,
-                  lines: matchingLines,
-                });
-              });
-            } else {
-              // No funnel distributions - single "no funnel" node
-              const matchingLines = lines.filter(l => 
-                l.subdivision_id === subId && l.moment_id === momId
-              );
-              const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-              funnelNodes.push({
-                funnelStage: { id: null, name: 'Sem fase', planned: momDist.amount },
-                funnelStageAllocated: funAllocated,
-                lines: matchingLines,
-              });
-            }
-
-            momentNodes.push({
-              moment: { id: momId, name: `Momento ${momId?.slice(0,4) || ''}`, planned: momDist.amount },
-              momentAllocated: momAllocated,
-              funnelStages: funnelNodes,
-            });
-          });
-        } else {
-          // No moment distributions - check if there are funnel distributions directly
-          const subFunnelDists = funnelDists.filter(f => f.parent_distribution_id === subId || f.parent_distribution_id?.startsWith(subId || ''));
-          
-          if (subFunnelDists.length > 0) {
-            // Has funnel stages under subdivision directly (no moments)
-            const funnelNodes: HierarchyNode['moments'][0]['funnelStages'] = [];
-            subFunnelDists.forEach(funDist => {
-              const funId = funDist.reference_id;
-              const matchingLines = lines.filter(l => 
-                l.subdivision_id === subId && l.funnel_stage_id === funId
-              );
-              const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-              funnelNodes.push({
-                funnelStage: { id: funId, name: `Fase ${funId?.slice(0,4) || ''}`, planned: funDist.amount },
-                funnelStageAllocated: funAllocated,
-                lines: matchingLines,
-              });
-            });
-            momentNodes.push({
-              moment: { id: null, name: 'Sem momento', planned: subDist.amount },
-              momentAllocated: subAllocated,
-              funnelStages: funnelNodes,
-            });
-          } else {
-            // No moments, no funnels - just subdivision
-            const matchingLines = lines.filter(l => l.subdivision_id === subId);
-            const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-            momentNodes.push({
-              moment: { id: null, name: 'Sem momento', planned: subDist.amount },
-              momentAllocated: subAllocated,
-              funnelStages: [{
-                funnelStage: { id: null, name: 'Sem fase', planned: subDist.amount },
-                funnelStageAllocated: funAllocated,
-                lines: matchingLines,
-              }],
-            });
-          }
-        }
-
-        nodes.push({
-          subdivision: { id: subId, name: `Subdivisão ${subId?.slice(0,4) || ''}`, planned: subDist.amount },
-          subdivisionAllocated: subAllocated,
-          moments: momentNodes,
-        });
-      });
-    } else if (momentDists.length > 0) {
-      // No subdivisions, but has moments at root level
-      const rootMomentDists = momentDists.filter(m => !m.parent_distribution_id || m.parent_distribution_id === 'root');
-      const momentNodes: HierarchyNode['moments'] = [];
-
-      rootMomentDists.forEach(momDist => {
-        const momId = momDist.reference_id;
-        const momAllocated = lines
-          .filter(l => l.moment_id === momId)
-          .reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-
-        // Get funnel stages for this moment
-        const momKey = `root_${momId}`;
-        const momFunnelDists = funnelDists.filter(f => f.parent_distribution_id === momKey);
-        const funnelNodes: HierarchyNode['moments'][0]['funnelStages'] = [];
-
-        if (momFunnelDists.length > 0) {
-          momFunnelDists.forEach(funDist => {
-            const funId = funDist.reference_id;
-            const matchingLines = lines.filter(l => 
-              l.moment_id === momId && l.funnel_stage_id === funId
-            );
-            const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-            funnelNodes.push({
-              funnelStage: { id: funId, name: `Fase ${funId?.slice(0,4) || ''}`, planned: funDist.amount },
-              funnelStageAllocated: funAllocated,
-              lines: matchingLines,
-            });
-          });
-        } else {
-          const matchingLines = lines.filter(l => l.moment_id === momId);
-          const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-          funnelNodes.push({
-            funnelStage: { id: null, name: 'Sem fase', planned: momDist.amount },
-            funnelStageAllocated: funAllocated,
-            lines: matchingLines,
-          });
-        }
-
-        momentNodes.push({
-          moment: { id: momId, name: `Momento ${momId?.slice(0,4) || ''}`, planned: momDist.amount },
-          momentAllocated: momAllocated,
-          funnelStages: funnelNodes,
-        });
-      });
-
+    // If no distributions at all, create a single "Geral" node
+    if (subdivisionDists.length === 0) {
+      const totalBudget = Number(plan.total_budget) || 0;
+      const allAllocated = lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+      
       nodes.push({
-        subdivision: { id: null, name: 'Sem subdivisão', planned: totalBudget },
-        subdivisionAllocated: lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0),
-        moments: momentNodes,
-      });
-    } else if (funnelDists.length > 0) {
-      // Only funnel stages
-      const funnelNodes: HierarchyNode['moments'][0]['funnelStages'] = [];
-      funnelDists.forEach(funDist => {
-        const funId = funDist.reference_id;
-        const matchingLines = lines.filter(l => l.funnel_stage_id === funId);
-        const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-        funnelNodes.push({
-          funnelStage: { id: funId, name: `Fase ${funId?.slice(0,4) || ''}`, planned: funDist.amount },
-          funnelStageAllocated: funAllocated,
-          lines: matchingLines,
-        });
-      });
-
-      nodes.push({
-        subdivision: { id: null, name: 'Sem subdivisão', planned: totalBudget },
-        subdivisionAllocated: lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0),
+        subdivision: { id: null, distId: 'root', name: 'Geral', planned: totalBudget, percentage: 100 },
+        subdivisionAllocated: allAllocated,
         moments: [{
-          moment: { id: null, name: 'Sem momento', planned: totalBudget },
-          momentAllocated: lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0),
-          funnelStages: funnelNodes,
-        }],
-      });
-    } else {
-      // No distributions at all - show single node with all lines
-      nodes.push({
-        subdivision: { id: null, name: 'Plano Completo', planned: totalBudget },
-        subdivisionAllocated: lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0),
-        moments: [{
-          moment: { id: null, name: 'Sem momento', planned: totalBudget },
-          momentAllocated: lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0),
+          moment: { id: null, distId: 'root', name: 'Geral', planned: totalBudget, percentage: 100 },
+          momentAllocated: allAllocated,
           funnelStages: [{
-            funnelStage: { id: null, name: 'Sem fase', planned: totalBudget },
-            funnelStageAllocated: lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0),
+            funnelStage: { id: null, distId: 'root', name: 'Geral', planned: totalBudget, percentage: 100 },
+            funnelStageAllocated: allAllocated,
             lines: lines,
           }],
         }],
       });
+
+      return { 
+        groupedData: nodes, 
+        showSubdivisionColumn: false, 
+        showMomentColumn: false, 
+        showFunnelColumn: false 
+      };
     }
 
-    return nodes;
-  }, [lines, budgetDistributions, plan.total_budget]);
-  
+    // Process each subdivision distribution
+    for (const subDist of subdivisionDists) {
+      const subRefId = subDist.reference_id;
+      const subName = getSubdivisionName(subRefId);
+      
+      // Get lines for this subdivision
+      const subLines = lines.filter(l => 
+        (subRefId === null && !l.subdivision_id) || l.subdivision_id === subRefId
+      );
+      const subAllocated = subLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+
+      // Get moments for this subdivision (where parent_distribution_id = subDist.id)
+      const subMomentDists = momentDists.filter(m => m.parent_distribution_id === subDist.id);
+      const momentNodes: HierarchyNode['moments'] = [];
+
+      if (subMomentDists.length === 0) {
+        // No moments for this subdivision - create single "Geral" moment
+        const funnelNodes: HierarchyNode['moments'][0]['funnelStages'] = [];
+        
+        // Get funnel stages directly under subdivision
+        const subFunnelDists = funnelDists.filter(f => f.parent_distribution_id === subDist.id);
+        
+        if (subFunnelDists.length === 0) {
+          // No funnel stages - single "Geral" funnel
+          funnelNodes.push({
+            funnelStage: { id: null, distId: 'none', name: 'Geral', planned: subDist.amount, percentage: 100 },
+            funnelStageAllocated: subAllocated,
+            lines: subLines,
+          });
+        } else {
+          for (const funDist of subFunnelDists) {
+            const funRefId = funDist.reference_id;
+            const funName = getFunnelStageName(funRefId);
+            const funLines = subLines.filter(l => 
+              (funRefId === null && !l.funnel_stage_id) || l.funnel_stage_id === funRefId
+            );
+            const funAllocated = funLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+            
+            funnelNodes.push({
+              funnelStage: { id: funRefId, distId: funDist.id, name: funName, planned: funDist.amount, percentage: funDist.percentage },
+              funnelStageAllocated: funAllocated,
+              lines: funLines,
+            });
+          }
+        }
+
+        momentNodes.push({
+          moment: { id: null, distId: 'none', name: 'Geral', planned: subDist.amount, percentage: 100 },
+          momentAllocated: subAllocated,
+          funnelStages: funnelNodes,
+        });
+      } else {
+        // Process each moment
+        for (const momDist of subMomentDists) {
+          const momRefId = momDist.reference_id;
+          const momName = getMomentName(momRefId);
+          
+          // Get lines for this moment
+          const momLines = subLines.filter(l => 
+            (momRefId === null && !l.moment_id) || l.moment_id === momRefId
+          );
+          const momAllocated = momLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+
+          // Get funnel stages for this moment (where parent_distribution_id = momDist.id)
+          const momFunnelDists = funnelDists.filter(f => f.parent_distribution_id === momDist.id);
+          const funnelNodes: HierarchyNode['moments'][0]['funnelStages'] = [];
+
+          if (momFunnelDists.length === 0) {
+            // No funnel stages - single "Geral" funnel
+            funnelNodes.push({
+              funnelStage: { id: null, distId: 'none', name: 'Geral', planned: momDist.amount, percentage: 100 },
+              funnelStageAllocated: momAllocated,
+              lines: momLines,
+            });
+          } else {
+            for (const funDist of momFunnelDists) {
+              const funRefId = funDist.reference_id;
+              const funName = getFunnelStageName(funRefId);
+              const funLines = momLines.filter(l => 
+                (funRefId === null && !l.funnel_stage_id) || l.funnel_stage_id === funRefId
+              );
+              const funAllocated = funLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+              
+              funnelNodes.push({
+                funnelStage: { id: funRefId, distId: funDist.id, name: funName, planned: funDist.amount, percentage: funDist.percentage },
+                funnelStageAllocated: funAllocated,
+                lines: funLines,
+              });
+            }
+          }
+
+          momentNodes.push({
+            moment: { id: momRefId, distId: momDist.id, name: momName, planned: momDist.amount, percentage: momDist.percentage },
+            momentAllocated: momAllocated,
+            funnelStages: funnelNodes,
+          });
+        }
+      }
+
+      nodes.push({
+        subdivision: { id: subRefId, distId: subDist.id, name: subName, planned: subDist.amount, percentage: subDist.percentage },
+        subdivisionAllocated: subAllocated,
+        moments: momentNodes,
+      });
+    }
+
+    return { 
+      groupedData: nodes, 
+      showSubdivisionColumn: !allSubdivisionsAreGeral, 
+      showMomentColumn: !allMomentsAreGeral, 
+      showFunnelColumn: !allFunnelStagesAreGeral 
+    };
+  }, [lines, budgetDistributions, plan.total_budget, subdivisionsList, momentsList, funnelStagesList]);
 
   const totalBudget = lines.reduce((acc, line) => acc + (Number(line.budget) || 0), 0);
 
@@ -496,14 +478,29 @@ export function HierarchicalMediaTable({
     </Button>
   );
 
+  // Calculate dynamic column widths based on what's visible
+  const getMinWidth = () => {
+    let width = 70 + 100 + 70 + 120 + 110 + 80 + 110 + 110 + 100; // base columns
+    if (showSubdivisionColumn) width += 160;
+    if (showMomentColumn) width += 160;
+    if (showFunnelColumn) width += 130;
+    return width;
+  };
+
   return (
     <TooltipProvider>
       <div className="border rounded-lg overflow-x-auto">
         {/* Header */}
-        <div className="flex bg-muted/50 text-xs font-medium text-muted-foreground border-b min-w-[1200px]">
-          <div className="w-[160px] p-3 border-r shrink-0">Subdivisão do plano:</div>
-          <div className="w-[160px] p-3 border-r shrink-0">Momentos de Campanha</div>
-          <div className="w-[130px] p-3 border-r shrink-0">Fase</div>
+        <div className="flex bg-muted/50 text-xs font-medium text-muted-foreground border-b" style={{ minWidth: `${getMinWidth()}px` }}>
+          {showSubdivisionColumn && (
+            <div className="w-[160px] p-3 border-r shrink-0">Subdivisão do plano:</div>
+          )}
+          {showMomentColumn && (
+            <div className="w-[160px] p-3 border-r shrink-0">Momentos de Campanha</div>
+          )}
+          {showFunnelColumn && (
+            <div className="w-[130px] p-3 border-r shrink-0">Fase</div>
+          )}
           <div className="w-[70px] p-3 border-r shrink-0">Meio</div>
           <div className="w-[100px] p-3 border-r shrink-0">Veículos e canais</div>
           <div className="w-[70px] p-3 border-r shrink-0">Formato</div>
@@ -516,51 +513,51 @@ export function HierarchicalMediaTable({
         </div>
 
         {/* Body */}
-        <div className="divide-y min-w-[1200px]">
+        <div className="divide-y" style={{ minWidth: `${getMinWidth()}px` }}>
           {groupedData.map((subdivisionGroup, subIdx) => (
-            <div key={subdivisionGroup.subdivision?.id || `no-sub-${subIdx}`} className="flex">
+            <div key={subdivisionGroup.subdivision.distId || `no-sub-${subIdx}`} className="flex">
               {/* Subdivision cell */}
-              <div className="w-[160px] p-2 border-r bg-background shrink-0">
-              <BudgetCard
-                  label={subdivisionGroup.subdivision.name}
-                  planned={subdivisionGroup.subdivision.planned}
-                  allocated={subdivisionGroup.subdivisionAllocated}
-                  percentageLabel={plan.total_budget 
-                    ? `${((subdivisionGroup.subdivision.planned / Number(plan.total_budget)) * 100).toFixed(0)}% do plano`
-                    : undefined}
-                />
-              </div>
+              {showSubdivisionColumn && (
+                <div className="w-[160px] p-2 border-r bg-background shrink-0">
+                  <BudgetCard
+                    label={subdivisionGroup.subdivision.name}
+                    planned={subdivisionGroup.subdivision.planned}
+                    allocated={subdivisionGroup.subdivisionAllocated}
+                    percentageLabel={`${subdivisionGroup.subdivision.percentage.toFixed(0)}% do plano`}
+                  />
+                </div>
+              )}
 
               {/* Moments column */}
               <div className="flex-1 divide-y">
                 {subdivisionGroup.moments.map((momentGroup, momIdx) => (
-                  <div key={momentGroup.moment?.id || `no-mom-${momIdx}`} className="flex">
+                  <div key={momentGroup.moment.distId || `no-mom-${momIdx}`} className="flex">
                     {/* Moment cell */}
-                    <div className="w-[160px] p-2 border-r bg-background shrink-0">
-                      <BudgetCard
-                        label={momentGroup.moment.name}
-                        planned={momentGroup.moment.planned}
-                        allocated={momentGroup.momentAllocated}
-                        percentageLabel={subdivisionGroup.subdivision.planned 
-                          ? `${((momentGroup.moment.planned / subdivisionGroup.subdivision.planned) * 100).toFixed(0)}% de ${subdivisionGroup.subdivision.name}`
-                          : undefined}
-                      />
-                    </div>
+                    {showMomentColumn && (
+                      <div className="w-[160px] p-2 border-r bg-background shrink-0">
+                        <BudgetCard
+                          label={momentGroup.moment.name}
+                          planned={momentGroup.moment.planned}
+                          allocated={momentGroup.momentAllocated}
+                          percentageLabel={`${momentGroup.moment.percentage.toFixed(0)}% de ${subdivisionGroup.subdivision.name}`}
+                        />
+                      </div>
+                    )}
 
                     {/* Funnel stages column */}
                     <div className="flex-1 divide-y">
                       {momentGroup.funnelStages.map((funnelGroup, funIdx) => (
-                        <div key={funnelGroup.funnelStage?.id || `no-fun-${funIdx}`} className="flex">
-                          <div className="w-[130px] p-2 border-r bg-background shrink-0">
-                            <BudgetCard
-                              label={funnelGroup.funnelStage.name}
-                              planned={funnelGroup.funnelStage.planned}
-                              allocated={funnelGroup.funnelStageAllocated}
-                              percentageLabel={momentGroup.moment.planned 
-                                ? `${((funnelGroup.funnelStage.planned / momentGroup.moment.planned) * 100).toFixed(0)}% de ${momentGroup.moment.name}`
-                                : undefined}
-                            />
-                          </div>
+                        <div key={funnelGroup.funnelStage.distId || `no-fun-${funIdx}`} className="flex">
+                          {showFunnelColumn && (
+                            <div className="w-[130px] p-2 border-r bg-background shrink-0">
+                              <BudgetCard
+                                label={funnelGroup.funnelStage.name}
+                                planned={funnelGroup.funnelStage.planned}
+                                allocated={funnelGroup.funnelStageAllocated}
+                                percentageLabel={`${funnelGroup.funnelStage.percentage.toFixed(0)}% de ${momentGroup.moment.name}`}
+                              />
+                            </div>
+                          )}
 
                           {/* Lines and Add button */}
                           <div className="flex-1 divide-y">
@@ -671,9 +668,9 @@ export function HierarchicalMediaTable({
                             {/* Add Line Button - always visible for each combination */}
                             <div className="p-2">
                               <AddLineButton
-                                subdivisionId={subdivisionGroup.subdivision?.id}
-                                momentId={momentGroup.moment?.id}
-                                funnelStageId={funnelGroup.funnelStage?.id}
+                                subdivisionId={subdivisionGroup.subdivision.id || undefined}
+                                momentId={momentGroup.moment.id || undefined}
+                                funnelStageId={funnelGroup.funnelStage.id || undefined}
                               />
                             </div>
                           </div>
@@ -688,10 +685,11 @@ export function HierarchicalMediaTable({
         </div>
 
         {/* Footer - Subtotal */}
-        <div className="flex bg-muted border-t min-w-[1200px]">
-          <div className="w-[160px] p-3 font-bold shrink-0">Subtotal:</div>
-          <div className="w-[160px] p-3 shrink-0"></div>
-          <div className="w-[130px] p-3 shrink-0"></div>
+        <div className="flex bg-muted border-t" style={{ minWidth: `${getMinWidth()}px` }}>
+          {showSubdivisionColumn && <div className="w-[160px] p-3 font-bold shrink-0">Subtotal:</div>}
+          {!showSubdivisionColumn && <div className="w-auto p-3 font-bold shrink-0">Subtotal:</div>}
+          {showMomentColumn && <div className="w-[160px] p-3 shrink-0"></div>}
+          {showFunnelColumn && <div className="w-[130px] p-3 shrink-0"></div>}
           <div className="w-[70px] p-3 shrink-0"></div>
           <div className="w-[100px] p-3 shrink-0"></div>
           <div className="w-[70px] p-3 shrink-0"></div>

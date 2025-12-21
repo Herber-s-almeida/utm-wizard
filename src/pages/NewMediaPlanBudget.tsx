@@ -32,6 +32,14 @@ const WIZARD_STEPS = [
 const MAX_SUBDIVISIONS = 12;
 const MAX_FUNNEL_STAGES = 7;
 
+// Helper to create a "Geral" allocation
+const createGeralAllocation = (budget: number): BudgetAllocation => ({
+  id: 'geral',
+  name: 'Geral',
+  percentage: 100,
+  amount: budget,
+});
+
 export default function NewMediaPlanBudget() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -103,6 +111,7 @@ export default function NewMediaPlanBudget() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // 1. Create the media plan
       const { data: plan, error: planError } = await supabase
         .from('media_plans')
         .insert({
@@ -122,94 +131,122 @@ export default function NewMediaPlanBudget() {
 
       if (planError) throw planError;
 
-      // Save budget distributions
-      const distributions: any[] = [];
-      
-      // Save subdivision distributions
-      if (state.subdivisions.length > 0) {
-        state.subdivisions.forEach(sub => {
-          distributions.push({
+      // 2. Save budget distributions in phases to respect FK constraints
+      // Map to store distribution IDs for parent references
+      const subdivisionDistIds: Record<string, string> = {};
+      const momentDistIds: Record<string, string> = {};
+
+      // Get effective subdivisions (use "Geral" if none defined)
+      const effectiveSubdivisions = state.subdivisions.length > 0 
+        ? state.subdivisions 
+        : [createGeralAllocation(state.planData.total_budget)];
+
+      // Phase 1: Insert subdivision distributions
+      for (const sub of effectiveSubdivisions) {
+        const subAmount = wizard.calculateAmount(state.planData.total_budget, sub.percentage);
+        const { data: subDist, error: subError } = await supabase
+          .from('plan_budget_distributions')
+          .insert({
             user_id: user?.id,
             media_plan_id: plan.id,
             distribution_type: 'subdivision',
-            reference_id: sub.id,
+            reference_id: sub.id === 'geral' ? null : sub.id,
             percentage: sub.percentage,
-            amount: wizard.calculateAmount(state.planData.total_budget, sub.percentage),
+            amount: subAmount,
             parent_distribution_id: null,
-          });
-        });
+          })
+          .select('id')
+          .single();
+
+        if (subError) {
+          console.error('Error saving subdivision distribution:', subError);
+          continue;
+        }
+        subdivisionDistIds[sub.id] = subDist.id;
       }
-      
-      // Save moment distributions
-      const subdivisionKeys = state.subdivisions.length > 0 
-        ? state.subdivisions.map(s => s.id) 
-        : ['root'];
-      
-      subdivisionKeys.forEach(subKey => {
-        const moments = state.moments[subKey] || [];
-        if (moments.length > 0) {
-          const parentBudget = subKey === 'root' 
-            ? state.planData.total_budget 
-            : wizard.calculateAmount(state.planData.total_budget, state.subdivisions.find(s => s.id === subKey)?.percentage || 0);
-          
-          moments.forEach(mom => {
-            distributions.push({
+
+      // Phase 2: Insert moment distributions
+      for (const sub of effectiveSubdivisions) {
+        const subDistId = subdivisionDistIds[sub.id];
+        if (!subDistId) continue;
+
+        const subAmount = wizard.calculateAmount(state.planData.total_budget, sub.percentage);
+        const subKey = sub.id === 'geral' ? 'root' : sub.id;
+        
+        // Get effective moments for this subdivision
+        const subMoments = state.moments[subKey] || [];
+        const effectiveMoments = subMoments.length > 0 
+          ? subMoments 
+          : [createGeralAllocation(subAmount)];
+
+        for (const mom of effectiveMoments) {
+          const momAmount = wizard.calculateAmount(subAmount, mom.percentage);
+          const { data: momDist, error: momError } = await supabase
+            .from('plan_budget_distributions')
+            .insert({
               user_id: user?.id,
               media_plan_id: plan.id,
               distribution_type: 'moment',
-              reference_id: mom.id,
+              reference_id: mom.id === 'geral' ? null : mom.id,
               percentage: mom.percentage,
-              amount: wizard.calculateAmount(parentBudget, mom.percentage),
-              parent_distribution_id: subKey === 'root' ? null : subKey,
-            });
-          });
-        }
-      });
-      
-      // Save funnel stage distributions
-      Object.entries(state.funnelStages).forEach(([key, stages]) => {
-        if (stages.length > 0) {
-          // Calculate parent budget based on the key
-          let parentBudget = state.planData.total_budget;
-          const keyParts = key.split('_');
-          
-          if (keyParts.length >= 1 && keyParts[0] !== 'root') {
-            const subPercentage = state.subdivisions.find(s => s.id === keyParts[0])?.percentage || 100;
-            parentBudget = wizard.calculateAmount(state.planData.total_budget, subPercentage);
-            
-            if (keyParts.length >= 2) {
-              const moments = state.moments[keyParts[0]] || [];
-              const momPercentage = moments.find(m => m.id === keyParts[1])?.percentage || 100;
-              parentBudget = wizard.calculateAmount(parentBudget, momPercentage);
-            }
-          } else if (keyParts[0] === 'root' && keyParts.length >= 2) {
-            const moments = state.moments['root'] || [];
-            const momPercentage = moments.find(m => m.id === keyParts[1])?.percentage || 100;
-            parentBudget = wizard.calculateAmount(parentBudget, momPercentage);
-          }
-          
-          stages.forEach(stage => {
-            distributions.push({
-              user_id: user?.id,
-              media_plan_id: plan.id,
-              distribution_type: 'funnel_stage',
-              reference_id: stage.id,
-              percentage: stage.percentage,
-              amount: wizard.calculateAmount(parentBudget, stage.percentage),
-              parent_distribution_id: key,
-            });
-          });
-        }
-      });
+              amount: momAmount,
+              parent_distribution_id: subDistId,
+            })
+            .select('id')
+            .single();
 
-      // Insert all distributions
-      if (distributions.length > 0) {
-        const { error: distError } = await supabase
-          .from('plan_budget_distributions')
-          .insert(distributions);
+          if (momError) {
+            console.error('Error saving moment distribution:', momError);
+            continue;
+          }
+          // Store with composite key: subId_momId
+          momentDistIds[`${sub.id}_${mom.id}`] = momDist.id;
+        }
+      }
+
+      // Phase 3: Insert funnel stage distributions
+      for (const sub of effectiveSubdivisions) {
+        const subAmount = wizard.calculateAmount(state.planData.total_budget, sub.percentage);
+        const subKey = sub.id === 'geral' ? 'root' : sub.id;
         
-        if (distError) {
-          console.error('Error saving distributions:', distError);
+        const subMoments = state.moments[subKey] || [];
+        const effectiveMoments = subMoments.length > 0 
+          ? subMoments 
+          : [createGeralAllocation(subAmount)];
+
+        for (const mom of effectiveMoments) {
+          const momDistId = momentDistIds[`${sub.id}_${mom.id}`];
+          if (!momDistId) continue;
+
+          const momAmount = wizard.calculateAmount(subAmount, mom.percentage);
+          
+          // Get funnel stages for this moment
+          // The funnelStages are keyed by subdivision ID (or 'root'), not by moment
+          // We need to check if there are funnel stages defined for this subdivision
+          const funnelKey = sub.id === 'geral' ? 'root' : sub.id;
+          const subFunnelStages = state.funnelStages[funnelKey] || [];
+          const effectiveFunnelStages = subFunnelStages.length > 0 
+            ? subFunnelStages 
+            : [createGeralAllocation(momAmount)];
+
+          for (const funnel of effectiveFunnelStages) {
+            const funnelAmount = wizard.calculateAmount(momAmount, funnel.percentage);
+            const { error: funnelError } = await supabase
+              .from('plan_budget_distributions')
+              .insert({
+                user_id: user?.id,
+                media_plan_id: plan.id,
+                distribution_type: 'funnel_stage',
+                reference_id: funnel.id === 'geral' ? null : funnel.id,
+                percentage: funnel.percentage,
+                amount: funnelAmount,
+                parent_distribution_id: momDistId,
+              });
+
+            if (funnelError) {
+              console.error('Error saving funnel distribution:', funnelError);
+            }
+          }
         }
       }
 
@@ -491,7 +528,7 @@ export default function NewMediaPlanBudget() {
                         <CardTitle>Subdivisão do Plano</CardTitle>
                         <CardDescription>
                           Divida o orçamento por cidade, produto ou outra subdivisão. Esta etapa é opcional.
-                          Se não adicionar subdivisões, o plano será tratado como um todo único.
+                          Se não adicionar subdivisões, o plano será tratado como "Geral".
                         </CardDescription>
                       </div>
                     </div>
@@ -518,7 +555,7 @@ export default function NewMediaPlanBudget() {
 
                     {state.subdivisions.length === 0 && (
                       <p className="text-sm text-muted-foreground text-center py-4 bg-muted/30 rounded-lg">
-                        Nenhuma subdivisão adicionada. O plano será tratado como um todo único.
+                        Nenhuma subdivisão adicionada. O plano será tratado como "Geral".
                       </p>
                     )}
 
@@ -570,7 +607,7 @@ export default function NewMediaPlanBudget() {
                         <CardTitle>Momentos de Campanha</CardTitle>
                         <CardDescription>
                           Distribua o orçamento por momentos (lançamento, sustentação, etc.). 
-                          Esta etapa é opcional. Se não adicionar momentos, será considerado um período geral.
+                          Esta etapa é opcional. Se não adicionar momentos, será considerado "Geral".
                         </CardDescription>
                       </div>
                     </div>
@@ -759,10 +796,10 @@ export default function NewMediaPlanBudget() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6">
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">
-                    Todas as configurações foram definidas. Clique em "Salvar Plano" para criar o plano e adicionar as linhas detalhadas.
+                  <p className="text-muted-foreground">
+                    Após salvar, você poderá adicionar as linhas de mídia detalhadas na tela do plano.
                   </p>
                 </div>
               </CardContent>
@@ -775,34 +812,30 @@ export default function NewMediaPlanBudget() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
           <div>
             <h1 className="font-display text-2xl font-bold">Novo Plano de Mídia</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Planejamento baseado em orçamento
-            </p>
+            <p className="text-muted-foreground">Construa seu plano passo a passo</p>
           </div>
         </div>
 
-        {/* Stepper */}
+        {/* Wizard Steps */}
         <WizardStepper
           steps={WIZARD_STEPS}
           currentStep={state.step}
-          onStepClick={(step) => {
-            if (step <= state.step) {
-              setEditingSection(null);
-              goToStep(step);
-            }
-          }}
+          onStepClick={goToStep}
         />
 
         {/* Content */}
         {renderContent()}
 
         {/* Navigation */}
-        <div className="flex justify-between pt-4 border-t">
+        <div className="flex justify-between pt-6 border-t">
           <Button
             variant="outline"
             onClick={handleBack}
@@ -826,19 +859,14 @@ export default function NewMediaPlanBudget() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="gap-2 bg-success hover:bg-success/90"
+              className="gap-2"
             >
               {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Salvando...
-                </>
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Salvar Plano
-                </>
+                <Save className="w-4 h-4" />
               )}
+              Salvar Plano
             </Button>
           )}
         </div>
