@@ -74,10 +74,10 @@ export default function MediaPlanDetail() {
   const statuses = useStatuses();
 
   useEffect(() => {
-    if (user && id) {
+    if (user?.id && id) {
       fetchData();
     }
-  }, [user, id]);
+  }, [user?.id, id]);
 
   // Open wizard if query param is set
   useEffect(() => {
@@ -90,12 +90,14 @@ export default function MediaPlanDetail() {
   }, [searchParams, setSearchParams]);
 
   const fetchData = async () => {
+    if (!user?.id || !id) return;
+    
     try {
       const { data: planData, error: planError } = await supabase
         .from('media_plans')
         .select('*')
         .eq('id', id)
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (planError) throw planError;
