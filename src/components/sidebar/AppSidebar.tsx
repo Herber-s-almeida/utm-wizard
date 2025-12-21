@@ -133,7 +133,7 @@ export function AppSidebar() {
   const getSegmentNames = () => behavioralSegmentations.data?.map(s => s.name) || [];
 
   return (
-    <div className="flex flex-col h-full w-64 border-r border-sidebar-border bg-sidebar-background overflow-x-hidden">
+    <div className="flex flex-col h-full w-64 border-r border-sidebar-border bg-sidebar overflow-x-hidden">
       {/* Header */}
       <div className="p-4 border-b border-sidebar-border">
         <Link to="/dashboard" className="flex items-center gap-2">
