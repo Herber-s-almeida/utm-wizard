@@ -317,7 +317,7 @@ export function AppSidebar() {
                 onClick={() => setSubdivisionDialogOpen(true)}
               >
                 <Plus className="h-3 w-3" />
-                + novo
+                Novo
               </Button>
               {parentSubdivisions.length > MAX_ITEMS && (
                 <Link to="/config/subdivisions">
