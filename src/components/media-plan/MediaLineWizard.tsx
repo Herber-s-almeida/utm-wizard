@@ -252,11 +252,62 @@ export function MediaLineWizard({
     }
   };
 
+  // Generate automatic line code based on subdivision, moment, funnel stage
+  const generateLineCode = async (): Promise<string> => {
+    const subdivision = subdivisions.data?.find(s => s.id === selectedSubdivision);
+    const moment = moments.data?.find(m => m.id === selectedMoment);
+    const funnelStage = funnelStages.data?.find(f => f.id === selectedFunnelStage);
+    
+    const getFirstLetter = (name?: string) => {
+      if (!name) return '';
+      return name.charAt(0).toUpperCase();
+    };
+    
+    const generateRandomLetters = () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      return Array.from({ length: 3 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
+    };
+    
+    let prefix = '';
+    prefix += subdivision?.name ? getFirstLetter(subdivision.name) : '';
+    prefix += moment?.name ? getFirstLetter(moment.name) : '';
+    prefix += funnelStage?.name ? getFirstLetter(funnelStage.name) : '';
+    
+    // If no letters, use random
+    if (!prefix) {
+      prefix = generateRandomLetters();
+    }
+    
+    // Get existing codes in this plan
+    const { data: existingLines } = await supabase
+      .from('media_lines')
+      .select('line_code')
+      .eq('media_plan_id', plan.id);
+    
+    const existingCodes = (existingLines || []).map(l => l.line_code).filter(Boolean) as string[];
+    
+    // Find next available number
+    let counter = 1;
+    let code = `${prefix}${counter}`;
+    while (existingCodes.includes(code)) {
+      counter++;
+      code = `${prefix}${counter}`;
+    }
+    
+    return code;
+  };
+
   const handleSave = async () => {
     if (!user) return;
     
     setSaving(true);
     try {
+      // Generate line code for new lines
+      let lineCode = editingLine?.line_code || null;
+      if (!editingLine) {
+        lineCode = await generateLineCode();
+      }
+
       const lineData = {
         subdivision_id: selectedSubdivision,
         moment_id: selectedMoment,
@@ -272,6 +323,7 @@ export function MediaLineWizard({
         notes: lineDetails.notes || null,
         platform: vehicles.data?.find(v => v.id === selectedVehicle)?.name || 'Outro',
         funnel_stage: 'top', // Legacy field
+        line_code: lineCode,
       };
 
       if (editingLine) {
