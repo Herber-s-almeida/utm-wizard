@@ -41,6 +41,8 @@ export default function MediaPlanDetail() {
   const [creatives, setCreatives] = useState<Record<string, MediaCreative[]>>({});
   const [loading, setLoading] = useState(true);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [editingLine, setEditingLine] = useState<MediaLine | null>(null);
+  const [editInitialStep, setEditInitialStep] = useState<string | undefined>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lineToDelete, setLineToDelete] = useState<MediaLine | null>(null);
 
@@ -253,15 +255,20 @@ export default function MediaPlanDetail() {
           vehicles={vehicles.data || []}
           channels={channels.data || []}
           targets={targets.data || []}
-          onEditLine={(line) => {
-            // TODO: Open edit wizard
-            console.log('Edit line', line);
+          onEditLine={(line, initialStep) => {
+            setEditingLine(line);
+            setEditInitialStep(initialStep);
+            setWizardOpen(true);
           }}
           onDeleteLine={(line) => {
             setLineToDelete(line);
             setDeleteDialogOpen(true);
           }}
-          onAddLine={() => setWizardOpen(true)}
+          onAddLine={() => {
+            setEditingLine(null);
+            setEditInitialStep(undefined);
+            setWizardOpen(true);
+          }}
           onUpdateLine={handleUpdateLine}
         />
       </div>
@@ -270,12 +277,20 @@ export default function MediaPlanDetail() {
       {plan && (
         <MediaLineWizard
           open={wizardOpen}
-          onOpenChange={setWizardOpen}
+          onOpenChange={(open) => {
+            setWizardOpen(open);
+            if (!open) {
+              setEditingLine(null);
+              setEditInitialStep(undefined);
+            }
+          }}
           plan={plan}
           onComplete={fetchData}
           existingSubdivisions={existingSubdivisions}
           existingMoments={existingMoments}
           existingFunnelStages={existingFunnelStages}
+          editingLine={editingLine}
+          initialStep={editInitialStep as any}
         />
       )}
 

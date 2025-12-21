@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Loader2, AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,11 +38,13 @@ interface MediaLineWizardProps {
   existingSubdivisions?: string[];
   existingMoments?: string[];
   existingFunnelStages?: string[];
+  editingLine?: any; // MediaLine to edit
+  initialStep?: WizardStep | 'creatives';
 }
 
-type WizardStep = 'subdivision' | 'moment' | 'funnel' | 'medium' | 'vehicle' | 'channel' | 'target' | 'details';
+type WizardStep = 'subdivision' | 'moment' | 'funnel' | 'medium' | 'vehicle' | 'channel' | 'target' | 'details' | 'creatives';
 
-const STEP_ORDER: WizardStep[] = ['subdivision', 'moment', 'funnel', 'medium', 'vehicle', 'channel', 'target', 'details'];
+const STEP_ORDER: WizardStep[] = ['subdivision', 'moment', 'funnel', 'medium', 'vehicle', 'channel', 'target', 'details', 'creatives'];
 
 const STEP_LABELS: Record<WizardStep, string> = {
   subdivision: 'Subdivisão do Plano',
@@ -53,6 +55,7 @@ const STEP_LABELS: Record<WizardStep, string> = {
   channel: 'Canal',
   target: 'Segmentação',
   details: 'Detalhes da Linha',
+  creatives: 'Criativos',
 };
 
 export function MediaLineWizard({
@@ -63,6 +66,8 @@ export function MediaLineWizard({
   existingSubdivisions = [],
   existingMoments = [],
   existingFunnelStages = [],
+  editingLine,
+  initialStep,
 }: MediaLineWizardProps) {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<WizardStep>('subdivision');
@@ -97,26 +102,46 @@ export function MediaLineWizard({
   const channels = useChannels();
   const targets = useTargets();
 
-  // Reset state when dialog opens
+  // Reset state when dialog opens or load editing line
   useEffect(() => {
     if (open) {
-      setCurrentStep('subdivision');
-      setSelectedSubdivision(null);
-      setSelectedMoment(null);
-      setSelectedFunnelStage(null);
-      setSelectedMedium(null);
-      setSelectedVehicle(null);
-      setSelectedChannel(null);
-      setSelectedTarget(null);
-      setLineDetails({
-        budget: '',
-        start_date: plan.start_date || '',
-        end_date: plan.end_date || '',
-        destination_url: '',
-        notes: '',
-      });
+      if (editingLine) {
+        // Editing mode - prefill with existing values
+        setCurrentStep(initialStep as WizardStep || 'subdivision');
+        setSelectedSubdivision(editingLine.subdivision_id || null);
+        setSelectedMoment(editingLine.moment_id || null);
+        setSelectedFunnelStage(editingLine.funnel_stage_id || null);
+        setSelectedMedium(editingLine.medium_id || null);
+        setSelectedVehicle(editingLine.vehicle_id || null);
+        setSelectedChannel(editingLine.channel_id || null);
+        setSelectedTarget(editingLine.target_id || null);
+        setLineDetails({
+          budget: String(editingLine.budget || ''),
+          start_date: editingLine.start_date || plan.start_date || '',
+          end_date: editingLine.end_date || plan.end_date || '',
+          destination_url: editingLine.destination_url || '',
+          notes: editingLine.notes || '',
+        });
+      } else {
+        // Create mode
+        setCurrentStep('subdivision');
+        setSelectedSubdivision(null);
+        setSelectedMoment(null);
+        setSelectedFunnelStage(null);
+        setSelectedMedium(null);
+        setSelectedVehicle(null);
+        setSelectedChannel(null);
+        setSelectedTarget(null);
+        setLineDetails({
+          budget: '',
+          start_date: plan.start_date || '',
+          end_date: plan.end_date || '',
+          destination_url: '',
+          notes: '',
+        });
+      }
     }
-  }, [open, plan]);
+  }, [open, plan, editingLine, initialStep]);
 
   const currentStepIndex = STEP_ORDER.indexOf(currentStep);
 
@@ -138,10 +163,14 @@ export function MediaLineWizard({
         return !!selectedTarget;
       case 'details':
         return !!lineDetails.budget && !!lineDetails.start_date && !!lineDetails.end_date;
+      case 'creatives':
+        return true; // Always can proceed from creatives (optional step)
       default:
         return false;
     }
   };
+
+  
 
   const handleNext = () => {
     if (currentStepIndex < STEP_ORDER.length - 1) {
@@ -209,36 +238,51 @@ export function MediaLineWizard({
     
     setSaving(true);
     try {
-      // Create the media line
-      const { error } = await supabase
-        .from('media_lines')
-        .insert({
-          media_plan_id: plan.id,
-          user_id: user.id,
-          subdivision_id: selectedSubdivision,
-          moment_id: selectedMoment,
-          funnel_stage_id: selectedFunnelStage,
-          medium_id: selectedMedium,
-          vehicle_id: selectedVehicle,
-          channel_id: selectedChannel,
-          target_id: selectedTarget,
-          budget: parseFloat(lineDetails.budget) || 0,
-          start_date: lineDetails.start_date,
-          end_date: lineDetails.end_date,
-          destination_url: lineDetails.destination_url || null,
-          notes: lineDetails.notes || null,
-          platform: vehicles.data?.find(v => v.id === selectedVehicle)?.name || 'Outro',
-          funnel_stage: 'top', // Legacy field
-        });
+      const lineData = {
+        subdivision_id: selectedSubdivision,
+        moment_id: selectedMoment,
+        funnel_stage_id: selectedFunnelStage,
+        medium_id: selectedMedium,
+        vehicle_id: selectedVehicle,
+        channel_id: selectedChannel,
+        target_id: selectedTarget,
+        budget: parseFloat(lineDetails.budget) || 0,
+        start_date: lineDetails.start_date,
+        end_date: lineDetails.end_date,
+        destination_url: lineDetails.destination_url || null,
+        notes: lineDetails.notes || null,
+        platform: vehicles.data?.find(v => v.id === selectedVehicle)?.name || 'Outro',
+        funnel_stage: 'top', // Legacy field
+      };
 
-      if (error) throw error;
+      if (editingLine) {
+        // Update existing line
+        const { error } = await supabase
+          .from('media_lines')
+          .update(lineData)
+          .eq('id', editingLine.id);
 
-      toast.success('Linha de mídia criada!');
+        if (error) throw error;
+        toast.success('Linha de mídia atualizada!');
+      } else {
+        // Create new line
+        const { error } = await supabase
+          .from('media_lines')
+          .insert({
+            ...lineData,
+            media_plan_id: plan.id,
+            user_id: user.id,
+          });
+
+        if (error) throw error;
+        toast.success('Linha de mídia criada!');
+      }
+
       onComplete();
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving line:', error);
-      toast.error('Erro ao criar linha de mídia');
+      toast.error(editingLine ? 'Erro ao atualizar linha de mídia' : 'Erro ao criar linha de mídia');
     } finally {
       setSaving(false);
     }
@@ -416,31 +460,36 @@ export function MediaLineWizard({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nova Linha de Mídia</DialogTitle>
+            <DialogTitle>{editingLine ? 'Editar Linha de Mídia' : 'Nova Linha de Mídia'}</DialogTitle>
             <DialogDescription>
-              Configure a linha seguindo a hierarquia do plano
+              {editingLine ? 'Edite os campos da linha de mídia' : 'Configure a linha seguindo a hierarquia do plano'}
             </DialogDescription>
           </DialogHeader>
 
-          {/* Progress indicators */}
+          {/* Progress indicators - clickable in edit mode */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2">
             {STEP_ORDER.map((step, index) => {
               const isActive = currentStep === step;
               const isPast = index < currentStepIndex;
+              const canClick = editingLine; // Can click to jump in edit mode
               
               return (
-                <div
+                <button
                   key={step}
+                  type="button"
+                  disabled={!canClick}
+                  onClick={() => canClick && setCurrentStep(step)}
                   className={cn(
                     "flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all",
                     isActive && "bg-primary text-primary-foreground",
                     isPast && "bg-success/20 text-success",
-                    !isActive && !isPast && "bg-muted text-muted-foreground"
+                    !isActive && !isPast && "bg-muted text-muted-foreground",
+                    canClick && !isActive && "hover:bg-muted/80 cursor-pointer"
                   )}
                 >
                   {isPast && <Check className="w-3 h-3" />}
                   {STEP_LABELS[step]}
-                </div>
+                </button>
               );
             })}
           </div>
@@ -455,7 +504,7 @@ export function MediaLineWizard({
               transition={{ duration: 0.2 }}
               className="min-h-[300px] py-4"
             >
-              {currentStep !== 'details' ? (
+              {currentStep !== 'details' && currentStep !== 'creatives' ? (
                 <HierarchyBlockSelector
                   title={STEP_LABELS[currentStep]}
                   items={getItemsForStep()}
@@ -474,6 +523,18 @@ export function MediaLineWizard({
                       : 'Nenhum item disponível. Crie um novo abaixo.'
                   }
                 />
+              ) : currentStep === 'creatives' ? (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-primary">Criativos da Linha:</h3>
+                  
+                  {editingLine ? (
+                    <CreativesSection lineId={editingLine.id} />
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Os criativos podem ser adicionados após salvar a linha.</p>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="space-y-4">
                   <h3 className="text-sm font-medium text-primary">Detalhes da Linha:</h3>
@@ -566,7 +627,7 @@ export function MediaLineWizard({
               {currentStepIndex === 0 ? 'Cancelar' : 'Voltar'}
             </Button>
             
-            {currentStep === 'details' ? (
+            {(currentStep === 'details' && !editingLine) || currentStep === 'creatives' ? (
               <Button
                 onClick={handleSave}
                 disabled={!canProceed() || saving}
@@ -580,7 +641,7 @@ export function MediaLineWizard({
                 ) : (
                   <>
                     <Check className="w-4 h-4" />
-                    Criar Linha
+                    {editingLine ? 'Salvar Alterações' : 'Criar Linha'}
                   </>
                 )}
               </Button>
@@ -622,5 +683,107 @@ export function MediaLineWizard({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+// Creatives Section Component
+function CreativesSection({ lineId }: { lineId: string }) {
+  const { user } = useAuth();
+  const [creatives, setCreatives] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newCreativeName, setNewCreativeName] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    loadCreatives();
+  }, [lineId]);
+
+  const loadCreatives = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('media_creatives')
+      .select('*')
+      .eq('media_line_id', lineId)
+      .order('created_at', { ascending: false });
+    setCreatives(data || []);
+    setLoading(false);
+  };
+
+  const addCreative = async () => {
+    if (!newCreativeName.trim() || !user) return;
+    
+    setAdding(true);
+    const { error } = await supabase
+      .from('media_creatives')
+      .insert({
+        media_line_id: lineId,
+        user_id: user.id,
+        name: newCreativeName.trim(),
+      });
+    
+    if (!error) {
+      setNewCreativeName('');
+      await loadCreatives();
+      toast.success('Criativo adicionado!');
+    }
+    setAdding(false);
+  };
+
+  const deleteCreative = async (id: string) => {
+    await supabase.from('media_creatives').delete().eq('id', id);
+    await loadCreatives();
+    toast.success('Criativo removido');
+  };
+
+  if (loading) {
+    return <div className="text-center py-4"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Add new creative */}
+      <div className="flex gap-2">
+        <Input
+          placeholder="Nome do criativo..."
+          value={newCreativeName}
+          onChange={(e) => setNewCreativeName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && addCreative()}
+        />
+        <Button onClick={addCreative} disabled={adding || !newCreativeName.trim()}>
+          {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Adicionar'}
+        </Button>
+      </div>
+
+      {/* List of creatives */}
+      {creatives.length === 0 ? (
+        <div className="text-center py-6 text-muted-foreground border rounded-lg">
+          Nenhum criativo adicionado ainda.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {creatives.map((creative) => (
+            <div
+              key={creative.id}
+              className="flex items-center justify-between p-3 border rounded-lg bg-background"
+            >
+              <div>
+                <div className="font-medium">{creative.name}</div>
+                {creative.creative_type && (
+                  <div className="text-xs text-muted-foreground">{creative.creative_type}</div>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-destructive hover:text-destructive"
+                onClick={() => deleteCreative(creative.id)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
