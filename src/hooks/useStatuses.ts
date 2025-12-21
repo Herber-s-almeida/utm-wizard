@@ -23,9 +23,11 @@ export function useStatuses() {
   const query = useQuery({
     queryKey: ['statuses', user?.id],
     queryFn: async () => {
+      // Fetch user's own statuses AND system statuses (global)
       const { data, error } = await supabase
         .from('statuses')
         .select('*')
+        .or(`user_id.eq.${user!.id},is_system.eq.true`)
         .order('is_system', { ascending: false })
         .order('created_at', { ascending: true });
       if (error) throw error;
@@ -97,44 +99,11 @@ export function useStatuses() {
     },
   });
 
-  // Function to initialize system statuses if they don't exist
-  const initializeSystemStatuses = useMutation({
-    mutationFn: async () => {
-      if (!user) return;
-      
-      // Check if system statuses already exist
-      const { data: existing } = await supabase
-        .from('statuses')
-        .select('name')
-        .eq('user_id', user.id)
-        .eq('is_system', true);
-      
-      const existingNames = existing?.map(s => s.name) || [];
-      const missingStatuses = SYSTEM_STATUSES.filter(s => !existingNames.includes(s));
-      
-      if (missingStatuses.length > 0) {
-        const { error } = await supabase
-          .from('statuses')
-          .insert(missingStatuses.map(name => ({
-            name,
-            description: null,
-            is_system: true,
-            user_id: user.id,
-          })));
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['statuses'] });
-    },
-  });
-
   return { 
     ...query, 
     create, 
     update, 
     remove,
-    initializeSystemStatuses,
     isSystemStatus: (status: Status) => status.is_system,
   };
 }
