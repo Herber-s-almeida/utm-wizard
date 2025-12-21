@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -19,17 +19,10 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function StatusesPage() {
-  const { data: statuses, create, update, remove, initializeSystemStatuses, isSystemStatus } = useStatuses();
+  const { data: statuses, create, update, remove, isSystemStatus } = useStatuses();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-
-  // Initialize system statuses on first load
-  useEffect(() => {
-    if (statuses && statuses.length === 0) {
-      initializeSystemStatuses.mutate();
-    }
-  }, [statuses]);
 
   const existingNames = statuses?.map(s => s.name) || [];
 

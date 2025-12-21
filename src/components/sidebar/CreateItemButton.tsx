@@ -59,7 +59,7 @@ export function CreateItemButton({ onCreate, placeholder = 'Nome...', className 
       onClick={() => setIsCreating(true)}
     >
       <Plus className="h-3 w-3" />
-      + novo
+      Novo
     </Button>
   );
 }

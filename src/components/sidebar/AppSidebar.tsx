@@ -364,7 +364,7 @@ export function AppSidebar() {
                 onClick={() => setMomentDialogOpen(true)}
               >
                 <Plus className="h-3 w-3" />
-                + novo
+                Novo
               </Button>
               {(moments.data?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/moments">
@@ -411,7 +411,7 @@ export function AppSidebar() {
                 onClick={() => setFunnelStageDialogOpen(true)}
               >
                 <Plus className="h-3 w-3" />
-                + novo
+                Novo
               </Button>
               {(funnelStages.data?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/funnel-stages">
@@ -458,7 +458,7 @@ export function AppSidebar() {
                 onClick={() => setMediumDialogOpen(true)}
               >
                 <Plus className="h-3 w-3" />
-                + novo
+                Novo
               </Button>
               {(mediums.data?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/mediums">
@@ -533,7 +533,7 @@ export function AppSidebar() {
                       }}
                     >
                       <Plus className="h-2.5 w-2.5" />
-                      + novo
+                      Novo
                     </Button>
                   </CollapsibleContent>
                 </Collapsible>
@@ -545,7 +545,7 @@ export function AppSidebar() {
                 onClick={() => setVehicleDialogOpen(true)}
               >
                 <Plus className="h-3 w-3" />
-                + novo
+                Novo
               </Button>
               {(vehicles.data?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/vehicles">
@@ -605,7 +605,7 @@ export function AppSidebar() {
                     }}
                   >
                     <Plus className="h-2.5 w-2.5" />
-                    + novo
+                    Novo
                   </Button>
                   {(behavioralSegmentations.data?.length || 0) > MAX_ITEMS && (
                     <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
@@ -646,7 +646,7 @@ export function AppSidebar() {
                     }}
                   >
                     <Plus className="h-2.5 w-2.5" />
-                    + novo
+                    Novo
                   </Button>
                   {(targets.data?.length || 0) > MAX_ITEMS && (
                     <Link to="/config/targets">
@@ -695,7 +695,7 @@ export function AppSidebar() {
                 onClick={() => setCreativeDialogOpen(true)}
               >
                 <Plus className="h-3 w-3" />
-                + novo
+                Novo
               </Button>
               {(creativeTemplates.data?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/creatives">
@@ -745,7 +745,7 @@ export function AppSidebar() {
                   className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
                 >
                   <Plus className="h-3 w-3" />
-                  + novo
+                  Novo
                 </Button>
               </Link>
             </CollapsibleContent>
