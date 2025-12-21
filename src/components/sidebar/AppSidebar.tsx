@@ -141,11 +141,12 @@ export function AppSidebar() {
     <div className="flex flex-col h-full w-64 border-r border-sidebar-border bg-sidebar overflow-x-hidden">
       {/* Header */}
       <div className="p-4 border-b border-sidebar-border">
-        <Link to="/dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-            <LayoutDashboard className="w-4 h-4 text-primary" />
+        <Link to="/dashboard" className="flex items-center gap-3">
+          <img src="/logo.png" alt="AdsPlanning Pro" className="h-8 w-auto" />
+          <div className="flex flex-col">
+            <span className="font-display font-bold text-sm text-primary">AdsPlanning</span>
+            <span className="text-[10px] font-semibold text-accent tracking-wider">PRO</span>
           </div>
-          <span className="font-display font-semibold text-sm">MediaPlan</span>
         </Link>
       </div>
 
