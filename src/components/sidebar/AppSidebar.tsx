@@ -261,7 +261,7 @@ export function AppSidebar() {
                   <span className="truncate">Subdivisões de Plano</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/subdivisions" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <Link to="/config/subdivisions" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100"> 
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -274,7 +274,7 @@ export function AppSidebar() {
                   open={openSubdivisions[sub.id]} 
                   onOpenChange={() => setOpenSubdivisions(prev => ({ ...prev, [sub.id]: !prev[sub.id] }))}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center min-w-0">
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-5 w-5 mr-1">
                         {openSubdivisions[sub.id] ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
@@ -312,7 +312,7 @@ export function AppSidebar() {
                 onClick={() => setSubdivisionDialogOpen(true)}
               >
                 <Plus className="h-3 w-3" />
-                Criar nova subdivisão de plano
+                + novo
               </Button>
               {parentSubdivisions.length > MAX_ITEMS && (
                 <Link to="/config/subdivisions">
@@ -334,7 +334,7 @@ export function AppSidebar() {
                   <span className="truncate">Momentos de Campanha</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/moments" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <Link to="/config/moments" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -359,7 +359,7 @@ export function AppSidebar() {
                 onClick={() => setMomentDialogOpen(true)}
               >
                 <Plus className="h-3 w-3" />
-                Criar novo momento de campanha
+                + novo
               </Button>
               {(moments.data?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/moments">
@@ -381,7 +381,7 @@ export function AppSidebar() {
                   <span className="truncate">Fases do Funil</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/funnel-stages" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <Link to="/config/funnel-stages" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -406,7 +406,7 @@ export function AppSidebar() {
                 onClick={() => setFunnelStageDialogOpen(true)}
               >
                 <Plus className="h-3 w-3" />
-                Criar nova fase de funil
+                + novo
               </Button>
               {(funnelStages.data?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/funnel-stages">
@@ -428,7 +428,7 @@ export function AppSidebar() {
                   <span className="truncate">Meio</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/mediums" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <Link to="/config/mediums" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -453,7 +453,7 @@ export function AppSidebar() {
                 onClick={() => setMediumDialogOpen(true)}
               >
                 <Plus className="h-3 w-3" />
-                Criar novo meio
+                + novo
               </Button>
               {(mediums.data?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/mediums">
@@ -475,7 +475,7 @@ export function AppSidebar() {
                   <span className="truncate">Veículos e Canais</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/vehicles" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <Link to="/config/vehicles" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -488,7 +488,7 @@ export function AppSidebar() {
                   open={openVehicles[vehicle.id]} 
                   onOpenChange={() => setOpenVehicles(prev => ({ ...prev, [vehicle.id]: !prev[vehicle.id] }))}
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center min-w-0">
                     <CollapsibleTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-5 w-5 mr-1">
                         {openVehicles[vehicle.id] ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
@@ -528,7 +528,7 @@ export function AppSidebar() {
                       }}
                     >
                       <Plus className="h-2.5 w-2.5" />
-                      Criar novo canal
+                      + novo
                     </Button>
                   </CollapsibleContent>
                 </Collapsible>
@@ -540,7 +540,7 @@ export function AppSidebar() {
                 onClick={() => setVehicleDialogOpen(true)}
               >
                 <Plus className="h-3 w-3" />
-                Criar novo veículo
+                + novo
               </Button>
               {(vehicles.data?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/vehicles">
@@ -562,7 +562,7 @@ export function AppSidebar() {
                   <span className="truncate">Segmentação e Target</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/targets" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <Link to="/config/targets" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -600,7 +600,7 @@ export function AppSidebar() {
                     }}
                   >
                     <Plus className="h-2.5 w-2.5" />
-                    Criar novo segmento
+                    + novo
                   </Button>
                   {(behavioralSegmentations.data?.length || 0) > MAX_ITEMS && (
                     <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
@@ -641,7 +641,7 @@ export function AppSidebar() {
                     }}
                   >
                     <Plus className="h-2.5 w-2.5" />
-                    Criar novo target
+                    + novo
                   </Button>
                   {(targets.data?.length || 0) > MAX_ITEMS && (
                     <Link to="/config/targets">
@@ -665,7 +665,7 @@ export function AppSidebar() {
                   <span className="truncate">Criativos</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/creatives" className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <Link to="/config/creatives" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -690,7 +690,7 @@ export function AppSidebar() {
                 onClick={() => setCreativeDialogOpen(true)}
               >
                 <Plus className="h-3 w-3" />
-                Criar novo criativo
+                + novo
               </Button>
               {(creativeTemplates.data?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/creatives">
