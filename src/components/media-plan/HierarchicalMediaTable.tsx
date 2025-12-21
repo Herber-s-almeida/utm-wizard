@@ -493,7 +493,7 @@ export function HierarchicalMediaTable({
     let width = 80 + 110 + 80 + 130 + 120 + 80 + 100 + 100 + 100 + 90; // base columns + status
     if (showSubdivisionColumn) width += 180;
     if (showMomentColumn) width += 180;
-    if (showFunnelColumn) width += 160;
+    if (showFunnelColumn) width += 200; // Increased width to prevent text wrap
     return width;
   };
 
@@ -519,7 +519,7 @@ export function HierarchicalMediaTable({
             <div className="w-[180px] p-3 border-r shrink-0">Momentos de Campanha</div>
           )}
           {showFunnelColumn && (
-            <div className="w-[160px] p-3 border-r shrink-0">Fase</div>
+            <div className="w-[200px] p-3 border-r shrink-0">Fase</div>
           )}
           <div className="w-[80px] p-3 border-r shrink-0">Meio</div>
           <div className="w-[110px] p-3 border-r shrink-0">Veículos e canais</div>
@@ -570,7 +570,7 @@ export function HierarchicalMediaTable({
                       {momentGroup.funnelStages.map((funnelGroup, funIdx) => (
                         <div key={funnelGroup.funnelStage.distId || `no-fun-${funIdx}`} className="flex">
                           {showFunnelColumn && (
-                            <div className="w-[160px] p-2 border-r bg-background shrink-0">
+                            <div className="w-[200px] p-2 border-r bg-background shrink-0">
                               <BudgetCard
                                 label={funnelGroup.funnelStage.name}
                                 planned={funnelGroup.funnelStage.planned}
