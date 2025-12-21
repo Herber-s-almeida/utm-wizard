@@ -549,7 +549,7 @@ export function HierarchicalMediaTable({
 
   // Calculate dynamic column widths based on what's visible
   const getMinWidth = () => {
-    let width = 70 + 80 + 110 + 80 + 130 + 120 + 80 + 100 + 100 + 100 + 90; // base columns + code + status
+    let width = 70 + 80 + 110 + 100 + 130 + 120 + 80 + 100 + 100 + 100 + 90; // base columns + code + status
     if (showSubdivisionColumn) width += 180;
     if (showMomentColumn) width += 180;
     if (showFunnelColumn) width += 200; // Increased width to prevent text wrap
@@ -582,8 +582,8 @@ export function HierarchicalMediaTable({
           )}
           <div className="w-[70px] p-3 border-r shrink-0">Código</div>
           <div className="w-[80px] p-3 border-r shrink-0">Meio</div>
-          <div className="w-[110px] p-3 border-r shrink-0">Veículos e canais</div>
-          <div className="w-[80px] p-3 border-r shrink-0">Formato</div>
+          <div className="w-[110px] p-3 border-r shrink-0">Veículo</div>
+          <div className="w-[100px] p-3 border-r shrink-0">Canal</div>
           <div className="w-[130px] p-3 border-r shrink-0">Segmentação</div>
           <div className="w-[120px] p-3 border-r shrink-0">Orçamento</div>
           <div className="w-[80px] p-3 border-r shrink-0">Criativos</div>
@@ -664,11 +664,11 @@ export function HierarchicalMediaTable({
                                   <div className="w-[80px] p-2 border-r truncate shrink-0" title={info.medium}>
                                     {info.medium}
                                   </div>
-                                  <div className="w-[110px] p-2 border-r truncate shrink-0" title={`${info.vehicle} / ${info.channel}`}>
+                                  <div className="w-[110px] p-2 border-r truncate shrink-0" title={info.vehicle}>
                                     {info.vehicle}
                                   </div>
-                                  <div className="w-[80px] p-2 border-r truncate shrink-0" title={info.format}>
-                                    {info.format}
+                                  <div className="w-[100px] p-2 border-r truncate shrink-0" title={info.channel}>
+                                    {info.channel}
                                   </div>
                                   <div className="w-[130px] p-2 border-r truncate shrink-0" title={info.target}>
                                     ({info.target})
