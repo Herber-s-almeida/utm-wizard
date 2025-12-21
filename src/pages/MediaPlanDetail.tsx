@@ -1,32 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { 
   ArrowLeft, 
   Plus, 
-  Loader2, 
-  Trash2, 
-  Copy,
-  Check,
-  Settings,
-  Calendar,
-  ChevronDown,
-  ChevronUp,
-  Link as LinkIcon
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
   MediaPlan, 
   MediaLine, 
   MediaCreative,
-  FunnelStage,
-  FUNNEL_STAGES,
   STATUS_LABELS,
   STATUS_COLORS,
 } from '@/types/media';
@@ -40,16 +28,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { CreativesManager } from '@/components/media/CreativesManager';
 import { MediaLineWizard } from '@/components/media-plan/MediaLineWizard';
+import { HierarchicalMediaTable } from '@/components/media-plan/HierarchicalMediaTable';
 import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets } from '@/hooks/useConfigData';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 export default function MediaPlanDetail() {
   const { id } = useParams<{ id: string }>();
@@ -62,8 +43,6 @@ export default function MediaPlanDetail() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lineToDelete, setLineToDelete] = useState<MediaLine | null>(null);
-  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
-  const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
 
   // Library data for display
   const subdivisions = useSubdivisions();
@@ -154,25 +133,21 @@ export default function MediaPlanDetail() {
     }
   };
 
-  const buildUtmUrl = (line: MediaLine) => {
-    if (!line.destination_url) return null;
+  const handleUpdateLine = async (lineId: string, updates: Partial<MediaLine>) => {
+    try {
+      const { error } = await supabase
+        .from('media_lines')
+        .update(updates)
+        .eq('id', lineId);
 
-    const params = new URLSearchParams();
-    if (line.utm_source) params.append('utm_source', line.utm_source);
-    if (line.utm_medium) params.append('utm_medium', line.utm_medium);
-    if (line.utm_campaign) params.append('utm_campaign', line.utm_campaign);
-    if (line.utm_content) params.append('utm_content', line.utm_content);
-    if (line.utm_term) params.append('utm_term', line.utm_term);
+      if (error) throw error;
 
-    const separator = line.destination_url.includes('?') ? '&' : '?';
-    return `${line.destination_url}${separator}${params.toString()}`;
-  };
-
-  const copyToClipboard = (url: string) => {
-    navigator.clipboard.writeText(url);
-    setCopiedUrl(url);
-    toast.success('URL copiada!');
-    setTimeout(() => setCopiedUrl(null), 2000);
+      setLines(lines.map(l => l.id === lineId ? { ...l, ...updates } : l));
+      toast.success('Linha atualizada');
+    } catch (error) {
+      console.error('Error updating line:', error);
+      toast.error('Erro ao atualizar linha');
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -180,43 +155,6 @@ export default function MediaPlanDetail() {
       style: 'currency',
       currency: 'BRL',
     }).format(value);
-  };
-
-  const toggleLineExpand = (lineId: string) => {
-    const newExpanded = new Set(expandedLines);
-    if (newExpanded.has(lineId)) {
-      newExpanded.delete(lineId);
-    } else {
-      newExpanded.add(lineId);
-    }
-    setExpandedLines(newExpanded);
-  };
-
-  const getLineDisplayInfo = (line: MediaLine) => {
-    const subdivision = subdivisions.data?.find(s => s.id === line.subdivision_id);
-    const moment = moments.data?.find(m => m.id === line.moment_id);
-    const funnelStage = funnelStages.data?.find(f => f.id === line.funnel_stage_id);
-    const medium = mediums.data?.find(m => m.id === line.medium_id);
-    const vehicle = vehicles.data?.find(v => v.id === line.vehicle_id);
-    const channel = channels.data?.find(c => c.id === line.channel_id);
-    const target = targets.data?.find(t => t.id === line.target_id);
-
-    // Fallback to old funnel_stage field
-    const funnelInfo = funnelStage 
-      ? { label: funnelStage.name, color: 'bg-primary/10 text-primary border-primary/30' }
-      : FUNNEL_STAGES.find(s => s.value === line.funnel_stage) || FUNNEL_STAGES[0];
-
-    return {
-      subdivision,
-      moment,
-      funnelStage,
-      funnelInfo,
-      medium,
-      vehicle,
-      channel,
-      target,
-      displayName: vehicle?.name || line.platform || 'Sem veículo',
-    };
   };
 
   if (loading) {
@@ -303,213 +241,29 @@ export default function MediaPlanDetail() {
           </Card>
         </div>
 
-        {/* Media Lines */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Linhas de Mídia</CardTitle>
-            <CardDescription>
-              Gerencie as linhas de mídia, criativos e parâmetros UTM
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {lines.length === 0 ? (
-              <div className="text-center py-12">
-                <Settings className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-                <h3 className="font-medium text-lg mb-2">Nenhuma linha de mídia</h3>
-                <p className="text-muted-foreground mb-4">
-                  Adicione linhas de mídia para detalhar seu plano
-                </p>
-                <Button onClick={() => setWizardOpen(true)} className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Adicionar Linha
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {lines.map((line, index) => {
-                  const utmUrl = buildUtmUrl(line);
-                  const lineInfo = getLineDisplayInfo(line);
-                  const lineCreatives = creatives[line.id] || [];
-                  const isExpanded = expandedLines.has(line.id);
-
-                  return (
-                    <motion.div
-                      key={line.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <Collapsible open={isExpanded} onOpenChange={() => toggleLineExpand(line.id)}>
-                        <div className="border rounded-lg overflow-hidden">
-                          <CollapsibleTrigger asChild>
-                            <div className="flex items-center gap-4 p-4 cursor-pointer hover:bg-muted/50 transition-colors">
-                              <div className={`px-2 py-1 rounded text-xs font-medium border ${lineInfo.funnelInfo.color}`}>
-                                {lineInfo.funnelInfo.label}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium">{lineInfo.displayName}</div>
-                                <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-2">
-                                  {lineInfo.subdivision && (
-                                    <span className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                                      {lineInfo.subdivision.name}
-                                    </span>
-                                  )}
-                                  {lineInfo.moment && (
-                                    <span className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                                      {lineInfo.moment.name}
-                                    </span>
-                                  )}
-                                  {lineInfo.channel && (
-                                    <span className="bg-muted px-1.5 py-0.5 rounded text-xs">
-                                      {lineInfo.channel.name}
-                                    </span>
-                                  )}
-                                  {line.start_date && line.end_date && (
-                                    <span className="flex items-center gap-1">
-                                      <Calendar className="w-3 h-3" />
-                                      {format(new Date(line.start_date), 'dd/MM', { locale: ptBR })} - {format(new Date(line.end_date), 'dd/MM', { locale: ptBR })}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="font-semibold">{formatCurrency(Number(line.budget))}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {lineCreatives.length} criativo{lineCreatives.length !== 1 ? 's' : ''}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {utmUrl && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      copyToClipboard(utmUrl);
-                                    }}
-                                  >
-                                    {copiedUrl === utmUrl ? (
-                                      <Check className="w-4 h-4 text-success" />
-                                    ) : (
-                                      <Copy className="w-4 h-4" />
-                                    )}
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:text-destructive"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setLineToDelete(line);
-                                    setDeleteDialogOpen(true);
-                                  }}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                                {isExpanded ? (
-                                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                                ) : (
-                                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                                )}
-                              </div>
-                            </div>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <div className="border-t p-4 bg-muted/30 space-y-4">
-                              {/* Line details summary */}
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                {lineInfo.subdivision && (
-                                  <div>
-                                    <span className="text-muted-foreground">Subdivisão:</span>{' '}
-                                    <span className="font-medium">{lineInfo.subdivision.name}</span>
-                                  </div>
-                                )}
-                                {lineInfo.moment && (
-                                  <div>
-                                    <span className="text-muted-foreground">Momento:</span>{' '}
-                                    <span className="font-medium">{lineInfo.moment.name}</span>
-                                  </div>
-                                )}
-                                {lineInfo.medium && (
-                                  <div>
-                                    <span className="text-muted-foreground">Meio:</span>{' '}
-                                    <span className="font-medium">{lineInfo.medium.name}</span>
-                                  </div>
-                                )}
-                                {lineInfo.target && (
-                                  <div>
-                                    <span className="text-muted-foreground">Target:</span>{' '}
-                                    <span className="font-medium">{lineInfo.target.name}</span>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* UTM Preview */}
-                              {utmUrl && (
-                                <div className="p-3 bg-background rounded-lg">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                                      <LinkIcon className="w-3 h-3" />
-                                      URL com UTMs (gerada automaticamente)
-                                    </Label>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-6 text-xs gap-1"
-                                      onClick={() => copyToClipboard(utmUrl)}
-                                    >
-                                      <Copy className="w-3 h-3" />
-                                      Copiar
-                                    </Button>
-                                  </div>
-                                  <p className="text-xs break-all font-mono bg-muted p-2 rounded">
-                                    {utmUrl}
-                                  </p>
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                    {line.utm_source && (
-                                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                                        source: {line.utm_source}
-                                      </span>
-                                    )}
-                                    {line.utm_medium && (
-                                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                                        medium: {line.utm_medium}
-                                      </span>
-                                    )}
-                                    {line.utm_campaign && (
-                                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                                        campaign: {line.utm_campaign}
-                                      </span>
-                                    )}
-                                    {line.utm_content && (
-                                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                                        content: {line.utm_content}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Creatives */}
-                              <CreativesManager
-                                mediaLineId={line.id}
-                                userId={user?.id || ''}
-                                creatives={lineCreatives}
-                                onUpdate={fetchData}
-                              />
-                            </div>
-                          </CollapsibleContent>
-                        </div>
-                      </Collapsible>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Hierarchical Media Table */}
+        <HierarchicalMediaTable
+          plan={plan}
+          lines={lines}
+          creatives={creatives}
+          subdivisions={subdivisions.data || []}
+          moments={moments.data || []}
+          funnelStages={funnelStages.data || []}
+          mediums={mediums.data || []}
+          vehicles={vehicles.data || []}
+          channels={channels.data || []}
+          targets={targets.data || []}
+          onEditLine={(line) => {
+            // TODO: Open edit wizard
+            console.log('Edit line', line);
+          }}
+          onDeleteLine={(line) => {
+            setLineToDelete(line);
+            setDeleteDialogOpen(true);
+          }}
+          onAddLine={() => setWizardOpen(true)}
+          onUpdateLine={handleUpdateLine}
+        />
       </div>
 
       {/* Media Line Wizard */}
