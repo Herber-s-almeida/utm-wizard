@@ -43,6 +43,11 @@ export default function MediaPlanDetail() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editingLine, setEditingLine] = useState<MediaLine | null>(null);
   const [editInitialStep, setEditInitialStep] = useState<string | undefined>(undefined);
+  const [wizardPrefill, setWizardPrefill] = useState<{
+    subdivisionId?: string;
+    momentId?: string;
+    funnelStageId?: string;
+  } | undefined>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lineToDelete, setLineToDelete] = useState<MediaLine | null>(null);
 
@@ -264,9 +269,10 @@ export default function MediaPlanDetail() {
             setLineToDelete(line);
             setDeleteDialogOpen(true);
           }}
-          onAddLine={() => {
+          onAddLine={(prefill) => {
             setEditingLine(null);
             setEditInitialStep(undefined);
+            setWizardPrefill(prefill);
             setWizardOpen(true);
           }}
           onUpdateLine={handleUpdateLine}
@@ -282,6 +288,7 @@ export default function MediaPlanDetail() {
             if (!open) {
               setEditingLine(null);
               setEditInitialStep(undefined);
+              setWizardPrefill(undefined);
             }
           }}
           plan={plan}
@@ -291,6 +298,7 @@ export default function MediaPlanDetail() {
           existingFunnelStages={existingFunnelStages}
           editingLine={editingLine}
           initialStep={editInitialStep as any}
+          prefillData={wizardPrefill}
         />
       )}
 
