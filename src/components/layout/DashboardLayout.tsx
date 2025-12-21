@@ -28,7 +28,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Mobile Sidebar */}
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 md:hidden transition-transform duration-300",
+        "fixed inset-y-0 left-0 z-50 md:hidden transition-transform duration-300 bg-sidebar shadow-xl",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <AppSidebar />

@@ -33,15 +33,15 @@ export function ConfigItemRow({
   children,
 }: ConfigItemRowProps) {
   return (
-    <div className={cn("group grid grid-cols-[minmax(0,1fr)_40px] items-start gap-1 py-1 pl-2 pr-0 rounded-md hover:bg-sidebar-accent/50 w-full", className)}>
-      <span className="text-xs leading-snug break-words overflow-hidden">
+    <div className={cn("group flex items-center justify-between py-1 pl-2 pr-1 rounded-md hover:bg-sidebar-accent/50 min-w-0", className)}>
+      <span className="text-xs leading-snug truncate flex-1 min-w-0">
         {name}
       </span>
-      <div className="flex items-center justify-end gap-0 shrink-0 w-10">
+      <div className="flex items-center gap-0 shrink-0 ml-1">
         <Button 
           size="icon" 
           variant="ghost" 
-          className="h-5 w-5 opacity-50 hover:opacity-100" 
+          className="h-5 w-5 opacity-50 hover:opacity-100 shrink-0" 
           onClick={(e) => {
             e.stopPropagation();
             onEdit();
@@ -56,7 +56,7 @@ export function ConfigItemRow({
               <Button 
                 size="icon" 
                 variant="ghost" 
-                className="h-5 w-5 opacity-50 hover:opacity-100"
+                className="h-5 w-5 opacity-50 hover:opacity-100 shrink-0"
                 onClick={(e) => e.stopPropagation()}
               >
                 <Trash2 className="h-2.5 w-2.5 text-muted-foreground hover:text-destructive" />
@@ -83,7 +83,7 @@ export function ConfigItemRow({
               <Button 
                 size="icon" 
                 variant="ghost" 
-                className="h-5 w-5 opacity-30"
+                className="h-5 w-5 opacity-30 shrink-0"
                 onClick={(e) => e.stopPropagation()}
               >
                 <Trash2 className="h-2.5 w-2.5 text-muted-foreground/50" />
