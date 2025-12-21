@@ -134,6 +134,29 @@ export function useMediaPlanWizard() {
     });
   }, []);
 
+  // Initialize state from existing plan data (for edit mode)
+  const initializeFromPlan = useCallback((
+    planData: WizardPlanData,
+    subdivisionAllocations: BudgetAllocation[],
+    momentAllocations: Record<string, BudgetAllocation[]>,
+    funnelAllocations: Record<string, BudgetAllocation[]>,
+    initialStep: number = 2
+  ) => {
+    setState({
+      step: initialStep,
+      planData,
+      subdivisions: subdivisionAllocations,
+      moments: momentAllocations,
+      funnelStages: funnelAllocations,
+      temporalGranularity: 'monthly',
+      temporalDistribution: {},
+    });
+  }, []);
+
+  const setFullState = useCallback((newState: WizardState) => {
+    setState(newState);
+  }, []);
+
   return {
     state,
     goToStep,
@@ -146,6 +169,8 @@ export function useMediaPlanWizard() {
     validatePercentages,
     calculateAmount,
     reset,
+    initializeFromPlan,
+    setFullState,
     // Library data
     libraryData: {
       subdivisions: subdivisions.data || [],
