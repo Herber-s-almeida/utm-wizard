@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { MediaLineWizard } from '@/components/media-plan/MediaLineWizard';
 import { HierarchicalMediaTable } from '@/components/media-plan/HierarchicalMediaTable';
-import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets } from '@/hooks/useConfigData';
+import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, Subdivision, Moment, FunnelStage } from '@/hooks/useConfigData';
 
 interface BudgetDistribution {
   id: string;
@@ -289,6 +289,9 @@ export default function MediaPlanDetail() {
           vehicles={vehicles.data || []}
           channels={channels.data || []}
           targets={targets.data || []}
+          subdivisions={subdivisions.data || []}
+          moments={moments.data || []}
+          funnelStages={funnelStages.data || []}
           onEditLine={(line, initialStep) => {
             setEditingLine(line);
             setEditInitialStep(initialStep);
