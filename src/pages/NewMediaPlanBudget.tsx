@@ -122,6 +122,97 @@ export default function NewMediaPlanBudget() {
 
       if (planError) throw planError;
 
+      // Save budget distributions
+      const distributions: any[] = [];
+      
+      // Save subdivision distributions
+      if (state.subdivisions.length > 0) {
+        state.subdivisions.forEach(sub => {
+          distributions.push({
+            user_id: user?.id,
+            media_plan_id: plan.id,
+            distribution_type: 'subdivision',
+            reference_id: sub.id,
+            percentage: sub.percentage,
+            amount: wizard.calculateAmount(state.planData.total_budget, sub.percentage),
+            parent_distribution_id: null,
+          });
+        });
+      }
+      
+      // Save moment distributions
+      const subdivisionKeys = state.subdivisions.length > 0 
+        ? state.subdivisions.map(s => s.id) 
+        : ['root'];
+      
+      subdivisionKeys.forEach(subKey => {
+        const moments = state.moments[subKey] || [];
+        if (moments.length > 0) {
+          const parentBudget = subKey === 'root' 
+            ? state.planData.total_budget 
+            : wizard.calculateAmount(state.planData.total_budget, state.subdivisions.find(s => s.id === subKey)?.percentage || 0);
+          
+          moments.forEach(mom => {
+            distributions.push({
+              user_id: user?.id,
+              media_plan_id: plan.id,
+              distribution_type: 'moment',
+              reference_id: mom.id,
+              percentage: mom.percentage,
+              amount: wizard.calculateAmount(parentBudget, mom.percentage),
+              parent_distribution_id: subKey === 'root' ? null : subKey,
+            });
+          });
+        }
+      });
+      
+      // Save funnel stage distributions
+      Object.entries(state.funnelStages).forEach(([key, stages]) => {
+        if (stages.length > 0) {
+          // Calculate parent budget based on the key
+          let parentBudget = state.planData.total_budget;
+          const keyParts = key.split('_');
+          
+          if (keyParts.length >= 1 && keyParts[0] !== 'root') {
+            const subPercentage = state.subdivisions.find(s => s.id === keyParts[0])?.percentage || 100;
+            parentBudget = wizard.calculateAmount(state.planData.total_budget, subPercentage);
+            
+            if (keyParts.length >= 2) {
+              const moments = state.moments[keyParts[0]] || [];
+              const momPercentage = moments.find(m => m.id === keyParts[1])?.percentage || 100;
+              parentBudget = wizard.calculateAmount(parentBudget, momPercentage);
+            }
+          } else if (keyParts[0] === 'root' && keyParts.length >= 2) {
+            const moments = state.moments['root'] || [];
+            const momPercentage = moments.find(m => m.id === keyParts[1])?.percentage || 100;
+            parentBudget = wizard.calculateAmount(parentBudget, momPercentage);
+          }
+          
+          stages.forEach(stage => {
+            distributions.push({
+              user_id: user?.id,
+              media_plan_id: plan.id,
+              distribution_type: 'funnel_stage',
+              reference_id: stage.id,
+              percentage: stage.percentage,
+              amount: wizard.calculateAmount(parentBudget, stage.percentage),
+              parent_distribution_id: key,
+            });
+          });
+        }
+      });
+
+      // Insert all distributions
+      if (distributions.length > 0) {
+        const { error: distError } = await supabase
+          .from('plan_budget_distributions')
+          .insert(distributions);
+        
+        if (distError) {
+          console.error('Error saving distributions:', distError);
+        }
+      }
+
       toast.success('Plano salvo com sucesso!');
       navigate(`/media-plans/${plan.id}`);
     } catch (error) {

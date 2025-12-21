@@ -6,9 +6,6 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { MediaLine, MediaPlan, MediaCreative } from '@/types/media';
 import { 
-  Subdivision, 
-  Moment, 
-  FunnelStage, 
   Medium, 
   Vehicle, 
   Channel, 
@@ -24,42 +21,55 @@ import {
 } from '@/components/ui/tooltip';
 
 interface BudgetDistribution {
-  subdivisionId: string | null;
-  momentId: string | null;
-  funnelStageId: string | null;
+  id: string;
+  distribution_type: string;
+  reference_id: string | null;
   percentage: number;
   amount: number;
+  parent_distribution_id: string | null;
 }
 
 interface HierarchicalMediaTableProps {
   plan: MediaPlan;
   lines: MediaLine[];
   creatives: Record<string, MediaCreative[]>;
-  subdivisions: Subdivision[];
-  moments: Moment[];
-  funnelStages: FunnelStage[];
+  budgetDistributions: BudgetDistribution[];
   mediums: Medium[];
   vehicles: Vehicle[];
   channels: Channel[];
   targets: Target[];
-  budgetDistributions?: BudgetDistribution[];
   onEditLine: (line: MediaLine, initialStep?: string) => void;
   onDeleteLine: (line: MediaLine) => void;
   onAddLine: (prefill?: { subdivisionId?: string; momentId?: string; funnelStageId?: string }) => void;
   onUpdateLine: (lineId: string, updates: Partial<MediaLine>) => Promise<void>;
 }
 
+interface SubdivisionInfo {
+  id: string | null;
+  name: string;
+  planned: number;
+}
+
+interface MomentInfo {
+  id: string | null;
+  name: string;
+  planned: number;
+}
+
+interface FunnelStageInfo {
+  id: string | null;
+  name: string;
+  planned: number;
+}
+
 interface HierarchyNode {
-  subdivision: Subdivision | null;
-  subdivisionPlanned: number;
+  subdivision: SubdivisionInfo;
   subdivisionAllocated: number;
   moments: {
-    moment: Moment | null;
-    momentPlanned: number;
+    moment: MomentInfo;
     momentAllocated: number;
     funnelStages: {
-      funnelStage: FunnelStage | null;
-      funnelStagePlanned: number;
+      funnelStage: FunnelStageInfo;
       funnelStageAllocated: number;
       lines: MediaLine[];
     }[];
@@ -72,14 +82,11 @@ export function HierarchicalMediaTable({
   plan,
   lines,
   creatives,
-  subdivisions,
-  moments: momentsList,
-  funnelStages,
+  budgetDistributions,
   mediums,
   vehicles,
   channels,
   targets,
-  budgetDistributions = [],
   onEditLine,
   onDeleteLine,
   onAddLine,
@@ -101,94 +108,213 @@ export function HierarchicalMediaTable({
     return format(new Date(date), 'dd/MM/yyyy', { locale: ptBR });
   };
 
-  // Build complete hierarchical structure including all combinations
+  // Build hierarchical structure based on saved budget distributions
   const groupedData = useMemo((): HierarchyNode[] => {
     const totalBudget = Number(plan.total_budget) || 0;
     const nodes: HierarchyNode[] = [];
 
-    // If no subdivisions defined, create a single "no subdivision" node
-    const subsToUse = subdivisions.length > 0 ? subdivisions : [null];
-    // If no moments defined, create a single "no moment" node
-    const momentsToUse = momentsList.length > 0 ? momentsList : [null];
-    // If no funnel stages defined, create a single "no funnel" node  
-    const funnelsToUse = funnelStages.length > 0 ? funnelStages : [null];
+    // Get unique subdivisions from distributions
+    const subdivisionDists = budgetDistributions.filter(d => d.distribution_type === 'subdivision');
+    const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
+    const funnelDists = budgetDistributions.filter(d => d.distribution_type === 'funnel_stage');
 
-    subsToUse.forEach((subdivision) => {
-      const subId = subdivision?.id || null;
-      
-      // Calculate planned budget for this subdivision
-      const subDistribution = budgetDistributions.find(
-        d => d.subdivisionId === subId && !d.momentId && !d.funnelStageId
-      );
-      const subPlanned = subDistribution?.amount || (totalBudget / subsToUse.length);
-      
-      // Calculate allocated budget for this subdivision
-      const subAllocated = lines
-        .filter(l => (l.subdivision_id || null) === subId)
-        .reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-
-      const momentNodes: HierarchyNode['moments'] = [];
-
-      momentsToUse.forEach((moment) => {
-        const momId = moment?.id || null;
-        
-        // Calculate planned budget for this moment
-        const momDistribution = budgetDistributions.find(
-          d => d.subdivisionId === subId && d.momentId === momId && !d.funnelStageId
-        );
-        const momPlanned = momDistribution?.amount || (subPlanned / momentsToUse.length);
-        
-        // Calculate allocated budget for this moment
-        const momAllocated = lines
-          .filter(l => (l.subdivision_id || null) === subId && (l.moment_id || null) === momId)
+    // If there are subdivision distributions, use them
+    if (subdivisionDists.length > 0) {
+      subdivisionDists.forEach(subDist => {
+        const subId = subDist.reference_id;
+        const subAllocated = lines
+          .filter(l => l.subdivision_id === subId)
           .reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
 
+        // Get moments for this subdivision
+        const subMomentDists = momentDists.filter(m => m.parent_distribution_id === subId);
+        const momentNodes: HierarchyNode['moments'] = [];
+
+        if (subMomentDists.length > 0) {
+          subMomentDists.forEach(momDist => {
+            const momId = momDist.reference_id;
+            const momAllocated = lines
+              .filter(l => l.subdivision_id === subId && l.moment_id === momId)
+              .reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+
+            // Get funnel stages for this moment
+            const momKey = `${subId}_${momId}`;
+            const momFunnelDists = funnelDists.filter(f => f.parent_distribution_id === momKey);
+            const funnelNodes: HierarchyNode['moments'][0]['funnelStages'] = [];
+
+            if (momFunnelDists.length > 0) {
+              momFunnelDists.forEach(funDist => {
+                const funId = funDist.reference_id;
+                const matchingLines = lines.filter(l => 
+                  l.subdivision_id === subId && l.moment_id === momId && l.funnel_stage_id === funId
+                );
+                const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+
+                funnelNodes.push({
+                  funnelStage: { id: funId, name: `Fase ${funId?.slice(0,4) || ''}`, planned: funDist.amount },
+                  funnelStageAllocated: funAllocated,
+                  lines: matchingLines,
+                });
+              });
+            } else {
+              // No funnel distributions - single "no funnel" node
+              const matchingLines = lines.filter(l => 
+                l.subdivision_id === subId && l.moment_id === momId
+              );
+              const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+              funnelNodes.push({
+                funnelStage: { id: null, name: 'Sem fase', planned: momDist.amount },
+                funnelStageAllocated: funAllocated,
+                lines: matchingLines,
+              });
+            }
+
+            momentNodes.push({
+              moment: { id: momId, name: `Momento ${momId?.slice(0,4) || ''}`, planned: momDist.amount },
+              momentAllocated: momAllocated,
+              funnelStages: funnelNodes,
+            });
+          });
+        } else {
+          // No moment distributions - check if there are funnel distributions directly
+          const subFunnelDists = funnelDists.filter(f => f.parent_distribution_id === subId || f.parent_distribution_id?.startsWith(subId || ''));
+          
+          if (subFunnelDists.length > 0) {
+            // Has funnel stages under subdivision directly (no moments)
+            const funnelNodes: HierarchyNode['moments'][0]['funnelStages'] = [];
+            subFunnelDists.forEach(funDist => {
+              const funId = funDist.reference_id;
+              const matchingLines = lines.filter(l => 
+                l.subdivision_id === subId && l.funnel_stage_id === funId
+              );
+              const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+              funnelNodes.push({
+                funnelStage: { id: funId, name: `Fase ${funId?.slice(0,4) || ''}`, planned: funDist.amount },
+                funnelStageAllocated: funAllocated,
+                lines: matchingLines,
+              });
+            });
+            momentNodes.push({
+              moment: { id: null, name: 'Sem momento', planned: subDist.amount },
+              momentAllocated: subAllocated,
+              funnelStages: funnelNodes,
+            });
+          } else {
+            // No moments, no funnels - just subdivision
+            const matchingLines = lines.filter(l => l.subdivision_id === subId);
+            const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+            momentNodes.push({
+              moment: { id: null, name: 'Sem momento', planned: subDist.amount },
+              momentAllocated: subAllocated,
+              funnelStages: [{
+                funnelStage: { id: null, name: 'Sem fase', planned: subDist.amount },
+                funnelStageAllocated: funAllocated,
+                lines: matchingLines,
+              }],
+            });
+          }
+        }
+
+        nodes.push({
+          subdivision: { id: subId, name: `Subdivisão ${subId?.slice(0,4) || ''}`, planned: subDist.amount },
+          subdivisionAllocated: subAllocated,
+          moments: momentNodes,
+        });
+      });
+    } else if (momentDists.length > 0) {
+      // No subdivisions, but has moments at root level
+      const rootMomentDists = momentDists.filter(m => !m.parent_distribution_id || m.parent_distribution_id === 'root');
+      const momentNodes: HierarchyNode['moments'] = [];
+
+      rootMomentDists.forEach(momDist => {
+        const momId = momDist.reference_id;
+        const momAllocated = lines
+          .filter(l => l.moment_id === momId)
+          .reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+
+        // Get funnel stages for this moment
+        const momKey = `root_${momId}`;
+        const momFunnelDists = funnelDists.filter(f => f.parent_distribution_id === momKey);
         const funnelNodes: HierarchyNode['moments'][0]['funnelStages'] = [];
 
-        funnelsToUse.forEach((funnelStage) => {
-          const funId = funnelStage?.id || null;
-          
-          // Calculate planned budget for this funnel stage
-          const funDistribution = budgetDistributions.find(
-            d => d.subdivisionId === subId && d.momentId === momId && d.funnelStageId === funId
-          );
-          const funPlanned = funDistribution?.amount || (momPlanned / funnelsToUse.length);
-          
-          // Get lines for this specific combination
-          const matchingLines = lines.filter(l => 
-            (l.subdivision_id || null) === subId && 
-            (l.moment_id || null) === momId && 
-            (l.funnel_stage_id || null) === funId
-          );
-          
+        if (momFunnelDists.length > 0) {
+          momFunnelDists.forEach(funDist => {
+            const funId = funDist.reference_id;
+            const matchingLines = lines.filter(l => 
+              l.moment_id === momId && l.funnel_stage_id === funId
+            );
+            const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+            funnelNodes.push({
+              funnelStage: { id: funId, name: `Fase ${funId?.slice(0,4) || ''}`, planned: funDist.amount },
+              funnelStageAllocated: funAllocated,
+              lines: matchingLines,
+            });
+          });
+        } else {
+          const matchingLines = lines.filter(l => l.moment_id === momId);
           const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-
           funnelNodes.push({
-            funnelStage,
-            funnelStagePlanned: funPlanned,
+            funnelStage: { id: null, name: 'Sem fase', planned: momDist.amount },
             funnelStageAllocated: funAllocated,
             lines: matchingLines,
           });
-        });
+        }
 
         momentNodes.push({
-          moment,
-          momentPlanned: momPlanned,
+          moment: { id: momId, name: `Momento ${momId?.slice(0,4) || ''}`, planned: momDist.amount },
           momentAllocated: momAllocated,
           funnelStages: funnelNodes,
         });
       });
 
       nodes.push({
-        subdivision,
-        subdivisionPlanned: subPlanned,
-        subdivisionAllocated: subAllocated,
+        subdivision: { id: null, name: 'Sem subdivisão', planned: totalBudget },
+        subdivisionAllocated: lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0),
         moments: momentNodes,
       });
-    });
+    } else if (funnelDists.length > 0) {
+      // Only funnel stages
+      const funnelNodes: HierarchyNode['moments'][0]['funnelStages'] = [];
+      funnelDists.forEach(funDist => {
+        const funId = funDist.reference_id;
+        const matchingLines = lines.filter(l => l.funnel_stage_id === funId);
+        const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+        funnelNodes.push({
+          funnelStage: { id: funId, name: `Fase ${funId?.slice(0,4) || ''}`, planned: funDist.amount },
+          funnelStageAllocated: funAllocated,
+          lines: matchingLines,
+        });
+      });
+
+      nodes.push({
+        subdivision: { id: null, name: 'Sem subdivisão', planned: totalBudget },
+        subdivisionAllocated: lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0),
+        moments: [{
+          moment: { id: null, name: 'Sem momento', planned: totalBudget },
+          momentAllocated: lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0),
+          funnelStages: funnelNodes,
+        }],
+      });
+    } else {
+      // No distributions at all - show single node with all lines
+      nodes.push({
+        subdivision: { id: null, name: 'Plano Completo', planned: totalBudget },
+        subdivisionAllocated: lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0),
+        moments: [{
+          moment: { id: null, name: 'Sem momento', planned: totalBudget },
+          momentAllocated: lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0),
+          funnelStages: [{
+            funnelStage: { id: null, name: 'Sem fase', planned: totalBudget },
+            funnelStageAllocated: lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0),
+            lines: lines,
+          }],
+        }],
+      });
+    }
 
     return nodes;
-  }, [lines, subdivisions, momentsList, funnelStages, budgetDistributions, plan.total_budget]);
+  }, [lines, budgetDistributions, plan.total_budget]);
+  
 
   const totalBudget = lines.reduce((acc, line) => acc + (Number(line.budget) || 0), 0);
 
@@ -395,14 +521,13 @@ export function HierarchicalMediaTable({
             <div key={subdivisionGroup.subdivision?.id || `no-sub-${subIdx}`} className="flex">
               {/* Subdivision cell */}
               <div className="w-[160px] p-2 border-r bg-background shrink-0">
-                <BudgetCard
-                  label={subdivisionGroup.subdivision?.name || 'Sem subdivisão'}
-                  planned={subdivisionGroup.subdivisionPlanned}
+              <BudgetCard
+                  label={subdivisionGroup.subdivision.name}
+                  planned={subdivisionGroup.subdivision.planned}
                   allocated={subdivisionGroup.subdivisionAllocated}
                   percentageLabel={plan.total_budget 
-                    ? `${((subdivisionGroup.subdivisionPlanned / Number(plan.total_budget)) * 100).toFixed(0)}% do plano`
+                    ? `${((subdivisionGroup.subdivision.planned / Number(plan.total_budget)) * 100).toFixed(0)}% do plano`
                     : undefined}
-                  description={subdivisionGroup.subdivision?.description || undefined}
                 />
               </div>
 
@@ -413,11 +538,11 @@ export function HierarchicalMediaTable({
                     {/* Moment cell */}
                     <div className="w-[160px] p-2 border-r bg-background shrink-0">
                       <BudgetCard
-                        label={momentGroup.moment?.name || 'Sem momento'}
-                        planned={momentGroup.momentPlanned}
+                        label={momentGroup.moment.name}
+                        planned={momentGroup.moment.planned}
                         allocated={momentGroup.momentAllocated}
-                        percentageLabel={subdivisionGroup.subdivisionPlanned 
-                          ? `${((momentGroup.momentPlanned / subdivisionGroup.subdivisionPlanned) * 100).toFixed(0)}% de ${subdivisionGroup.subdivision?.name || 'subdivisão'}`
+                        percentageLabel={subdivisionGroup.subdivision.planned 
+                          ? `${((momentGroup.moment.planned / subdivisionGroup.subdivision.planned) * 100).toFixed(0)}% de ${subdivisionGroup.subdivision.name}`
                           : undefined}
                       />
                     </div>
@@ -426,14 +551,13 @@ export function HierarchicalMediaTable({
                     <div className="flex-1 divide-y">
                       {momentGroup.funnelStages.map((funnelGroup, funIdx) => (
                         <div key={funnelGroup.funnelStage?.id || `no-fun-${funIdx}`} className="flex">
-                          {/* Funnel Stage cell */}
                           <div className="w-[130px] p-2 border-r bg-background shrink-0">
                             <BudgetCard
-                              label={funnelGroup.funnelStage?.name || 'Sem fase'}
-                              planned={funnelGroup.funnelStagePlanned}
+                              label={funnelGroup.funnelStage.name}
+                              planned={funnelGroup.funnelStage.planned}
                               allocated={funnelGroup.funnelStageAllocated}
-                              percentageLabel={momentGroup.momentPlanned 
-                                ? `${((funnelGroup.funnelStagePlanned / momentGroup.momentPlanned) * 100).toFixed(0)}% de ${momentGroup.moment?.name || 'momento'}`
+                              percentageLabel={momentGroup.moment.planned 
+                                ? `${((funnelGroup.funnelStage.planned / momentGroup.moment.planned) * 100).toFixed(0)}% de ${momentGroup.moment.name}`
                                 : undefined}
                             />
                           </div>
