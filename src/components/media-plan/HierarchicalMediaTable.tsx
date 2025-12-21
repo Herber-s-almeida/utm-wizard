@@ -23,6 +23,14 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+interface BudgetDistribution {
+  subdivisionId: string | null;
+  momentId: string | null;
+  funnelStageId: string | null;
+  percentage: number;
+  amount: number;
+}
+
 interface HierarchicalMediaTableProps {
   plan: MediaPlan;
   lines: MediaLine[];
@@ -34,21 +42,25 @@ interface HierarchicalMediaTableProps {
   vehicles: Vehicle[];
   channels: Channel[];
   targets: Target[];
+  budgetDistributions?: BudgetDistribution[];
   onEditLine: (line: MediaLine, initialStep?: string) => void;
   onDeleteLine: (line: MediaLine) => void;
-  onAddLine: () => void;
+  onAddLine: (prefill?: { subdivisionId?: string; momentId?: string; funnelStageId?: string }) => void;
   onUpdateLine: (lineId: string, updates: Partial<MediaLine>) => Promise<void>;
 }
 
 interface HierarchyNode {
   subdivision: Subdivision | null;
-  subdivisionBudget: number;
+  subdivisionPlanned: number;
+  subdivisionAllocated: number;
   moments: {
     moment: Moment | null;
-    momentBudget: number;
+    momentPlanned: number;
+    momentAllocated: number;
     funnelStages: {
       funnelStage: FunnelStage | null;
-      funnelStageBudget: number;
+      funnelStagePlanned: number;
+      funnelStageAllocated: number;
       lines: MediaLine[];
     }[];
   }[];
@@ -67,6 +79,7 @@ export function HierarchicalMediaTable({
   vehicles,
   channels,
   targets,
+  budgetDistributions = [],
   onEditLine,
   onDeleteLine,
   onAddLine,
@@ -88,63 +101,94 @@ export function HierarchicalMediaTable({
     return format(new Date(date), 'dd/MM/yyyy', { locale: ptBR });
   };
 
-  // Group lines hierarchically
+  // Build complete hierarchical structure including all combinations
   const groupedData = useMemo((): HierarchyNode[] => {
-    const groups = new Map<string, HierarchyNode>();
+    const totalBudget = Number(plan.total_budget) || 0;
+    const nodes: HierarchyNode[] = [];
 
-    lines.forEach(line => {
-      const subKey = line.subdivision_id || 'no-subdivision';
+    // If no subdivisions defined, create a single "no subdivision" node
+    const subsToUse = subdivisions.length > 0 ? subdivisions : [null];
+    // If no moments defined, create a single "no moment" node
+    const momentsToUse = momentsList.length > 0 ? momentsList : [null];
+    // If no funnel stages defined, create a single "no funnel" node  
+    const funnelsToUse = funnelStages.length > 0 ? funnelStages : [null];
+
+    subsToUse.forEach((subdivision) => {
+      const subId = subdivision?.id || null;
       
-      if (!groups.has(subKey)) {
-        const subdivision = subdivisions.find(s => s.id === line.subdivision_id) || null;
-        groups.set(subKey, {
-          subdivision,
-          subdivisionBudget: 0,
-          moments: [],
+      // Calculate planned budget for this subdivision
+      const subDistribution = budgetDistributions.find(
+        d => d.subdivisionId === subId && !d.momentId && !d.funnelStageId
+      );
+      const subPlanned = subDistribution?.amount || (totalBudget / subsToUse.length);
+      
+      // Calculate allocated budget for this subdivision
+      const subAllocated = lines
+        .filter(l => (l.subdivision_id || null) === subId)
+        .reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+
+      const momentNodes: HierarchyNode['moments'] = [];
+
+      momentsToUse.forEach((moment) => {
+        const momId = moment?.id || null;
+        
+        // Calculate planned budget for this moment
+        const momDistribution = budgetDistributions.find(
+          d => d.subdivisionId === subId && d.momentId === momId && !d.funnelStageId
+        );
+        const momPlanned = momDistribution?.amount || (subPlanned / momentsToUse.length);
+        
+        // Calculate allocated budget for this moment
+        const momAllocated = lines
+          .filter(l => (l.subdivision_id || null) === subId && (l.moment_id || null) === momId)
+          .reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+
+        const funnelNodes: HierarchyNode['moments'][0]['funnelStages'] = [];
+
+        funnelsToUse.forEach((funnelStage) => {
+          const funId = funnelStage?.id || null;
+          
+          // Calculate planned budget for this funnel stage
+          const funDistribution = budgetDistributions.find(
+            d => d.subdivisionId === subId && d.momentId === momId && d.funnelStageId === funId
+          );
+          const funPlanned = funDistribution?.amount || (momPlanned / funnelsToUse.length);
+          
+          // Get lines for this specific combination
+          const matchingLines = lines.filter(l => 
+            (l.subdivision_id || null) === subId && 
+            (l.moment_id || null) === momId && 
+            (l.funnel_stage_id || null) === funId
+          );
+          
+          const funAllocated = matchingLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+
+          funnelNodes.push({
+            funnelStage,
+            funnelStagePlanned: funPlanned,
+            funnelStageAllocated: funAllocated,
+            lines: matchingLines,
+          });
         });
-      }
 
-      const group = groups.get(subKey)!;
-      group.subdivisionBudget += Number(line.budget) || 0;
-
-      const momentKey = line.moment_id || 'no-moment';
-      let momentGroup = group.moments.find(m => 
-        (m.moment?.id || 'no-moment') === momentKey
-      );
-
-      if (!momentGroup) {
-        const moment = momentsList.find(m => m.id === line.moment_id) || null;
-        momentGroup = {
+        momentNodes.push({
           moment,
-          momentBudget: 0,
-          funnelStages: [],
-        };
-        group.moments.push(momentGroup);
-      }
+          momentPlanned: momPlanned,
+          momentAllocated: momAllocated,
+          funnelStages: funnelNodes,
+        });
+      });
 
-      momentGroup.momentBudget += Number(line.budget) || 0;
-
-      const funnelKey = line.funnel_stage_id || 'no-funnel';
-      let funnelGroup = momentGroup.funnelStages.find(f =>
-        (f.funnelStage?.id || 'no-funnel') === funnelKey
-      );
-
-      if (!funnelGroup) {
-        const funnelStage = funnelStages.find(f => f.id === line.funnel_stage_id) || null;
-        funnelGroup = {
-          funnelStage,
-          funnelStageBudget: 0,
-          lines: [],
-        };
-        momentGroup.funnelStages.push(funnelGroup);
-      }
-
-      funnelGroup.funnelStageBudget += Number(line.budget) || 0;
-      funnelGroup.lines.push(line);
+      nodes.push({
+        subdivision,
+        subdivisionPlanned: subPlanned,
+        subdivisionAllocated: subAllocated,
+        moments: momentNodes,
+      });
     });
 
-    return Array.from(groups.values());
-  }, [lines, subdivisions, momentsList, funnelStages]);
+    return nodes;
+  }, [lines, subdivisions, momentsList, funnelStages, budgetDistributions, plan.total_budget]);
 
   const totalBudget = lines.reduce((acc, line) => acc + (Number(line.budget) || 0), 0);
 
@@ -202,22 +246,6 @@ export function HierarchicalMediaTable({
   const isEditingField = (lineId: string, field: EditingField) => {
     return editingLineId === lineId && editingField === field;
   };
-
-  if (lines.length === 0) {
-    return (
-      <div className="text-center py-12 border rounded-lg">
-        <Plus className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-        <h3 className="font-medium text-lg mb-2">Nenhuma linha de mídia</h3>
-        <p className="text-muted-foreground mb-4">
-          Adicione linhas de mídia para detalhar seu plano
-        </p>
-        <Button onClick={onAddLine} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Adicionar Linha
-        </Button>
-      </div>
-    );
-  }
 
   const EditableCell = ({ 
     line, 
@@ -283,6 +311,65 @@ export function HierarchicalMediaTable({
     );
   };
 
+  const BudgetCard = ({ 
+    label, 
+    planned, 
+    allocated, 
+    percentageLabel,
+    description 
+  }: { 
+    label: string;
+    planned: number;
+    allocated: number;
+    percentageLabel?: string;
+    description?: string;
+  }) => {
+    const isOverBudget = allocated > planned;
+    
+    return (
+      <div className="border rounded-lg p-2 h-full">
+        <div className="font-medium text-sm">{label}</div>
+        <div className="text-lg font-bold mt-1">{formatCurrency(planned)}</div>
+        <div className={cn(
+          "text-sm font-medium mt-1",
+          isOverBudget ? "text-destructive" : "text-primary"
+        )}>
+          {formatCurrency(allocated)} <span className="text-xs font-normal">alocado</span>
+        </div>
+        {percentageLabel && (
+          <div className="text-xs text-muted-foreground mt-1">
+            {percentageLabel}
+          </div>
+        )}
+        {description && (
+          <div className="text-xs text-muted-foreground mt-2 line-clamp-2">
+            ({description})
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const AddLineButton = ({ 
+    subdivisionId, 
+    momentId, 
+    funnelStageId 
+  }: { 
+    subdivisionId: string | undefined;
+    momentId: string | undefined;
+    funnelStageId: string | undefined;
+  }) => (
+    <Button
+      variant="outline"
+      size="sm"
+      className="w-full h-8 text-xs border-dashed border-primary text-primary hover:bg-primary/10 gap-1"
+      onClick={() => onAddLine({ subdivisionId, momentId, funnelStageId })}
+    >
+      <Plus className="w-3 h-3" />
+      Criar nova Linha
+    </Button>
+  );
+
   return (
     <TooltipProvider>
       <div className="border rounded-lg overflow-x-auto">
@@ -308,24 +395,15 @@ export function HierarchicalMediaTable({
             <div key={subdivisionGroup.subdivision?.id || `no-sub-${subIdx}`} className="flex">
               {/* Subdivision cell */}
               <div className="w-[160px] p-2 border-r bg-background shrink-0">
-                <div className="border rounded-lg p-2 h-full">
-                  <div className="font-medium text-sm">
-                    {subdivisionGroup.subdivision?.name || 'Sem subdivisão'}
-                  </div>
-                  <div className="text-lg font-bold mt-1">
-                    {formatCurrency(subdivisionGroup.subdivisionBudget)}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {plan.total_budget 
-                      ? `${((subdivisionGroup.subdivisionBudget / Number(plan.total_budget)) * 100).toFixed(0)}% do plano`
-                      : ''}
-                  </div>
-                  {subdivisionGroup.subdivision?.description && (
-                    <div className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                      ({subdivisionGroup.subdivision.description})
-                    </div>
-                  )}
-                </div>
+                <BudgetCard
+                  label={subdivisionGroup.subdivision?.name || 'Sem subdivisão'}
+                  planned={subdivisionGroup.subdivisionPlanned}
+                  allocated={subdivisionGroup.subdivisionAllocated}
+                  percentageLabel={plan.total_budget 
+                    ? `${((subdivisionGroup.subdivisionPlanned / Number(plan.total_budget)) * 100).toFixed(0)}% do plano`
+                    : undefined}
+                  description={subdivisionGroup.subdivision?.description || undefined}
+                />
               </div>
 
               {/* Moments column */}
@@ -334,19 +412,14 @@ export function HierarchicalMediaTable({
                   <div key={momentGroup.moment?.id || `no-mom-${momIdx}`} className="flex">
                     {/* Moment cell */}
                     <div className="w-[160px] p-2 border-r bg-background shrink-0">
-                      <div className="border rounded-lg p-2 h-full">
-                        <div className="font-medium text-sm">
-                          {momentGroup.moment?.name || 'Sem momento'}
-                        </div>
-                        <div className="text-lg font-bold mt-1">
-                          {formatCurrency(momentGroup.momentBudget)}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {subdivisionGroup.subdivisionBudget 
-                            ? `${((momentGroup.momentBudget / subdivisionGroup.subdivisionBudget) * 100).toFixed(0)}% de ${subdivisionGroup.subdivision?.name || 'subdivisão'}`
-                            : ''}
-                        </div>
-                      </div>
+                      <BudgetCard
+                        label={momentGroup.moment?.name || 'Sem momento'}
+                        planned={momentGroup.momentPlanned}
+                        allocated={momentGroup.momentAllocated}
+                        percentageLabel={subdivisionGroup.subdivisionPlanned 
+                          ? `${((momentGroup.momentPlanned / subdivisionGroup.subdivisionPlanned) * 100).toFixed(0)}% de ${subdivisionGroup.subdivision?.name || 'subdivisão'}`
+                          : undefined}
+                      />
                     </div>
 
                     {/* Funnel stages column */}
@@ -355,22 +428,17 @@ export function HierarchicalMediaTable({
                         <div key={funnelGroup.funnelStage?.id || `no-fun-${funIdx}`} className="flex">
                           {/* Funnel Stage cell */}
                           <div className="w-[130px] p-2 border-r bg-background shrink-0">
-                            <div className="border rounded-lg p-2 h-full">
-                              <div className="font-medium text-sm">
-                                {funnelGroup.funnelStage?.name || 'Sem fase'}
-                              </div>
-                              <div className="text-base font-bold mt-1">
-                                {formatCurrency(funnelGroup.funnelStageBudget)}
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {momentGroup.momentBudget 
-                                  ? `${((funnelGroup.funnelStageBudget / momentGroup.momentBudget) * 100).toFixed(0)}% de ${momentGroup.moment?.name || 'momento'}`
-                                  : ''}
-                              </div>
-                            </div>
+                            <BudgetCard
+                              label={funnelGroup.funnelStage?.name || 'Sem fase'}
+                              planned={funnelGroup.funnelStagePlanned}
+                              allocated={funnelGroup.funnelStageAllocated}
+                              percentageLabel={momentGroup.momentPlanned 
+                                ? `${((funnelGroup.funnelStagePlanned / momentGroup.momentPlanned) * 100).toFixed(0)}% de ${momentGroup.moment?.name || 'momento'}`
+                                : undefined}
+                            />
                           </div>
 
-                          {/* Lines */}
+                          {/* Lines and Add button */}
                           <div className="flex-1 divide-y">
                             {funnelGroup.lines.map((line) => {
                               const info = getLineDisplayInfo(line);
@@ -475,6 +543,15 @@ export function HierarchicalMediaTable({
                                 </motion.div>
                               );
                             })}
+                            
+                            {/* Add Line Button - always visible for each combination */}
+                            <div className="p-2">
+                              <AddLineButton
+                                subdivisionId={subdivisionGroup.subdivision?.id}
+                                momentId={momentGroup.moment?.id}
+                                funnelStageId={funnelGroup.funnelStage?.id}
+                              />
+                            </div>
                           </div>
                         </div>
                       ))}

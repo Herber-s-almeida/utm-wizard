@@ -40,6 +40,11 @@ interface MediaLineWizardProps {
   existingFunnelStages?: string[];
   editingLine?: any; // MediaLine to edit
   initialStep?: WizardStep | 'creatives';
+  prefillData?: {
+    subdivisionId?: string;
+    momentId?: string;
+    funnelStageId?: string;
+  };
 }
 
 type WizardStep = 'subdivision' | 'moment' | 'funnel' | 'medium' | 'vehicle' | 'channel' | 'target' | 'details' | 'creatives';
@@ -68,6 +73,7 @@ export function MediaLineWizard({
   existingFunnelStages = [],
   editingLine,
   initialStep,
+  prefillData,
 }: MediaLineWizardProps) {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<WizardStep>('subdivision');
@@ -123,11 +129,21 @@ export function MediaLineWizard({
           notes: editingLine.notes || '',
         });
       } else {
-        // Create mode
-        setCurrentStep('subdivision');
-        setSelectedSubdivision(null);
-        setSelectedMoment(null);
-        setSelectedFunnelStage(null);
+        // Create mode - may have prefilled data
+        // Determine starting step based on prefilled data
+        let startStep: WizardStep = 'subdivision';
+        if (prefillData?.subdivisionId && prefillData?.momentId && prefillData?.funnelStageId) {
+          startStep = 'medium'; // All hierarchy prefilled, start at medium
+        } else if (prefillData?.subdivisionId && prefillData?.momentId) {
+          startStep = 'funnel';
+        } else if (prefillData?.subdivisionId) {
+          startStep = 'moment';
+        }
+        
+        setCurrentStep(startStep);
+        setSelectedSubdivision(prefillData?.subdivisionId || null);
+        setSelectedMoment(prefillData?.momentId || null);
+        setSelectedFunnelStage(prefillData?.funnelStageId || null);
         setSelectedMedium(null);
         setSelectedVehicle(null);
         setSelectedChannel(null);
@@ -141,18 +157,21 @@ export function MediaLineWizard({
         });
       }
     }
-  }, [open, plan, editingLine, initialStep]);
+  }, [open, plan, editingLine, initialStep, prefillData]);
 
   const currentStepIndex = STEP_ORDER.indexOf(currentStep);
 
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 'subdivision':
-        return !!selectedSubdivision;
+        // Allow skipping if no subdivisions exist or one is selected/prefilled
+        return subdivisions.data?.length === 0 || !!selectedSubdivision;
       case 'moment':
-        return !!selectedMoment;
+        // Allow skipping if no moments exist or one is selected/prefilled
+        return moments.data?.length === 0 || !!selectedMoment;
       case 'funnel':
-        return !!selectedFunnelStage;
+        // Allow skipping if no funnel stages exist or one is selected/prefilled
+        return funnelStages.data?.length === 0 || !!selectedFunnelStage;
       case 'medium':
         return !!selectedMedium;
       case 'vehicle':
