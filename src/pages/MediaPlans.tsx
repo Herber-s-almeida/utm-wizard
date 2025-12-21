@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,13 +14,16 @@ import {
   Calendar,
   Loader2,
   Trash2,
-  MoreVertical
+  MoreVertical,
+  Settings2,
+  List
 } from 'lucide-react';
 import { MediaPlan, STATUS_LABELS, STATUS_COLORS } from '@/types/media';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -37,6 +40,7 @@ import { toast } from 'sonner';
 
 export default function MediaPlans() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [plans, setPlans] = useState<MediaPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -198,6 +202,19 @@ export default function MediaPlans() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => navigate(`/media-plans/${plan.id}/edit`)}
+                            >
+                              <Settings2 className="w-4 h-4 mr-2" />
+                              Editar Plano
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => navigate(`/media-plans/${plan.id}?openWizard=true`)}
+                            >
+                              <List className="w-4 h-4 mr-2" />
+                              Criar Linhas
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
                               onClick={() => {

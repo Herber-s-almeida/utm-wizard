@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -46,6 +46,7 @@ export default function MediaPlanDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [plan, setPlan] = useState<MediaPlan | null>(null);
   const [lines, setLines] = useState<MediaLine[]>([]);
   const [creatives, setCreatives] = useState<Record<string, MediaCreative[]>>({});
@@ -76,6 +77,16 @@ export default function MediaPlanDetail() {
       fetchData();
     }
   }, [user, id]);
+
+  // Open wizard if query param is set
+  useEffect(() => {
+    if (searchParams.get('openWizard') === 'true') {
+      setWizardOpen(true);
+      // Remove the query param to avoid re-opening on refresh
+      searchParams.delete('openWizard');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const fetchData = async () => {
     try {

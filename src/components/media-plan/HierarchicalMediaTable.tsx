@@ -480,10 +480,10 @@ export function HierarchicalMediaTable({
 
   // Calculate dynamic column widths based on what's visible
   const getMinWidth = () => {
-    let width = 70 + 100 + 70 + 120 + 110 + 80 + 110 + 110 + 100; // base columns
-    if (showSubdivisionColumn) width += 160;
-    if (showMomentColumn) width += 160;
-    if (showFunnelColumn) width += 130;
+    let width = 80 + 110 + 80 + 130 + 120 + 80 + 100 + 100 + 90; // base columns (widened)
+    if (showSubdivisionColumn) width += 180;
+    if (showMomentColumn) width += 180;
+    if (showFunnelColumn) width += 160;
     return width;
   };
 
@@ -493,23 +493,23 @@ export function HierarchicalMediaTable({
         {/* Header */}
         <div className="flex bg-muted/50 text-xs font-medium text-muted-foreground border-b" style={{ minWidth: `${getMinWidth()}px` }}>
           {showSubdivisionColumn && (
-            <div className="w-[160px] p-3 border-r shrink-0">Subdivisão do plano:</div>
+            <div className="w-[180px] p-3 border-r shrink-0">Subdivisão do plano</div>
           )}
           {showMomentColumn && (
-            <div className="w-[160px] p-3 border-r shrink-0">Momentos de Campanha</div>
+            <div className="w-[180px] p-3 border-r shrink-0">Momentos de Campanha</div>
           )}
           {showFunnelColumn && (
-            <div className="w-[130px] p-3 border-r shrink-0">Fase</div>
+            <div className="w-[160px] p-3 border-r shrink-0">Fase</div>
           )}
-          <div className="w-[70px] p-3 border-r shrink-0">Meio</div>
-          <div className="w-[100px] p-3 border-r shrink-0">Veículos e canais</div>
-          <div className="w-[70px] p-3 border-r shrink-0">Formato</div>
-          <div className="w-[120px] p-3 border-r shrink-0">Segmentação</div>
-          <div className="w-[110px] p-3 border-r shrink-0">Orçamento</div>
+          <div className="w-[80px] p-3 border-r shrink-0">Meio</div>
+          <div className="w-[110px] p-3 border-r shrink-0">Veículos e canais</div>
+          <div className="w-[80px] p-3 border-r shrink-0">Formato</div>
+          <div className="w-[130px] p-3 border-r shrink-0">Segmentação</div>
+          <div className="w-[120px] p-3 border-r shrink-0">Orçamento</div>
           <div className="w-[80px] p-3 border-r shrink-0">Criativos</div>
-          <div className="w-[110px] p-3 border-r shrink-0">Início</div>
-          <div className="w-[110px] p-3 border-r shrink-0">Fim</div>
-          <div className="w-[100px] p-3 shrink-0">Ações</div>
+          <div className="w-[100px] p-3 border-r shrink-0">Início</div>
+          <div className="w-[100px] p-3 border-r shrink-0">Fim</div>
+          <div className="w-[90px] p-3 shrink-0">Ações</div>
         </div>
 
         {/* Body */}
@@ -518,7 +518,7 @@ export function HierarchicalMediaTable({
             <div key={subdivisionGroup.subdivision.distId || `no-sub-${subIdx}`} className="flex">
               {/* Subdivision cell */}
               {showSubdivisionColumn && (
-                <div className="w-[160px] p-2 border-r bg-background shrink-0">
+                <div className="w-[180px] p-2 border-r bg-background shrink-0">
                   <BudgetCard
                     label={subdivisionGroup.subdivision.name}
                     planned={subdivisionGroup.subdivision.planned}
@@ -534,7 +534,7 @@ export function HierarchicalMediaTable({
                   <div key={momentGroup.moment.distId || `no-mom-${momIdx}`} className="flex">
                     {/* Moment cell */}
                     {showMomentColumn && (
-                      <div className="w-[160px] p-2 border-r bg-background shrink-0">
+                      <div className="w-[180px] p-2 border-r bg-background shrink-0">
                         <BudgetCard
                           label={momentGroup.moment.name}
                           planned={momentGroup.moment.planned}
@@ -549,7 +549,7 @@ export function HierarchicalMediaTable({
                       {momentGroup.funnelStages.map((funnelGroup, funIdx) => (
                         <div key={funnelGroup.funnelStage.distId || `no-fun-${funIdx}`} className="flex">
                           {showFunnelColumn && (
-                            <div className="w-[130px] p-2 border-r bg-background shrink-0">
+                            <div className="w-[160px] p-2 border-r bg-background shrink-0">
                               <BudgetCard
                                 label={funnelGroup.funnelStage.name}
                                 planned={funnelGroup.funnelStage.planned}
@@ -571,16 +571,16 @@ export function HierarchicalMediaTable({
                                   animate={{ opacity: 1 }}
                                   className="flex hover:bg-muted/30 transition-colors text-sm"
                                 >
-                                  <div className="w-[70px] p-2 border-r truncate shrink-0" title={info.medium}>
+                                  <div className="w-[80px] p-2 border-r truncate shrink-0" title={info.medium}>
                                     {info.medium}
                                   </div>
-                                  <div className="w-[100px] p-2 border-r truncate shrink-0" title={`${info.vehicle} / ${info.channel}`}>
+                                  <div className="w-[110px] p-2 border-r truncate shrink-0" title={`${info.vehicle} / ${info.channel}`}>
                                     {info.vehicle}
                                   </div>
-                                  <div className="w-[70px] p-2 border-r truncate shrink-0" title={info.format}>
+                                  <div className="w-[80px] p-2 border-r truncate shrink-0" title={info.format}>
                                     {info.format}
                                   </div>
-                                  <div className="w-[120px] p-2 border-r truncate shrink-0" title={info.target}>
+                                  <div className="w-[130px] p-2 border-r truncate shrink-0" title={info.target}>
                                     ({info.target})
                                   </div>
                                   
@@ -590,7 +590,7 @@ export function HierarchicalMediaTable({
                                     field="budget"
                                     displayValue={formatCurrency(Number(line.budget))}
                                     inputType="number"
-                                    width="w-[110px]"
+                                    width="w-[120px]"
                                   />
                                   
                                   {/* Creatives with edit button */}
@@ -620,7 +620,7 @@ export function HierarchicalMediaTable({
                                     field="start_date"
                                     displayValue={formatDate(line.start_date)}
                                     inputType="date"
-                                    width="w-[110px]"
+                                    width="w-[100px]"
                                   />
                                   
                                   {/* Editable End Date */}
@@ -629,11 +629,11 @@ export function HierarchicalMediaTable({
                                     field="end_date"
                                     displayValue={formatDate(line.end_date)}
                                     inputType="date"
-                                    width="w-[110px]"
+                                    width="w-[100px]"
                                   />
                                   
                                   {/* Action buttons */}
-                                  <div className="w-[100px] p-2 flex items-center gap-1 shrink-0">
+                                  <div className="w-[90px] p-2 flex items-center gap-1 shrink-0">
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <Button
