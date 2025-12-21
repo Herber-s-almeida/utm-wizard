@@ -17,6 +17,7 @@ import {
 import { Status } from '@/hooks/useStatuses';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from '@/hooks/use-toast';
 import {
   Tooltip,
   TooltipContent,
@@ -97,7 +98,7 @@ interface HierarchyNode {
   }[];
 }
 
-type EditingField = 'budget' | 'start_date' | 'end_date' | null;
+type EditingField = 'budget' | 'start_date' | 'end_date' | 'line_code' | null;
 
 export function HierarchicalMediaTable({
   plan,
@@ -327,6 +328,48 @@ export function HierarchicalMediaTable({
     };
   };
 
+  // Generate automatic line code based on subdivision, moment, funnel stage
+  const generateLineCode = (line: MediaLine, existingCodes: string[]): string => {
+    const subdivision = subdivisionsList.find(s => s.id === line.subdivision_id);
+    const moment = momentsList.find(m => m.id === line.moment_id);
+    const funnelStage = funnelStagesList.find(f => f.id === line.funnel_stage_id);
+    
+    const getFirstLetter = (name?: string) => {
+      if (!name) return '';
+      return name.charAt(0).toUpperCase();
+    };
+    
+    const generateRandomLetters = () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      return Array.from({ length: 3 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
+    };
+    
+    let prefix = '';
+    prefix += subdivision?.name ? getFirstLetter(subdivision.name) : '';
+    prefix += moment?.name ? getFirstLetter(moment.name) : '';
+    prefix += funnelStage?.name ? getFirstLetter(funnelStage.name) : '';
+    
+    // If no letters, use random
+    if (!prefix) {
+      prefix = generateRandomLetters();
+    }
+    
+    // Find next available number
+    let counter = 1;
+    let code = `${prefix}${counter}`;
+    while (existingCodes.includes(code)) {
+      counter++;
+      code = `${prefix}${counter}`;
+    }
+    
+    return code;
+  };
+
+  // Get all existing codes in the plan
+  const existingLineCodes = useMemo(() => {
+    return lines.map(l => l.line_code).filter(Boolean) as string[];
+  }, [lines]);
+
   const startEditingField = (line: MediaLine, field: EditingField) => {
     setEditingLineId(line.id);
     setEditingField(field);
@@ -336,6 +379,10 @@ export function HierarchicalMediaTable({
       setEditValue(line.start_date || '');
     } else if (field === 'end_date') {
       setEditValue(line.end_date || '');
+    } else if (field === 'line_code') {
+      // If no code exists, generate one
+      const currentCode = line.line_code || generateLineCode(line, existingLineCodes);
+      setEditValue(currentCode);
     }
   };
 
@@ -349,6 +396,18 @@ export function HierarchicalMediaTable({
       updates.start_date = editValue;
     } else if (editingField === 'end_date') {
       updates.end_date = editValue;
+    } else if (editingField === 'line_code') {
+      // Validate uniqueness
+      const otherCodes = lines.filter(l => l.id !== editingLineId).map(l => l.line_code).filter(Boolean);
+      if (otherCodes.includes(editValue)) {
+        toast({
+          title: "Código já existe",
+          description: "Este código já está em uso por outra linha neste plano.",
+          variant: "destructive",
+        });
+        return;
+      }
+      updates.line_code = editValue;
     }
     
     await onUpdateLine(editingLineId, updates);
@@ -490,7 +549,7 @@ export function HierarchicalMediaTable({
 
   // Calculate dynamic column widths based on what's visible
   const getMinWidth = () => {
-    let width = 80 + 110 + 80 + 130 + 120 + 80 + 100 + 100 + 100 + 90; // base columns + status
+    let width = 70 + 80 + 110 + 80 + 130 + 120 + 80 + 100 + 100 + 100 + 90; // base columns + code + status
     if (showSubdivisionColumn) width += 180;
     if (showMomentColumn) width += 180;
     if (showFunnelColumn) width += 200; // Increased width to prevent text wrap
@@ -521,6 +580,7 @@ export function HierarchicalMediaTable({
           {showFunnelColumn && (
             <div className="w-[200px] p-3 border-r shrink-0">Fase</div>
           )}
+          <div className="w-[70px] p-3 border-r shrink-0">Código</div>
           <div className="w-[80px] p-3 border-r shrink-0">Meio</div>
           <div className="w-[110px] p-3 border-r shrink-0">Veículos e canais</div>
           <div className="w-[80px] p-3 border-r shrink-0">Formato</div>
@@ -592,6 +652,15 @@ export function HierarchicalMediaTable({
                                   animate={{ opacity: 1 }}
                                   className="flex hover:bg-muted/30 transition-colors text-sm"
                                 >
+                                  {/* Editable Line Code */}
+                                  <EditableCell
+                                    line={line}
+                                    field="line_code"
+                                    displayValue={line.line_code || generateLineCode(line, existingLineCodes)}
+                                    inputType="text"
+                                    width="w-[70px]"
+                                  />
+                                  
                                   <div className="w-[80px] p-2 border-r truncate shrink-0" title={info.medium}>
                                     {info.medium}
                                   </div>

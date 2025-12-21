@@ -217,6 +217,7 @@ export type Database = {
           funnel_stage_id: string | null
           id: string
           impressions: number | null
+          line_code: string | null
           media_plan_id: string
           medium_id: string | null
           moment_id: string | null
@@ -256,6 +257,7 @@ export type Database = {
           funnel_stage_id?: string | null
           id?: string
           impressions?: number | null
+          line_code?: string | null
           media_plan_id: string
           medium_id?: string | null
           moment_id?: string | null
@@ -295,6 +297,7 @@ export type Database = {
           funnel_stage_id?: string | null
           id?: string
           impressions?: number | null
+          line_code?: string | null
           media_plan_id?: string
           medium_id?: string | null
           moment_id?: string | null
