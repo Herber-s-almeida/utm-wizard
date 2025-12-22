@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2 } from 'lucide-react';
+import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -31,6 +31,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+
+// Columns that can be toggled (excludes: Código, Orçamento, Status, Início, Fim, Ações)
+type ToggleableColumn = 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target' | 'creatives';
+
+const TOGGLEABLE_COLUMNS: { key: ToggleableColumn; label: string }[] = [
+  { key: 'subdivision', label: 'Subdivisão' },
+  { key: 'moment', label: 'Momentos' },
+  { key: 'funnel_stage', label: 'Fase' },
+  { key: 'medium', label: 'Meio' },
+  { key: 'vehicle', label: 'Veículo' },
+  { key: 'channel', label: 'Canal' },
+  { key: 'target', label: 'Segmentação' },
+  { key: 'creatives', label: 'Criativos' },
+];
+
+interface LineFilters {
+  status: string;
+  subdivision: string;
+  moment: string;
+  funnel_stage: string;
+  code: string;
+  medium: string;
+  vehicle: string;
+  channel: string;
+  target: string;
+  start_date: string;
+  end_date: string;
+}
 
 interface BudgetDistribution {
   id: string;
@@ -121,6 +157,58 @@ export function HierarchicalMediaTable({
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<EditingField>(null);
   const [editValue, setEditValue] = useState<string>('');
+
+  // Column visibility state
+  const [visibleColumns, setVisibleColumns] = useState<Record<ToggleableColumn, boolean>>({
+    subdivision: true,
+    moment: true,
+    funnel_stage: true,
+    medium: true,
+    vehicle: true,
+    channel: true,
+    target: true,
+    creatives: true,
+  });
+
+  // Line filters state
+  const [lineFilters, setLineFilters] = useState<LineFilters>({
+    status: '',
+    subdivision: '',
+    moment: '',
+    funnel_stage: '',
+    code: '',
+    medium: '',
+    vehicle: '',
+    channel: '',
+    target: '',
+    start_date: '',
+    end_date: '',
+  });
+
+  const [columnFilterSearch, setColumnFilterSearch] = useState('');
+  const [lineFilterSearch, setLineFilterSearch] = useState('');
+
+  const toggleColumn = (key: ToggleableColumn) => {
+    setVisibleColumns(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const clearLineFilters = () => {
+    setLineFilters({
+      status: '',
+      subdivision: '',
+      moment: '',
+      funnel_stage: '',
+      code: '',
+      medium: '',
+      vehicle: '',
+      channel: '',
+      target: '',
+      start_date: '',
+      end_date: '',
+    });
+  };
+
+  const activeFiltersCount = Object.values(lineFilters).filter(v => v !== '').length;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -293,6 +381,41 @@ export function HierarchicalMediaTable({
 
     return nodes;
   }, [lines, budgetDistributions, plan.total_budget, subdivisionsList, momentsList, funnelStagesList]);
+
+  // Apply line filters to the grouped data
+  const filterLine = (line: MediaLine): boolean => {
+    const info = getLineDisplayInfo(line);
+    
+    if (lineFilters.status && line.status_id !== lineFilters.status) return false;
+    if (lineFilters.subdivision && line.subdivision_id !== lineFilters.subdivision) return false;
+    if (lineFilters.moment && line.moment_id !== lineFilters.moment) return false;
+    if (lineFilters.funnel_stage && line.funnel_stage_id !== lineFilters.funnel_stage) return false;
+    if (lineFilters.code && !(line.line_code || '').toLowerCase().includes(lineFilters.code.toLowerCase())) return false;
+    if (lineFilters.medium && line.medium_id !== lineFilters.medium) return false;
+    if (lineFilters.vehicle && line.vehicle_id !== lineFilters.vehicle) return false;
+    if (lineFilters.channel && line.channel_id !== lineFilters.channel) return false;
+    if (lineFilters.target && line.target_id !== lineFilters.target) return false;
+    if (lineFilters.start_date && line.start_date !== lineFilters.start_date) return false;
+    if (lineFilters.end_date && line.end_date !== lineFilters.end_date) return false;
+    
+    return true;
+  };
+
+  // Create filtered grouped data
+  const filteredGroupedData = useMemo(() => {
+    if (activeFiltersCount === 0) return groupedData;
+    
+    return groupedData.map(subGroup => ({
+      ...subGroup,
+      moments: subGroup.moments.map(momGroup => ({
+        ...momGroup,
+        funnelStages: momGroup.funnelStages.map(funGroup => ({
+          ...funGroup,
+          lines: funGroup.lines.filter(filterLine),
+        })),
+      })),
+    }));
+  }, [groupedData, lineFilters, activeFiltersCount]);
 
   const totalBudget = lines.reduce((acc, line) => acc + (Number(line.budget) || 0), 0);
 
@@ -538,11 +661,23 @@ export function HierarchicalMediaTable({
     </Button>
   );
 
-  // Calculate dynamic column widths - always show all columns
+  // Calculate dynamic column widths based on visible columns
   const getMinWidth = () => {
-    // Base columns + subdivision + moment + funnel (always visible)
-    return 100 + 80 + 110 + 100 + 130 + 120 + 80 + 100 + 100 + 100 + 90 + 180 + 180 + 200;
+    let width = 100 + 120 + 100 + 100 + 100 + 90; // Fixed columns: Código, Orçamento, Status, Início, Fim, Ações
+    if (visibleColumns.subdivision) width += 180;
+    if (visibleColumns.moment) width += 180;
+    if (visibleColumns.funnel_stage) width += 200;
+    if (visibleColumns.medium) width += 80;
+    if (visibleColumns.vehicle) width += 110;
+    if (visibleColumns.channel) width += 100;
+    if (visibleColumns.target) width += 130;
+    if (visibleColumns.creatives) width += 80;
+    return width;
   };
+
+  const filteredColumnsList = TOGGLEABLE_COLUMNS.filter(col => 
+    col.label.toLowerCase().includes(columnFilterSearch.toLowerCase())
+  );
 
   const getStatusName = (statusId: string | null) => {
     if (!statusId) return null;
@@ -556,231 +691,545 @@ export function HierarchicalMediaTable({
 
   return (
     <TooltipProvider>
-      <div className="border rounded-lg overflow-x-auto">
-        {/* Header */}
-        <div className="flex bg-muted/50 text-xs font-medium text-muted-foreground border-b" style={{ minWidth: `${getMinWidth()}px` }}>
-          <div className="w-[180px] p-3 border-r shrink-0">Subdivisão do plano</div>
-          <div className="w-[180px] p-3 border-r shrink-0">Momentos de Campanha</div>
-          <div className="w-[200px] p-3 border-r shrink-0">Fase</div>
-          <div className="w-[100px] p-3 border-r shrink-0">Código</div>
-          <div className="w-[80px] p-3 border-r shrink-0">Meio</div>
-          <div className="w-[110px] p-3 border-r shrink-0">Veículo</div>
-          <div className="w-[100px] p-3 border-r shrink-0">Canal</div>
-          <div className="w-[130px] p-3 border-r shrink-0">Segmentação</div>
-          <div className="w-[120px] p-3 border-r shrink-0">Orçamento</div>
-          <div className="w-[80px] p-3 border-r shrink-0">Criativos</div>
-          <div className="w-[100px] p-3 border-r shrink-0">Status</div>
-          <div className="w-[100px] p-3 border-r shrink-0">Início</div>
-          <div className="w-[100px] p-3 border-r shrink-0">Fim</div>
-          <div className="w-[90px] p-3 shrink-0">Ações</div>
-        </div>
-
-        {/* Body */}
-        <div className="divide-y" style={{ minWidth: `${getMinWidth()}px` }}>
-          {groupedData.map((subdivisionGroup, subIdx) => (
-            <div key={subdivisionGroup.subdivision.distId || `no-sub-${subIdx}`} className="flex">
-              {/* Subdivision cell */}
-              <div className="w-[180px] p-2 border-r bg-background shrink-0">
-                <BudgetCard
-                  label={subdivisionGroup.subdivision.name}
-                  planned={subdivisionGroup.subdivision.planned}
-                  allocated={subdivisionGroup.subdivisionAllocated}
-                  percentageLabel={`${subdivisionGroup.subdivision.percentage.toFixed(0)}% do plano`}
-                />
+      <div className="space-y-3">
+        {/* Filters Bar */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Column Visibility Filter */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Columns className="w-4 h-4" />
+                Colunas
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 bg-popover" align="start">
+              <div className="space-y-3">
+                <div className="font-medium text-sm">Exibir colunas</div>
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar coluna..."
+                    value={columnFilterSearch}
+                    onChange={(e) => setColumnFilterSearch(e.target.value)}
+                    className="pl-8 h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {filteredColumnsList.map(col => (
+                    <div key={col.key} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`col-${col.key}`}
+                        checked={visibleColumns[col.key]}
+                        onCheckedChange={() => toggleColumn(col.key)}
+                      />
+                      <Label htmlFor={`col-${col.key}`} className="text-sm cursor-pointer">
+                        {col.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground pt-2 border-t">
+                  Código, Orçamento, Status, Início, Fim e Ações estão sempre visíveis.
+                </p>
               </div>
+            </PopoverContent>
+          </Popover>
 
-              {/* Moments column */}
-              <div className="flex-1 divide-y">
-                {subdivisionGroup.moments.map((momentGroup, momIdx) => (
-                  <div key={momentGroup.moment.distId || `no-mom-${momIdx}`} className="flex">
-                    {/* Moment cell */}
-                    <div className="w-[180px] p-2 border-r bg-background shrink-0">
-                      <BudgetCard
-                        label={momentGroup.moment.name}
-                        planned={momentGroup.moment.planned}
-                        allocated={momentGroup.momentAllocated}
-                        percentageLabel={`${momentGroup.moment.percentage.toFixed(0)}% de ${subdivisionGroup.subdivision.name}`}
+          {/* Line Filters */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Filter className="w-4 h-4" />
+                Filtrar linhas
+                {activeFiltersCount > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                    {activeFiltersCount}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 bg-popover" align="start">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="font-medium text-sm">Filtrar linhas</div>
+                  {activeFiltersCount > 0 && (
+                    <Button variant="ghost" size="sm" onClick={clearLineFilters} className="h-6 text-xs">
+                      Limpar filtros
+                    </Button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar filtro..."
+                    value={lineFilterSearch}
+                    onChange={(e) => setLineFilterSearch(e.target.value)}
+                    className="pl-8 h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {/* Status filter */}
+                  {'status'.includes(lineFilterSearch.toLowerCase()) && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Status</Label>
+                      <Select value={lineFilters.status} onValueChange={(v) => setLineFilters(prev => ({ ...prev, status: v === 'all' ? '' : v }))}>
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Todos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {statusesList.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  {/* Subdivision filter */}
+                  {'subdivisão'.includes(lineFilterSearch.toLowerCase()) && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Subdivisão</Label>
+                      <Select value={lineFilters.subdivision} onValueChange={(v) => setLineFilters(prev => ({ ...prev, subdivision: v === 'all' ? '' : v }))}>
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Todas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas</SelectItem>
+                          {subdivisionsList.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  {/* Moment filter */}
+                  {'momento'.includes(lineFilterSearch.toLowerCase()) && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Momento</Label>
+                      <Select value={lineFilters.moment} onValueChange={(v) => setLineFilters(prev => ({ ...prev, moment: v === 'all' ? '' : v }))}>
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Todos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {momentsList.map(m => (
+                            <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  {/* Funnel Stage filter */}
+                  {'fase'.includes(lineFilterSearch.toLowerCase()) && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Fase</Label>
+                      <Select value={lineFilters.funnel_stage} onValueChange={(v) => setLineFilters(prev => ({ ...prev, funnel_stage: v === 'all' ? '' : v }))}>
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Todas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas</SelectItem>
+                          {funnelStagesList.map(f => (
+                            <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  {/* Code filter */}
+                  {'código'.includes(lineFilterSearch.toLowerCase()) && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Código</Label>
+                      <Input
+                        placeholder="Buscar código..."
+                        value={lineFilters.code}
+                        onChange={(e) => setLineFilters(prev => ({ ...prev, code: e.target.value }))}
+                        className="h-8 text-sm"
                       />
                     </div>
-
-                    {/* Funnel stages column */}
-                    <div className="flex-1 divide-y">
-                      {momentGroup.funnelStages.map((funnelGroup, funIdx) => (
-                        <div key={funnelGroup.funnelStage.distId || `no-fun-${funIdx}`} className="flex">
-                          <div className="w-[200px] p-2 border-r bg-background shrink-0">
-                            <BudgetCard
-                              label={funnelGroup.funnelStage.name}
-                              planned={funnelGroup.funnelStage.planned}
-                              allocated={funnelGroup.funnelStageAllocated}
-                              percentageLabel={`${funnelGroup.funnelStage.percentage.toFixed(0)}% de ${momentGroup.moment.name}`}
-                            />
-                          </div>
-
-                          {/* Lines and Add button */}
-                          <div className="flex-1 divide-y">
-                            {funnelGroup.lines.map((line) => {
-                              const info = getLineDisplayInfo(line);
-
-                              return (
-                                <motion.div
-                                  key={line.id}
-                                  initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
-                                  className="flex hover:bg-muted/30 transition-colors text-sm"
-                                >
-                                  {/* Editable Line Code */}
-                                  <EditableCell
-                                    line={line}
-                                    field="line_code"
-                                    displayValue={line.line_code || generateLineCode(line, existingLineCodes)}
-                                    inputType="text"
-                                    width="w-[100px]"
-                                  />
-                                  
-                                  <div className="w-[80px] p-2 border-r truncate shrink-0" title={info.medium}>
-                                    {info.medium}
-                                  </div>
-                                  <div className="w-[110px] p-2 border-r truncate shrink-0" title={info.vehicle}>
-                                    {info.vehicle}
-                                  </div>
-                                  <div className="w-[100px] p-2 border-r truncate shrink-0" title={info.channel}>
-                                    {info.channel}
-                                  </div>
-                                  <div className="w-[130px] p-2 border-r truncate shrink-0" title={info.target}>
-                                    ({info.target})
-                                  </div>
-                                  
-                                  {/* Editable Budget */}
-                                  <EditableCell
-                                    line={line}
-                                    field="budget"
-                                    displayValue={formatCurrency(Number(line.budget))}
-                                    inputType="number"
-                                    width="w-[120px]"
-                                  />
-                                  
-                                  {/* Creatives with edit button */}
-                                  <div className="w-[80px] p-2 border-r flex items-center justify-between group shrink-0">
-                                    <div className="flex items-center gap-1">
-                                      <ImageIcon className="w-3 h-3 text-muted-foreground" />
-                                      <span>{info.creativesCount}</span>
-                                    </div>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                          onClick={() => onEditLine(line, 'creatives')}
-                                        >
-                                          <Pencil className="w-3 h-3" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Editar criativos</TooltipContent>
-                                    </Tooltip>
-                                  </div>
-                                  
-                                  {/* Status select */}
-                                  <div className="w-[100px] p-2 border-r shrink-0">
-                                    <Select
-                                      value={line.status_id || 'none'}
-                                      onValueChange={(value) => handleStatusChange(line.id, value)}
-                                    >
-                                      <SelectTrigger className="h-6 text-xs">
-                                        <SelectValue placeholder="Status" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="none">-</SelectItem>
-                                        {statusesList.map(status => (
-                                          <SelectItem key={status.id} value={status.id}>
-                                            {status.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  
-                                  {/* Editable Start Date */}
-                                  <EditableCell
-                                    line={line}
-                                    field="start_date"
-                                    displayValue={formatDate(line.start_date)}
-                                    inputType="date"
-                                    width="w-[100px]"
-                                  />
-                                  
-                                  {/* Editable End Date */}
-                                  <EditableCell
-                                    line={line}
-                                    field="end_date"
-                                    displayValue={formatDate(line.end_date)}
-                                    inputType="date"
-                                    width="w-[100px]"
-                                  />
-                                  
-                                  {/* Action buttons */}
-                                  <div className="w-[90px] p-2 flex items-center gap-1 shrink-0">
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-6 w-6"
-                                          onClick={() => onEditLine(line)}
-                                        >
-                                          <Settings2 className="w-3 h-3" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Editar linha completa</TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-6 w-6 text-destructive hover:text-destructive"
-                                          onClick={() => onDeleteLine(line)}
-                                        >
-                                          <Trash2 className="w-3 h-3" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Excluir linha</TooltipContent>
-                                    </Tooltip>
-                                  </div>
-                                </motion.div>
-                              );
-                            })}
-                            
-                            {/* Add Line Button - always visible for each combination */}
-                            <div className="p-2">
-                              <AddLineButton
-                                subdivisionId={subdivisionGroup.subdivision.id || undefined}
-                                momentId={momentGroup.moment.id || undefined}
-                                funnelStageId={funnelGroup.funnelStage.id || undefined}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                  )}
+                  
+                  {/* Medium filter */}
+                  {'meio'.includes(lineFilterSearch.toLowerCase()) && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Meio</Label>
+                      <Select value={lineFilters.medium} onValueChange={(v) => setLineFilters(prev => ({ ...prev, medium: v === 'all' ? '' : v }))}>
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Todos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {mediums.map(m => (
+                            <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </div>
-                ))}
+                  )}
+                  
+                  {/* Vehicle filter */}
+                  {'veículo'.includes(lineFilterSearch.toLowerCase()) && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Veículo</Label>
+                      <Select value={lineFilters.vehicle} onValueChange={(v) => setLineFilters(prev => ({ ...prev, vehicle: v === 'all' ? '' : v }))}>
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Todos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {vehicles.map(v => (
+                            <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  {/* Channel filter */}
+                  {'canal'.includes(lineFilterSearch.toLowerCase()) && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Canal</Label>
+                      <Select value={lineFilters.channel} onValueChange={(v) => setLineFilters(prev => ({ ...prev, channel: v === 'all' ? '' : v }))}>
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Todos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {channels.map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  {/* Target filter */}
+                  {'segmentação'.includes(lineFilterSearch.toLowerCase()) && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Segmentação</Label>
+                      <Select value={lineFilters.target} onValueChange={(v) => setLineFilters(prev => ({ ...prev, target: v === 'all' ? '' : v }))}>
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Todas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas</SelectItem>
+                          {targets.map(t => (
+                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  {/* Start Date filter */}
+                  {'início'.includes(lineFilterSearch.toLowerCase()) && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Início</Label>
+                      <Input
+                        type="date"
+                        value={lineFilters.start_date}
+                        onChange={(e) => setLineFilters(prev => ({ ...prev, start_date: e.target.value }))}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* End Date filter */}
+                  {'fim'.includes(lineFilterSearch.toLowerCase()) && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Fim</Label>
+                      <Input
+                        type="date"
+                        value={lineFilters.end_date}
+                        onChange={(e) => setLineFilters(prev => ({ ...prev, end_date: e.target.value }))}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Active filters badges */}
+          {activeFiltersCount > 0 && (
+            <div className="flex items-center gap-1 flex-wrap">
+              {lineFilters.status && (
+                <Badge variant="secondary" className="gap-1">
+                  Status: {statusesList.find(s => s.id === lineFilters.status)?.name}
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => setLineFilters(prev => ({ ...prev, status: '' }))} />
+                </Badge>
+              )}
+              {lineFilters.code && (
+                <Badge variant="secondary" className="gap-1">
+                  Código: {lineFilters.code}
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => setLineFilters(prev => ({ ...prev, code: '' }))} />
+                </Badge>
+              )}
+              {lineFilters.medium && (
+                <Badge variant="secondary" className="gap-1">
+                  Meio: {mediums.find(m => m.id === lineFilters.medium)?.name}
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => setLineFilters(prev => ({ ...prev, medium: '' }))} />
+                </Badge>
+              )}
+              {lineFilters.vehicle && (
+                <Badge variant="secondary" className="gap-1">
+                  Veículo: {vehicles.find(v => v.id === lineFilters.vehicle)?.name}
+                  <X className="w-3 h-3 cursor-pointer" onClick={() => setLineFilters(prev => ({ ...prev, vehicle: '' }))} />
+                </Badge>
+              )}
             </div>
-          ))}
+          )}
         </div>
 
-        {/* Footer - Subtotal */}
-        <div className="flex bg-muted border-t" style={{ minWidth: `${getMinWidth()}px` }}>
-          <div className="w-[180px] p-3 font-bold shrink-0">Subtotal:</div>
-          <div className="w-[180px] p-3 shrink-0"></div>
-          <div className="w-[200px] p-3 shrink-0"></div>
-          <div className="w-[100px] p-3 shrink-0"></div>
-          <div className="w-[100px] p-3 shrink-0"></div>
-          <div className="w-[70px] p-3 shrink-0"></div>
-          <div className="w-[120px] p-3 shrink-0"></div>
-          <div className="w-[110px] p-3 font-bold shrink-0">{formatCurrency(totalBudget)}</div>
-          <div className="flex-1"></div>
+        <div className="border rounded-lg overflow-x-auto">
+          {/* Header */}
+          <div className="flex bg-muted/50 text-xs font-medium text-muted-foreground border-b" style={{ minWidth: `${getMinWidth()}px` }}>
+            {visibleColumns.subdivision && <div className="w-[180px] p-3 border-r shrink-0">Subdivisão do plano</div>}
+            {visibleColumns.moment && <div className="w-[180px] p-3 border-r shrink-0">Momentos de Campanha</div>}
+            {visibleColumns.funnel_stage && <div className="w-[200px] p-3 border-r shrink-0">Fase</div>}
+            <div className="w-[100px] p-3 border-r shrink-0">Código</div>
+            {visibleColumns.medium && <div className="w-[80px] p-3 border-r shrink-0">Meio</div>}
+            {visibleColumns.vehicle && <div className="w-[110px] p-3 border-r shrink-0">Veículo</div>}
+            {visibleColumns.channel && <div className="w-[100px] p-3 border-r shrink-0">Canal</div>}
+            {visibleColumns.target && <div className="w-[130px] p-3 border-r shrink-0">Segmentação</div>}
+            <div className="w-[120px] p-3 border-r shrink-0">Orçamento</div>
+            {visibleColumns.creatives && <div className="w-[80px] p-3 border-r shrink-0">Criativos</div>}
+            <div className="w-[100px] p-3 border-r shrink-0">Status</div>
+            <div className="w-[100px] p-3 border-r shrink-0">Início</div>
+            <div className="w-[100px] p-3 border-r shrink-0">Fim</div>
+            <div className="w-[90px] p-3 shrink-0">Ações</div>
+          </div>
+
+          {/* Body */}
+          <div className="divide-y" style={{ minWidth: `${getMinWidth()}px` }}>
+            {filteredGroupedData.map((subdivisionGroup, subIdx) => (
+              <div key={subdivisionGroup.subdivision.distId || `no-sub-${subIdx}`} className="flex">
+                {/* Subdivision cell */}
+                {visibleColumns.subdivision && (
+                  <div className="w-[180px] p-2 border-r bg-background shrink-0">
+                    <BudgetCard
+                      label={subdivisionGroup.subdivision.name}
+                      planned={subdivisionGroup.subdivision.planned}
+                      allocated={subdivisionGroup.subdivisionAllocated}
+                      percentageLabel={`${subdivisionGroup.subdivision.percentage.toFixed(0)}% do plano`}
+                    />
+                  </div>
+                )}
+
+                {/* Moments column */}
+                <div className="flex-1 divide-y">
+                  {subdivisionGroup.moments.map((momentGroup, momIdx) => (
+                    <div key={momentGroup.moment.distId || `no-mom-${momIdx}`} className="flex">
+                      {/* Moment cell */}
+                      {visibleColumns.moment && (
+                        <div className="w-[180px] p-2 border-r bg-background shrink-0">
+                          <BudgetCard
+                            label={momentGroup.moment.name}
+                            planned={momentGroup.moment.planned}
+                            allocated={momentGroup.momentAllocated}
+                            percentageLabel={`${momentGroup.moment.percentage.toFixed(0)}% de ${subdivisionGroup.subdivision.name}`}
+                          />
+                        </div>
+                      )}
+
+                      {/* Funnel stages column */}
+                      <div className="flex-1 divide-y">
+                        {momentGroup.funnelStages.map((funnelGroup, funIdx) => (
+                          <div key={funnelGroup.funnelStage.distId || `no-fun-${funIdx}`} className="flex">
+                            {visibleColumns.funnel_stage && (
+                              <div className="w-[200px] p-2 border-r bg-background shrink-0">
+                                <BudgetCard
+                                  label={funnelGroup.funnelStage.name}
+                                  planned={funnelGroup.funnelStage.planned}
+                                  allocated={funnelGroup.funnelStageAllocated}
+                                  percentageLabel={`${funnelGroup.funnelStage.percentage.toFixed(0)}% de ${momentGroup.moment.name}`}
+                                />
+                              </div>
+                            )}
+
+                            {/* Lines and Add button */}
+                            <div className="flex-1 divide-y">
+                              {funnelGroup.lines.map((line) => {
+                                const info = getLineDisplayInfo(line);
+
+                                return (
+                                  <motion.div
+                                    key={line.id}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="flex hover:bg-muted/30 transition-colors text-sm"
+                                  >
+                                    {/* Editable Line Code */}
+                                    <EditableCell
+                                      line={line}
+                                      field="line_code"
+                                      displayValue={line.line_code || generateLineCode(line, existingLineCodes)}
+                                      inputType="text"
+                                      width="w-[100px]"
+                                    />
+                                    
+                                    {visibleColumns.medium && (
+                                      <div className="w-[80px] p-2 border-r truncate shrink-0" title={info.medium}>
+                                        {info.medium}
+                                      </div>
+                                    )}
+                                    {visibleColumns.vehicle && (
+                                      <div className="w-[110px] p-2 border-r truncate shrink-0" title={info.vehicle}>
+                                        {info.vehicle}
+                                      </div>
+                                    )}
+                                    {visibleColumns.channel && (
+                                      <div className="w-[100px] p-2 border-r truncate shrink-0" title={info.channel}>
+                                        {info.channel}
+                                      </div>
+                                    )}
+                                    {visibleColumns.target && (
+                                      <div className="w-[130px] p-2 border-r truncate shrink-0" title={info.target}>
+                                        ({info.target})
+                                      </div>
+                                    )}
+                                    
+                                    {/* Editable Budget */}
+                                    <EditableCell
+                                      line={line}
+                                      field="budget"
+                                      displayValue={formatCurrency(Number(line.budget))}
+                                      inputType="number"
+                                      width="w-[120px]"
+                                    />
+                                    
+                                    {/* Creatives with edit button */}
+                                    {visibleColumns.creatives && (
+                                      <div className="w-[80px] p-2 border-r flex items-center justify-between group shrink-0">
+                                        <div className="flex items-center gap-1">
+                                          <ImageIcon className="w-3 h-3 text-muted-foreground" />
+                                          <span>{info.creativesCount}</span>
+                                        </div>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                              onClick={() => onEditLine(line, 'creatives')}
+                                            >
+                                              <Pencil className="w-3 h-3" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Editar criativos</TooltipContent>
+                                        </Tooltip>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Status select */}
+                                    <div className="w-[100px] p-2 border-r shrink-0">
+                                      <Select
+                                        value={line.status_id || 'none'}
+                                        onValueChange={(value) => handleStatusChange(line.id, value)}
+                                      >
+                                        <SelectTrigger className="h-6 text-xs">
+                                          <SelectValue placeholder="Status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="none">-</SelectItem>
+                                          {statusesList.map(status => (
+                                            <SelectItem key={status.id} value={status.id}>
+                                              {status.name}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    
+                                    {/* Editable Start Date */}
+                                    <EditableCell
+                                      line={line}
+                                      field="start_date"
+                                      displayValue={formatDate(line.start_date)}
+                                      inputType="date"
+                                      width="w-[100px]"
+                                    />
+                                    
+                                    {/* Editable End Date */}
+                                    <EditableCell
+                                      line={line}
+                                      field="end_date"
+                                      displayValue={formatDate(line.end_date)}
+                                      inputType="date"
+                                      width="w-[100px]"
+                                    />
+                                    
+                                    {/* Action buttons */}
+                                    <div className="w-[90px] p-2 flex items-center gap-1 shrink-0">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6"
+                                            onClick={() => onEditLine(line)}
+                                          >
+                                            <Settings2 className="w-3 h-3" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Editar linha completa</TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-destructive hover:text-destructive"
+                                            onClick={() => onDeleteLine(line)}
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Excluir linha</TooltipContent>
+                                      </Tooltip>
+                                    </div>
+                                  </motion.div>
+                                );
+                              })}
+                              
+                              {/* Add Line Button - always visible for each combination */}
+                              <div className="p-2">
+                                <AddLineButton
+                                  subdivisionId={subdivisionGroup.subdivision.id || undefined}
+                                  momentId={momentGroup.moment.id || undefined}
+                                  funnelStageId={funnelGroup.funnelStage.id || undefined}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer - Subtotal */}
+          <div className="flex bg-muted border-t" style={{ minWidth: `${getMinWidth()}px` }}>
+            {visibleColumns.subdivision && <div className="w-[180px] p-3 font-bold shrink-0">Subtotal:</div>}
+            {visibleColumns.moment && <div className="w-[180px] p-3 shrink-0"></div>}
+            {visibleColumns.funnel_stage && <div className="w-[200px] p-3 shrink-0"></div>}
+            <div className="w-[100px] p-3 shrink-0"></div>
+            {visibleColumns.medium && <div className="w-[80px] p-3 shrink-0"></div>}
+            {visibleColumns.vehicle && <div className="w-[110px] p-3 shrink-0"></div>}
+            {visibleColumns.channel && <div className="w-[100px] p-3 shrink-0"></div>}
+            {visibleColumns.target && <div className="w-[130px] p-3 shrink-0"></div>}
+            <div className="w-[120px] p-3 font-bold shrink-0">{formatCurrency(totalBudget)}</div>
+            {visibleColumns.creatives && <div className="w-[80px] p-3 shrink-0"></div>}
+            <div className="flex-1"></div>
+          </div>
         </div>
       </div>
     </TooltipProvider>
