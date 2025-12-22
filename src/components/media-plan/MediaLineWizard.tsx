@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, Loader2, AlertTriangle, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,16 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { HierarchyBlockSelector, HierarchyItem } from './HierarchyBlockSelector';
 import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets } from '@/hooks/useConfigData';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,14 +20,19 @@ import { toast } from 'sonner';
 import { MediaPlan } from '@/types/media';
 import { cn } from '@/lib/utils';
 
+interface PlanHierarchyOption {
+  id: string | null;
+  name: string;
+}
+
 interface MediaLineWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   plan: MediaPlan;
   onComplete: () => void;
-  existingSubdivisions?: string[];
-  existingMoments?: string[];
-  existingFunnelStages?: string[];
+  planSubdivisions: PlanHierarchyOption[];
+  planMoments: PlanHierarchyOption[];
+  planFunnelStages: PlanHierarchyOption[];
   editingLine?: any; // MediaLine to edit
   initialStep?: WizardStep | 'creatives';
   prefillData?: {
@@ -68,9 +63,9 @@ export function MediaLineWizard({
   onOpenChange,
   plan,
   onComplete,
-  existingSubdivisions = [],
-  existingMoments = [],
-  existingFunnelStages = [],
+  planSubdivisions,
+  planMoments,
+  planFunnelStages,
   editingLine,
   initialStep,
   prefillData,
@@ -78,8 +73,6 @@ export function MediaLineWizard({
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<WizardStep>('subdivision');
   const [saving, setSaving] = useState(false);
-  const [showRedistributeWarning, setShowRedistributeWarning] = useState(false);
-  const [pendingSubdivisionChange, setPendingSubdivisionChange] = useState<string | null>(null);
   
   // Selection state
   const [selectedSubdivision, setSelectedSubdivision] = useState<string | null>(null);
@@ -109,6 +102,20 @@ export function MediaLineWizard({
   const targets = useTargets();
 
   // Reset state when dialog opens or load editing line
+  // Helper to get the appropriate value for a hierarchy selection
+  const getHierarchyValue = (prefillId: string | undefined, planOptions: PlanHierarchyOption[]): string | null => {
+    // If prefilled, use that value (undefined means use null)
+    if (prefillId !== undefined) {
+      return prefillId || null;
+    }
+    // If only one option, auto-select it
+    if (planOptions.length === 1) {
+      return planOptions[0].id;
+    }
+    // Otherwise, no selection
+    return null;
+  };
+
   useEffect(() => {
     if (open) {
       if (editingLine) {
@@ -129,21 +136,14 @@ export function MediaLineWizard({
           notes: editingLine.notes || '',
         });
       } else {
-        // Create mode - may have prefilled data
-        // Determine starting step based on prefilled data
-        let startStep: WizardStep = 'subdivision';
-        if (prefillData?.subdivisionId && prefillData?.momentId && prefillData?.funnelStageId) {
-          startStep = 'medium'; // All hierarchy prefilled, start at medium
-        } else if (prefillData?.subdivisionId && prefillData?.momentId) {
-          startStep = 'funnel';
-        } else if (prefillData?.subdivisionId) {
-          startStep = 'moment';
-        }
+        // Create mode - prefill with hierarchy from where user clicked
+        const subValue = getHierarchyValue(prefillData?.subdivisionId, planSubdivisions);
+        const momValue = getHierarchyValue(prefillData?.momentId, planMoments);
+        const funValue = getHierarchyValue(prefillData?.funnelStageId, planFunnelStages);
         
-        setCurrentStep(startStep);
-        setSelectedSubdivision(prefillData?.subdivisionId || null);
-        setSelectedMoment(prefillData?.momentId || null);
-        setSelectedFunnelStage(prefillData?.funnelStageId || null);
+        setSelectedSubdivision(subValue);
+        setSelectedMoment(momValue);
+        setSelectedFunnelStage(funValue);
         setSelectedMedium(null);
         setSelectedVehicle(null);
         setSelectedChannel(null);
@@ -155,23 +155,42 @@ export function MediaLineWizard({
           destination_url: '',
           notes: '',
         });
+        
+        // Determine starting step - skip hierarchy steps if only one option
+        let startStep: WizardStep = 'subdivision';
+        if (planSubdivisions.length <= 1) {
+          startStep = 'moment';
+          if (planMoments.length <= 1) {
+            startStep = 'funnel';
+            if (planFunnelStages.length <= 1) {
+              startStep = 'medium';
+            }
+          }
+        }
+        setCurrentStep(startStep);
       }
     }
-  }, [open, plan, editingLine, initialStep, prefillData]);
+  }, [open, plan, editingLine, initialStep, prefillData, planSubdivisions, planMoments, planFunnelStages]);
 
   const currentStepIndex = STEP_ORDER.indexOf(currentStep);
+
+  // Check if hierarchy step should be skipped (only one option)
+  const shouldSkipStep = (step: WizardStep): boolean => {
+    if (step === 'subdivision') return planSubdivisions.length <= 1;
+    if (step === 'moment') return planMoments.length <= 1;
+    if (step === 'funnel') return planFunnelStages.length <= 1;
+    return false;
+  };
 
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 'subdivision':
-        // Allow skipping if no subdivisions exist or one is selected/prefilled
-        return subdivisions.data?.length === 0 || !!selectedSubdivision;
+        // Always can proceed - either prefilled or selected
+        return selectedSubdivision !== undefined;
       case 'moment':
-        // Allow skipping if no moments exist or one is selected/prefilled
-        return moments.data?.length === 0 || !!selectedMoment;
+        return selectedMoment !== undefined;
       case 'funnel':
-        // Allow skipping if no funnel stages exist or one is selected/prefilled
-        return funnelStages.data?.length === 0 || !!selectedFunnelStage;
+        return selectedFunnelStage !== undefined;
       case 'medium':
         return !!selectedMedium;
       case 'vehicle':
@@ -203,54 +222,6 @@ export function MediaLineWizard({
     }
   };
 
-  const handleSubdivisionSelect = (id: string) => {
-    // Check if there are existing budget distributions that would be affected
-    const hasExistingDistributions = existingSubdivisions.length > 0 && !existingSubdivisions.includes(id);
-    
-    if (hasExistingDistributions) {
-      setPendingSubdivisionChange(id);
-      setShowRedistributeWarning(true);
-    } else {
-      setSelectedSubdivision(id);
-    }
-  };
-
-  const handleConfirmRedistribute = async () => {
-    if (pendingSubdivisionChange) {
-      // Redistribute budget equally across funnel stages
-      await redistributeBudgetEqually();
-      setSelectedSubdivision(pendingSubdivisionChange);
-    }
-    setPendingSubdivisionChange(null);
-    setShowRedistributeWarning(false);
-  };
-
-  const redistributeBudgetEqually = async () => {
-    // Get existing funnel stage distributions
-    const { data: distributions } = await supabase
-      .from('plan_budget_distributions')
-      .select('*')
-      .eq('media_plan_id', plan.id)
-      .eq('distribution_type', 'funnel_stage');
-    
-    if (distributions && distributions.length > 0) {
-      const equalPercentage = Math.floor(100 / distributions.length * 100) / 100;
-      const remainder = 100 - (equalPercentage * distributions.length);
-      
-      for (let i = 0; i < distributions.length; i++) {
-        const percentage = i === 0 ? equalPercentage + remainder : equalPercentage;
-        await supabase
-          .from('plan_budget_distributions')
-          .update({ 
-            percentage,
-            amount: (plan.total_budget * percentage) / 100
-          })
-          .eq('id', distributions[i].id);
-      }
-      
-      toast.info('Orçamento redistribuído igualmente entre as fases do funil');
-    }
-  };
 
   // Generate automatic line code based on subdivision, moment, funnel stage
   const generateLineCode = async (): Promise<string> => {
@@ -362,22 +333,22 @@ export function MediaLineWizard({
   const getItemsForStep = (): HierarchyItem[] => {
     switch (currentStep) {
       case 'subdivision':
-        return (subdivisions.data || []).map(s => ({
-          id: s.id,
+        // Only show subdivisions that exist in the plan
+        return planSubdivisions.map(s => ({
+          id: s.id || 'null',
           name: s.name,
-          description: s.description,
         }));
       case 'moment':
-        return (moments.data || []).map(m => ({
-          id: m.id,
+        // Only show moments that exist in the plan
+        return planMoments.map(m => ({
+          id: m.id || 'null',
           name: m.name,
-          description: m.description,
         }));
       case 'funnel':
-        return (funnelStages.data || []).map(f => ({
-          id: f.id,
+        // Only show funnel stages that exist in the plan
+        return planFunnelStages.map(f => ({
+          id: f.id || 'null',
           name: f.name,
-          description: f.description,
         }));
       case 'medium':
         return (mediums.data || []).map(m => ({
@@ -416,9 +387,9 @@ export function MediaLineWizard({
 
   const getSelectedId = (): string | null => {
     switch (currentStep) {
-      case 'subdivision': return selectedSubdivision;
-      case 'moment': return selectedMoment;
-      case 'funnel': return selectedFunnelStage;
+      case 'subdivision': return selectedSubdivision === null ? 'null' : selectedSubdivision;
+      case 'moment': return selectedMoment === null ? 'null' : selectedMoment;
+      case 'funnel': return selectedFunnelStage === null ? 'null' : selectedFunnelStage;
       case 'medium': return selectedMedium;
       case 'vehicle': return selectedVehicle;
       case 'channel': return selectedChannel;
@@ -427,31 +398,35 @@ export function MediaLineWizard({
     }
   };
 
+  // Check if current step is a hierarchy step (subdivision, moment, funnel)
+  const isHierarchyStep = currentStep === 'subdivision' || currentStep === 'moment' || currentStep === 'funnel';
+
   const handleSelect = (id: string) => {
+    const actualId = id === 'null' ? null : id;
     switch (currentStep) {
       case 'subdivision':
-        handleSubdivisionSelect(id);
+        setSelectedSubdivision(actualId);
         break;
       case 'moment':
-        setSelectedMoment(id);
+        setSelectedMoment(actualId);
         break;
       case 'funnel':
-        setSelectedFunnelStage(id);
+        setSelectedFunnelStage(actualId);
         break;
       case 'medium':
-        setSelectedMedium(id);
+        setSelectedMedium(actualId);
         setSelectedVehicle(null);
         setSelectedChannel(null);
         break;
       case 'vehicle':
-        setSelectedVehicle(id);
+        setSelectedVehicle(actualId);
         setSelectedChannel(null);
         break;
       case 'channel':
-        setSelectedChannel(id);
+        setSelectedChannel(actualId);
         break;
       case 'target':
-        setSelectedTarget(id);
+        setSelectedTarget(actualId);
         break;
     }
   };
@@ -582,10 +557,10 @@ export function MediaLineWizard({
                   selectedIds={selectedId ? [selectedId] : []}
                   onSelect={handleSelect}
                   onDeselect={handleDeselect}
-                  onCreate={handleCreate}
+                  onCreate={isHierarchyStep ? undefined : handleCreate}
                   createPlaceholder={getCreatePlaceholder()}
                   multiSelect={false}
-                  allowCreate={currentStep !== 'channel' || !!selectedVehicle}
+                  allowCreate={!isHierarchyStep && (currentStep !== 'channel' || !!selectedVehicle)}
                   emptyMessage={
                     currentStep === 'channel' && !selectedVehicle 
                       ? 'Selecione um veículo primeiro' 
@@ -730,29 +705,6 @@ export function MediaLineWizard({
         </DialogContent>
       </Dialog>
 
-      {/* Redistribute warning dialog */}
-      <AlertDialog open={showRedistributeWarning} onOpenChange={setShowRedistributeWarning}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-warning" />
-              Redistribuir Orçamento
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Alterar a subdivisão do plano irá redistribuir automaticamente o orçamento de forma igual entre as fases do funil existentes. 
-              Deseja continuar?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingSubdivisionChange(null)}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmRedistribute}>
-              Redistribuir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
