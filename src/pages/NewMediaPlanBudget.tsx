@@ -503,7 +503,7 @@ export default function NewMediaPlanBudget() {
                   </CardContent>
                 </Card>
               </motion.div>
-            ) : state.step > 1 && (
+            ) : state.step > 1 && state.step < 6 && (
               <motion.div
                 key="plan-summary"
                 initial={{ opacity: 0, scale: 0.98 }}
