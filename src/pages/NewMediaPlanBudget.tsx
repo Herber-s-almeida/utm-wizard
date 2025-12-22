@@ -799,7 +799,7 @@ export default function NewMediaPlanBudget() {
           </AnimatePresence>
         )}
 
-        {/* Step 6: Lines */}
+        {/* Step 6: Summary */}
         {state.step === 6 && (
           <motion.div
             key="lines-form"
@@ -808,39 +808,20 @@ export default function NewMediaPlanBudget() {
             transition={{ duration: 0.3 }}
             className="space-y-6"
           >
-            {/* Header Card */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle>Linhas do Plano</CardTitle>
-                    <CardDescription className="text-sm leading-relaxed">
-                      Revise as configurações e finalize a criação do plano.
-                      <br />
-                      Na próxima etapa, você poderá detalhar cada linha, definindo veículos, canais, segmentações e criativos, consolidando as escolhas táticas do plano.
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-
-            {/* Plan Summary Card */}
+            {/* 1. Plan Summary Card */}
             <PlanSummaryCard
               planData={state.planData}
               onEdit={() => goToStep(1)}
               showEditButton={true}
             />
 
-            {/* Subdivisions with nested Moments and Funnel */}
+            {/* 2. Subdivisions with nested Moments and Funnel */}
             <Card className="border-2 border-primary/20">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full bg-primary" />
-                    <CardTitle className="text-lg">Subdivisão do plano</CardTitle>
+                    <CardTitle className="text-lg">Subdivisões do Plano</CardTitle>
                     <div className="flex-1 h-[2px] bg-gradient-to-r from-primary/50 to-transparent rounded-full min-w-[100px]" />
                     <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
                       <span className="text-success font-bold text-sm">✓</span>
@@ -853,7 +834,7 @@ export default function NewMediaPlanBudget() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Render each subdivision with its moments and funnel */}
+                {/* 3. Render each subdivision with its moments and funnel */}
                 {(state.subdivisions.length > 0 ? state.subdivisions : [{ id: 'root', name: 'Geral', percentage: 100, amount: state.planData.total_budget }]).map((sub) => {
                   const subKey = sub.id === 'root' ? 'root' : sub.id;
                   const subBudget = wizard.calculateAmount(state.planData.total_budget, sub.percentage);
@@ -911,14 +892,14 @@ export default function NewMediaPlanBudget() {
               </CardContent>
             </Card>
 
-            {/* Temporal Distribution */}
+            {/* 4. Temporal Distribution */}
             {temporalPeriods.length > 0 && (
               <Card className="border-2 border-primary/20">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 rounded-full bg-primary" />
-                      <CardTitle className="text-lg">Distribuição temporal</CardTitle>
+                      <CardTitle className="text-lg">Distribuição Temporal</CardTitle>
                       <div className="flex-1 h-[2px] bg-gradient-to-r from-primary/50 to-transparent rounded-full min-w-[100px]" />
                       <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
                         <span className="text-success font-bold text-sm">✓</span>
@@ -943,6 +924,25 @@ export default function NewMediaPlanBudget() {
                 </CardContent>
               </Card>
             )}
+
+            {/* 5. Linhas do Plano */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Linhas do Plano</CardTitle>
+                    <CardDescription className="text-sm leading-relaxed">
+                      Revise as configurações e finalize a criação do plano.
+                      <br />
+                      Na próxima etapa, você poderá detalhar cada linha, definindo veículos, canais, segmentações e criativos, consolidando as escolhas táticas do plano.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
           </motion.div>
         )}
       </div>
