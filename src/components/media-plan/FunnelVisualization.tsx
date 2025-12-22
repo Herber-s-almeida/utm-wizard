@@ -86,23 +86,23 @@ export function FunnelVisualization({
                     {/* Label */}
                     <text
                       x="100"
-                      y={y + height / 2 - 2}
+                      y={y + height / 2 - 6}
                       textAnchor="middle"
-                      fill="hsl(var(--primary-foreground))"
+                      fill="hsl(var(--foreground))"
                       className="font-semibold"
-                      style={{ fontSize: Math.max(7, 10 - funnelStages.length) }}
+                      style={{ fontSize: Math.max(7, 10 - funnelStages.length), textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
                     >
                       {stage.name}
                     </text>
-                    {/* Percentage */}
+                    {/* Percentage and Value */}
                     <text
                       x="100"
-                      y={y + height / 2 + 8}
+                      y={y + height / 2 + 5}
                       textAnchor="middle"
-                      fill="hsl(var(--primary-foreground))"
-                      style={{ fontSize: Math.max(6, 9 - funnelStages.length), opacity: 0.9 }}
+                      fill="hsl(var(--foreground))"
+                      style={{ fontSize: Math.max(6, 9 - funnelStages.length), opacity: 0.9, textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
                     >
-                      {stage.percentage}%
+                      {stage.percentage}% • R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                     </text>
                   </g>
                 );
