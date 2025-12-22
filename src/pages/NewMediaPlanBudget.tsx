@@ -410,8 +410,14 @@ export default function NewMediaPlanBudget() {
                           id="start_date"
                           type="date"
                           value={state.planData.start_date}
-                          max={state.planData.end_date || undefined}
-                          onChange={(e) => updatePlanData({ start_date: e.target.value })}
+                          max={state.planData.end_date || "2099-12-31"}
+                          min="2000-01-01"
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value.length <= 10) {
+                              updatePlanData({ start_date: value });
+                            }
+                          }}
                         />
                       </div>
                       <div className="space-y-2">
@@ -420,8 +426,14 @@ export default function NewMediaPlanBudget() {
                           id="end_date"
                           type="date"
                           value={state.planData.end_date}
-                          min={state.planData.start_date || undefined}
-                          onChange={(e) => updatePlanData({ end_date: e.target.value })}
+                          min={state.planData.start_date || "2000-01-01"}
+                          max="2099-12-31"
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value.length <= 10) {
+                              updatePlanData({ end_date: value });
+                            }
+                          }}
                         />
                         {state.planData.start_date && state.planData.end_date && state.planData.end_date <= state.planData.start_date && (
                           <p className="text-xs text-destructive">A data de término deve ser posterior à data de início</p>
