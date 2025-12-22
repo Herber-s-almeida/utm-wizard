@@ -432,7 +432,13 @@ export function HierarchicalMediaTable({
               type={inputType}
               className="h-6 text-xs px-1 w-full"
               value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Limit code field to 7 characters
+                if (field === 'line_code' && value.length > 7) return;
+                setEditValue(value);
+              }}
+              maxLength={field === 'line_code' ? 7 : undefined}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') saveFieldEdit();
                 if (e.key === 'Escape') cancelFieldEdit();
@@ -535,7 +541,7 @@ export function HierarchicalMediaTable({
   // Calculate dynamic column widths - always show all columns
   const getMinWidth = () => {
     // Base columns + subdivision + moment + funnel (always visible)
-    return 70 + 80 + 110 + 100 + 130 + 120 + 80 + 100 + 100 + 100 + 90 + 180 + 180 + 200;
+    return 100 + 80 + 110 + 100 + 130 + 120 + 80 + 100 + 100 + 100 + 90 + 180 + 180 + 200;
   };
 
   const getStatusName = (statusId: string | null) => {
@@ -556,7 +562,7 @@ export function HierarchicalMediaTable({
           <div className="w-[180px] p-3 border-r shrink-0">Subdivisão do plano</div>
           <div className="w-[180px] p-3 border-r shrink-0">Momentos de Campanha</div>
           <div className="w-[200px] p-3 border-r shrink-0">Fase</div>
-          <div className="w-[70px] p-3 border-r shrink-0">Código</div>
+          <div className="w-[100px] p-3 border-r shrink-0">Código</div>
           <div className="w-[80px] p-3 border-r shrink-0">Meio</div>
           <div className="w-[110px] p-3 border-r shrink-0">Veículo</div>
           <div className="w-[100px] p-3 border-r shrink-0">Canal</div>
@@ -628,7 +634,7 @@ export function HierarchicalMediaTable({
                                     field="line_code"
                                     displayValue={line.line_code || generateLineCode(line, existingLineCodes)}
                                     inputType="text"
-                                    width="w-[70px]"
+                                    width="w-[100px]"
                                   />
                                   
                                   <div className="w-[80px] p-2 border-r truncate shrink-0" title={info.medium}>
@@ -769,7 +775,7 @@ export function HierarchicalMediaTable({
           <div className="w-[180px] p-3 font-bold shrink-0">Subtotal:</div>
           <div className="w-[180px] p-3 shrink-0"></div>
           <div className="w-[200px] p-3 shrink-0"></div>
-          <div className="w-[70px] p-3 shrink-0"></div>
+          <div className="w-[100px] p-3 shrink-0"></div>
           <div className="w-[100px] p-3 shrink-0"></div>
           <div className="w-[70px] p-3 shrink-0"></div>
           <div className="w-[120px] p-3 shrink-0"></div>
