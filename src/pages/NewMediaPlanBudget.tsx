@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Save, Loader2, Layers, Clock, Filter, Calendar, FileText, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, Loader2, Layers, Clock, Filter, Calendar, FileText, Sparkles, Edit2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -806,7 +806,9 @@ export default function NewMediaPlanBudget() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
+            className="space-y-6"
           >
+            {/* Header Card */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
@@ -823,128 +825,124 @@ export default function NewMediaPlanBudget() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Plan Summary */}
-                <PlanSummaryCard
-                  planData={state.planData}
-                  onEdit={() => goToStep(1)}
-                  showEditButton={false}
-                />
+            </Card>
 
-                {/* Subdivisions Summary */}
-                {state.subdivisions.length > 0 && (
-                  <SubdivisionsSummaryCard
-                    subdivisions={state.subdivisions}
-                    totalBudget={state.planData.total_budget}
-                    onEdit={() => goToStep(2)}
-                  />
-                )}
+            {/* Plan Summary Card */}
+            <PlanSummaryCard
+              planData={state.planData}
+              onEdit={() => goToStep(1)}
+              showEditButton={true}
+            />
 
-                {/* Moments Summary */}
-                {Object.values(state.moments).some(arr => arr.length > 0) && (
-                  <Card className="border-primary/20">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Clock className="h-4 w-4 text-primary" />
+            {/* Subdivisions with nested Moments and Funnel */}
+            <Card className="border-2 border-primary/20">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full bg-primary" />
+                    <CardTitle className="text-lg">Subdivisão do plano</CardTitle>
+                    <div className="flex-1 h-[2px] bg-gradient-to-r from-primary/50 to-transparent rounded-full min-w-[100px]" />
+                    <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
+                      <span className="text-success font-bold text-sm">✓</span>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={() => goToStep(2)}>
+                    <Edit2 className="h-3.5 w-3.5" />
+                    editar
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Render each subdivision with its moments and funnel */}
+                {(state.subdivisions.length > 0 ? state.subdivisions : [{ id: 'root', name: 'Geral', percentage: 100, amount: state.planData.total_budget }]).map((sub) => {
+                  const subKey = sub.id === 'root' ? 'root' : sub.id;
+                  const subBudget = wizard.calculateAmount(state.planData.total_budget, sub.percentage);
+                  const subMoments = state.moments[subKey] || [];
+                  const subFunnelStages = state.funnelStages[subKey] || [];
+
+                  return (
+                    <Card key={sub.id} className="bg-muted/30 border-border/50">
+                      <CardHeader className="py-3 px-4">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base">{sub.name}</CardTitle>
+                          <span className="text-sm text-muted-foreground">
+                            {sub.percentage}% - {formatCurrency(subBudget)}
+                          </span>
                         </div>
-                        <CardTitle className="text-base">Momentos de Campanha</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {Object.entries(state.moments).map(([key, items]) => {
-                          if (items.length === 0) return null;
-                          const subName = key === 'root' 
-                            ? 'Plano Completo' 
-                            : state.subdivisions.find(s => s.id === key)?.name || key;
-                          return (
-                            <div key={key} className="border rounded-lg p-3 bg-muted/20">
-                              <p className="text-sm font-medium mb-2">{subName}</p>
-                              <div className="flex flex-wrap gap-2">
-                                {items.map(item => (
-                                  <span key={item.id} className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                                    {item.name} ({item.percentage}%)
-                                  </span>
-                                ))}
-                              </div>
+                      </CardHeader>
+                      <CardContent className="px-4 pb-4 space-y-4">
+                        {/* Moments for this subdivision */}
+                        {subMoments.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                              <Clock className="h-3 w-3" />
+                              Momentos de Campanha
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {subMoments.map(mom => (
+                                <span key={mom.id} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
+                                  {mom.name} ({mom.percentage}%)
+                                </span>
+                              ))}
                             </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Funnel Stages Summary */}
-                {Object.values(state.funnelStages).some(arr => arr.length > 0) && (
-                  <Card className="border-primary/20">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Filter className="h-4 w-4 text-primary" />
-                        </div>
-                        <CardTitle className="text-base">Fases do Funil</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {Object.entries(state.funnelStages).map(([key, items]) => {
-                          if (items.length === 0) return null;
-                          const subName = key === 'root' 
-                            ? 'Plano Completo' 
-                            : state.subdivisions.find(s => s.id === key)?.name || key;
-                          const subBudget = key === 'root' 
-                            ? state.planData.total_budget 
-                            : wizard.calculateAmount(state.planData.total_budget, state.subdivisions.find(s => s.id === key)?.percentage || 0);
-                          return (
-                            <div key={key} className="border rounded-lg p-3 bg-muted/20">
-                              <p className="text-sm font-medium mb-3">{subName}</p>
-                              <FunnelVisualization
-                                funnelStages={items}
-                                parentBudget={subBudget}
-                                parentName={subName}
-                                onEdit={() => goToStep(4)}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Temporal Distribution Summary */}
-                {temporalPeriods.length > 0 && (
-                  <Card className="border-primary/20">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Calendar className="h-4 w-4 text-primary" />
-                        </div>
-                        <CardTitle className="text-base">Distribuição Temporal ({state.temporalGranularity === 'monthly' ? 'Mensal' : 'Trimestral'})</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                        {temporalPeriods.slice(0, 12).map((period) => (
-                          <div key={period.id} className="border rounded-lg p-2 bg-muted/20 text-center">
-                            <p className="text-xs text-muted-foreground">{period.name}</p>
-                            <p className="font-semibold text-sm">{formatCurrency(period.amount)}</p>
-                            <p className="text-xs text-primary">{period.percentage.toFixed(1)}%</p>
-                          </div>
-                        ))}
-                        {temporalPeriods.length > 12 && (
-                          <div className="border rounded-lg p-2 bg-muted/20 text-center flex items-center justify-center">
-                            <p className="text-xs text-muted-foreground">+{temporalPeriods.length - 12} períodos</p>
                           </div>
                         )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+
+                        {/* Funnel Visualization for this subdivision */}
+                        {subFunnelStages.length > 0 && (
+                          <div className="mt-4">
+                            <FunnelVisualization
+                              funnelStages={subFunnelStages}
+                              parentBudget={subBudget}
+                              parentName={sub.name}
+                              onEdit={() => goToStep(4)}
+                            />
+                          </div>
+                        )}
+
+                        {/* If no moments and no funnel, show "Geral" */}
+                        {subMoments.length === 0 && subFunnelStages.length === 0 && (
+                          <p className="text-sm text-muted-foreground italic">Configuração geral (sem momentos ou fases específicas)</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </CardContent>
             </Card>
+
+            {/* Temporal Distribution */}
+            {temporalPeriods.length > 0 && (
+              <Card className="border-2 border-primary/20">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-primary" />
+                      <CardTitle className="text-lg">Distribuição temporal</CardTitle>
+                      <div className="flex-1 h-[2px] bg-gradient-to-r from-primary/50 to-transparent rounded-full min-w-[100px]" />
+                      <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
+                        <span className="text-success font-bold text-sm">✓</span>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={() => goToStep(5)}>
+                      <Edit2 className="h-3.5 w-3.5" />
+                      editar
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {temporalPeriods.map((period) => (
+                      <div key={period.id} className="border rounded-lg p-2 bg-muted/20 text-center">
+                        <p className="text-xs text-muted-foreground">{period.name}</p>
+                        <p className="font-semibold text-sm">{formatCurrency(period.amount)}</p>
+                        <p className="text-xs text-primary">{period.percentage.toFixed(1)}%</p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </motion.div>
         )}
       </div>
