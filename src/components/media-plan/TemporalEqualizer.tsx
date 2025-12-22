@@ -208,9 +208,14 @@ export function TemporalEqualizer({
                     key={period.id}
                     className="flex-1 flex flex-col items-center justify-end h-full"
                   >
-                    <span className="text-[8px] text-muted-foreground mb-1 font-medium">
-                      {period.percentage.toFixed(0)}%
-                    </span>
+                    <div className="text-center mb-1">
+                      <span className="text-[8px] text-muted-foreground font-medium block">
+                        {period.percentage.toFixed(0)}%
+                      </span>
+                      <span className="text-[7px] text-muted-foreground block">
+                        R$ {(period.amount / 1000).toFixed(0)}k
+                      </span>
+                    </div>
                     <div 
                       className="w-full bg-primary rounded-t transition-all duration-300 min-h-[4px] relative"
                       style={{ height: `${Math.max(height, 2)}%` }}
