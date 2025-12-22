@@ -78,7 +78,8 @@ export default function NewMediaPlanBudget() {
   const canProceed = () => {
     switch (state.step) {
       case 1:
-        return state.planData.name.trim() && state.planData.start_date && state.planData.end_date && state.planData.total_budget > 0;
+        const validDates = state.planData.start_date && state.planData.end_date && state.planData.end_date > state.planData.start_date;
+        return state.planData.name.trim() && validDates && state.planData.total_budget > 0;
       case 2:
         return state.subdivisions.length === 0 || wizard.validatePercentages(state.subdivisions);
       case 3: {
@@ -409,6 +410,7 @@ export default function NewMediaPlanBudget() {
                           id="start_date"
                           type="date"
                           value={state.planData.start_date}
+                          max={state.planData.end_date || undefined}
                           onChange={(e) => updatePlanData({ start_date: e.target.value })}
                         />
                       </div>
@@ -418,8 +420,12 @@ export default function NewMediaPlanBudget() {
                           id="end_date"
                           type="date"
                           value={state.planData.end_date}
+                          min={state.planData.start_date || undefined}
                           onChange={(e) => updatePlanData({ end_date: e.target.value })}
                         />
+                        {state.planData.start_date && state.planData.end_date && state.planData.end_date <= state.planData.start_date && (
+                          <p className="text-xs text-destructive">A data de término deve ser posterior à data de início</p>
+                        )}
                       </div>
                     </div>
 
