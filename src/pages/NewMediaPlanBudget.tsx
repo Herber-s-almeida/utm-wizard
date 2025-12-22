@@ -929,7 +929,7 @@ export default function NewMediaPlanBudget() {
                                   {period.percentage.toFixed(0)}%
                                 </span>
                                 <span className="text-[7px] text-muted-foreground block">
-                                  R$ {(period.amount / 1000).toFixed(0)}k
+                                  R$ {period.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                               </div>
                               <div 
