@@ -16,9 +16,10 @@ interface PlanSummaryCardProps {
     kpis: Record<string, number>;
   };
   onEdit: () => void;
+  showEditButton?: boolean;
 }
 
-export function PlanSummaryCard({ planData, onEdit }: PlanSummaryCardProps) {
+export function PlanSummaryCard({ planData, onEdit, showEditButton = true }: PlanSummaryCardProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -58,10 +59,12 @@ export function PlanSummaryCard({ planData, onEdit }: PlanSummaryCardProps) {
               <span className="text-success font-bold text-sm">✓</span>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="gap-2" onClick={onEdit}>
-            <Edit2 className="h-3.5 w-3.5" />
-            Editar
-          </Button>
+          {showEditButton && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={onEdit}>
+              <Edit2 className="h-3.5 w-3.5" />
+              Editar
+            </Button>
+          )}
         </div>
 
         <div className="space-y-4">
