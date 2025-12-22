@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, ChevronDown, ChevronRight, Lock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useSubdivisions } from '@/hooks/useConfigData';
 import { SubdivisionDialog } from '@/components/config/SubdivisionDialog';
 import {
@@ -106,21 +107,29 @@ export default function SubdivisionsPage() {
                               </Button>
                             </CollapsibleTrigger>
                           )}
-                          <div>
+                          <div className="flex items-center gap-2">
                             <CardTitle className="text-base">{sub.name}</CardTitle>
-                            {(sub as any).description && (
-                              <p className="text-sm text-muted-foreground">{(sub as any).description}</p>
+                            {(sub as any).is_system && (
+                              <Badge variant="secondary" className="text-xs gap-1">
+                                <Lock className="h-3 w-3" />
+                                Padrão
+                              </Badge>
                             )}
                           </div>
+                          {(sub as any).description && (
+                            <p className="text-sm text-muted-foreground">{(sub as any).description}</p>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(sub)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setDeleteId(sub.id)} className="text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        {!(sub as any).is_system && (
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(sub)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setDeleteId(sub.id)} className="text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </CardHeader>
                     {children.length > 0 && (

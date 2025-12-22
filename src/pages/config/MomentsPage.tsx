@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, ArrowLeft } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, Lock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useMoments } from '@/hooks/useConfigData';
 import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
 import {
@@ -68,22 +69,32 @@ export default function MomentsPage() {
             moments?.map(moment => (
               <Card key={moment.id}>
                 <CardHeader className="py-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-base">{moment.name}</CardTitle>
-                      {(moment as any).description && (
-                        <p className="text-sm text-muted-foreground">{(moment as any).description}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-base">{moment.name}</CardTitle>
+                          {(moment as any).is_system && (
+                            <Badge variant="secondary" className="text-xs gap-1">
+                              <Lock className="h-3 w-3" />
+                              Padrão
+                            </Badge>
+                          )}
+                        </div>
+                        {(moment as any).description && (
+                          <p className="text-sm text-muted-foreground">{(moment as any).description}</p>
+                        )}
+                      </div>
+                      {!(moment as any).is_system && (
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => { setEditingItem(moment); setDialogOpen(true); }}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteId(moment.id)} className="text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => { setEditingItem(moment); setDialogOpen(true); }}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeleteId(moment.id)} className="text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
                 </CardHeader>
               </Card>
             ))
