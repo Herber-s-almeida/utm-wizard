@@ -18,6 +18,7 @@ import { SubdivisionsSummaryCard } from '@/components/media-plan/SubdivisionsSum
 import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization';
 import { SortableFunnelList } from '@/components/media-plan/SortableFunnelList';
 import { FunnelStageSelector } from '@/components/media-plan/FunnelStageSelector';
+
 import { TemporalEqualizer, generateTemporalPeriods } from '@/components/media-plan/TemporalEqualizer';
 import { useMediaPlanWizard, BudgetAllocation } from '@/hooks/useMediaPlanWizard';
 import { KPI_OPTIONS } from '@/types/media';
