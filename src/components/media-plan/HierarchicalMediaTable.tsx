@@ -377,25 +377,23 @@ export function HierarchicalMediaTable({
   }, [lines, budgetDistributions, plan.total_budget, subdivisionsList, momentsList, funnelStagesList]);
 
   // Apply line filters to the grouped data
-  const filterLine = (line: MediaLine): boolean => {
-    const info = getLineDisplayInfo(line);
-    
-    if (lineFilters.status && line.status_id !== lineFilters.status) return false;
-    if (lineFilters.subdivision && line.subdivision_id !== lineFilters.subdivision) return false;
-    if (lineFilters.moment && line.moment_id !== lineFilters.moment) return false;
-    if (lineFilters.funnel_stage && line.funnel_stage_id !== lineFilters.funnel_stage) return false;
-    if (lineFilters.code && !(line.line_code || '').toLowerCase().includes(lineFilters.code.toLowerCase())) return false;
-    if (lineFilters.medium && line.medium_id !== lineFilters.medium) return false;
-    if (lineFilters.vehicle && line.vehicle_id !== lineFilters.vehicle) return false;
-    if (lineFilters.channel && line.channel_id !== lineFilters.channel) return false;
-    if (lineFilters.target && line.target_id !== lineFilters.target) return false;
-    
-    return true;
-  };
-
   // Create filtered grouped data
   const filteredGroupedData = useMemo(() => {
     if (activeFiltersCount === 0) return groupedData;
+    
+    const filterLine = (line: MediaLine): boolean => {
+      if (lineFilters.status && line.status_id !== lineFilters.status) return false;
+      if (lineFilters.subdivision && line.subdivision_id !== lineFilters.subdivision) return false;
+      if (lineFilters.moment && line.moment_id !== lineFilters.moment) return false;
+      if (lineFilters.funnel_stage && line.funnel_stage_id !== lineFilters.funnel_stage) return false;
+      if (lineFilters.code && !(line.line_code || '').toLowerCase().includes(lineFilters.code.toLowerCase())) return false;
+      if (lineFilters.medium && line.medium_id !== lineFilters.medium) return false;
+      if (lineFilters.vehicle && line.vehicle_id !== lineFilters.vehicle) return false;
+      if (lineFilters.channel && line.channel_id !== lineFilters.channel) return false;
+      if (lineFilters.target && line.target_id !== lineFilters.target) return false;
+      
+      return true;
+    };
     
     return groupedData.map(subGroup => ({
       ...subGroup,
