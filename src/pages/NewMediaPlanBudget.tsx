@@ -916,7 +916,7 @@ export default function NewMediaPlanBudget() {
                   {(() => {
                     const maxAmount = Math.max(...temporalPeriods.map(p => p.amount), 1);
                     return (
-                      <div className="flex items-end gap-1 h-32 bg-muted/20 rounded-lg p-2">
+                      <div className="flex items-end gap-1 h-40 bg-muted/20 rounded-lg p-2">
                         {temporalPeriods.map((period) => {
                           const height = maxAmount > 0 ? (period.amount / maxAmount) * 100 : 0;
                           return (
@@ -924,6 +924,9 @@ export default function NewMediaPlanBudget() {
                               key={period.id}
                               className="flex-1 flex flex-col items-center justify-end h-full"
                             >
+                              <span className="text-[8px] text-muted-foreground mb-1 font-medium">
+                                {period.percentage.toFixed(0)}%
+                              </span>
                               <div 
                                 className="w-full bg-primary rounded-t transition-all duration-300 min-h-[4px]"
                                 style={{ height: `${Math.max(height, 2)}%` }}
