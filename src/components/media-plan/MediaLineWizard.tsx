@@ -200,7 +200,8 @@ export function MediaLineWizard({
       case 'target':
         return !!selectedTarget;
       case 'details':
-        return !!lineDetails.budget && !!lineDetails.start_date && !!lineDetails.end_date;
+        const validDates = lineDetails.start_date && lineDetails.end_date && lineDetails.end_date > lineDetails.start_date;
+        return !!lineDetails.budget && validDates;
       case 'creatives':
         return true; // Always can proceed from creatives (optional step)
       default:
@@ -618,6 +619,7 @@ export function MediaLineWizard({
                         id="start_date"
                         type="date"
                         value={lineDetails.start_date}
+                        max={lineDetails.end_date || undefined}
                         onChange={(e) => setLineDetails(prev => ({ ...prev, start_date: e.target.value }))}
                       />
                     </div>
@@ -628,8 +630,12 @@ export function MediaLineWizard({
                         id="end_date"
                         type="date"
                         value={lineDetails.end_date}
+                        min={lineDetails.start_date || undefined}
                         onChange={(e) => setLineDetails(prev => ({ ...prev, end_date: e.target.value }))}
                       />
+                      {lineDetails.start_date && lineDetails.end_date && lineDetails.end_date <= lineDetails.start_date && (
+                        <p className="text-xs text-destructive">A data de fim deve ser posterior à data de início</p>
+                      )}
                     </div>
                   </div>
                   
