@@ -126,6 +126,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_system: boolean
           name: string
           order_index: number
           updated_at: string
@@ -135,6 +136,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_system?: boolean
           name: string
           order_index?: number
           updated_at?: string
@@ -144,6 +146,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_system?: boolean
           name?: string
           order_index?: number
           updated_at?: string
@@ -475,6 +478,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_system: boolean
           name: string
           updated_at: string
           user_id: string
@@ -483,6 +487,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_system?: boolean
           name: string
           updated_at?: string
           user_id: string
@@ -491,6 +496,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_system?: boolean
           name?: string
           updated_at?: string
           user_id?: string
@@ -562,6 +568,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_system: boolean
           name: string
           parent_id: string | null
           updated_at: string
@@ -571,6 +578,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_system?: boolean
           name: string
           parent_id?: string | null
           updated_at?: string
@@ -580,6 +588,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_system?: boolean
           name?: string
           parent_id?: string | null
           updated_at?: string
