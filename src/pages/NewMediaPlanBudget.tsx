@@ -892,7 +892,7 @@ export default function NewMediaPlanBudget() {
               </CardContent>
             </Card>
 
-            {/* 4. Temporal Distribution */}
+            {/* 4. Temporal Distribution - Show chart only */}
             {temporalPeriods.length > 0 && (
               <Card className="border-2 border-primary/20">
                 <CardHeader className="pb-2">
@@ -912,15 +912,31 @@ export default function NewMediaPlanBudget() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                    {temporalPeriods.map((period) => (
-                      <div key={period.id} className="border rounded-lg p-2 bg-muted/20 text-center">
-                        <p className="text-xs text-muted-foreground">{period.name}</p>
-                        <p className="font-semibold text-sm">{formatCurrency(period.amount)}</p>
-                        <p className="text-xs text-primary">{period.percentage.toFixed(1)}%</p>
+                  {/* Bar Chart Visualization */}
+                  {(() => {
+                    const maxAmount = Math.max(...temporalPeriods.map(p => p.amount), 1);
+                    return (
+                      <div className="flex items-end gap-1 h-32 bg-muted/20 rounded-lg p-2">
+                        {temporalPeriods.map((period) => {
+                          const height = maxAmount > 0 ? (period.amount / maxAmount) * 100 : 0;
+                          return (
+                            <div
+                              key={period.id}
+                              className="flex-1 flex flex-col items-center justify-end h-full"
+                            >
+                              <div 
+                                className="w-full bg-primary rounded-t transition-all duration-300 min-h-[4px]"
+                                style={{ height: `${Math.max(height, 2)}%` }}
+                              />
+                              <span className="text-[9px] text-muted-foreground text-center mt-1 whitespace-nowrap overflow-hidden max-w-full truncate">
+                                {state.temporalGranularity === 'monthly' ? period.label.slice(0, 3) : period.label}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             )}

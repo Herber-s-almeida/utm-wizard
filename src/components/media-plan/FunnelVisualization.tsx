@@ -1,15 +1,13 @@
-import { Edit2, Filter, GripVertical } from 'lucide-react';
+import { Edit2, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { BudgetAllocation } from '@/hooks/useMediaPlanWizard';
-import { useState } from 'react';
 
 interface FunnelVisualizationProps {
   funnelStages: BudgetAllocation[];
   parentBudget: number;
   parentName: string;
   onEdit: () => void;
-  onReorder?: (stages: BudgetAllocation[]) => void;
 }
 
 export function FunnelVisualization({ 
@@ -17,10 +15,7 @@ export function FunnelVisualization({
   parentBudget, 
   parentName,
   onEdit,
-  onReorder 
 }: FunnelVisualizationProps) {
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -28,27 +23,6 @@ export function FunnelVisualization({
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
-  };
-
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) return;
-    
-    const newStages = [...funnelStages];
-    const draggedItem = newStages[draggedIndex];
-    newStages.splice(draggedIndex, 1);
-    newStages.splice(index, 0, draggedItem);
-    
-    onReorder?.(newStages);
-    setDraggedIndex(index);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
   };
 
   if (funnelStages.length === 0) {
@@ -125,24 +99,15 @@ export function FunnelVisualization({
             </svg>
           </div>
 
-          {/* Stage Cards */}
+          {/* Stage Cards - NO DRAG here, just display */}
           <div className="space-y-3">
-            {funnelStages.map((stage, index) => {
+            {funnelStages.map((stage) => {
               const amount = (parentBudget * stage.percentage) / 100;
               return (
                 <div
                   key={stage.id}
-                  draggable
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragEnd={handleDragEnd}
-                  className={`
-                    flex items-center gap-3 bg-muted/50 rounded-xl p-4 border border-border/50 
-                    cursor-move hover:border-primary/30 transition-all
-                    ${draggedIndex === index ? 'opacity-50 scale-[0.98]' : ''}
-                  `}
+                  className="flex items-center gap-3 bg-muted/50 rounded-xl p-4 border border-border/50"
                 >
-                  <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
                     <span className="text-xs text-muted-foreground uppercase tracking-wide block">
                       {stage.name}

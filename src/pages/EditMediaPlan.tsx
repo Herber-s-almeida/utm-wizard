@@ -921,7 +921,6 @@ export default function EditMediaPlan() {
                                 parentBudget={budgetForSubdivision}
                                 parentName={subdivision.name}
                                 onEdit={() => {}}
-                                onReorder={(stages) => handleFunnelReorder(subdivision.id, stages)}
                               />
                             </div>
                           )}
