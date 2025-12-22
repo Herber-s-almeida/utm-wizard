@@ -16,9 +16,13 @@ import { BudgetAllocationTable } from '@/components/media-plan/BudgetAllocationT
 import { PlanSummaryCard } from '@/components/media-plan/PlanSummaryCard';
 import { SubdivisionsSummaryCard } from '@/components/media-plan/SubdivisionsSummaryCard';
 import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization';
+import { SortableFunnelList } from '@/components/media-plan/SortableFunnelList';
+import { FunnelStageSelector } from '@/components/media-plan/FunnelStageSelector';
 import { TemporalEqualizer, generateTemporalPeriods } from '@/components/media-plan/TemporalEqualizer';
 import { useMediaPlanWizard, BudgetAllocation } from '@/hooks/useMediaPlanWizard';
 import { KPI_OPTIONS } from '@/types/media';
+import { Plus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const WIZARD_STEPS = [
   { id: 1, title: 'Plano', description: 'Dados básicos' },
@@ -433,14 +437,21 @@ export default function NewMediaPlanBudget() {
 
                     <div className="space-y-2">
                       <Label>Objetivos Gerais da Campanha</Label>
-                      <Input
-                        placeholder="Ex: Aumentar brand awareness, gerar leads qualificados"
-                        value={state.planData.objectives.join(', ')}
-                        onChange={(e) => updatePlanData({ 
-                          objectives: e.target.value.split(',').map(s => s.trim()).filter(Boolean) 
-                        })}
+                      <textarea
+                        placeholder="Descreva os objetivos gerais da campanha..."
+                        value={state.planData.objectives.join('\n')}
+                        onChange={(e) => {
+                          const text = e.target.value.slice(0, 500);
+                          updatePlanData({ 
+                            objectives: text ? [text] : [] 
+                          });
+                        }}
+                        maxLength={500}
+                        className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                       />
-                      <p className="text-xs text-muted-foreground">Separe os objetivos por vírgula</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(state.planData.objectives.join('\n') || '').length}/500 caracteres
+                      </p>
                     </div>
 
                     <div className="space-y-3">
@@ -605,9 +616,10 @@ export default function NewMediaPlanBudget() {
                       </div>
                       <div>
                         <CardTitle>Momentos de Campanha</CardTitle>
-                        <CardDescription>
-                          Distribua o orçamento por momentos (lançamento, sustentação, etc.). 
-                          Esta etapa é opcional. Se não adicionar momentos, será considerado "Geral".
+                        <CardDescription className="text-sm leading-relaxed">
+                          Momentos de campanha representam as fases estratégicas de veiculação de um plano de mídia, como lançamento, sustentação ou períodos específicos de maior intensidade. Essa configuração permite priorizar investimento em determinados momentos, criar campanhas faseadas ou concentrar verba conforme a estratégia definida.
+                          <br /><br />
+                          Essa etapa é opcional. Caso nenhum momento seja configurado, todo o plano será considerado como Geral.
                         </CardDescription>
                       </div>
                     </div>
@@ -674,9 +686,10 @@ export default function NewMediaPlanBudget() {
                       </div>
                       <div>
                         <CardTitle>Fases do Funil</CardTitle>
-                        <CardDescription>
-                          Distribua o orçamento por fase do funil. Você pode arrastar para reordenar as fases.
-                          Máximo de {MAX_FUNNEL_STAGES} fases por subdivisão.
+                        <CardDescription className="text-sm leading-relaxed">
+                          As fases do funil representam os estágios da jornada do público, como awareness, consideração e conversão. Essa configuração permite distribuir o orçamento de acordo com o papel de cada fase, ajustando o investimento conforme o objetivo da campanha em cada etapa.
+                          <br /><br />
+                          Você pode reordenar as fases livremente. É possível definir até {MAX_FUNNEL_STAGES} fases por subdivisão.
                         </CardDescription>
                       </div>
                     </div>
@@ -697,29 +710,40 @@ export default function NewMediaPlanBudget() {
                             </span>
                           </div>
                           
-                          <BudgetAllocationTable
-                            items={currentStages}
-                            existingItems={libraryData.funnelStages}
-                            totalBudget={budgetForSubdivision}
-                            onAdd={(item) => handleFunnelAdd(subdivision.id, item)}
-                            onUpdate={(id, percentage) => handleFunnelUpdate(subdivision.id, id, percentage)}
-                            onRemove={(id) => handleFunnelRemove(subdivision.id, id)}
-                            onCreate={handleCreateFunnelStage}
-                            label="Fase do Funil"
-                            createLabel="Criar nova fase"
-                            maxItems={MAX_FUNNEL_STAGES}
-                          />
+                          {/* Add funnel stage selector */}
+                          {currentStages.length < MAX_FUNNEL_STAGES && (
+                            <FunnelStageSelector
+                              existingItems={libraryData.funnelStages}
+                              selectedItems={currentStages}
+                              onAdd={(item) => handleFunnelAdd(subdivision.id, item)}
+                              onCreate={handleCreateFunnelStage}
+                              maxItems={MAX_FUNNEL_STAGES}
+                            />
+                          )}
+                          
+                          {/* Sortable funnel list */}
+                          {currentStages.length > 0 && (
+                            <div className="mt-4">
+                              <p className="text-sm text-muted-foreground mb-3">Arraste para reordenar as fases:</p>
+                              <SortableFunnelList
+                                items={currentStages}
+                                totalBudget={budgetForSubdivision}
+                                onUpdate={(id, percentage) => handleFunnelUpdate(subdivision.id, id, percentage)}
+                                onRemove={(id) => handleFunnelRemove(subdivision.id, id)}
+                                onReorder={(stages) => handleFunnelReorder(subdivision.id, stages)}
+                              />
+                            </div>
+                          )}
 
                           {/* Funnel Preview */}
                           {currentStages.length > 0 && (
                             <div className="pt-4 border-t">
-                              <p className="text-sm text-muted-foreground mb-4">Prévia do Funil (arraste para reordenar):</p>
+                              <p className="text-sm text-muted-foreground mb-4">Visualização do Funil:</p>
                               <FunnelVisualization
                                 funnelStages={currentStages}
                                 parentBudget={budgetForSubdivision}
                                 parentName={subdivision.name}
                                 onEdit={() => {}}
-                                onReorder={(stages) => handleFunnelReorder(subdivision.id, stages)}
                               />
                             </div>
                           )}
@@ -790,18 +814,134 @@ export default function NewMediaPlanBudget() {
                   </div>
                   <div>
                     <CardTitle>Linhas do Plano</CardTitle>
-                    <CardDescription>
-                      Revise as configurações e salve o plano. As linhas detalhadas podem ser adicionadas depois.
+                    <CardDescription className="text-sm leading-relaxed">
+                      Revise as configurações e finalize a criação do plano.
+                      <br />
+                      Na próxima etapa, você poderá detalhar cada linha, definindo veículos, canais, segmentações e criativos, consolidando as escolhas táticas do plano.
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    Após salvar, você poderá adicionar as linhas de mídia detalhadas na tela do plano.
-                  </p>
-                </div>
+                {/* Plan Summary */}
+                <PlanSummaryCard
+                  planData={state.planData}
+                  onEdit={() => goToStep(1)}
+                  showEditButton={false}
+                />
+
+                {/* Subdivisions Summary */}
+                {state.subdivisions.length > 0 && (
+                  <SubdivisionsSummaryCard
+                    subdivisions={state.subdivisions}
+                    totalBudget={state.planData.total_budget}
+                    onEdit={() => goToStep(2)}
+                  />
+                )}
+
+                {/* Moments Summary */}
+                {Object.values(state.moments).some(arr => arr.length > 0) && (
+                  <Card className="border-primary/20">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Clock className="h-4 w-4 text-primary" />
+                        </div>
+                        <CardTitle className="text-base">Momentos de Campanha</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {Object.entries(state.moments).map(([key, items]) => {
+                          if (items.length === 0) return null;
+                          const subName = key === 'root' 
+                            ? 'Plano Completo' 
+                            : state.subdivisions.find(s => s.id === key)?.name || key;
+                          return (
+                            <div key={key} className="border rounded-lg p-3 bg-muted/20">
+                              <p className="text-sm font-medium mb-2">{subName}</p>
+                              <div className="flex flex-wrap gap-2">
+                                {items.map(item => (
+                                  <span key={item.id} className="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
+                                    {item.name} ({item.percentage}%)
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Funnel Stages Summary */}
+                {Object.values(state.funnelStages).some(arr => arr.length > 0) && (
+                  <Card className="border-primary/20">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Filter className="h-4 w-4 text-primary" />
+                        </div>
+                        <CardTitle className="text-base">Fases do Funil</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {Object.entries(state.funnelStages).map(([key, items]) => {
+                          if (items.length === 0) return null;
+                          const subName = key === 'root' 
+                            ? 'Plano Completo' 
+                            : state.subdivisions.find(s => s.id === key)?.name || key;
+                          const subBudget = key === 'root' 
+                            ? state.planData.total_budget 
+                            : wizard.calculateAmount(state.planData.total_budget, state.subdivisions.find(s => s.id === key)?.percentage || 0);
+                          return (
+                            <div key={key} className="border rounded-lg p-3 bg-muted/20">
+                              <p className="text-sm font-medium mb-3">{subName}</p>
+                              <FunnelVisualization
+                                funnelStages={items}
+                                parentBudget={subBudget}
+                                parentName={subName}
+                                onEdit={() => goToStep(4)}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Temporal Distribution Summary */}
+                {temporalPeriods.length > 0 && (
+                  <Card className="border-primary/20">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Calendar className="h-4 w-4 text-primary" />
+                        </div>
+                        <CardTitle className="text-base">Distribuição Temporal ({state.temporalGranularity === 'monthly' ? 'Mensal' : 'Trimestral'})</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {temporalPeriods.slice(0, 12).map((period) => (
+                          <div key={period.id} className="border rounded-lg p-2 bg-muted/20 text-center">
+                            <p className="text-xs text-muted-foreground">{period.name}</p>
+                            <p className="font-semibold text-sm">{formatCurrency(period.amount)}</p>
+                            <p className="text-xs text-primary">{period.percentage.toFixed(1)}%</p>
+                          </div>
+                        ))}
+                        {temporalPeriods.length > 12 && (
+                          <div className="border rounded-lg p-2 bg-muted/20 text-center flex items-center justify-center">
+                            <p className="text-xs text-muted-foreground">+{temporalPeriods.length - 12} períodos</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </CardContent>
             </Card>
           </motion.div>
