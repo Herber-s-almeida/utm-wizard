@@ -200,7 +200,7 @@ export function TemporalEqualizer({
                 Distribuição {granularity === 'monthly' ? 'mensal' : 'trimestral'}
               </span>
             </div>
-            <div className="flex items-end gap-1 h-32 bg-muted/20 rounded-lg p-2">
+            <div className="flex items-end gap-1 h-40 bg-muted/20 rounded-lg p-2">
               {periods.map((period) => {
                 const height = maxAmount > 0 ? (period.amount / maxAmount) * 100 : 0;
                 return (
@@ -208,8 +208,11 @@ export function TemporalEqualizer({
                     key={period.id}
                     className="flex-1 flex flex-col items-center justify-end h-full"
                   >
+                    <span className="text-[8px] text-muted-foreground mb-1 font-medium">
+                      {period.percentage.toFixed(0)}%
+                    </span>
                     <div 
-                      className="w-full bg-primary rounded-t transition-all duration-300 min-h-[4px]"
+                      className="w-full bg-primary rounded-t transition-all duration-300 min-h-[4px] relative"
                       style={{ height: `${Math.max(height, 2)}%` }}
                     />
                     <span className="text-[9px] text-muted-foreground text-center mt-1 whitespace-nowrap overflow-hidden max-w-full truncate">

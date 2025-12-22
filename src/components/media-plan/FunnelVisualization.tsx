@@ -64,6 +64,7 @@ export function FunnelVisualization({
                 const x = (100 - width) / 2;
                 const y = index * (160 / funnelStages.length) + 10;
                 const height = 150 / funnelStages.length - 4;
+                const amount = (parentBudget * stage.percentage) / 100;
                 
                 return (
                   <g key={stage.id}>
@@ -85,13 +86,23 @@ export function FunnelVisualization({
                     {/* Label */}
                     <text
                       x="100"
-                      y={y + height / 2 + 4}
+                      y={y + height / 2 - 2}
                       textAnchor="middle"
-                      fill="hsl(var(--foreground))"
+                      fill="hsl(var(--primary-foreground))"
                       className="font-semibold"
-                      style={{ fontSize: Math.max(8, 12 - funnelStages.length) }}
+                      style={{ fontSize: Math.max(7, 10 - funnelStages.length) }}
                     >
                       {stage.name}
+                    </text>
+                    {/* Percentage */}
+                    <text
+                      x="100"
+                      y={y + height / 2 + 8}
+                      textAnchor="middle"
+                      fill="hsl(var(--primary-foreground))"
+                      style={{ fontSize: Math.max(6, 9 - funnelStages.length), opacity: 0.9 }}
+                    >
+                      {stage.percentage}%
                     </text>
                   </g>
                 );
