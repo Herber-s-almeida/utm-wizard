@@ -9,7 +9,8 @@ import {
   ArrowLeft, 
   Plus, 
   Loader2,
-  Settings2
+  Settings2,
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -32,6 +33,7 @@ import {
 import { MediaLineWizard } from '@/components/media-plan/MediaLineWizard';
 import { HierarchicalMediaTable } from '@/components/media-plan/HierarchicalMediaTable';
 import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, Subdivision, Moment, FunnelStage } from '@/hooks/useConfigData';
+import { exportMediaPlanToXlsx } from '@/utils/exportToXlsx';
 import { useStatuses } from '@/hooks/useStatuses';
 interface BudgetDistribution {
   id: string;
@@ -274,6 +276,26 @@ export default function MediaPlanDetail() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => exportMediaPlanToXlsx({
+                plan,
+                lines,
+                creatives,
+                subdivisions: subdivisions.data || [],
+                moments: moments.data || [],
+                funnelStages: funnelStages.data || [],
+                mediums: mediums.data || [],
+                vehicles: vehicles.data || [],
+                channels: channels.data || [],
+                targets: targets.data || [],
+                statuses: statuses.data || [],
+              })} 
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Exportar XLSX
+            </Button>
             <Button 
               variant="outline" 
               onClick={() => navigate(`/media-plans/${id}/edit`)} 
