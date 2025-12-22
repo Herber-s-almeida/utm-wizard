@@ -64,8 +64,6 @@ interface LineFilters {
   vehicle: string;
   channel: string;
   target: string;
-  start_date: string;
-  end_date: string;
 }
 
 interface BudgetDistribution {
@@ -181,8 +179,6 @@ export function HierarchicalMediaTable({
     vehicle: '',
     channel: '',
     target: '',
-    start_date: '',
-    end_date: '',
   });
 
   const [columnFilterSearch, setColumnFilterSearch] = useState('');
@@ -203,8 +199,6 @@ export function HierarchicalMediaTable({
       vehicle: '',
       channel: '',
       target: '',
-      start_date: '',
-      end_date: '',
     });
   };
 
@@ -395,8 +389,6 @@ export function HierarchicalMediaTable({
     if (lineFilters.vehicle && line.vehicle_id !== lineFilters.vehicle) return false;
     if (lineFilters.channel && line.channel_id !== lineFilters.channel) return false;
     if (lineFilters.target && line.target_id !== lineFilters.target) return false;
-    if (lineFilters.start_date && line.start_date !== lineFilters.start_date) return false;
-    if (lineFilters.end_date && line.end_date !== lineFilters.end_date) return false;
     
     return true;
   };
@@ -925,31 +917,6 @@ export function HierarchicalMediaTable({
                     </div>
                   )}
                   
-                  {/* Start Date filter */}
-                  {'início'.includes(lineFilterSearch.toLowerCase()) && (
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Início</Label>
-                      <Input
-                        type="date"
-                        value={lineFilters.start_date}
-                        onChange={(e) => setLineFilters(prev => ({ ...prev, start_date: e.target.value }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  )}
-                  
-                  {/* End Date filter */}
-                  {'fim'.includes(lineFilterSearch.toLowerCase()) && (
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Fim</Label>
-                      <Input
-                        type="date"
-                        value={lineFilters.end_date}
-                        onChange={(e) => setLineFilters(prev => ({ ...prev, end_date: e.target.value }))}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
             </PopoverContent>
