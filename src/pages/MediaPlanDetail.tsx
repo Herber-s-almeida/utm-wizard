@@ -213,10 +213,40 @@ export default function MediaPlanDetail() {
 
   const totalLinesBudget = lines.reduce((acc, line) => acc + Number(line.budget || 0), 0);
 
-  // Get existing selections for wizard context
-  const existingSubdivisions = [...new Set(lines.map(l => l.subdivision_id).filter(Boolean))] as string[];
-  const existingMoments = [...new Set(lines.map(l => l.moment_id).filter(Boolean))] as string[];
-  const existingFunnelStages = [...new Set(lines.map(l => l.funnel_stage_id).filter(Boolean))] as string[];
+  // Get plan hierarchy options from budget distributions
+  const getPlanHierarchyOptions = () => {
+    const subdivisionDists = budgetDistributions.filter(d => d.distribution_type === 'subdivision');
+    const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
+    const funnelDists = budgetDistributions.filter(d => d.distribution_type === 'funnel_stage');
+
+    // Build subdivision options
+    const planSubdivisions: { id: string | null; name: string }[] = subdivisionDists.length === 0
+      ? [{ id: null, name: 'Geral' }]
+      : subdivisionDists.map(d => ({
+          id: d.reference_id,
+          name: (subdivisions.data || []).find(s => s.id === d.reference_id)?.name || 'Geral'
+        }));
+
+    // Build moment options
+    const planMoments: { id: string | null; name: string }[] = momentDists.length === 0
+      ? [{ id: null, name: 'Geral' }]
+      : momentDists.map(d => ({
+          id: d.reference_id,
+          name: (moments.data || []).find(m => m.id === d.reference_id)?.name || 'Geral'
+        }));
+
+    // Build funnel stage options
+    const planFunnelStages: { id: string | null; name: string }[] = funnelDists.length === 0
+      ? [{ id: null, name: 'Geral' }]
+      : funnelDists.map(d => ({
+          id: d.reference_id,
+          name: (funnelStages.data || []).find(f => f.id === d.reference_id)?.name || 'Geral'
+        }));
+
+    return { planSubdivisions, planMoments, planFunnelStages };
+  };
+
+  const { planSubdivisions, planMoments, planFunnelStages } = getPlanHierarchyOptions();
 
   return (
     <DashboardLayout>
@@ -340,9 +370,9 @@ export default function MediaPlanDetail() {
           }}
           plan={plan}
           onComplete={fetchData}
-          existingSubdivisions={existingSubdivisions}
-          existingMoments={existingMoments}
-          existingFunnelStages={existingFunnelStages}
+          planSubdivisions={planSubdivisions}
+          planMoments={planMoments}
+          planFunnelStages={planFunnelStages}
           editingLine={editingLine}
           initialStep={editInitialStep as any}
           prefillData={wizardPrefill}
