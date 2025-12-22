@@ -155,18 +155,13 @@ export function HierarchicalMediaTable({
 
   // Build hierarchical structure based on saved budget distributions
   // Using the actual parent_distribution_id FK relationships
-  const { groupedData, showSubdivisionColumn, showMomentColumn, showFunnelColumn } = useMemo(() => {
+  const groupedData = useMemo(() => {
     const nodes: HierarchyNode[] = [];
 
     // Get distributions by type
     const subdivisionDists = budgetDistributions.filter(d => d.distribution_type === 'subdivision');
     const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
     const funnelDists = budgetDistributions.filter(d => d.distribution_type === 'funnel_stage');
-
-    // Determine if columns should be shown (not all items are "Geral")
-    const allSubdivisionsAreGeral = subdivisionDists.length <= 1 && subdivisionDists.every(d => !d.reference_id);
-    const allMomentsAreGeral = momentDists.length <= 1 && momentDists.every(d => !d.reference_id);
-    const allFunnelStagesAreGeral = funnelDists.length <= 1 && funnelDists.every(d => !d.reference_id);
 
     // If no distributions at all, create a single "Geral" node
     if (subdivisionDists.length === 0) {
@@ -187,12 +182,7 @@ export function HierarchicalMediaTable({
         }],
       });
 
-      return { 
-        groupedData: nodes, 
-        showSubdivisionColumn: false, 
-        showMomentColumn: false, 
-        showFunnelColumn: false 
-      };
+      return nodes;
     }
 
     // Process each subdivision distribution
@@ -301,12 +291,7 @@ export function HierarchicalMediaTable({
       });
     }
 
-    return { 
-      groupedData: nodes, 
-      showSubdivisionColumn: !allSubdivisionsAreGeral, 
-      showMomentColumn: !allMomentsAreGeral, 
-      showFunnelColumn: !allFunnelStagesAreGeral 
-    };
+    return nodes;
   }, [lines, budgetDistributions, plan.total_budget, subdivisionsList, momentsList, funnelStagesList]);
 
   const totalBudget = lines.reduce((acc, line) => acc + (Number(line.budget) || 0), 0);
@@ -547,13 +532,10 @@ export function HierarchicalMediaTable({
     </Button>
   );
 
-  // Calculate dynamic column widths based on what's visible
+  // Calculate dynamic column widths - always show all columns
   const getMinWidth = () => {
-    let width = 70 + 80 + 110 + 100 + 130 + 120 + 80 + 100 + 100 + 100 + 90; // base columns + code + status
-    if (showSubdivisionColumn) width += 180;
-    if (showMomentColumn) width += 180;
-    if (showFunnelColumn) width += 200; // Increased width to prevent text wrap
-    return width;
+    // Base columns + subdivision + moment + funnel (always visible)
+    return 70 + 80 + 110 + 100 + 130 + 120 + 80 + 100 + 100 + 100 + 90 + 180 + 180 + 200;
   };
 
   const getStatusName = (statusId: string | null) => {
@@ -571,15 +553,9 @@ export function HierarchicalMediaTable({
       <div className="border rounded-lg overflow-x-auto">
         {/* Header */}
         <div className="flex bg-muted/50 text-xs font-medium text-muted-foreground border-b" style={{ minWidth: `${getMinWidth()}px` }}>
-          {showSubdivisionColumn && (
-            <div className="w-[180px] p-3 border-r shrink-0">Subdivisão do plano</div>
-          )}
-          {showMomentColumn && (
-            <div className="w-[180px] p-3 border-r shrink-0">Momentos de Campanha</div>
-          )}
-          {showFunnelColumn && (
-            <div className="w-[200px] p-3 border-r shrink-0">Fase</div>
-          )}
+          <div className="w-[180px] p-3 border-r shrink-0">Subdivisão do plano</div>
+          <div className="w-[180px] p-3 border-r shrink-0">Momentos de Campanha</div>
+          <div className="w-[200px] p-3 border-r shrink-0">Fase</div>
           <div className="w-[70px] p-3 border-r shrink-0">Código</div>
           <div className="w-[80px] p-3 border-r shrink-0">Meio</div>
           <div className="w-[110px] p-3 border-r shrink-0">Veículo</div>
@@ -598,47 +574,41 @@ export function HierarchicalMediaTable({
           {groupedData.map((subdivisionGroup, subIdx) => (
             <div key={subdivisionGroup.subdivision.distId || `no-sub-${subIdx}`} className="flex">
               {/* Subdivision cell */}
-              {showSubdivisionColumn && (
-                <div className="w-[180px] p-2 border-r bg-background shrink-0">
-                  <BudgetCard
-                    label={subdivisionGroup.subdivision.name}
-                    planned={subdivisionGroup.subdivision.planned}
-                    allocated={subdivisionGroup.subdivisionAllocated}
-                    percentageLabel={`${subdivisionGroup.subdivision.percentage.toFixed(0)}% do plano`}
-                  />
-                </div>
-              )}
+              <div className="w-[180px] p-2 border-r bg-background shrink-0">
+                <BudgetCard
+                  label={subdivisionGroup.subdivision.name}
+                  planned={subdivisionGroup.subdivision.planned}
+                  allocated={subdivisionGroup.subdivisionAllocated}
+                  percentageLabel={`${subdivisionGroup.subdivision.percentage.toFixed(0)}% do plano`}
+                />
+              </div>
 
               {/* Moments column */}
               <div className="flex-1 divide-y">
                 {subdivisionGroup.moments.map((momentGroup, momIdx) => (
                   <div key={momentGroup.moment.distId || `no-mom-${momIdx}`} className="flex">
                     {/* Moment cell */}
-                    {showMomentColumn && (
-                      <div className="w-[180px] p-2 border-r bg-background shrink-0">
-                        <BudgetCard
-                          label={momentGroup.moment.name}
-                          planned={momentGroup.moment.planned}
-                          allocated={momentGroup.momentAllocated}
-                          percentageLabel={`${momentGroup.moment.percentage.toFixed(0)}% de ${subdivisionGroup.subdivision.name}`}
-                        />
-                      </div>
-                    )}
+                    <div className="w-[180px] p-2 border-r bg-background shrink-0">
+                      <BudgetCard
+                        label={momentGroup.moment.name}
+                        planned={momentGroup.moment.planned}
+                        allocated={momentGroup.momentAllocated}
+                        percentageLabel={`${momentGroup.moment.percentage.toFixed(0)}% de ${subdivisionGroup.subdivision.name}`}
+                      />
+                    </div>
 
                     {/* Funnel stages column */}
                     <div className="flex-1 divide-y">
                       {momentGroup.funnelStages.map((funnelGroup, funIdx) => (
                         <div key={funnelGroup.funnelStage.distId || `no-fun-${funIdx}`} className="flex">
-                          {showFunnelColumn && (
-                            <div className="w-[200px] p-2 border-r bg-background shrink-0">
-                              <BudgetCard
-                                label={funnelGroup.funnelStage.name}
-                                planned={funnelGroup.funnelStage.planned}
-                                allocated={funnelGroup.funnelStageAllocated}
-                                percentageLabel={`${funnelGroup.funnelStage.percentage.toFixed(0)}% de ${momentGroup.moment.name}`}
-                              />
-                            </div>
-                          )}
+                          <div className="w-[200px] p-2 border-r bg-background shrink-0">
+                            <BudgetCard
+                              label={funnelGroup.funnelStage.name}
+                              planned={funnelGroup.funnelStage.planned}
+                              allocated={funnelGroup.funnelStageAllocated}
+                              percentageLabel={`${funnelGroup.funnelStage.percentage.toFixed(0)}% de ${momentGroup.moment.name}`}
+                            />
+                          </div>
 
                           {/* Lines and Add button */}
                           <div className="flex-1 divide-y">
@@ -796,10 +766,9 @@ export function HierarchicalMediaTable({
 
         {/* Footer - Subtotal */}
         <div className="flex bg-muted border-t" style={{ minWidth: `${getMinWidth()}px` }}>
-          {showSubdivisionColumn && <div className="w-[160px] p-3 font-bold shrink-0">Subtotal:</div>}
-          {!showSubdivisionColumn && <div className="w-auto p-3 font-bold shrink-0">Subtotal:</div>}
-          {showMomentColumn && <div className="w-[160px] p-3 shrink-0"></div>}
-          {showFunnelColumn && <div className="w-[130px] p-3 shrink-0"></div>}
+          <div className="w-[180px] p-3 font-bold shrink-0">Subtotal:</div>
+          <div className="w-[180px] p-3 shrink-0"></div>
+          <div className="w-[200px] p-3 shrink-0"></div>
           <div className="w-[70px] p-3 shrink-0"></div>
           <div className="w-[100px] p-3 shrink-0"></div>
           <div className="w-[70px] p-3 shrink-0"></div>
