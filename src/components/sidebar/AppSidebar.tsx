@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates, useBehavioralSegmentations } from '@/hooks/useConfigData';
+import { useFormatsHierarchy } from '@/hooks/useFormatsHierarchy';
+import { useCreativeTypes } from '@/hooks/useCreativeTypes';
 import { useStatuses } from '@/hooks/useStatuses';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -71,6 +73,8 @@ export function AppSidebar() {
   const creativeTemplates = useCreativeTemplates();
   const behavioralSegmentations = useBehavioralSegmentations();
   const statuses = useStatuses();
+  const formatsHierarchy = useFormatsHierarchy();
+  const creativeTypesGlobal = useCreativeTypes();
 
   // Section open states
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -85,6 +89,8 @@ export function AppSidebar() {
     segments: false,
     targetsList: false,
     creatives: false,
+    formatsList: false,
+    creativeTypesList: false,
     statuses: false,
     trash: false,
   });
@@ -93,6 +99,8 @@ export function AppSidebar() {
   const [openVehicles, setOpenVehicles] = useState<Record<string, boolean>>({});
   // Subdivisions subsections
   const [openSubdivisions, setOpenSubdivisions] = useState<Record<string, boolean>>({});
+  // Formats subsections
+  const [openFormats, setOpenFormats] = useState<Record<string, boolean>>({});
 
   // Dialog states
   const [subdivisionDialogOpen, setSubdivisionDialogOpen] = useState(false);
@@ -864,33 +872,92 @@ export function AppSidebar() {
               </Link>
             </div>
             <CollapsibleContent className="pl-4">
-              {creativeTemplates.data?.slice(0, MAX_ITEMS).map(template => (
-                <ConfigItemRow
-                  key={template.id}
-                  name={template.name}
-                  onEdit={() => {
-                    setEditingCreative(template);
-                    setCreativeDialogOpen(true);
-                  }}
-                  onDelete={() => creativeTemplates.remove.mutate(template.id)}
-                />
-              ))}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
-                onClick={() => setCreativeDialogOpen(true)}
-              >
-                <Plus className="h-3 w-3" />
-                Novo
-              </Button>
-              {(creativeTemplates.data?.length || 0) > MAX_ITEMS && (
-                <Link to="/config/formats">
-                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                    ... ver todos ({creativeTemplates.data?.length})
+              {/* Formatos (hierarchy) */}
+              <Collapsible open={openSections.formatsList} onOpenChange={() => toggleSection('formatsList')}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-7 text-xs">
+                    {openSections.formatsList ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
+                    <span className="font-medium">Formatos</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{formatsHierarchy.data?.length || 0}</span>
                   </Button>
-                </Link>
-              )}
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-4">
+                  {formatsHierarchy.data?.slice(0, MAX_ITEMS).map(format => (
+                    <Collapsible 
+                      key={format.id}
+                      open={openFormats[format.id]} 
+                      onOpenChange={() => setOpenFormats(prev => ({ ...prev, [format.id]: !prev[format.id] }))}
+                    >
+                      <div className="flex items-center min-w-0">
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" size="sm" className="flex-1 justify-start gap-1 h-6 text-[11px] min-w-0">
+                            {format.creative_types.length > 0 ? (
+                              openFormats[format.id] ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />
+                            ) : (
+                              <span className="w-2.5" />
+                            )}
+                            <span className="truncate">{format.name}</span>
+                          </Button>
+                        </CollapsibleTrigger>
+                      </div>
+                      {format.creative_types.length > 0 && (
+                        <CollapsibleContent className="pl-4">
+                          {format.creative_types.slice(0, 3).map(ct => (
+                            <div key={ct.id} className="flex items-center px-2 py-0.5 text-[10px] text-muted-foreground truncate">
+                              <span className="truncate">{ct.name}</span>
+                              <span className="ml-1 text-[9px]">({ct.specifications?.length || 0})</span>
+                            </div>
+                          ))}
+                          {format.creative_types.length > 3 && (
+                            <div className="px-2 py-0.5 text-[9px] text-muted-foreground">
+                              +{format.creative_types.length - 3} mais
+                            </div>
+                          )}
+                        </CollapsibleContent>
+                      )}
+                    </Collapsible>
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start gap-2 h-6 text-[10px] text-primary hover:text-primary"
+                    onClick={() => setCreativeDialogOpen(true)}
+                  >
+                    <Plus className="h-2.5 w-2.5" />
+                    Novo
+                  </Button>
+                  {(formatsHierarchy.data?.length || 0) > MAX_ITEMS && (
+                    <Link to="/config/formats">
+                      <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                        ... ver todos ({formatsHierarchy.data?.length})
+                      </Button>
+                    </Link>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Tipos de Criativo (global) */}
+              <Collapsible open={openSections.creativeTypesList} onOpenChange={() => toggleSection('creativeTypesList')}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-7 text-xs">
+                    {openSections.creativeTypesList ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
+                    <span className="font-medium">Tipos de Criativo</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{creativeTypesGlobal.data?.length || 0}</span>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-4">
+                  {creativeTypesGlobal.data?.slice(0, MAX_ITEMS).map(ct => (
+                    <div key={ct.id} className="flex items-center px-3 py-1 text-xs text-muted-foreground">
+                      <span className="truncate">{ct.name}</span>
+                    </div>
+                  ))}
+                  {(creativeTypesGlobal.data?.length || 0) > MAX_ITEMS && (
+                    <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                      ... ver todos ({creativeTypesGlobal.data?.length})
+                    </Button>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
             </CollapsibleContent>
           </Collapsible>
 

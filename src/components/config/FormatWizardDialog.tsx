@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,8 +10,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useFormats, useFormatCreativeTypes, useCreativeTypeSpecifications, useSpecificationCopyFields, useSpecificationDimensions, useFileExtensions, useSpecificationExtensions } from '@/hooks/useFormatsHierarchy';
+import { useFormats, useFileExtensions } from '@/hooks/useFormatsHierarchy';
+import { useCreativeTypes } from '@/hooks/useCreativeTypes';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FormatWizardDialogProps {
   open: boolean;
@@ -34,17 +36,15 @@ interface Dimension {
 export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWizardDialogProps) {
   const [step, setStep] = useState(1);
   
-  // Step 1: Format
+  // Step 1: Format Name
   const [formatName, setFormatName] = useState('');
-  const [selectedFormatId, setSelectedFormatId] = useState<string | null>(null);
-  const [isNewFormat, setIsNewFormat] = useState(true);
   
   // Step 2: Creative Type
-  const [creativeTypeName, setCreativeTypeName] = useState('');
+  const [selectedCreativeTypeId, setSelectedCreativeTypeId] = useState<string | null>(null);
+  const [isNewCreativeType, setIsNewCreativeType] = useState(false);
+  const [newCreativeTypeName, setNewCreativeTypeName] = useState('');
   
   // Step 3: Specifications
-  const [specName, setSpecName] = useState('');
-  
   // Copy fields
   const [copyFields, setCopyFields] = useState<CopyField[]>([]);
   const [newCopyName, setNewCopyName] = useState('');
@@ -73,7 +73,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
   
   // Hooks
   const formats = useFormats();
-  const creativeTypes = useFormatCreativeTypes(selectedFormatId || undefined);
+  const creativeTypes = useCreativeTypes();
   const fileExtensions = useFileExtensions();
   
   // Created IDs for later use
@@ -85,10 +85,9 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
     if (!open) {
       setStep(1);
       setFormatName('');
-      setSelectedFormatId(null);
-      setIsNewFormat(true);
-      setCreativeTypeName('');
-      setSpecName('');
+      setSelectedCreativeTypeId(null);
+      setIsNewCreativeType(false);
+      setNewCreativeTypeName('');
       setCopyFields([]);
       setNewCopyName('');
       setNewCopyMaxChars('');
@@ -109,6 +108,11 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
       setCreatedCreativeTypeId(null);
     }
   }, [open]);
+
+  // Check if format name already exists
+  const formatNameExists = formats.data?.some(
+    f => f.name.toLowerCase().trim() === formatName.toLowerCase().trim()
+  );
 
   const handleAddCopyField = () => {
     if (!newCopyName.trim()) {
@@ -180,69 +184,90 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
 
   const handleNext = async () => {
     if (step === 1) {
-      // Validate format
-      if (isNewFormat) {
-        if (!formatName.trim()) {
-          toast.error('Nome do formato é obrigatório');
-          return;
-        }
-        try {
-          const created = await formats.create.mutateAsync(formatName.trim());
-          setCreatedFormatId(created.id);
-          setSelectedFormatId(created.id);
-          setStep(2);
-        } catch (err) {
-          toast.error('Erro ao criar formato');
-        }
-      } else {
-        if (!selectedFormatId) {
-          toast.error('Selecione um formato');
-          return;
-        }
-        setStep(2);
-      }
-    } else if (step === 2) {
-      // Validate creative type
-      if (!creativeTypeName.trim()) {
-        toast.error('Nome do tipo de criativo é obrigatório');
+      // Validate format name
+      if (!formatName.trim()) {
+        toast.error('Nome do formato é obrigatório');
         return;
       }
-      try {
-        const formatId = createdFormatId || selectedFormatId;
-        if (!formatId) {
-          toast.error('Formato não encontrado');
+      if (formatName.trim().length > 50) {
+        toast.error('Nome do formato deve ter no máximo 50 caracteres');
+        return;
+      }
+      if (formatNameExists) {
+        toast.error('Já existe um formato com este nome');
+        return;
+      }
+      setStep(2);
+    } else if (step === 2) {
+      // Validate creative type
+      if (isNewCreativeType) {
+        if (!newCreativeTypeName.trim()) {
+          toast.error('Nome do tipo de criativo é obrigatório');
           return;
         }
-        const created = await creativeTypes.create.mutateAsync({
-          formatId,
-          name: creativeTypeName.trim()
-        });
-        setCreatedCreativeTypeId(created.id);
+        // Create new creative type
+        try {
+          const created = await creativeTypes.create.mutateAsync(newCreativeTypeName.trim());
+          setCreatedCreativeTypeId(created.id);
+          setStep(3);
+        } catch (err) {
+          // Error already handled in hook
+        }
+      } else {
+        if (!selectedCreativeTypeId) {
+          toast.error('Selecione um tipo de criativo');
+          return;
+        }
+        setCreatedCreativeTypeId(selectedCreativeTypeId);
         setStep(3);
-      } catch (err) {
-        toast.error('Erro ao criar tipo de criativo');
       }
     }
   };
 
   const handleFinish = async () => {
-    // Validate specification name
-    if (!specName.trim()) {
-      toast.error('Nome da especificação é obrigatório');
-      return;
-    }
-
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
       
-      // Create specification
+      if (!userId) {
+        toast.error('Usuário não autenticado');
+        return;
+      }
+
+      // 1. Create the format
+      const { data: format, error: formatError } = await supabase
+        .from('formats')
+        .insert({ name: formatName.trim(), user_id: userId })
+        .select()
+        .single();
+      
+      if (formatError) throw formatError;
+      setCreatedFormatId(format.id);
+
+      // 2. Create format_creative_type association
+      const creativeTypeId = createdCreativeTypeId!;
+      const creativeTypeName = isNewCreativeType 
+        ? newCreativeTypeName.trim() 
+        : creativeTypes.data?.find(ct => ct.id === creativeTypeId)?.name || '';
+
+      const { data: formatCreativeType, error: fctError } = await supabase
+        .from('format_creative_types')
+        .insert({ 
+          format_id: format.id, 
+          name: creativeTypeName,
+          user_id: userId 
+        })
+        .select()
+        .single();
+      
+      if (fctError) throw fctError;
+
+      // 3. Create specification
       const { data: spec, error: specError } = await supabase
         .from('creative_type_specifications')
         .insert({
-          creative_type_id: createdCreativeTypeId,
-          name: specName.trim(),
+          creative_type_id: formatCreativeType.id,
+          name: `${formatName.trim()} - ${creativeTypeName}`,
           has_duration: hasDuration,
           duration_value: hasDuration && durationValue ? parseFloat(durationValue) : null,
           duration_unit: hasDuration ? durationUnit : null,
@@ -255,7 +280,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
       
       if (specError) throw specError;
       
-      // Create copy fields
+      // 4. Create copy fields
       for (const copy of copyFields) {
         await supabase.from('specification_copy_fields').insert({
           specification_id: spec.id,
@@ -266,7 +291,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
         });
       }
       
-      // Create dimensions
+      // 5. Create dimensions
       for (const dim of dimensions) {
         await supabase.from('specification_dimensions').insert({
           specification_id: spec.id,
@@ -277,7 +302,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
         });
       }
       
-      // Create extension associations
+      // 6. Create extension associations
       for (const extId of selectedExtensions) {
         await supabase.from('specification_extensions').insert({
           specification_id: spec.id,
@@ -291,7 +316,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
       onOpenChange(false);
     } catch (err) {
       console.error(err);
-      toast.error('Erro ao criar especificação');
+      toast.error('Erro ao criar formato');
     }
   };
 
@@ -305,112 +330,112 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-sm font-normal text-muted-foreground">
-              <Badge variant={step === 1 ? 'default' : 'secondary'} className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">1</Badge>
-              <span className={cn(step === 1 ? 'text-foreground font-medium' : '')}>Formato</span>
-              <ChevronRight className="h-3 w-3" />
-              <Badge variant={step === 2 ? 'default' : 'secondary'} className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">2</Badge>
-              <span className={cn(step === 2 ? 'text-foreground font-medium' : '')}>Tipo de Criativo</span>
-              <ChevronRight className="h-3 w-3" />
-              <Badge variant={step === 3 ? 'default' : 'secondary'} className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">3</Badge>
-              <span className={cn(step === 3 ? 'text-foreground font-medium' : '')}>Especificações</span>
-            </span>
-          </DialogTitle>
+          <DialogTitle>Criar novo formato para anúncios</DialogTitle>
+          <DialogDescription className="flex items-center gap-1.5 text-sm pt-2">
+            <Badge variant={step === 1 ? 'default' : 'secondary'} className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">1</Badge>
+            <span className={cn(step === 1 ? 'text-foreground font-medium' : 'text-muted-foreground')}>Formato</span>
+            <ChevronRight className="h-3 w-3 text-muted-foreground" />
+            <Badge variant={step === 2 ? 'default' : 'secondary'} className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">2</Badge>
+            <span className={cn(step === 2 ? 'text-foreground font-medium' : 'text-muted-foreground')}>Tipo de Criativo</span>
+            <ChevronRight className="h-3 w-3 text-muted-foreground" />
+            <Badge variant={step === 3 ? 'default' : 'secondary'} className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">3</Badge>
+            <span className={cn(step === 3 ? 'text-foreground font-medium' : 'text-muted-foreground')}>Especificações</span>
+          </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh] pr-4">
+          {/* Step 1: Format Name */}
           {step === 1 && (
             <div className="space-y-4 py-4">
-              <div className="flex items-center gap-4">
-                <Button
-                  type="button"
-                  variant={isNewFormat ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setIsNewFormat(true)}
-                >
-                  Criar novo formato
-                </Button>
-                <Button
-                  type="button"
-                  variant={!isNewFormat ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setIsNewFormat(false)}
-                >
-                  Usar existente
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="formatName">Nome do Formato *</Label>
+                <Input
+                  id="formatName"
+                  value={formatName}
+                  onChange={(e) => setFormatName(e.target.value.slice(0, 50))}
+                  placeholder="Ex: Anúncios Dinâmicos de Pesquisa, PPL - Meta, OOH Duplo"
+                  maxLength={50}
+                  className={cn(formatNameExists && 'border-destructive')}
+                />
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">{formatName.length}/50 caracteres</span>
+                  {formatNameExists && (
+                    <span className="text-destructive">Já existe um formato com este nome</span>
+                  )}
+                </div>
               </div>
 
-              {isNewFormat ? (
-                <div className="space-y-2">
-                  <Label htmlFor="formatName">Nome do Formato *</Label>
-                  <Input
-                    id="formatName"
-                    value={formatName}
-                    onChange={(e) => setFormatName(e.target.value.slice(0, 50))}
-                    placeholder="Ex: Display, Vídeo, Áudio, Social Feed"
-                    maxLength={50}
-                  />
-                  <p className="text-xs text-muted-foreground">{formatName.length}/50 caracteres</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label>Selecione um formato</Label>
-                  <Select value={selectedFormatId || ''} onValueChange={setSelectedFormatId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Escolha um formato..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {formats.data?.map((format) => (
-                        <SelectItem key={format.id} value={format.id}>
-                          {format.name} {format.is_system && <Badge variant="secondary" className="ml-2 text-xs">Sistema</Badge>}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
               <p className="text-xs text-muted-foreground">
-                Formatos representam o conceito geral do criativo (ex: Display, Vídeo, Áudio).
+                Formatos representam o tipo de anúncio, tipo de peça que será criada.
               </p>
             </div>
           )}
 
+          {/* Step 2: Creative Type */}
           {step === 2 && (
             <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="creativeTypeName">Nome do Tipo de Criativo *</Label>
-                <Input
-                  id="creativeTypeName"
-                  value={creativeTypeName}
-                  onChange={(e) => setCreativeTypeName(e.target.value.slice(0, 100))}
-                  placeholder="Ex: Anúncio Search, OOH Lonado Simples, Rádio Spot 30s"
-                  maxLength={100}
-                />
-                <p className="text-xs text-muted-foreground">{creativeTypeName.length}/100 caracteres</p>
+              <div className="space-y-3">
+                <Label>Tipo de Criativo *</Label>
+                
+                {!isNewCreativeType ? (
+                  <>
+                    <Select value={selectedCreativeTypeId || ''} onValueChange={setSelectedCreativeTypeId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um tipo de criativo..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {creativeTypes.data?.map((ct) => (
+                          <SelectItem key={ct.id} value={ct.id}>
+                            {ct.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsNewCreativeType(true)}
+                      className="w-full"
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                      Criar novo tipo de criativo
+                    </Button>
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    <Input
+                      value={newCreativeTypeName}
+                      onChange={(e) => setNewCreativeTypeName(e.target.value)}
+                      placeholder="Ex: imagem estática, vídeo, audio, motion, texto"
+                      autoFocus
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIsNewCreativeType(false);
+                        setNewCreativeTypeName('');
+                      }}
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                      Voltar para lista
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <p className="text-xs text-muted-foreground">
-                Tipos de criativo definem o comportamento criativo do formato e indicam quais campos serão usados.
+                Tipos de criativo definem a natureza do conteúdo (ex: imagem estática, vídeo, áudio).
               </p>
             </div>
           )}
 
+          {/* Step 3: Specifications */}
           {step === 3 && (
             <div className="space-y-6 py-4">
-              {/* Specification Name */}
-              <div className="space-y-2">
-                <Label htmlFor="specName">Nome da Especificação *</Label>
-                <Input
-                  id="specName"
-                  value={specName}
-                  onChange={(e) => setSpecName(e.target.value.slice(0, 100))}
-                  placeholder="Ex: 300×250, 1080×1080, 6s vertical"
-                  maxLength={100}
-                />
-              </div>
-
               {/* Copy Fields */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Copy (campos de texto)</Label>
@@ -462,6 +487,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
               {/* Dimensions */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Dimensões</Label>
+                <p className="text-xs text-muted-foreground">Máximo de 10 dimensões</p>
                 
                 {dimensions.length > 0 && (
                   <div className="flex flex-wrap gap-2">
@@ -476,22 +502,26 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    value={newDimWidth}
-                    onChange={(e) => setNewDimWidth(e.target.value)}
-                    placeholder="Largura"
-                    className="w-24"
-                  />
-                  <span>×</span>
-                  <Input
-                    type="number"
-                    value={newDimHeight}
-                    onChange={(e) => setNewDimHeight(e.target.value)}
-                    placeholder="Altura"
-                    className="w-24"
-                  />
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <Label className="text-xs text-muted-foreground">Largura</Label>
+                    <Input
+                      type="number"
+                      value={newDimWidth}
+                      onChange={(e) => setNewDimWidth(e.target.value)}
+                      placeholder="Largura"
+                    />
+                  </div>
+                  <span className="pb-2">×</span>
+                  <div className="flex-1">
+                    <Label className="text-xs text-muted-foreground">Altura</Label>
+                    <Input
+                      type="number"
+                      value={newDimHeight}
+                      onChange={(e) => setNewDimHeight(e.target.value)}
+                      placeholder="Altura"
+                    />
+                  </div>
                   <Select value={newDimUnit} onValueChange={setNewDimUnit}>
                     <SelectTrigger className="w-20">
                       <SelectValue />
@@ -503,11 +533,16 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
                       <SelectItem value="m">m</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button type="button" variant="outline" size="icon" onClick={handleAddDimension}>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={handleAddDimension}
+                    disabled={dimensions.length >= 10}
+                  >
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">Máximo de 10 dimensões</p>
               </div>
 
               {/* Extensions */}
@@ -517,8 +552,8 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
                 {fileExtensions.data && fileExtensions.data.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {fileExtensions.data.map((ext) => (
-                      <Badge
-                        key={ext.id}
+                      <Badge 
+                        key={ext.id} 
                         variant={selectedExtensions.includes(ext.id) ? 'default' : 'outline'}
                         className="cursor-pointer"
                         onClick={() => toggleExtension(ext.id)}
@@ -529,13 +564,13 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
+                <div className="flex gap-2">
                   <Input
                     value={newExtension}
                     onChange={(e) => setNewExtension(e.target.value)}
-                    placeholder="Nova extensão (ex: .pdf)"
-                    className="w-40"
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddExtension()}
+                    placeholder="Nova extensão (ex: .webp)"
+                    className="flex-1"
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddExtension())}
                   />
                   <Button type="button" variant="outline" size="sm" onClick={handleAddExtension}>
                     <Plus className="h-3 w-3 mr-1" /> Adicionar
@@ -549,13 +584,15 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
                   <Checkbox
                     id="hasDuration"
                     checked={hasDuration}
-                    onCheckedChange={(checked) => setHasDuration(checked === true)}
+                    onCheckedChange={(checked) => setHasDuration(!!checked)}
                   />
-                  <Label htmlFor="hasDuration" className="text-sm font-medium cursor-pointer">Tem duração</Label>
+                  <Label htmlFor="hasDuration" className="text-sm font-medium cursor-pointer">
+                    Tem duração máxima/mínima
+                  </Label>
                 </div>
                 
                 {hasDuration && (
-                  <div className="flex items-center gap-2 ml-6">
+                  <div className="flex gap-2 pl-6">
                     <Input
                       type="number"
                       value={durationValue}
@@ -564,12 +601,13 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
                       className="w-24"
                     />
                     <Select value={durationUnit} onValueChange={setDurationUnit}>
-                      <SelectTrigger className="w-32">
+                      <SelectTrigger className="w-24">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="s">segundos</SelectItem>
                         <SelectItem value="min">minutos</SelectItem>
+                        <SelectItem value="h">horas</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -582,13 +620,15 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
                   <Checkbox
                     id="hasWeight"
                     checked={hasWeight}
-                    onCheckedChange={(checked) => setHasWeight(checked === true)}
+                    onCheckedChange={(checked) => setHasWeight(!!checked)}
                   />
-                  <Label htmlFor="hasWeight" className="text-sm font-medium cursor-pointer">Peso máximo</Label>
+                  <Label htmlFor="hasWeight" className="text-sm font-medium cursor-pointer">
+                    Peso máximo/mínimo
+                  </Label>
                 </div>
                 
                 {hasWeight && (
-                  <div className="flex items-center gap-2 ml-6">
+                  <div className="flex gap-2 pl-6">
                     <Input
                       type="number"
                       value={weightValue}
@@ -613,26 +653,30 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
           )}
         </ScrollArea>
 
-        <DialogFooter className="flex justify-between">
-          <div>
-            {step > 1 && (
-              <Button type="button" variant="outline" onClick={handleBack}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Voltar
-              </Button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            {step < 3 ? (
-              <Button onClick={handleNext}>
-                Próximo <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            ) : (
-              <Button onClick={handleFinish}>
-                Concluir
-              </Button>
-            )}
-          </div>
+        <DialogFooter className="gap-2 sm:gap-0">
+          {step > 1 && (
+            <Button type="button" variant="outline" onClick={handleBack}>
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Voltar
+            </Button>
+          )}
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          {step < 3 ? (
+            <Button 
+              type="button" 
+              onClick={handleNext}
+              disabled={step === 1 && (formatNameExists || !formatName.trim())}
+            >
+              Próximo
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          ) : (
+            <Button type="button" onClick={handleFinish}>
+              Concluir
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
