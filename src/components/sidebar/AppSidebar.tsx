@@ -938,23 +938,42 @@ export function AppSidebar() {
 
               {/* Tipos de Criativo (global) */}
               <Collapsible open={openSections.creativeTypesList} onOpenChange={() => toggleSection('creativeTypesList')}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-7 text-xs">
-                    {openSections.creativeTypesList ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
-                    <span className="font-medium">Tipos de Criativo</span>
-                    <span className="ml-auto text-[10px] text-muted-foreground">{creativeTypesGlobal.data?.length || 0}</span>
-                  </Button>
-                </CollapsibleTrigger>
+                <div className="flex items-center min-w-0">
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-7 text-xs">
+                      {openSections.creativeTypesList ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
+                      <span className="font-medium">Tipos de Criativo</span>
+                      <span className="ml-auto text-[10px] text-muted-foreground">{creativeTypesGlobal.data?.length || 0}</span>
+                    </Button>
+                  </CollapsibleTrigger>
+                  <Link to="/config/creative-types" className="shrink-0 opacity-70 transition-opacity hover:opacity-100">
+                    <Button variant="ghost" size="icon" className="h-5 w-5">
+                      <Eye className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                  </Link>
+                </div>
                 <CollapsibleContent className="pl-4">
                   {creativeTypesGlobal.data?.slice(0, MAX_ITEMS).map(ct => (
                     <div key={ct.id} className="flex items-center px-3 py-1 text-xs text-muted-foreground">
                       <span className="truncate">{ct.name}</span>
                     </div>
                   ))}
-                  {(creativeTypesGlobal.data?.length || 0) > MAX_ITEMS && (
-                    <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                      ... ver todos ({creativeTypesGlobal.data?.length})
+                  <Link to="/config/creative-types">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start gap-2 h-6 text-[10px] text-primary hover:text-primary"
+                    >
+                      <Plus className="h-2.5 w-2.5" />
+                      Novo
                     </Button>
+                  </Link>
+                  {(creativeTypesGlobal.data?.length || 0) > MAX_ITEMS && (
+                    <Link to="/config/creative-types">
+                      <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                        ... ver todos ({creativeTypesGlobal.data?.length})
+                      </Button>
+                    </Link>
                   )}
                 </CollapsibleContent>
               </Collapsible>
