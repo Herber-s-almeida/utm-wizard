@@ -241,18 +241,6 @@ export default function MediaPlanDetail() {
     return format(date, 'dd/MM/yyyy', { locale: ptBR });
   };
 
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!plan) return null;
-
   const totalLinesBudget = lines.reduce((acc, line) => acc + Number(line.budget || 0), 0);
 
   // Get plan hierarchy options from budget distributions
