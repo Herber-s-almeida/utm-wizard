@@ -132,6 +132,56 @@ export type Database = {
           },
         ]
       }
+      creative_type_specifications: {
+        Row: {
+          created_at: string
+          creative_type_id: string
+          duration_unit: string | null
+          duration_value: number | null
+          has_duration: boolean | null
+          id: string
+          max_weight: number | null
+          name: string
+          updated_at: string
+          user_id: string
+          weight_unit: string | null
+        }
+        Insert: {
+          created_at?: string
+          creative_type_id: string
+          duration_unit?: string | null
+          duration_value?: number | null
+          has_duration?: boolean | null
+          id?: string
+          max_weight?: number | null
+          name: string
+          updated_at?: string
+          user_id: string
+          weight_unit?: string | null
+        }
+        Update: {
+          created_at?: string
+          creative_type_id?: string
+          duration_unit?: string | null
+          duration_value?: number | null
+          has_duration?: boolean | null
+          id?: string
+          max_weight?: number | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+          weight_unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_type_specifications_creative_type_id_fkey"
+            columns: ["creative_type_id"]
+            isOneToOne: false
+            referencedRelation: "format_creative_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creative_types: {
         Row: {
           created_at: string
@@ -153,10 +203,30 @@ export type Database = {
         }
         Relationships: []
       }
-      format_specifications: {
+      file_extensions: {
         Row: {
           created_at: string
-          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      format_creative_types: {
+        Row: {
+          created_at: string
           format_id: string
           id: string
           name: string
@@ -165,7 +235,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          description?: string | null
           format_id: string
           id?: string
           name: string
@@ -174,7 +243,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          description?: string | null
           format_id?: string
           id?: string
           name?: string
@@ -183,13 +251,40 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "format_specifications_format_id_fkey"
+            foreignKeyName: "format_creative_types_format_id_fkey"
             columns: ["format_id"]
             isOneToOne: false
-            referencedRelation: "creative_templates"
+            referencedRelation: "formats"
             referencedColumns: ["id"]
           },
         ]
+      }
+      formats: {
+        Row: {
+          created_at: string
+          id: string
+          is_system: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_system?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_system?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       funnel_stages: {
         Row: {
@@ -738,6 +833,127 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      specification_copy_fields: {
+        Row: {
+          created_at: string
+          id: string
+          max_characters: number | null
+          name: string
+          observation: string | null
+          specification_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_characters?: number | null
+          name: string
+          observation?: string | null
+          specification_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_characters?: number | null
+          name?: string
+          observation?: string | null
+          specification_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specification_copy_fields_specification_id_fkey"
+            columns: ["specification_id"]
+            isOneToOne: false
+            referencedRelation: "creative_type_specifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      specification_dimensions: {
+        Row: {
+          created_at: string
+          height: number
+          id: string
+          specification_id: string
+          unit: string
+          updated_at: string
+          user_id: string
+          width: number
+        }
+        Insert: {
+          created_at?: string
+          height: number
+          id?: string
+          specification_id: string
+          unit?: string
+          updated_at?: string
+          user_id: string
+          width: number
+        }
+        Update: {
+          created_at?: string
+          height?: number
+          id?: string
+          specification_id?: string
+          unit?: string
+          updated_at?: string
+          user_id?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specification_dimensions_specification_id_fkey"
+            columns: ["specification_id"]
+            isOneToOne: false
+            referencedRelation: "creative_type_specifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      specification_extensions: {
+        Row: {
+          created_at: string
+          extension_id: string
+          id: string
+          specification_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          extension_id: string
+          id?: string
+          specification_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          extension_id?: string
+          id?: string
+          specification_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "specification_extensions_extension_id_fkey"
+            columns: ["extension_id"]
+            isOneToOne: false
+            referencedRelation: "file_extensions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "specification_extensions_specification_id_fkey"
+            columns: ["specification_id"]
+            isOneToOne: false
+            referencedRelation: "creative_type_specifications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       statuses: {
         Row: {
