@@ -59,14 +59,14 @@ export function PercentageInput({ value, onChange, className, disabled }: Percen
         type="number"
         min={0}
         max={100}
-        step={0.1}
+        step={0.01}
         value={displayValue}
         onChange={handleChange}
         onBlur={handleBlur}
         onFocus={handleFocus}
         disabled={disabled}
         placeholder="0"
-        className={cn("pr-6 text-right", className)}
+        className={cn("pr-6 text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", className)}
       />
       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">
         %
