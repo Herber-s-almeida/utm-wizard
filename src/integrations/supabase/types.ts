@@ -201,6 +201,44 @@ export type Database = {
           },
         ]
       }
+      media_line_monthly_budgets: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          media_line_id: string
+          month_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          media_line_id: string
+          month_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          media_line_id?: string
+          month_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_line_monthly_budgets_media_line_id_fkey"
+            columns: ["media_line_id"]
+            isOneToOne: false
+            referencedRelation: "media_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_lines: {
         Row: {
           budget: number | null

@@ -4,7 +4,9 @@ import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { MediaLine, MediaPlan, MediaCreative } from '@/types/media';
+import { MediaLine, MediaPlan, MediaCreative, MediaLineMonthlyBudget } from '@/types/media';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Medium, 
   Vehicle, 
@@ -15,7 +17,7 @@ import {
   FunnelStage 
 } from '@/hooks/useConfigData';
 import { Status } from '@/hooks/useStatuses';
-import { format } from 'date-fns';
+import { format, differenceInDays, startOfMonth, endOfMonth, parseISO, eachMonthOfInterval, min, max } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -80,6 +82,7 @@ interface HierarchicalMediaTableProps {
   lines: MediaLine[];
   creatives: Record<string, MediaCreative[]>;
   budgetDistributions: BudgetDistribution[];
+  monthlyBudgets: Record<string, MediaLineMonthlyBudget[]>;
   mediums: Medium[];
   vehicles: Vehicle[];
   channels: Channel[];
@@ -92,6 +95,7 @@ interface HierarchicalMediaTableProps {
   onDeleteLine: (line: MediaLine) => void;
   onAddLine: (prefill?: { subdivisionId?: string; momentId?: string; funnelStageId?: string }) => void;
   onUpdateLine: (lineId: string, updates: Partial<MediaLine>) => Promise<void>;
+  onUpdateMonthlyBudgets: () => void;
 }
 
 interface SubdivisionInfo {
@@ -139,6 +143,7 @@ export function HierarchicalMediaTable({
   lines,
   creatives,
   budgetDistributions,
+  monthlyBudgets,
   mediums,
   vehicles,
   channels,
@@ -151,6 +156,7 @@ export function HierarchicalMediaTable({
   onDeleteLine,
   onAddLine,
   onUpdateLine,
+  onUpdateMonthlyBudgets,
 }: HierarchicalMediaTableProps) {
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<EditingField>(null);
@@ -407,6 +413,45 @@ export function HierarchicalMediaTable({
     }));
   }, [groupedData, lineFilters, activeFiltersCount]);
 
+  // Calculate plan months based on start_date and end_date
+  const planMonths = useMemo(() => {
+    if (!plan.start_date || !plan.end_date) return [];
+    
+    const startDate = parseISO(plan.start_date);
+    const endDate = parseISO(plan.end_date);
+    
+    return eachMonthOfInterval({ start: startDate, end: endDate });
+  }, [plan.start_date, plan.end_date]);
+
+  // Calculate campaign days for a line
+  const getLineCampaignDays = (line: MediaLine): number => {
+    const lineStart = line.start_date ? parseISO(line.start_date) : null;
+    const lineEnd = line.end_date ? parseISO(line.end_date) : null;
+    
+    if (!lineStart || !lineEnd) return 0;
+    
+    return differenceInDays(lineEnd, lineStart) + 1;
+  };
+
+  // Calculate allocated budget (sum of monthly budgets) for a line
+  const getLineAllocatedBudget = (lineId: string): number => {
+    const lineBudgets = monthlyBudgets[lineId] || [];
+    return lineBudgets.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+  };
+
+  // Get the budget for a specific month for a line
+  const getMonthBudget = (lineId: string, monthDate: Date): number => {
+    const lineBudgets = monthlyBudgets[lineId] || [];
+    const monthStr = format(monthDate, 'yyyy-MM-01');
+    const found = lineBudgets.find(b => b.month_date === monthStr);
+    return found ? Number(found.amount) || 0 : 0;
+  };
+
+  // Format month header
+  const formatMonthHeader = (date: Date): string => {
+    return format(date, 'MMM/yy', { locale: ptBR });
+  };
+
   const totalBudget = lines.reduce((acc, line) => acc + (Number(line.budget) || 0), 0);
 
   const getLineDisplayInfo = (line: MediaLine) => {
@@ -520,6 +565,111 @@ export function HierarchicalMediaTable({
 
   const isEditingField = (lineId: string, field: EditingField) => {
     return editingLineId === lineId && editingField === field;
+  };
+
+  // Month Budget Cell Component for editing monthly budgets
+  const MonthBudgetCell = ({
+    lineId,
+    month,
+    value,
+    onUpdate,
+  }: {
+    lineId: string;
+    month: Date;
+    value: number;
+    onUpdate: () => void;
+  }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editVal, setEditVal] = useState(String(value));
+    const { user } = useAuth();
+
+    const handleSave = async () => {
+      if (!user?.id) return;
+      
+      const newAmount = parseFloat(editVal) || 0;
+      const monthStr = format(month, 'yyyy-MM-01');
+      
+      try {
+        // Check if record exists
+        const { data: existing } = await supabase
+          .from('media_line_monthly_budgets')
+          .select('id')
+          .eq('media_line_id', lineId)
+          .eq('month_date', monthStr)
+          .maybeSingle();
+        
+        if (existing) {
+          // Update existing
+          await supabase
+            .from('media_line_monthly_budgets')
+            .update({ amount: newAmount })
+            .eq('id', existing.id);
+        } else if (newAmount > 0) {
+          // Insert new
+          await supabase
+            .from('media_line_monthly_budgets')
+            .insert({
+              media_line_id: lineId,
+              user_id: user.id,
+              month_date: monthStr,
+              amount: newAmount,
+            });
+        }
+        
+        onUpdate();
+        setIsEditing(false);
+      } catch (error) {
+        console.error('Error saving monthly budget:', error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível salvar o orçamento mensal.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    if (isEditing) {
+      return (
+        <div className="w-[90px] p-1 border-r shrink-0 bg-primary/5">
+          <div className="flex items-center gap-0.5">
+            <Input
+              type="number"
+              value={editVal}
+              onChange={(e) => setEditVal(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSave();
+                if (e.key === 'Escape') setIsEditing(false);
+              }}
+              className="h-6 text-xs px-1"
+              autoFocus
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 text-success hover:text-success shrink-0"
+              onClick={handleSave}
+            >
+              <Check className="w-3 h-3" />
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div 
+        className="w-[90px] p-2 border-r shrink-0 bg-primary/5 text-xs cursor-pointer hover:bg-primary/10 transition-colors group"
+        onClick={() => {
+          setEditVal(String(value));
+          setIsEditing(true);
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <span>{value > 0 ? formatCurrency(value) : '-'}</span>
+          <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 text-muted-foreground" />
+        </div>
+      </div>
+    );
   };
 
   const EditableCell = ({ 
@@ -654,6 +804,9 @@ export function HierarchicalMediaTable({
   // Calculate dynamic column widths based on visible columns
   const getMinWidth = () => {
     let width = 100 + 120 + 100 + 100 + 100 + 90; // Fixed columns: Código, Orçamento, Status, Início, Fim, Ações
+    // New fixed columns: Dias, Orçamento Alocado, Months
+    width += 60 + 100; // Dias + Orçamento Alocado
+    width += planMonths.length * 90; // Each month column
     if (visibleColumns.subdivision) width += 180;
     if (visibleColumns.moment) width += 180;
     if (visibleColumns.funnel_stage) width += 200;
@@ -967,6 +1120,14 @@ export function HierarchicalMediaTable({
             <div className="w-[100px] p-3 border-r shrink-0">Status</div>
             <div className="w-[100px] p-3 border-r shrink-0">Início</div>
             <div className="w-[100px] p-3 border-r shrink-0">Fim</div>
+            {/* New columns - always visible, not affected by column filter */}
+            <div className="w-[60px] p-3 border-r shrink-0 bg-primary/5">Dias</div>
+            <div className="w-[100px] p-3 border-r shrink-0 bg-primary/5">Orc. Alocado</div>
+            {planMonths.map((month, idx) => (
+              <div key={idx} className="w-[90px] p-3 border-r shrink-0 bg-primary/5 text-center">
+                {formatMonthHeader(month)}
+              </div>
+            ))}
             <div className="w-[90px] p-3 shrink-0">Ações</div>
           </div>
 
@@ -1129,6 +1290,27 @@ export function HierarchicalMediaTable({
                                       width="w-[100px]"
                                     />
                                     
+                                    {/* Campaign Days - fixed column */}
+                                    <div className="w-[60px] p-2 border-r shrink-0 bg-primary/5 text-center text-xs">
+                                      {getLineCampaignDays(line)}
+                                    </div>
+                                    
+                                    {/* Allocated Budget - fixed column */}
+                                    <div className="w-[100px] p-2 border-r shrink-0 bg-primary/5 text-xs font-medium">
+                                      {formatCurrency(getLineAllocatedBudget(line.id))}
+                                    </div>
+                                    
+                                    {/* Month columns - fixed columns */}
+                                    {planMonths.map((month, idx) => (
+                                      <MonthBudgetCell
+                                        key={idx}
+                                        lineId={line.id}
+                                        month={month}
+                                        value={getMonthBudget(line.id, month)}
+                                        onUpdate={onUpdateMonthlyBudgets}
+                                      />
+                                    ))}
+                                    
                                     {/* Action buttons */}
                                     <div className="w-[90px] p-2 flex items-center gap-1 shrink-0">
                                       <Tooltip>
@@ -1193,7 +1375,20 @@ export function HierarchicalMediaTable({
             {visibleColumns.target && <div className="w-[130px] p-3 shrink-0"></div>}
             <div className="w-[120px] p-3 font-bold shrink-0">{formatCurrency(totalBudget)}</div>
             {visibleColumns.creatives && <div className="w-[80px] p-3 shrink-0"></div>}
-            <div className="flex-1"></div>
+            <div className="w-[100px] p-3 shrink-0"></div>
+            <div className="w-[100px] p-3 shrink-0"></div>
+            <div className="w-[100px] p-3 shrink-0"></div>
+            {/* New columns totals */}
+            <div className="w-[60px] p-3 shrink-0 bg-primary/5"></div>
+            <div className="w-[100px] p-3 shrink-0 bg-primary/5 font-bold text-xs">
+              {formatCurrency(lines.reduce((sum, l) => sum + getLineAllocatedBudget(l.id), 0))}
+            </div>
+            {planMonths.map((month, idx) => (
+              <div key={idx} className="w-[90px] p-3 shrink-0 bg-primary/5 text-xs font-medium text-center">
+                {formatCurrency(lines.reduce((sum, l) => sum + getMonthBudget(l.id, month), 0))}
+              </div>
+            ))}
+            <div className="w-[90px] p-3 shrink-0"></div>
           </div>
         </div>
       </div>
