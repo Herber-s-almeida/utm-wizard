@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { MediaLineWizard } from '@/components/media-plan/MediaLineWizard';
 import { HierarchicalMediaTable } from '@/components/media-plan/HierarchicalMediaTable';
+import { EditableHierarchyCard } from '@/components/media-plan/EditableHierarchyCard';
 import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, Subdivision, Moment, FunnelStage } from '@/hooks/useConfigData';
 import { exportMediaPlanToXlsx } from '@/utils/exportToXlsx';
 import { useStatuses } from '@/hooks/useStatuses';
@@ -289,6 +290,142 @@ export default function MediaPlanDetail() {
 
   const { planSubdivisions, planMoments, planFunnelStages } = getPlanHierarchyOptions();
 
+  // Build hierarchy data for EditableHierarchyCard
+  const hierarchyData = useMemo(() => {
+    const getSubdivisionName = (refId: string | null): string => {
+      if (!refId) return 'Geral';
+      const found = (subdivisions.data || []).find(s => s.id === refId);
+      return found?.name || 'Geral';
+    };
+
+    const getMomentName = (refId: string | null): string => {
+      if (!refId) return 'Geral';
+      const found = (moments.data || []).find(m => m.id === refId);
+      return found?.name || 'Geral';
+    };
+
+    const getFunnelStageName = (refId: string | null): string => {
+      if (!refId) return 'Geral';
+      const found = (funnelStages.data || []).find(f => f.id === refId);
+      return found?.name || 'Geral';
+    };
+
+    const subdivisionDists = budgetDistributions.filter(d => d.distribution_type === 'subdivision');
+    const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
+    const funnelDists = budgetDistributions.filter(d => d.distribution_type === 'funnel_stage');
+
+    if (subdivisionDists.length === 0) {
+      return [];
+    }
+
+    return subdivisionDists.map(subDist => {
+      const subRefId = subDist.reference_id;
+      const subName = getSubdivisionName(subRefId);
+      
+      // Get lines for this subdivision
+      const subLines = lines.filter(l => 
+        (subRefId === null && !l.subdivision_id) || l.subdivision_id === subRefId
+      );
+      const subAllocated = subLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+
+      // Get moments for this subdivision
+      const subMomentDists = momentDists.filter(m => m.parent_distribution_id === subDist.id);
+
+      const momentNodes = subMomentDists.length === 0
+        ? [{
+            moment: { 
+              id: null as string | null, 
+              distId: 'none', 
+              name: 'Geral', 
+              planned: subDist.amount, 
+              percentage: 100,
+              parentDistId: subDist.id
+            },
+            momentAllocated: subAllocated,
+            funnelStages: [{
+              funnelStage: { 
+                id: null as string | null, 
+                distId: 'none', 
+                name: 'Geral', 
+                planned: subDist.amount, 
+                percentage: 100,
+                parentDistId: 'none'
+              },
+              funnelStageAllocated: subAllocated,
+            }],
+          }]
+        : subMomentDists.map(momDist => {
+            const momRefId = momDist.reference_id;
+            const momName = getMomentName(momRefId);
+            
+            const momLines = subLines.filter(l => 
+              (momRefId === null && !l.moment_id) || l.moment_id === momRefId
+            );
+            const momAllocated = momLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+
+            const momFunnelDists = funnelDists.filter(f => f.parent_distribution_id === momDist.id);
+
+            const funnelNodes = momFunnelDists.length === 0
+              ? [{
+                  funnelStage: { 
+                    id: null as string | null, 
+                    distId: 'none', 
+                    name: 'Geral', 
+                    planned: momDist.amount, 
+                    percentage: 100,
+                    parentDistId: momDist.id
+                  },
+                  funnelStageAllocated: momAllocated,
+                }]
+              : momFunnelDists.map(funDist => {
+                  const funRefId = funDist.reference_id;
+                  const funName = getFunnelStageName(funRefId);
+                  const funLines = momLines.filter(l => 
+                    (funRefId === null && !l.funnel_stage_id) || l.funnel_stage_id === funRefId
+                  );
+                  const funAllocated = funLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+                  
+                  return {
+                    funnelStage: { 
+                      id: funRefId, 
+                      distId: funDist.id, 
+                      name: funName, 
+                      planned: funDist.amount, 
+                      percentage: funDist.percentage,
+                      parentDistId: momDist.id
+                    },
+                    funnelStageAllocated: funAllocated,
+                  };
+                });
+
+            return {
+              moment: { 
+                id: momRefId, 
+                distId: momDist.id, 
+                name: momName, 
+                planned: momDist.amount, 
+                percentage: momDist.percentage,
+                parentDistId: subDist.id
+              },
+              momentAllocated: momAllocated,
+              funnelStages: funnelNodes,
+            };
+          });
+
+      return {
+        subdivision: { 
+          id: subRefId, 
+          distId: subDist.id, 
+          name: subName, 
+          planned: subDist.amount, 
+          percentage: subDist.percentage 
+        },
+        subdivisionAllocated: subAllocated,
+        moments: momentNodes,
+      };
+    });
+  }, [lines, budgetDistributions, subdivisions.data, moments.data, funnelStages.data]);
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -420,6 +557,18 @@ export default function MediaPlanDetail() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Editable Hierarchy Card */}
+        {hierarchyData.length > 0 && (
+          <EditableHierarchyCard
+            planId={plan.id}
+            planName={plan.name}
+            totalBudget={Number(plan.total_budget) || 0}
+            budgetDistributions={budgetDistributions}
+            hierarchyData={hierarchyData}
+            onDistributionsUpdated={fetchData}
+          />
+        )}
 
         {/* Funnel Visualization - Show only if there are custom funnel stages */}
         {(() => {
