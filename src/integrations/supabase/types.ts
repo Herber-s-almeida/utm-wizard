@@ -881,6 +881,7 @@ export type Database = {
           description: string | null
           height: number
           id: string
+          observation: string | null
           specification_id: string
           unit: string
           updated_at: string
@@ -892,6 +893,7 @@ export type Database = {
           description?: string | null
           height: number
           id?: string
+          observation?: string | null
           specification_id: string
           unit?: string
           updated_at?: string
@@ -903,6 +905,7 @@ export type Database = {
           description?: string | null
           height?: number
           id?: string
+          observation?: string | null
           specification_id?: string
           unit?: string
           updated_at?: string

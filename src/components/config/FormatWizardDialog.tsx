@@ -392,6 +392,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
           height: dim.height,
           unit: dim.unit,
           description: dim.description,
+          observation: dim.observation || null,
           user_id: userId,
         });
       }
