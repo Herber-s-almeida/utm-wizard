@@ -30,8 +30,7 @@ const WIZARD_STEPS = [
   { id: 2, title: 'Subdivisão', description: 'Opcional' },
   { id: 3, title: 'Momentos', description: 'Opcional' },
   { id: 4, title: 'Funil', description: 'Fases' },
-  { id: 5, title: 'Temporal', description: 'Distribuição' },
-  { id: 6, title: 'Linhas', description: 'Detalhes' },
+  { id: 5, title: 'Linhas', description: 'Detalhes' },
 ];
 
 const MAX_SUBDIVISIONS = 12;
@@ -93,15 +92,13 @@ export default function NewMediaPlanBudget() {
       }
       case 4:
         return true;
-      case 5:
-        return true;
       default:
         return true;
     }
   };
 
   const handleNext = () => {
-    if (state.step < 6) {
+    if (state.step < 5) {
       setEditingSection(null);
       goToStep(state.step + 1);
     }
@@ -784,41 +781,8 @@ export default function NewMediaPlanBudget() {
           </AnimatePresence>
         )}
 
-        {/* Step 5: Temporal Distribution */}
-        {state.step >= 5 && (
-          <AnimatePresence mode="wait">
-            {state.step === 5 || editingSection === 'temporal' ? (
-              <motion.div
-                key="temporal-form"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <TemporalEqualizer
-                  startDate={state.planData.start_date}
-                  endDate={state.planData.end_date}
-                  totalBudget={state.planData.total_budget}
-                  granularity={state.temporalGranularity}
-                  periods={temporalPeriods}
-                  onGranularityChange={(g) => setTemporalGranularity(g)}
-                  onPeriodsChange={setTemporalPeriods}
-                />
-
-                {editingSection === 'temporal' && (
-                  <div className="flex justify-end pt-4">
-                    <Button onClick={() => setEditingSection(null)}>
-                      Salvar alterações
-                    </Button>
-                  </div>
-                )}
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        )}
-
-        {/* Step 6: Summary */}
-        {state.step === 6 && (
+        {/* Step 5: Summary (was Step 6) */}
+        {state.step === 5 && (
           <motion.div
             key="lines-form"
             initial={{ opacity: 0, y: 20 }}
@@ -910,64 +874,7 @@ export default function NewMediaPlanBudget() {
               </CardContent>
             </Card>
 
-            {/* 4. Temporal Distribution - Show chart only */}
-            {temporalPeriods.length > 0 && (
-              <Card className="border-2 border-primary/20">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full bg-primary" />
-                      <CardTitle className="text-lg">Distribuição Temporal</CardTitle>
-                      <div className="flex-1 h-[2px] bg-gradient-to-r from-primary/50 to-transparent rounded-full min-w-[100px]" />
-                      <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
-                        <span className="text-success font-bold text-sm">✓</span>
-                      </div>
-                    </div>
-                    <Button variant="outline" size="sm" className="gap-2" onClick={() => goToStep(5)}>
-                      <Edit2 className="h-3.5 w-3.5" />
-                      editar
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {/* Bar Chart Visualization */}
-                  {(() => {
-                    const maxAmount = Math.max(...temporalPeriods.map(p => p.amount), 1);
-                    return (
-                      <div className="flex items-end gap-1 h-40 bg-muted/20 rounded-lg p-2">
-                        {temporalPeriods.map((period) => {
-                          const height = maxAmount > 0 ? (period.amount / maxAmount) * 100 : 0;
-                          return (
-                            <div
-                              key={period.id}
-                              className="flex-1 flex flex-col items-center justify-end h-full"
-                            >
-                              <div className="text-center mb-1">
-                                <span className="text-[8px] text-muted-foreground font-medium block">
-                                  {period.percentage.toFixed(0)}%
-                                </span>
-                                <span className="text-[7px] text-muted-foreground block">
-                                  R$ {period.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                              </div>
-                              <div 
-                                className="w-full bg-primary rounded-t transition-all duration-300 min-h-[4px]"
-                                style={{ height: `${Math.max(height, 2)}%` }}
-                              />
-                              <span className="text-[9px] text-muted-foreground text-center mt-1 whitespace-nowrap overflow-hidden max-w-full truncate">
-                                {state.temporalGranularity === 'monthly' ? period.label.slice(0, 3) : period.label}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* 5. Linhas do Plano */}
+            {/* 4. Linhas do Plano */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
@@ -1027,7 +934,7 @@ export default function NewMediaPlanBudget() {
             Voltar
           </Button>
 
-          {state.step < 6 ? (
+          {state.step < 5 ? (
             <Button
               onClick={handleNext}
               disabled={!canProceed()}
