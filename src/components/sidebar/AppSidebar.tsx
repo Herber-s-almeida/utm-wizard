@@ -62,7 +62,7 @@ export function AppSidebar() {
     // Not in provider, use default values
   }
   
-  const { activePlans, finishedPlans, trashedPlans, softDelete, restore, permanentDelete } = useMediaPlans();
+  const { draftPlans, activePlans, finishedPlans, trashedPlans, softDelete, restore, permanentDelete } = useMediaPlans();
   const subdivisions = useSubdivisions();
   const moments = useMoments();
   const funnelStages = useFunnelStages();
@@ -78,6 +78,7 @@ export function AppSidebar() {
 
   // Section open states
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    draftPlans: false,
     activePlans: true,
     finishedPlans: false,
     subdivisions: false,
@@ -386,6 +387,34 @@ export function AppSidebar() {
               Novo plano
             </Button>
           </Link>
+
+          {/* Rascunhos */}
+          <Collapsible open={openSections.draftPlans} onOpenChange={() => toggleSection('draftPlans')}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
+                {openSections.draftPlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                <span className="font-medium">Rascunhos</span>
+                <span className="ml-auto text-[10px] text-muted-foreground">{draftPlans.data?.length || 0}</span>
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4">
+              {draftPlans.data?.slice(0, MAX_ITEMS).map(plan => (
+                <PlanItemRow
+                  key={plan.id}
+                  id={plan.id}
+                  name={plan.name}
+                  onDelete={() => softDelete.mutate(plan.id)}
+                />
+              ))}
+              {(draftPlans.data?.length || 0) > MAX_ITEMS && (
+                <Link to="/media-plans?status=draft">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                    ... ver todos ({draftPlans.data?.length})
+                  </Button>
+                </Link>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Ativos */}
           <Collapsible open={openSections.activePlans} onOpenChange={() => toggleSection('activePlans')}>

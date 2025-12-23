@@ -469,10 +469,20 @@ export function useMediaPlans() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  const draftPlans = useQuery({
+    queryKey: ['media_plans', 'draft', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('media_plans').select('*').is('deleted_at', null).eq('status', 'draft').order('updated_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
   const activePlans = useQuery({
     queryKey: ['media_plans', 'active', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('media_plans').select('*').is('deleted_at', null).in('status', ['draft', 'active']).order('updated_at', { ascending: false });
+      const { data, error } = await supabase.from('media_plans').select('*').is('deleted_at', null).eq('status', 'active').order('updated_at', { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -514,5 +524,16 @@ export function useMediaPlans() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['media_plans'] }); toast.success('Plano excluído permanentemente'); },
   });
 
-  return { activePlans, finishedPlans, trashedPlans, softDelete, restore, permanentDelete };
+  const updateStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => { 
+      const { error } = await supabase.from('media_plans').update({ status }).eq('id', id); 
+      if (error) throw error; 
+    },
+    onSuccess: () => { 
+      queryClient.invalidateQueries({ queryKey: ['media_plans'] }); 
+      toast.success('Status atualizado!'); 
+    },
+  });
+
+  return { draftPlans, activePlans, finishedPlans, trashedPlans, softDelete, restore, permanentDelete, updateStatus };
 }
