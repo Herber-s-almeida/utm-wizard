@@ -1419,6 +1419,7 @@ export function HierarchicalMediaTable({
             <div className="w-[100px] p-3 border-r shrink-0">Status</div>
             <div className="w-[100px] p-3 border-r shrink-0">Início</div>
             <div className="w-[100px] p-3 border-r shrink-0">Fim</div>
+            <div className="w-[90px] p-3 border-r shrink-0">Ações</div>
             {/* New columns - always visible, not affected by column filter */}
             <div className="w-[60px] p-3 border-r shrink-0 bg-primary/5">Dias</div>
             <div className="w-[100px] p-3 border-r shrink-0 bg-primary/5">Orc. Alocado</div>
@@ -1427,7 +1428,6 @@ export function HierarchicalMediaTable({
                 {formatMonthHeader(month)}
               </div>
             ))}
-            <div className="w-[90px] p-3 shrink-0">Ações</div>
           </div>
 
           {/* Body */}
@@ -1589,31 +1589,8 @@ export function HierarchicalMediaTable({
                                       width="w-[100px]"
                                     />
                                     
-                                    {/* Campaign Days - fixed column */}
-                                    <div className="w-[60px] p-2 border-r shrink-0 bg-primary/5 text-center text-xs">
-                                      {getLineCampaignDays(line)}
-                                    </div>
-                                    
-                                    {/* Allocated Budget - fixed column */}
-                                    <div className="w-[100px] p-2 border-r shrink-0 bg-primary/5 text-xs font-medium">
-                                      {formatCurrency(getLineAllocatedBudget(line.id))}
-                                    </div>
-                                    
-                                    {/* Month columns - fixed columns */}
-                                    {planMonths.map((month, idx) => (
-                                      <MonthBudgetCell
-                                        key={idx}
-                                        lineId={line.id}
-                                        line={line}
-                                        month={month}
-                                        value={getMonthBudget(line.id, month)}
-                                        onUpdate={onUpdateMonthlyBudgets}
-                                        isEditable={isMonthEditableForLine(line, month)}
-                                      />
-                                    ))}
-                                    
                                     {/* Action buttons */}
-                                    <div className="w-[90px] p-2 flex items-center gap-1 shrink-0">
+                                    <div className="w-[90px] p-2 border-r flex items-center gap-1 shrink-0">
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Button
@@ -1641,6 +1618,29 @@ export function HierarchicalMediaTable({
                                         <TooltipContent>Excluir linha</TooltipContent>
                                       </Tooltip>
                                     </div>
+                                    
+                                    {/* Campaign Days - fixed column */}
+                                    <div className="w-[60px] p-2 border-r shrink-0 bg-primary/5 text-center text-xs">
+                                      {getLineCampaignDays(line)}
+                                    </div>
+                                    
+                                    {/* Allocated Budget - fixed column */}
+                                    <div className="w-[100px] p-2 border-r shrink-0 bg-primary/5 text-xs font-medium">
+                                      {formatCurrency(getLineAllocatedBudget(line.id))}
+                                    </div>
+                                    
+                                    {/* Month columns - fixed columns */}
+                                    {planMonths.map((month, idx) => (
+                                      <MonthBudgetCell
+                                        key={idx}
+                                        lineId={line.id}
+                                        line={line}
+                                        month={month}
+                                        value={getMonthBudget(line.id, month)}
+                                        onUpdate={onUpdateMonthlyBudgets}
+                                        isEditable={isMonthEditableForLine(line, month)}
+                                      />
+                                    ))}
                                   </motion.div>
                                 );
                               })}
