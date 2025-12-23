@@ -96,6 +96,7 @@ interface HierarchicalMediaTableProps {
   onAddLine: (prefill?: { subdivisionId?: string; momentId?: string; funnelStageId?: string }) => void;
   onUpdateLine: (lineId: string, updates: Partial<MediaLine>) => Promise<void>;
   onUpdateMonthlyBudgets: () => void;
+  onFilteredLinesChange?: (lines: MediaLine[]) => void;
 }
 
 interface SubdivisionInfo {
@@ -157,6 +158,7 @@ export function HierarchicalMediaTable({
   onAddLine,
   onUpdateLine,
   onUpdateMonthlyBudgets,
+  onFilteredLinesChange,
 }: HierarchicalMediaTableProps) {
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<EditingField>(null);
@@ -414,6 +416,26 @@ export function HierarchicalMediaTable({
       })),
     }));
   }, [groupedData, lineFilters, activeFiltersCount]);
+
+  // Get all filtered lines as a flat array
+  const filteredLines = useMemo(() => {
+    const allLines: MediaLine[] = [];
+    filteredGroupedData.forEach(subGroup => {
+      subGroup.moments.forEach(momGroup => {
+        momGroup.funnelStages.forEach(funGroup => {
+          allLines.push(...funGroup.lines);
+        });
+      });
+    });
+    return allLines;
+  }, [filteredGroupedData]);
+
+  // Notify parent of filtered lines changes
+  useMemo(() => {
+    if (onFilteredLinesChange) {
+      onFilteredLinesChange(filteredLines);
+    }
+  }, [filteredLines, onFilteredLinesChange]);
 
   // Calculate plan months based on start_date and end_date
   const planMonths = useMemo(() => {

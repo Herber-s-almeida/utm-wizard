@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,7 +10,9 @@ import {
   Plus, 
   Loader2,
   Settings2,
-  Download
+  Download,
+  Calendar,
+  AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -36,6 +38,17 @@ import { HierarchicalMediaTable } from '@/components/media-plan/HierarchicalMedi
 import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, Subdivision, Moment, FunnelStage } from '@/hooks/useConfigData';
 import { exportMediaPlanToXlsx } from '@/utils/exportToXlsx';
 import { useStatuses } from '@/hooks/useStatuses';
+import { format, eachMonthOfInterval, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { BudgetAllocation } from '@/hooks/useMediaPlanWizard';
+import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization';
+
 interface BudgetDistribution {
   id: string;
   distribution_type: string;
@@ -66,6 +79,7 @@ export default function MediaPlanDetail() {
   } | undefined>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lineToDelete, setLineToDelete] = useState<MediaLine | null>(null);
+  const [filteredLines, setFilteredLines] = useState<MediaLine[]>([]);
 
   // Library data for display
   const subdivisions = useSubdivisions();
@@ -219,6 +233,13 @@ export default function MediaPlanDetail() {
     }).format(value);
   };
 
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return format(date, 'dd/MM/yyyy', { locale: ptBR });
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -330,7 +351,7 @@ export default function MediaPlanDetail() {
         </div>
 
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
           <Card>
             <CardContent className="pt-6">
               <div className="text-sm text-muted-foreground">Orçamento do Plano</div>
@@ -339,14 +360,29 @@ export default function MediaPlanDetail() {
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-sm text-muted-foreground">Distribuído nas Linhas</div>
-              <div className="text-2xl font-bold font-display">
-                {formatCurrency(totalLinesBudget)}
-              </div>
-            </CardContent>
-          </Card>
+          <TooltipProvider>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  Orçamento Alocado
+                  {totalLinesBudget > Number(plan.total_budget) && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertTriangle className="w-4 h-4 text-destructive animate-pulse cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Orçamento alocado excede o planejado!</p>
+                        <p className="font-bold">Excedente: {formatCurrency(totalLinesBudget - Number(plan.total_budget))}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+                <div className="text-2xl font-bold font-display">
+                  {formatCurrency(totalLinesBudget)}
+                </div>
+              </CardContent>
+            </Card>
+          </TooltipProvider>
           <Card>
             <CardContent className="pt-6">
               <div className="text-sm text-muted-foreground">Linhas de Mídia</div>
@@ -361,7 +397,143 @@ export default function MediaPlanDetail() {
               </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Calendar className="w-3 h-3" />
+                Data de Início
+              </div>
+              <div className="text-xl font-bold font-display">
+                {formatDate(plan.start_date)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Calendar className="w-3 h-3" />
+                Data de Término
+              </div>
+              <div className="text-xl font-bold font-display">
+                {formatDate(plan.end_date)}
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Funnel Visualization - Show only if there are custom funnel stages */}
+        {(() => {
+          // Check if there are non-default funnel stages
+          const funnelDists = budgetDistributions.filter(d => d.distribution_type === 'funnel_stage');
+          const hasCustomFunnel = funnelDists.length > 0 && funnelDists.some(d => d.reference_id !== null);
+          
+          if (!hasCustomFunnel) return null;
+
+          // Build funnel stages from budget distributions for filtered lines
+          const funnelStagesForViz: BudgetAllocation[] = funnelDists
+            .filter(d => d.reference_id !== null)
+            .map(d => {
+              const stage = (funnelStages.data || []).find(f => f.id === d.reference_id);
+              // Calculate allocated from filtered lines
+              const allocated = filteredLines
+                .filter(l => l.funnel_stage_id === d.reference_id)
+                .reduce((acc, l) => acc + Number(l.budget || 0), 0);
+              
+              return {
+                id: d.reference_id || 'geral',
+                name: stage?.name || 'Geral',
+                percentage: Number(plan.total_budget) > 0 ? (allocated / Number(plan.total_budget)) * 100 : 0,
+                amount: allocated,
+              };
+            })
+            .filter(s => s.amount > 0);
+
+          if (funnelStagesForViz.length === 0) return null;
+
+          const totalAllocated = funnelStagesForViz.reduce((acc, s) => acc + s.amount, 0);
+
+          return (
+            <FunnelVisualization
+              funnelStages={funnelStagesForViz}
+              parentBudget={totalAllocated}
+              parentName="Linhas Filtradas"
+              onEdit={() => {}}
+            />
+          );
+        })()}
+
+        {/* Temporal Distribution Chart */}
+        {plan.start_date && plan.end_date && (
+          <Card className="border border-border/50 bg-card">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <Calendar className="h-5 w-5 text-primary" />
+                <h3 className="font-display text-lg font-semibold">Distribuição Temporal</h3>
+              </div>
+              {(() => {
+                // Calculate monthly sums from filtered lines monthly budgets
+                const planMonths = eachMonthOfInterval({
+                  start: parseISO(plan.start_date!),
+                  end: parseISO(plan.end_date!),
+                });
+
+                const monthlyTotals = planMonths.map(monthDate => {
+                  const monthStr = format(monthDate, 'yyyy-MM-01');
+                  let total = 0;
+                  
+                  filteredLines.forEach(line => {
+                    const lineBudgets = monthlyBudgets[line.id] || [];
+                    const found = lineBudgets.find(b => b.month_date === monthStr);
+                    if (found) {
+                      total += Number(found.amount) || 0;
+                    }
+                  });
+
+                  return {
+                    month: format(monthDate, 'MMM/yy', { locale: ptBR }),
+                    amount: total,
+                  };
+                });
+
+                const maxAmount = Math.max(...monthlyTotals.map(m => m.amount), 1);
+
+                return (
+                  <div className="flex items-end gap-1 h-40 bg-muted/20 rounded-lg p-2">
+                    {monthlyTotals.map((month, index) => {
+                      const height = maxAmount > 0 ? (month.amount / maxAmount) * 100 : 0;
+                      return (
+                        <TooltipProvider key={index}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex-1 flex flex-col items-center justify-end h-full cursor-help">
+                                <div className="text-center mb-1">
+                                  <span className="text-[8px] text-muted-foreground font-medium block">
+                                    {month.amount > 0 ? `${((month.amount / monthlyTotals.reduce((a, b) => a + b.amount, 0)) * 100).toFixed(0)}%` : '0%'}
+                                  </span>
+                                </div>
+                                <div 
+                                  className="w-full bg-primary rounded-t transition-all duration-300 min-h-[4px]"
+                                  style={{ height: `${Math.max(height, 2)}%` }}
+                                />
+                                <span className="text-[9px] text-muted-foreground text-center mt-1 whitespace-nowrap overflow-hidden max-w-full truncate">
+                                  {month.month}
+                                </span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="font-semibold">{month.month}</p>
+                              <p>{formatCurrency(month.amount)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Hierarchical Media Table */}
         <HierarchicalMediaTable
@@ -395,6 +567,7 @@ export default function MediaPlanDetail() {
           }}
           onUpdateLine={handleUpdateLine}
           onUpdateMonthlyBudgets={fetchData}
+          onFilteredLinesChange={setFilteredLines}
         />
       </div>
 
