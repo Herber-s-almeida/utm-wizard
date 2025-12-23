@@ -158,20 +158,23 @@ export function AppSidebar() {
       isCollapsed ? "w-16" : "w-80"
     )}>
       {/* Header */}
-      <div className="p-3 border-b border-sidebar-border">
-        <div className="flex items-center justify-between gap-2">
-          <Link to="/dashboard" className={cn(
-            "flex items-center gap-3 min-w-0",
-            isCollapsed && "justify-center"
-          )}>
-            <img src="/logo.png" alt="AdsPlanning Pro" className="h-8 w-auto shrink-0" />
-            {!isCollapsed && (
+      <div className={cn(
+        "border-b border-sidebar-border",
+        isCollapsed ? "p-2" : "p-3"
+      )}>
+        <div className={cn(
+          "flex items-center gap-2",
+          isCollapsed ? "justify-center" : "justify-between"
+        )}>
+          {!isCollapsed && (
+            <Link to="/dashboard" className="flex items-center gap-3 min-w-0">
+              <img src="/logo.png" alt="AdsPlanning Pro" className="h-8 w-auto shrink-0" />
               <div className="flex flex-col min-w-0">
                 <span className="font-display font-bold text-sm text-primary truncate">AdsPlanning</span>
                 <span className="text-[10px] font-semibold text-accent tracking-wider">PRO</span>
               </div>
-            )}
-          </Link>
+            </Link>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
