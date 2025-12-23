@@ -27,7 +27,9 @@ export function exportMediaPlanToXlsx(data: ExportData) {
   // Format date for display
   const formatDate = (date: string | null | undefined): string => {
     if (!date) return '-';
-    return new Date(date).toLocaleDateString('pt-BR');
+    // Parse date as local time to avoid timezone issues
+    const [year, month, day] = date.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
   };
 
   // Format currency for display

@@ -219,7 +219,9 @@ export function HierarchicalMediaTable({
 
   const formatDate = (date: string | null) => {
     if (!date) return '-';
-    return format(new Date(date), 'dd/MM/yyyy', { locale: ptBR });
+    // Parse date as local time to avoid timezone issues
+    const [year, month, day] = date.split('-').map(Number);
+    return format(new Date(year, month - 1, day), 'dd/MM/yyyy', { locale: ptBR });
   };
 
   // Helper to get name from library data
