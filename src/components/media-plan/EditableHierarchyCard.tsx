@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Check, X, Pencil, AlertTriangle } from 'lucide-react';
+import { Check, X, Pencil, AlertTriangle, ChevronDown, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface BudgetDistribution {
   id: string;
@@ -84,6 +89,7 @@ export function EditableHierarchyCard({
   onDistributionsUpdated,
 }: EditableHierarchyCardProps) {
   const { user } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
   const [editingCell, setEditingCell] = useState<EditingCell>(null);
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -173,129 +179,155 @@ export function EditableHierarchyCard({
 
   return (
     <TooltipProvider>
-      <div className="border rounded-lg overflow-hidden bg-card">
-        {/* Header */}
-        <div className="bg-muted/50 px-4 py-3 border-b">
-          <h3 className="font-semibold text-sm">Hierarquia do Orçamento</h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            Clique para editar os valores. Avisos aparecerão quando valores excederem a hierarquia anterior.
-          </p>
-        </div>
+      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="border rounded-lg overflow-hidden bg-card">
+        {/* Collapsed Header / Trigger */}
+        <CollapsibleTrigger asChild>
+          <button 
+            className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-colors text-left"
+          >
+            <div className="flex items-center gap-3">
+              <Layers className="h-4 w-4 text-primary" />
+              <div>
+                <h3 className="font-semibold text-sm">Hierarquia do Orçamento</h3>
+                {!isOpen && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {hierarchyData.length} subdivisão(ões) • Clique para expandir
+                  </p>
+                )}
+              </div>
+            </div>
+            <ChevronDown 
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                isOpen && "rotate-180"
+              )} 
+            />
+          </button>
+        </CollapsibleTrigger>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/30">
-              <tr>
-                <th className="text-left px-4 py-2 font-medium border-r">Subdivisão do plano</th>
-                <th className="text-left px-4 py-2 font-medium border-r">Momentos de Campanha</th>
-                <th className="text-left px-4 py-2 font-medium">Fase</th>
-              </tr>
-            </thead>
-            <tbody>
-              {hierarchyData.map((subRow, subIdx) => {
-                // Count total rows for this subdivision
-                const totalMomentRows = subRow.moments.reduce((acc, m) => acc + m.funnelStages.length, 0);
-                const momentsSumOverBudget = getMomentsSumForSubdivision(subRow) > subRow.subdivision.planned;
-                
-                return subRow.moments.map((momentRow, momIdx) => {
-                  // Rows for this moment
-                  const funnelRows = momentRow.funnelStages.length;
-                  const funnelSumOverBudget = getFunnelStagesSumForMoment(momentRow) > momentRow.moment.planned;
+        <CollapsibleContent>
+          {/* Description */}
+          <div className="px-4 py-2 border-t bg-muted/30">
+            <p className="text-xs text-muted-foreground">
+              Clique para editar os valores. Avisos aparecerão quando valores excederem a hierarquia anterior.
+            </p>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30">
+                <tr>
+                  <th className="text-left px-4 py-2 font-medium border-r">Subdivisão do plano</th>
+                  <th className="text-left px-4 py-2 font-medium border-r">Momentos de Campanha</th>
+                  <th className="text-left px-4 py-2 font-medium">Fase</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hierarchyData.map((subRow, subIdx) => {
+                  // Count total rows for this subdivision
+                  const totalMomentRows = subRow.moments.reduce((acc, m) => acc + m.funnelStages.length, 0);
+                  const momentsSumOverBudget = getMomentsSumForSubdivision(subRow) > subRow.subdivision.planned;
                   
-                  return momentRow.funnelStages.map((funnelRow, funIdx) => {
-                    const isFirstMoment = momIdx === 0 && funIdx === 0;
-                    const isFirstFunnel = funIdx === 0;
+                  return subRow.moments.map((momentRow, momIdx) => {
+                    // Rows for this moment
+                    const funnelRows = momentRow.funnelStages.length;
+                    const funnelSumOverBudget = getFunnelStagesSumForMoment(momentRow) > momentRow.moment.planned;
+                    
+                    return momentRow.funnelStages.map((funnelRow, funIdx) => {
+                      const isFirstMoment = momIdx === 0 && funIdx === 0;
+                      const isFirstFunnel = funIdx === 0;
 
-                    return (
-                      <tr key={`${subIdx}-${momIdx}-${funIdx}`} className="border-t">
-                        {/* Subdivision Cell */}
-                        {isFirstMoment && (
-                          <td 
-                            rowSpan={totalMomentRows} 
-                            className="px-4 py-3 border-r align-top bg-primary/5"
-                          >
+                      return (
+                        <tr key={`${subIdx}-${momIdx}-${funIdx}`} className="border-t">
+                          {/* Subdivision Cell */}
+                          {isFirstMoment && (
+                            <td 
+                              rowSpan={totalMomentRows} 
+                              className="px-4 py-3 border-r align-top bg-primary/5"
+                            >
+                              <EditableCell
+                                name={subRow.subdivision.name}
+                                planned={subRow.subdivision.planned}
+                                allocated={subRow.subdivisionAllocated}
+                                percentage={subRow.subdivision.percentage}
+                                percentageOf={planName}
+                                isEditing={editingCell?.distId === subRow.subdivision.distId}
+                                editValue={editValue}
+                                onEditValueChange={setEditValue}
+                                onStartEdit={() => startEditing('subdivision', subRow.subdivision.distId, subRow.subdivision.planned)}
+                                onSave={saveEdit}
+                                onCancel={cancelEditing}
+                                onKeyDown={handleKeyDown}
+                                saving={saving}
+                                isOverBudget={isSubdivisionOverBudget}
+                                overBudgetMessage={`A soma das subdivisões é maior do que o valor do plano "${planName}"`}
+                                canEdit={subRow.subdivision.distId !== 'root' && subRow.subdivision.distId !== 'none'}
+                                formatCurrency={formatCurrency}
+                              />
+                            </td>
+                          )}
+
+                          {/* Moment Cell */}
+                          {isFirstFunnel && (
+                            <td 
+                              rowSpan={funnelRows} 
+                              className="px-4 py-3 border-r align-top bg-secondary/5"
+                            >
+                              <EditableCell
+                                name={momentRow.moment.name}
+                                planned={momentRow.moment.planned}
+                                allocated={momentRow.momentAllocated}
+                                percentage={momentRow.moment.percentage}
+                                percentageOf={subRow.subdivision.name}
+                                isEditing={editingCell?.distId === momentRow.moment.distId}
+                                editValue={editValue}
+                                onEditValueChange={setEditValue}
+                                onStartEdit={() => startEditing('moment', momentRow.moment.distId, momentRow.moment.planned)}
+                                onSave={saveEdit}
+                                onCancel={cancelEditing}
+                                onKeyDown={handleKeyDown}
+                                saving={saving}
+                                isOverBudget={momentsSumOverBudget}
+                                overBudgetMessage={`A soma dos momentos é maior do que a subdivisão "${subRow.subdivision.name}"`}
+                                canEdit={momentRow.moment.distId !== 'root' && momentRow.moment.distId !== 'none'}
+                                formatCurrency={formatCurrency}
+                              />
+                            </td>
+                          )}
+
+                          {/* Funnel Stage Cell */}
+                          <td className="px-4 py-3 align-top">
                             <EditableCell
-                              name={subRow.subdivision.name}
-                              planned={subRow.subdivision.planned}
-                              allocated={subRow.subdivisionAllocated}
-                              percentage={subRow.subdivision.percentage}
-                              percentageOf={planName}
-                              isEditing={editingCell?.distId === subRow.subdivision.distId}
+                              name={funnelRow.funnelStage.name}
+                              planned={funnelRow.funnelStage.planned}
+                              allocated={funnelRow.funnelStageAllocated}
+                              percentage={funnelRow.funnelStage.percentage}
+                              percentageOf={momentRow.moment.name}
+                              isEditing={editingCell?.distId === funnelRow.funnelStage.distId}
                               editValue={editValue}
                               onEditValueChange={setEditValue}
-                              onStartEdit={() => startEditing('subdivision', subRow.subdivision.distId, subRow.subdivision.planned)}
+                              onStartEdit={() => startEditing('funnel_stage', funnelRow.funnelStage.distId, funnelRow.funnelStage.planned)}
                               onSave={saveEdit}
                               onCancel={cancelEditing}
                               onKeyDown={handleKeyDown}
                               saving={saving}
-                              isOverBudget={isSubdivisionOverBudget}
-                              overBudgetMessage={`A soma das subdivisões é maior do que o valor do plano "${planName}"`}
-                              canEdit={subRow.subdivision.distId !== 'root' && subRow.subdivision.distId !== 'none'}
+                              isOverBudget={funnelSumOverBudget}
+                              overBudgetMessage={`A soma das fases é maior do que o momento "${momentRow.moment.name}"`}
+                              canEdit={funnelRow.funnelStage.distId !== 'root' && funnelRow.funnelStage.distId !== 'none'}
                               formatCurrency={formatCurrency}
                             />
                           </td>
-                        )}
-
-                        {/* Moment Cell */}
-                        {isFirstFunnel && (
-                          <td 
-                            rowSpan={funnelRows} 
-                            className="px-4 py-3 border-r align-top bg-secondary/5"
-                          >
-                            <EditableCell
-                              name={momentRow.moment.name}
-                              planned={momentRow.moment.planned}
-                              allocated={momentRow.momentAllocated}
-                              percentage={momentRow.moment.percentage}
-                              percentageOf={subRow.subdivision.name}
-                              isEditing={editingCell?.distId === momentRow.moment.distId}
-                              editValue={editValue}
-                              onEditValueChange={setEditValue}
-                              onStartEdit={() => startEditing('moment', momentRow.moment.distId, momentRow.moment.planned)}
-                              onSave={saveEdit}
-                              onCancel={cancelEditing}
-                              onKeyDown={handleKeyDown}
-                              saving={saving}
-                              isOverBudget={momentsSumOverBudget}
-                              overBudgetMessage={`A soma dos momentos é maior do que a subdivisão "${subRow.subdivision.name}"`}
-                              canEdit={momentRow.moment.distId !== 'root' && momentRow.moment.distId !== 'none'}
-                              formatCurrency={formatCurrency}
-                            />
-                          </td>
-                        )}
-
-                        {/* Funnel Stage Cell */}
-                        <td className="px-4 py-3 align-top">
-                          <EditableCell
-                            name={funnelRow.funnelStage.name}
-                            planned={funnelRow.funnelStage.planned}
-                            allocated={funnelRow.funnelStageAllocated}
-                            percentage={funnelRow.funnelStage.percentage}
-                            percentageOf={momentRow.moment.name}
-                            isEditing={editingCell?.distId === funnelRow.funnelStage.distId}
-                            editValue={editValue}
-                            onEditValueChange={setEditValue}
-                            onStartEdit={() => startEditing('funnel_stage', funnelRow.funnelStage.distId, funnelRow.funnelStage.planned)}
-                            onSave={saveEdit}
-                            onCancel={cancelEditing}
-                            onKeyDown={handleKeyDown}
-                            saving={saving}
-                            isOverBudget={funnelSumOverBudget}
-                            overBudgetMessage={`A soma das fases é maior do que o momento "${momentRow.moment.name}"`}
-                            canEdit={funnelRow.funnelStage.distId !== 'root' && funnelRow.funnelStage.distId !== 'none'}
-                            formatCurrency={formatCurrency}
-                          />
-                        </td>
-                      </tr>
-                    );
+                        </tr>
+                      );
+                    });
                   });
-                });
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </TooltipProvider>
   );
 }
