@@ -17,6 +17,7 @@ import {
   MediaPlan, 
   MediaLine, 
   MediaCreative,
+  MediaLineMonthlyBudget,
   STATUS_LABELS,
   STATUS_COLORS,
 } from '@/types/media';
@@ -53,6 +54,7 @@ export default function MediaPlanDetail() {
   const [lines, setLines] = useState<MediaLine[]>([]);
   const [creatives, setCreatives] = useState<Record<string, MediaCreative[]>>({});
   const [budgetDistributions, setBudgetDistributions] = useState<BudgetDistribution[]>([]);
+  const [monthlyBudgets, setMonthlyBudgets] = useState<Record<string, MediaLineMonthlyBudget[]>>({});
   const [loading, setLoading] = useState(true);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editingLine, setEditingLine] = useState<MediaLine | null>(null);
@@ -145,6 +147,22 @@ export default function MediaPlanDetail() {
             grouped[c.media_line_id].push(c);
           });
           setCreatives(grouped);
+        }
+
+        // Fetch monthly budgets for all lines
+        const { data: monthlyData, error: monthlyError } = await supabase
+          .from('media_line_monthly_budgets')
+          .select('*')
+          .in('media_line_id', linesList.map(l => l.id))
+          .order('month_date', { ascending: true });
+
+        if (!monthlyError && monthlyData) {
+          const groupedMonthly: Record<string, MediaLineMonthlyBudget[]> = {};
+          monthlyData.forEach((m: MediaLineMonthlyBudget) => {
+            if (!groupedMonthly[m.media_line_id]) groupedMonthly[m.media_line_id] = [];
+            groupedMonthly[m.media_line_id].push(m);
+          });
+          setMonthlyBudgets(groupedMonthly);
         }
       }
     } catch (error) {
@@ -351,6 +369,7 @@ export default function MediaPlanDetail() {
           lines={lines}
           creatives={creatives}
           budgetDistributions={budgetDistributions}
+          monthlyBudgets={monthlyBudgets}
           mediums={mediums.data || []}
           vehicles={vehicles.data || []}
           channels={channels.data || []}
@@ -375,6 +394,7 @@ export default function MediaPlanDetail() {
             setWizardOpen(true);
           }}
           onUpdateLine={handleUpdateLine}
+          onUpdateMonthlyBudgets={fetchData}
         />
       </div>
 

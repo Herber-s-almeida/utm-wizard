@@ -86,6 +86,16 @@ export interface PlanBudgetDistribution {
   updated_at: string;
 }
 
+export interface MediaLineMonthlyBudget {
+  id: string;
+  media_line_id: string;
+  user_id: string;
+  month_date: string; // ISO date string (first day of month)
+  amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export const PLATFORMS = [
   'Google Ads',
   'Meta Ads',
