@@ -257,20 +257,22 @@ export default function MediaPlanDetail() {
           name: (subdivisions.data || []).find(s => s.id === d.reference_id)?.name || 'Geral'
         }));
 
-    // Build moment options
+    // Build moment options - deduplicate by reference_id
+    const uniqueMomentIds = [...new Set(momentDists.map(d => d.reference_id))];
     const planMoments: { id: string | null; name: string }[] = momentDists.length === 0
       ? [{ id: null, name: 'Geral' }]
-      : momentDists.map(d => ({
-          id: d.reference_id,
-          name: (moments.data || []).find(m => m.id === d.reference_id)?.name || 'Geral'
+      : uniqueMomentIds.map(refId => ({
+          id: refId,
+          name: (moments.data || []).find(m => m.id === refId)?.name || 'Geral'
         }));
 
-    // Build funnel stage options
+    // Build funnel stage options - deduplicate by reference_id
+    const uniqueFunnelIds = [...new Set(funnelDists.map(d => d.reference_id))];
     const planFunnelStages: { id: string | null; name: string }[] = funnelDists.length === 0
       ? [{ id: null, name: 'Geral' }]
-      : funnelDists.map(d => ({
-          id: d.reference_id,
-          name: (funnelStages.data || []).find(f => f.id === d.reference_id)?.name || 'Geral'
+      : uniqueFunnelIds.map(refId => ({
+          id: refId,
+          name: (funnelStages.data || []).find(f => f.id === refId)?.name || 'Geral'
         }));
 
     return { planSubdivisions, planMoments, planFunnelStages };
