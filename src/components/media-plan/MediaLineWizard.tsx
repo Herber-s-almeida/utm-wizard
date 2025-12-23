@@ -201,7 +201,10 @@ export function MediaLineWizard({
         return !!selectedTarget;
       case 'details':
         const validDates = lineDetails.start_date && lineDetails.end_date && lineDetails.end_date > lineDetails.start_date;
-        return !!lineDetails.budget && validDates;
+        // Validate that dates are within plan dates
+        const startWithinPlan = !plan.start_date || lineDetails.start_date >= plan.start_date;
+        const endWithinPlan = !plan.end_date || lineDetails.end_date <= plan.end_date;
+        return !!lineDetails.budget && validDates && startWithinPlan && endWithinPlan;
       case 'creatives':
         return true; // Always can proceed from creatives (optional step)
       default:
@@ -619,9 +622,13 @@ export function MediaLineWizard({
                         id="start_date"
                         type="date"
                         value={lineDetails.start_date}
-                        max={lineDetails.end_date || undefined}
+                        min={plan.start_date || undefined}
+                        max={lineDetails.end_date || plan.end_date || undefined}
                         onChange={(e) => setLineDetails(prev => ({ ...prev, start_date: e.target.value }))}
                       />
+                      {plan.start_date && lineDetails.start_date && lineDetails.start_date < plan.start_date && (
+                        <p className="text-xs text-destructive">A data de início não pode ser anterior à data do plano ({new Date(plan.start_date).toLocaleDateString('pt-BR')})</p>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
@@ -630,11 +637,15 @@ export function MediaLineWizard({
                         id="end_date"
                         type="date"
                         value={lineDetails.end_date}
-                        min={lineDetails.start_date || undefined}
+                        min={lineDetails.start_date || plan.start_date || undefined}
+                        max={plan.end_date || undefined}
                         onChange={(e) => setLineDetails(prev => ({ ...prev, end_date: e.target.value }))}
                       />
                       {lineDetails.start_date && lineDetails.end_date && lineDetails.end_date <= lineDetails.start_date && (
                         <p className="text-xs text-destructive">A data de fim deve ser posterior à data de início</p>
+                      )}
+                      {plan.end_date && lineDetails.end_date && lineDetails.end_date > plan.end_date && (
+                        <p className="text-xs text-destructive">A data de fim não pode ser posterior à data do plano ({new Date(plan.end_date).toLocaleDateString('pt-BR')})</p>
                       )}
                     </div>
                   </div>
