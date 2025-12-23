@@ -366,6 +366,9 @@ export function HierarchicalMediaTable({
       return nodes;
     }
 
+    // Get IDs from distributions
+    const subdivisionRefIds = subdivisionDists.map(d => d.reference_id);
+    
     // Process each subdivision distribution
     for (const subDist of subdivisionDists) {
       const subRefId = subDist.reference_id;
@@ -469,6 +472,35 @@ export function HierarchicalMediaTable({
         subdivision: { id: subRefId, distId: subDist.id, name: subName, planned: subDist.amount, percentage: subDist.percentage },
         subdivisionAllocated: subAllocated,
         moments: momentNodes,
+      });
+    }
+
+    // Find "orphan" lines that don't belong to any subdivision in the distributions
+    const orphanLines = lines.filter(l => {
+      // If line has no subdivision_id, check if there's a distribution with reference_id = null
+      if (!l.subdivision_id) {
+        return !subdivisionRefIds.includes(null);
+      }
+      // If line has a subdivision_id, check if it's in the distributions
+      return !subdivisionRefIds.includes(l.subdivision_id);
+    });
+
+    // Add orphan lines under a "Sem Classificação" node if any exist
+    if (orphanLines.length > 0) {
+      const orphanAllocated = orphanLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+      
+      nodes.push({
+        subdivision: { id: 'orphan', distId: 'orphan', name: 'Sem Classificação', planned: 0, percentage: 0 },
+        subdivisionAllocated: orphanAllocated,
+        moments: [{
+          moment: { id: null, distId: 'orphan', name: 'Geral', planned: 0, percentage: 100 },
+          momentAllocated: orphanAllocated,
+          funnelStages: [{
+            funnelStage: { id: null, distId: 'orphan', name: 'Geral', planned: 0, percentage: 100 },
+            funnelStageAllocated: orphanAllocated,
+            lines: orphanLines,
+          }],
+        }],
       });
     }
 
