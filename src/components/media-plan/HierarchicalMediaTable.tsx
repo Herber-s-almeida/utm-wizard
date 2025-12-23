@@ -447,6 +447,20 @@ export function HierarchicalMediaTable({
     return found ? Number(found.amount) || 0 : 0;
   };
 
+  // Check if a month is within the line's active period
+  const isMonthEditableForLine = (line: MediaLine, monthDate: Date): boolean => {
+    const lineStart = line.start_date ? parseISO(line.start_date) : null;
+    const lineEnd = line.end_date ? parseISO(line.end_date) : null;
+    
+    if (!lineStart || !lineEnd) return false;
+    
+    const monthStart = startOfMonth(monthDate);
+    const monthEnd = endOfMonth(monthDate);
+    
+    // Check if there's any overlap between line period and month
+    return lineStart <= monthEnd && lineEnd >= monthStart;
+  };
+
   // Format month header
   const formatMonthHeader = (date: Date): string => {
     return format(date, 'MMM/yy', { locale: ptBR });
@@ -536,8 +550,46 @@ export function HierarchicalMediaTable({
     if (editingField === 'budget') {
       updates.budget = parseFloat(editValue) || 0;
     } else if (editingField === 'start_date') {
+      // Validate: start_date >= plan.start_date
+      if (plan.start_date && editValue < plan.start_date) {
+        toast({
+          title: "Data inválida",
+          description: `A data de início da linha não pode ser anterior à data de início do plano (${formatDate(plan.start_date)}).`,
+          variant: "destructive",
+        });
+        return;
+      }
+      // Also validate: start_date <= line's end_date if end_date exists
+      const currentLine = lines.find(l => l.id === editingLineId);
+      if (currentLine?.end_date && editValue > currentLine.end_date) {
+        toast({
+          title: "Data inválida",
+          description: "A data de início não pode ser posterior à data de fim da linha.",
+          variant: "destructive",
+        });
+        return;
+      }
       updates.start_date = editValue;
     } else if (editingField === 'end_date') {
+      // Validate: end_date <= plan.end_date
+      if (plan.end_date && editValue > plan.end_date) {
+        toast({
+          title: "Data inválida",
+          description: `A data de fim da linha não pode ser posterior à data de fim do plano (${formatDate(plan.end_date)}).`,
+          variant: "destructive",
+        });
+        return;
+      }
+      // Also validate: end_date >= line's start_date if start_date exists
+      const currentLine = lines.find(l => l.id === editingLineId);
+      if (currentLine?.start_date && editValue < currentLine.start_date) {
+        toast({
+          title: "Data inválida",
+          description: "A data de fim não pode ser anterior à data de início da linha.",
+          variant: "destructive",
+        });
+        return;
+      }
       updates.end_date = editValue;
     } else if (editingField === 'line_code') {
       // Validate uniqueness
@@ -570,14 +622,18 @@ export function HierarchicalMediaTable({
   // Month Budget Cell Component for editing monthly budgets
   const MonthBudgetCell = ({
     lineId,
+    line,
     month,
     value,
     onUpdate,
+    isEditable,
   }: {
     lineId: string;
+    line: MediaLine;
     month: Date;
     value: number;
     onUpdate: () => void;
+    isEditable: boolean;
   }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editVal, setEditVal] = useState(String(value));
@@ -634,6 +690,15 @@ export function HierarchicalMediaTable({
       const sanitized = rawValue.replace(/[^\d.,]/g, '').replace(',', '.');
       setEditVal(sanitized);
     };
+
+    // If not editable, show disabled cell with gray background
+    if (!isEditable) {
+      return (
+        <div className="w-[90px] p-2 border-r shrink-0 bg-muted/50 text-xs text-muted-foreground">
+          <span>{value > 0 ? formatCurrency(value) : '-'}</span>
+        </div>
+      );
+    }
 
     if (isEditing) {
       return (
@@ -1320,9 +1385,11 @@ export function HierarchicalMediaTable({
                                       <MonthBudgetCell
                                         key={idx}
                                         lineId={line.id}
+                                        line={line}
                                         month={month}
                                         value={getMonthBudget(line.id, month)}
                                         onUpdate={onUpdateMonthlyBudgets}
+                                        isEditable={isMonthEditableForLine(line, month)}
                                       />
                                     ))}
                                     
