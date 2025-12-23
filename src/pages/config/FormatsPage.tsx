@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Layers, Type, ImageIcon, FileText } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Layers, Type, ImageIcon, FileText, Pencil } from 'lucide-react';
 import { useFormatsHierarchy, useFormats, FormatWithHierarchy, FormatCreativeType, CreativeTypeSpecification } from '@/hooks/useFormatsHierarchy';
 import { FormatWizardDialog } from '@/components/config/FormatWizardDialog';
 import {
@@ -25,6 +25,7 @@ export default function FormatsPage() {
   
   // Wizard dialog state
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [editingFormat, setEditingFormat] = useState<FormatWithHierarchy | null>(null);
   
   // Delete states
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -57,6 +58,12 @@ export default function FormatsPage() {
   };
 
   const handleNewFormat = () => {
+    setEditingFormat(null);
+    setWizardOpen(true);
+  };
+
+  const handleEditFormat = (format: FormatWithHierarchy) => {
+    setEditingFormat(format);
     setWizardOpen(true);
   };
 
@@ -108,6 +115,7 @@ export default function FormatsPage() {
                 format={format}
                 isOpen={openFormats[format.id]}
                 onToggle={() => toggleFormat(format.id)}
+                onEdit={() => handleEditFormat(format)}
                 onDelete={() => setDeleteTarget({ id: format.id, name: format.name })}
                 openCreativeTypes={openCreativeTypes}
                 onToggleCreativeType={toggleCreativeType}
@@ -158,6 +166,7 @@ interface FormatCardProps {
   format: FormatWithHierarchy;
   isOpen: boolean;
   onToggle: () => void;
+  onEdit: () => void;
   onDelete: () => void;
   openCreativeTypes: Record<string, boolean>;
   onToggleCreativeType: (id: string) => void;
@@ -173,6 +182,7 @@ function FormatCard({
   format,
   isOpen,
   onToggle,
+  onEdit,
   onDelete,
   openCreativeTypes,
   onToggleCreativeType,
@@ -212,14 +222,23 @@ function FormatCard({
             </div>
             <div className="flex items-center gap-1">
               {!format.is_system && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={onDelete}
-                  className="text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={onEdit}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={onDelete}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
               )}
             </div>
           </div>

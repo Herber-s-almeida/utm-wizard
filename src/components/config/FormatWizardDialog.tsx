@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Plus, X, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { useFormats, useFileExtensions } from '@/hooks/useFormatsHierarchy';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCreativeTypes } from '@/hooks/useCreativeTypes';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -83,6 +84,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
   const formats = useFormats();
   const creativeTypes = useCreativeTypes();
   const fileExtensions = useFileExtensions();
+  const queryClient = useQueryClient();
   
   // Created IDs for later use
   const [createdFormatId, setCreatedFormatId] = useState<string | null>(null);
@@ -405,6 +407,10 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
           user_id: userId,
         });
       }
+      
+      // Invalidate queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ['formats'] });
+      queryClient.invalidateQueries({ queryKey: ['formats_hierarchy'] });
       
       toast.success('Formato criado com sucesso!');
       onComplete?.();
