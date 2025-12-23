@@ -306,6 +306,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
           width: dim.width,
           height: dim.height,
           unit: dim.unit,
+          description: dim.description,
           user_id: userId,
         });
       }

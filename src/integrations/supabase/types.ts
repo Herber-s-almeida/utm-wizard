@@ -878,6 +878,7 @@ export type Database = {
       specification_dimensions: {
         Row: {
           created_at: string
+          description: string | null
           height: number
           id: string
           specification_id: string
@@ -888,6 +889,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           height: number
           id?: string
           specification_id: string
@@ -898,6 +900,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           height?: number
           id?: string
           specification_id?: string
