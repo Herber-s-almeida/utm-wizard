@@ -50,8 +50,9 @@ export function BudgetAllocationTable({
 
   const totalPercentage = items.reduce((sum, item) => sum + item.percentage, 0);
   const isValid = Math.abs(totalPercentage - 100) < 0.01;
+  // Filter out "Geral" (system items with name "Geral") and already selected items
   const availableItems = existingItems.filter(
-    e => !items.find(i => i.id === e.id)
+    e => !items.find(i => i.id === e.id) && e.name.toLowerCase() !== 'geral'
   );
   const canAddMore = maxItems === undefined || items.length < maxItems;
 
