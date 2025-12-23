@@ -21,7 +21,7 @@ import FunnelStagesPage from "./pages/config/FunnelStagesPage";
 import MediumsPage from "./pages/config/MediumsPage";
 import VehiclesPage from "./pages/config/VehiclesPage";
 import TargetsPage from "./pages/config/TargetsPage";
-import CreativesPage from "./pages/config/CreativesPage";
+import FormatsPage from "./pages/config/FormatsPage";
 import StatusesPage from "./pages/config/StatusesPage";
 
 const queryClient = new QueryClient();
@@ -48,7 +48,7 @@ function App() {
             <Route path="/config/mediums" element={<ProtectedRoute><MediumsPage /></ProtectedRoute>} />
             <Route path="/config/vehicles" element={<ProtectedRoute><VehiclesPage /></ProtectedRoute>} />
             <Route path="/config/targets" element={<ProtectedRoute><TargetsPage /></ProtectedRoute>} />
-            <Route path="/config/creatives" element={<ProtectedRoute><CreativesPage /></ProtectedRoute>} />
+            <Route path="/config/formats" element={<ProtectedRoute><FormatsPage /></ProtectedRoute>} />
             <Route path="/config/statuses" element={<ProtectedRoute><StatusesPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

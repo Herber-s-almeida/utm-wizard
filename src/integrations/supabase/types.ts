@@ -82,6 +82,7 @@ export type Database = {
       creative_templates: {
         Row: {
           created_at: string
+          creative_type_id: string | null
           dimension: string | null
           dimensions: Json | null
           duration: string | null
@@ -95,6 +96,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          creative_type_id?: string | null
           dimension?: string | null
           dimensions?: Json | null
           duration?: string | null
@@ -108,6 +110,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          creative_type_id?: string | null
           dimension?: string | null
           dimensions?: Json | null
           duration?: string | null
@@ -119,7 +122,74 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "creative_templates_creative_type_id_fkey"
+            columns: ["creative_type_id"]
+            isOneToOne: false
+            referencedRelation: "creative_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creative_types: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
         Relationships: []
+      }
+      format_specifications: {
+        Row: {
+          created_at: string
+          description: string | null
+          format_id: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          format_id: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          format_id?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "format_specifications_format_id_fkey"
+            columns: ["format_id"]
+            isOneToOne: false
+            referencedRelation: "creative_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       funnel_stages: {
         Row: {

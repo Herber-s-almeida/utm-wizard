@@ -37,7 +37,7 @@ import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
 import { VehicleDialog } from '@/components/config/VehicleDialog';
 import { ChannelDialog } from '@/components/config/ChannelDialog';
 import { TargetDialog } from '@/components/config/TargetDialog';
-import { CreativeDialog } from '@/components/config/CreativeDialog';
+import { FormatDialog } from '@/components/config/FormatDialog';
 import { SegmentDialog } from '@/components/config/SegmentDialog';
 
 export function AppSidebar() {
@@ -661,17 +661,17 @@ export function AppSidebar() {
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Criativos */}
+          {/* Formatos e Especificações */}
           <Collapsible open={openSections.creatives} onOpenChange={() => toggleSection('creatives')}>
             <div className="group flex items-center min-w-0">
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs min-w-0 overflow-hidden">
                   {openSections.creatives ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
                   <Image className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">Criativos</span>
+                  <span className="truncate">Formatos e Especificações</span>
                 </Button>
               </CollapsibleTrigger>
-              <Link to="/config/creatives" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100">
+              <Link to="/config/formats" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100">
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
@@ -699,7 +699,7 @@ export function AppSidebar() {
                 Novo
               </Button>
               {(creativeTemplates.data?.length || 0) > MAX_ITEMS && (
-                <Link to="/config/creatives">
+                <Link to="/config/formats">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
                     ... ver todos ({creativeTemplates.data?.length})
                   </Button>
@@ -910,19 +910,13 @@ export function AppSidebar() {
         mode="create"
       />
 
-      <CreativeDialog
+      <FormatDialog
         open={creativeDialogOpen}
         onOpenChange={setCreativeDialogOpen}
         onSave={(data) => {
           creativeTemplates.create.mutate({
             name: data.name,
-            format: data.format,
-            dimension: data.dimensions.length > 0 
-              ? data.dimensions.map(d => `${d.width}x${d.height}${d.unit}`).join(', ')
-              : null,
-            duration: data.duration || null,
-            message: data.message || null,
-            objective: data.objective || null
+            format: 'custom',
           });
         }}
         existingNames={getCreativeNames()}
