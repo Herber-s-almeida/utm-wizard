@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, X, ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
 import { useFormats, useFileExtensions } from '@/hooks/useFormatsHierarchy';
 import { useCreativeTypes } from '@/hooks/useCreativeTypes';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,7 @@ interface Dimension {
   height: number;
   unit: string;
   description: string;
+  observation: string;
 }
 
 export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWizardDialogProps) {
@@ -58,6 +59,11 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
   const [newDimHeight, setNewDimHeight] = useState('');
   const [newDimUnit, setNewDimUnit] = useState('px');
   const [newDimDescription, setNewDimDescription] = useState('');
+  const [newDimObservation, setNewDimObservation] = useState('');
+  
+  // Edit mode states
+  const [editingCopyIndex, setEditingCopyIndex] = useState<number | null>(null);
+  const [editingDimIndex, setEditingDimIndex] = useState<number | null>(null);
   
   // Extensions
   const [selectedExtensions, setSelectedExtensions] = useState<string[]>([]);
@@ -99,6 +105,9 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
       setNewDimHeight('');
       setNewDimUnit('px');
       setNewDimDescription('');
+      setNewDimObservation('');
+      setEditingCopyIndex(null);
+      setEditingDimIndex(null);
       setSelectedExtensions([]);
       setNewExtension('');
       setHasDuration(false);
@@ -122,11 +131,40 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
       toast.error('Nome do campo é obrigatório');
       return;
     }
-    setCopyFields([...copyFields, {
-      name: newCopyName.trim(),
-      maxCharacters: newCopyMaxChars ? parseInt(newCopyMaxChars) : null,
-      observation: newCopyObservation.trim()
-    }]);
+    
+    if (editingCopyIndex !== null) {
+      // Update existing
+      const updated = [...copyFields];
+      updated[editingCopyIndex] = {
+        name: newCopyName.trim(),
+        maxCharacters: newCopyMaxChars ? parseInt(newCopyMaxChars) : null,
+        observation: newCopyObservation.trim()
+      };
+      setCopyFields(updated);
+      setEditingCopyIndex(null);
+    } else {
+      // Add new
+      setCopyFields([...copyFields, {
+        name: newCopyName.trim(),
+        maxCharacters: newCopyMaxChars ? parseInt(newCopyMaxChars) : null,
+        observation: newCopyObservation.trim()
+      }]);
+    }
+    setNewCopyName('');
+    setNewCopyMaxChars('');
+    setNewCopyObservation('');
+  };
+
+  const handleEditCopyField = (index: number) => {
+    const field = copyFields[index];
+    setNewCopyName(field.name);
+    setNewCopyMaxChars(field.maxCharacters?.toString() || '');
+    setNewCopyObservation(field.observation);
+    setEditingCopyIndex(index);
+  };
+
+  const handleCancelEditCopy = () => {
+    setEditingCopyIndex(null);
     setNewCopyName('');
     setNewCopyMaxChars('');
     setNewCopyObservation('');
@@ -134,6 +172,9 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
 
   const handleRemoveCopyField = (index: number) => {
     setCopyFields(copyFields.filter((_, i) => i !== index));
+    if (editingCopyIndex === index) {
+      handleCancelEditCopy();
+    }
   };
 
   const handleAddDimension = () => {
@@ -147,18 +188,62 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
       toast.error('Descrição da dimensão é obrigatória');
       return;
     }
-    if (dimensions.length >= 10) {
+    if (editingDimIndex === null && dimensions.length >= 10) {
       toast.error('Máximo de 10 dimensões');
       return;
     }
-    setDimensions([...dimensions, { width, height, unit: newDimUnit, description: newDimDescription.trim() }]);
+    
+    if (editingDimIndex !== null) {
+      // Update existing
+      const updated = [...dimensions];
+      updated[editingDimIndex] = { 
+        width, 
+        height, 
+        unit: newDimUnit, 
+        description: newDimDescription.trim(),
+        observation: newDimObservation.trim()
+      };
+      setDimensions(updated);
+      setEditingDimIndex(null);
+    } else {
+      // Add new
+      setDimensions([...dimensions, { 
+        width, 
+        height, 
+        unit: newDimUnit, 
+        description: newDimDescription.trim(),
+        observation: newDimObservation.trim()
+      }]);
+    }
     setNewDimWidth('');
     setNewDimHeight('');
     setNewDimDescription('');
+    setNewDimObservation('');
+  };
+
+  const handleEditDimension = (index: number) => {
+    const dim = dimensions[index];
+    setNewDimWidth(dim.width.toString());
+    setNewDimHeight(dim.height.toString());
+    setNewDimUnit(dim.unit);
+    setNewDimDescription(dim.description);
+    setNewDimObservation(dim.observation || '');
+    setEditingDimIndex(index);
+  };
+
+  const handleCancelEditDim = () => {
+    setEditingDimIndex(null);
+    setNewDimWidth('');
+    setNewDimHeight('');
+    setNewDimDescription('');
+    setNewDimObservation('');
   };
 
   const handleRemoveDimension = (index: number) => {
     setDimensions(dimensions.filter((_, i) => i !== index));
+    if (editingDimIndex === index) {
+      handleCancelEditDim();
+    }
   };
 
   const handleAddExtension = async () => {
@@ -449,7 +534,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Copy (campos de texto)</Label>
                 
-                {copyFields.length > 0 && (
+                {copyFields.length > 0 && editingCopyIndex === null && (
                   <div className="space-y-2">
                     {copyFields.map((field, index) => (
                       <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
@@ -457,6 +542,9 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
                           {field.name}
                           {field.maxCharacters && <span className="text-muted-foreground ml-1">({field.maxCharacters} chars)</span>}
                         </span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEditCopyField(index)}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveCopyField(index)}>
                           <X className="h-3 w-3" />
                         </Button>
@@ -476,7 +564,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
                       type="number"
                       value={newCopyMaxChars}
                       onChange={(e) => setNewCopyMaxChars(e.target.value)}
-                      placeholder="Máx. caracteres"
+                      placeholder="Máx. caracter"
                       className="w-32"
                     />
                     <Textarea
@@ -487,9 +575,16 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
                       maxLength={500}
                     />
                   </div>
-                  <Button type="button" variant="outline" size="sm" onClick={handleAddCopyField}>
-                    <Plus className="h-3 w-3 mr-1" /> Adicionar Copy
-                  </Button>
+                  <div className="flex gap-2">
+                    {editingCopyIndex !== null && (
+                      <Button type="button" variant="ghost" size="sm" onClick={handleCancelEditCopy}>
+                        Cancelar
+                      </Button>
+                    )}
+                    <Button type="button" variant="outline" size="sm" onClick={handleAddCopyField}>
+                      <Plus className="h-3 w-3 mr-1" /> {editingCopyIndex !== null ? 'Salvar Copy' : 'Adicionar Copy'}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -498,7 +593,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
                 <Label className="text-sm font-medium">Dimensões (imagens/vídeos)</Label>
                 <p className="text-xs text-muted-foreground">Máximo de 10 dimensões</p>
                 
-                {dimensions.length > 0 && (
+                {dimensions.length > 0 && editingDimIndex === null && (
                   <div className="space-y-2">
                     {dimensions.map((dim, index) => (
                       <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
@@ -506,6 +601,9 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
                           <span className="font-medium">{dim.description}</span>
                           <span className="text-muted-foreground ml-2">({dim.width} × {dim.height} {dim.unit})</span>
                         </span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEditDimension(index)}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveDimension(index)}>
                           <X className="h-3 w-3" />
                         </Button>
@@ -552,16 +650,30 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleAddDimension}
-                    disabled={dimensions.length >= 10}
-                    className="w-full"
-                  >
-                    <Plus className="h-3 w-3 mr-1" /> Adicionar Dimensão
-                  </Button>
+                  <Textarea
+                    value={newDimObservation}
+                    onChange={(e) => setNewDimObservation(e.target.value.slice(0, 500))}
+                    placeholder="Observações (opcional)"
+                    className="min-h-[60px]"
+                    maxLength={500}
+                  />
+                  <div className="flex gap-2">
+                    {editingDimIndex !== null && (
+                      <Button type="button" variant="ghost" size="sm" onClick={handleCancelEditDim}>
+                        Cancelar
+                      </Button>
+                    )}
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleAddDimension}
+                      disabled={editingDimIndex === null && dimensions.length >= 10}
+                      className="w-full"
+                    >
+                      <Plus className="h-3 w-3 mr-1" /> {editingDimIndex !== null ? 'Salvar Dimensão' : 'Adicionar Dimensão'}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
