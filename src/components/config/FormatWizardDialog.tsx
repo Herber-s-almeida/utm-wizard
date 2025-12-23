@@ -31,6 +31,7 @@ interface Dimension {
   width: number;
   height: number;
   unit: string;
+  description: string;
 }
 
 export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWizardDialogProps) {
@@ -56,6 +57,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
   const [newDimWidth, setNewDimWidth] = useState('');
   const [newDimHeight, setNewDimHeight] = useState('');
   const [newDimUnit, setNewDimUnit] = useState('px');
+  const [newDimDescription, setNewDimDescription] = useState('');
   
   // Extensions
   const [selectedExtensions, setSelectedExtensions] = useState<string[]>([]);
@@ -96,6 +98,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
       setNewDimWidth('');
       setNewDimHeight('');
       setNewDimUnit('px');
+      setNewDimDescription('');
       setSelectedExtensions([]);
       setNewExtension('');
       setHasDuration(false);
@@ -140,13 +143,18 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
       toast.error('Largura e altura devem ser números positivos');
       return;
     }
+    if (!newDimDescription.trim()) {
+      toast.error('Descrição da dimensão é obrigatória');
+      return;
+    }
     if (dimensions.length >= 10) {
       toast.error('Máximo de 10 dimensões');
       return;
     }
-    setDimensions([...dimensions, { width, height, unit: newDimUnit }]);
+    setDimensions([...dimensions, { width, height, unit: newDimUnit, description: newDimDescription.trim() }]);
     setNewDimWidth('');
     setNewDimHeight('');
+    setNewDimDescription('');
   };
 
   const handleRemoveDimension = (index: number) => {
@@ -486,61 +494,72 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
 
               {/* Dimensions */}
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Dimensões</Label>
+                <Label className="text-sm font-medium">Dimensões (imagens/vídeos)</Label>
                 <p className="text-xs text-muted-foreground">Máximo de 10 dimensões</p>
                 
                 {dimensions.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="space-y-2">
                     {dimensions.map((dim, index) => (
-                      <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                        {dim.width} × {dim.height} {dim.unit}
-                        <button onClick={() => handleRemoveDimension(index)} className="ml-1 hover:text-destructive">
+                      <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                        <span className="text-sm flex-1">
+                          <span className="font-medium">{dim.description}</span>
+                          <span className="text-muted-foreground ml-2">({dim.width} × {dim.height} {dim.unit})</span>
+                        </span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveDimension(index)}>
                           <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
+                        </Button>
+                      </div>
                     ))}
                   </div>
                 )}
 
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1">
-                    <Label className="text-xs text-muted-foreground">Largura</Label>
-                    <Input
-                      type="number"
-                      value={newDimWidth}
-                      onChange={(e) => setNewDimWidth(e.target.value)}
-                      placeholder="Largura"
-                    />
+                <div className="space-y-2 p-3 border rounded-md">
+                  <Input
+                    value={newDimDescription}
+                    onChange={(e) => setNewDimDescription(e.target.value)}
+                    placeholder="Descrição (ex: Logo, Banner, Thumbnail)"
+                  />
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <Label className="text-xs text-muted-foreground">Largura</Label>
+                      <Input
+                        type="number"
+                        value={newDimWidth}
+                        onChange={(e) => setNewDimWidth(e.target.value)}
+                        placeholder="Largura"
+                      />
+                    </div>
+                    <span className="pb-2">×</span>
+                    <div className="flex-1">
+                      <Label className="text-xs text-muted-foreground">Altura</Label>
+                      <Input
+                        type="number"
+                        value={newDimHeight}
+                        onChange={(e) => setNewDimHeight(e.target.value)}
+                        placeholder="Altura"
+                      />
+                    </div>
+                    <Select value={newDimUnit} onValueChange={setNewDimUnit}>
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="px">px</SelectItem>
+                        <SelectItem value="cm">cm</SelectItem>
+                        <SelectItem value="mm">mm</SelectItem>
+                        <SelectItem value="m">m</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <span className="pb-2">×</span>
-                  <div className="flex-1">
-                    <Label className="text-xs text-muted-foreground">Altura</Label>
-                    <Input
-                      type="number"
-                      value={newDimHeight}
-                      onChange={(e) => setNewDimHeight(e.target.value)}
-                      placeholder="Altura"
-                    />
-                  </div>
-                  <Select value={newDimUnit} onValueChange={setNewDimUnit}>
-                    <SelectTrigger className="w-20">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="px">px</SelectItem>
-                      <SelectItem value="cm">cm</SelectItem>
-                      <SelectItem value="mm">mm</SelectItem>
-                      <SelectItem value="m">m</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <Button 
                     type="button" 
                     variant="outline" 
-                    size="icon" 
+                    size="sm" 
                     onClick={handleAddDimension}
                     disabled={dimensions.length >= 10}
+                    className="w-full"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-3 w-3 mr-1" /> Adicionar Dimensão
                   </Button>
                 </div>
               </div>
