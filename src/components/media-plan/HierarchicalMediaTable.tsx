@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search } from 'lucide-react';
+import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -836,16 +836,37 @@ export function HierarchicalMediaTable({
     description?: string;
   }) => {
     const isOverBudget = allocated > planned;
+    const overBudgetAmount = allocated - planned;
     
     return (
       <div className="border rounded-lg p-2 h-full">
         <div className="font-medium text-sm">{label}</div>
         <div className="text-lg font-bold mt-1">{formatCurrency(planned)}</div>
         <div className={cn(
-          "text-sm font-medium mt-1",
+          "text-sm font-medium mt-1 flex items-center gap-1",
           isOverBudget ? "text-destructive" : "text-primary"
         )}>
-          {formatCurrency(allocated)} <span className="text-xs font-normal">alocado</span>
+          <span>{formatCurrency(allocated)}</span>
+          <span className="text-xs font-normal">alocado</span>
+          {isOverBudget && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  type="button" 
+                  className="inline-flex items-center justify-center focus:outline-none"
+                  aria-label="Orçamento excedido"
+                >
+                  <AlertTriangle className="w-4 h-4 text-destructive animate-pulse" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <p className="text-sm font-medium">Orçamento excedido!</p>
+                <p className="text-xs text-muted-foreground">
+                  O valor alocado está {formatCurrency(overBudgetAmount)} acima do planejado.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
         {percentageLabel && (
           <div className="text-xs text-muted-foreground mt-1">
