@@ -1121,9 +1121,9 @@ export function AppSidebar() {
       <FormatDialog
         open={creativeDialogOpen}
         onOpenChange={setCreativeDialogOpen}
-        onSave={(data) => {
+        onSave={(name) => {
           creativeTemplates.create.mutate({
-            name: data.name,
+            name: name,
             format: 'custom',
           });
         }}
