@@ -55,6 +55,8 @@ export interface SpecificationDimension {
   width: number;
   height: number;
   unit: string;
+  description: string | null;
+  observation: string | null;
   user_id: string;
 }
 
@@ -588,8 +590,11 @@ export function useFormatsHierarchy() {
 
       const ctIds = creativeTypes?.map(ct => ct.id) || [];
       
-      // Get all specifications
+      // Get all specifications with copy_fields and dimensions
       let specifications: CreativeTypeSpecification[] = [];
+      let copyFields: SpecificationCopyField[] = [];
+      let dimensions: SpecificationDimension[] = [];
+      
       if (ctIds.length > 0) {
         const { data: specs, error: specsError } = await supabase
           .from('creative_type_specifications')
@@ -598,16 +603,44 @@ export function useFormatsHierarchy() {
         
         if (specsError) throw specsError;
         specifications = specs || [];
+        
+        const specIds = specifications.map(s => s.id);
+        
+        if (specIds.length > 0) {
+          // Get copy fields
+          const { data: copyData, error: copyError } = await supabase
+            .from('specification_copy_fields')
+            .select('*')
+            .in('specification_id', specIds);
+          
+          if (copyError) throw copyError;
+          copyFields = copyData || [];
+          
+          // Get dimensions
+          const { data: dimData, error: dimError } = await supabase
+            .from('specification_dimensions')
+            .select('*')
+            .in('specification_id', specIds);
+          
+          if (dimError) throw dimError;
+          dimensions = dimData || [];
+        }
       }
 
-      // Build hierarchy
+      // Build hierarchy with copy_fields and dimensions
       const result = formats?.map(format => ({
         ...format,
         creative_types: creativeTypes
           ?.filter(ct => ct.format_id === format.id)
           .map(ct => ({
             ...ct,
-            specifications: specifications.filter(s => s.creative_type_id === ct.id),
+            specifications: specifications
+              .filter(s => s.creative_type_id === ct.id)
+              .map(spec => ({
+                ...spec,
+                copy_fields: copyFields.filter(cf => cf.specification_id === spec.id),
+                dimensions: dimensions.filter(d => d.specification_id === spec.id),
+              })),
           })) || [],
       })) as FormatWithHierarchy[];
 
