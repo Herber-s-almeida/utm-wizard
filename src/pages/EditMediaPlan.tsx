@@ -35,8 +35,7 @@ const WIZARD_STEPS = [
   { id: 2, title: 'Subdivisão', description: 'Opcional' },
   { id: 3, title: 'Momentos', description: 'Opcional' },
   { id: 4, title: 'Funil', description: 'Fases' },
-  { id: 5, title: 'Temporal', description: 'Distribuição' },
-  { id: 6, title: 'Salvar', description: 'Confirmar' },
+  { id: 5, title: 'Salvar', description: 'Confirmar' },
 ];
 
 const MAX_SUBDIVISIONS = 12;
@@ -246,15 +245,13 @@ export default function EditMediaPlan() {
       }
       case 4:
         return true;
-      case 5:
-        return true;
       default:
         return true;
     }
   };
 
   const handleNext = () => {
-    if (state.step < 6) {
+    if (state.step < 5) {
       setEditingSection(null);
       goToStep(state.step + 1);
     }
@@ -942,41 +939,8 @@ export default function EditMediaPlan() {
           </AnimatePresence>
         )}
 
-        {/* Step 5: Temporal Distribution */}
-        {state.step >= 5 && (
-          <AnimatePresence mode="wait">
-            {state.step === 5 || editingSection === 'temporal' ? (
-              <motion.div
-                key="temporal-form"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <TemporalEqualizer
-                  startDate={state.planData.start_date}
-                  endDate={state.planData.end_date}
-                  totalBudget={state.planData.total_budget}
-                  granularity={state.temporalGranularity}
-                  periods={temporalPeriods}
-                  onGranularityChange={(g) => setTemporalGranularity(g)}
-                  onPeriodsChange={setTemporalPeriods}
-                />
-
-                {editingSection === 'temporal' && (
-                  <div className="flex justify-end pt-4">
-                    <Button onClick={() => setEditingSection(null)}>
-                      Salvar alterações
-                    </Button>
-                  </div>
-                )}
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        )}
-
-        {/* Step 6: Confirm */}
-        {state.step === 6 && (
+        {/* Step 5: Confirm (was Step 6) */}
+        {state.step === 5 && (
           <motion.div
             key="confirm-form"
             initial={{ opacity: 0, y: 20 }}
@@ -1052,7 +1016,7 @@ export default function EditMediaPlan() {
             Voltar
           </Button>
 
-          {state.step < 6 ? (
+          {state.step < 5 ? (
             <Button
               onClick={handleNext}
               disabled={!canProceed()}
