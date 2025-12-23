@@ -68,6 +68,33 @@ interface LineFilters {
   target: string;
 }
 
+type TextFilterColumn = 'status' | 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target';
+type TextFilterOperator = 'contains' | 'equals' | 'not_contains' | 'regex';
+
+interface TextFilter {
+  column: TextFilterColumn | '';
+  operator: TextFilterOperator;
+  value: string;
+}
+
+const TEXT_FILTER_COLUMNS: { key: TextFilterColumn; label: string }[] = [
+  { key: 'status', label: 'Status' },
+  { key: 'subdivision', label: 'Subdivisão' },
+  { key: 'moment', label: 'Momento' },
+  { key: 'funnel_stage', label: 'Fase' },
+  { key: 'medium', label: 'Meio' },
+  { key: 'vehicle', label: 'Veículo' },
+  { key: 'channel', label: 'Canal' },
+  { key: 'target', label: 'Segmentação' },
+];
+
+const TEXT_FILTER_OPERATORS: { key: TextFilterOperator; label: string }[] = [
+  { key: 'contains', label: 'Contém' },
+  { key: 'equals', label: 'Igual a' },
+  { key: 'not_contains', label: 'Não Contém' },
+  { key: 'regex', label: 'Corresponde Regex' },
+];
+
 interface BudgetDistribution {
   id: string;
   distribution_type: string;
@@ -192,6 +219,13 @@ export function HierarchicalMediaTable({
   const [columnFilterSearch, setColumnFilterSearch] = useState('');
   const [lineFilterSearch, setLineFilterSearch] = useState('');
 
+  // Text-based advanced filter
+  const [textFilter, setTextFilter] = useState<TextFilter>({
+    column: '',
+    operator: 'contains',
+    value: '',
+  });
+
   const toggleColumn = (key: ToggleableColumn) => {
     setVisibleColumns(prev => ({ ...prev, [key]: !prev[key] }));
   };
@@ -210,7 +244,62 @@ export function HierarchicalMediaTable({
     });
   };
 
+  const clearTextFilter = () => {
+    setTextFilter({ column: '', operator: 'contains', value: '' });
+  };
+
   const activeFiltersCount = Object.values(lineFilters).filter(v => v !== '').length;
+  const isTextFilterActive = textFilter.column !== '' && textFilter.value !== '';
+
+  // Helper to get the name for a column value
+  const getColumnValueName = (line: MediaLine, column: TextFilterColumn): string => {
+    switch (column) {
+      case 'status':
+        return statusesList.find(s => s.id === line.status_id)?.name || '';
+      case 'subdivision':
+        return subdivisionsList.find(s => s.id === line.subdivision_id)?.name || '';
+      case 'moment':
+        return momentsList.find(m => m.id === line.moment_id)?.name || '';
+      case 'funnel_stage':
+        return funnelStagesList.find(f => f.id === line.funnel_stage_id)?.name || '';
+      case 'medium':
+        return mediums.find(m => m.id === line.medium_id)?.name || '';
+      case 'vehicle':
+        return vehicles.find(v => v.id === line.vehicle_id)?.name || '';
+      case 'channel':
+        return channels.find(c => c.id === line.channel_id)?.name || '';
+      case 'target':
+        return targets.find(t => t.id === line.target_id)?.name || '';
+      default:
+        return '';
+    }
+  };
+
+  // Apply text filter
+  const matchesTextFilter = (line: MediaLine): boolean => {
+    if (!textFilter.column || !textFilter.value) return true;
+    
+    const fieldValue = getColumnValueName(line, textFilter.column).toLowerCase();
+    const searchValue = textFilter.value.toLowerCase();
+    
+    switch (textFilter.operator) {
+      case 'contains':
+        return fieldValue.includes(searchValue);
+      case 'equals':
+        return fieldValue === searchValue;
+      case 'not_contains':
+        return !fieldValue.includes(searchValue);
+      case 'regex':
+        try {
+          const regex = new RegExp(textFilter.value, 'i');
+          return regex.test(fieldValue);
+        } catch {
+          return true; // Invalid regex, don't filter
+        }
+      default:
+        return true;
+    }
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -389,9 +478,11 @@ export function HierarchicalMediaTable({
   // Apply line filters to the grouped data
   // Create filtered grouped data
   const filteredGroupedData = useMemo(() => {
-    if (activeFiltersCount === 0) return groupedData;
+    const hasAnyFilter = activeFiltersCount > 0 || isTextFilterActive;
+    if (!hasAnyFilter) return groupedData;
     
     const filterLine = (line: MediaLine): boolean => {
+      // Standard filters
       if (lineFilters.status && line.status_id !== lineFilters.status) return false;
       if (lineFilters.subdivision && line.subdivision_id !== lineFilters.subdivision) return false;
       if (lineFilters.moment && line.moment_id !== lineFilters.moment) return false;
@@ -401,6 +492,9 @@ export function HierarchicalMediaTable({
       if (lineFilters.vehicle && line.vehicle_id !== lineFilters.vehicle) return false;
       if (lineFilters.channel && line.channel_id !== lineFilters.channel) return false;
       if (lineFilters.target && line.target_id !== lineFilters.target) return false;
+      
+      // Text filter
+      if (!matchesTextFilter(line)) return false;
       
       return true;
     };
@@ -415,7 +509,7 @@ export function HierarchicalMediaTable({
         })),
       })),
     }));
-  }, [groupedData, lineFilters, activeFiltersCount]);
+  }, [groupedData, lineFilters, activeFiltersCount, isTextFilterActive, textFilter]);
 
   // Get all filtered lines as a flat array
   const filteredLines = useMemo(() => {
@@ -1198,8 +1292,50 @@ export function HierarchicalMediaTable({
             </PopoverContent>
           </Popover>
 
+          {/* Text-based advanced filter */}
+          <div className="flex items-center gap-2 border-l pl-3 ml-1">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Buscar:</span>
+            <Select 
+              value={textFilter.column} 
+              onValueChange={(v) => setTextFilter(prev => ({ ...prev, column: v as TextFilterColumn | '' }))}
+            >
+              <SelectTrigger className="h-8 w-[130px] text-sm">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {TEXT_FILTER_COLUMNS.map(col => (
+                  <SelectItem key={col.key} value={col.key}>{col.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select 
+              value={textFilter.operator} 
+              onValueChange={(v) => setTextFilter(prev => ({ ...prev, operator: v as TextFilterOperator }))}
+            >
+              <SelectTrigger className="h-8 w-[150px] text-sm">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {TEXT_FILTER_OPERATORS.map(op => (
+                  <SelectItem key={op.key} value={op.key}>{op.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              placeholder="Digite o valor..."
+              value={textFilter.value}
+              onChange={(e) => setTextFilter(prev => ({ ...prev, value: e.target.value }))}
+              className="h-8 w-[180px] text-sm"
+            />
+            {isTextFilterActive && (
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={clearTextFilter}>
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+
           {/* Active filters badges */}
-          {activeFiltersCount > 0 && (
+          {(activeFiltersCount > 0 || isTextFilterActive) && (
             <div className="flex items-center gap-1 flex-wrap">
               {lineFilters.status && (
                 <Badge variant="secondary" className="gap-1">
@@ -1223,6 +1359,12 @@ export function HierarchicalMediaTable({
                 <Badge variant="secondary" className="gap-1">
                   Veículo: {vehicles.find(v => v.id === lineFilters.vehicle)?.name}
                   <X className="w-3 h-3 cursor-pointer" onClick={() => setLineFilters(prev => ({ ...prev, vehicle: '' }))} />
+                </Badge>
+              )}
+              {isTextFilterActive && (
+                <Badge variant="secondary" className="gap-1">
+                  {TEXT_FILTER_COLUMNS.find(c => c.key === textFilter.column)?.label} {TEXT_FILTER_OPERATORS.find(o => o.key === textFilter.operator)?.label.toLowerCase()} "{textFilter.value}"
+                  <X className="w-3 h-3 cursor-pointer" onClick={clearTextFilter} />
                 </Badge>
               )}
             </div>
