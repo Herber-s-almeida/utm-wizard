@@ -628,14 +628,22 @@ export function HierarchicalMediaTable({
       }
     };
 
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const rawValue = e.target.value;
+      // Allow empty, digits, comma and dot for decimal
+      const sanitized = rawValue.replace(/[^\d.,]/g, '').replace(',', '.');
+      setEditVal(sanitized);
+    };
+
     if (isEditing) {
       return (
         <div className="w-[90px] p-1 border-r shrink-0 bg-primary/5">
           <div className="flex items-center gap-0.5">
             <Input
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={editVal}
-              onChange={(e) => setEditVal(e.target.value)}
+              onChange={handleInputChange}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSave();
                 if (e.key === 'Escape') setIsEditing(false);
@@ -687,20 +695,27 @@ export function HierarchicalMediaTable({
   }) => {
     const isEditing = isEditingField(line.id, field);
     
+    const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      let value = e.target.value;
+      // Limit code field to 7 characters
+      if (field === 'line_code' && value.length > 7) return;
+      // For budget fields, allow only numeric input with decimals
+      if (inputType === 'number') {
+        value = value.replace(/[^\d.,]/g, '').replace(',', '.');
+      }
+      setEditValue(value);
+    };
+
     return (
       <div className={cn("p-2 border-r shrink-0 group relative", width)}>
         {isEditing ? (
           <div className="flex items-center gap-1">
             <Input
-              type={inputType}
+              type={inputType === 'number' ? 'text' : inputType}
+              inputMode={inputType === 'number' ? 'decimal' : undefined}
               className="h-6 text-xs px-1 w-full"
               value={editValue}
-              onChange={(e) => {
-                const value = e.target.value;
-                // Limit code field to 7 characters
-                if (field === 'line_code' && value.length > 7) return;
-                setEditValue(value);
-              }}
+              onChange={handleEditChange}
               maxLength={field === 'line_code' ? 7 : undefined}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') saveFieldEdit();
