@@ -78,6 +78,7 @@ export function AppSidebar() {
 
   // Section open states
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    mediaPlans: true,
     draftPlans: false,
     activePlans: true,
     finishedPlans: false,
@@ -364,111 +365,115 @@ export function AppSidebar() {
             </Button>
           </Link>
 
-          {/* Lista de planos */}
-          <Link to="/media-plans">
-            <Button 
-              variant={isActive('/media-plans') ? 'secondary' : 'ghost'} 
-              size="sm" 
-              className="w-full justify-start gap-2 h-8 text-xs mb-1"
-            >
-              <FileText className="h-3.5 w-3.5" />
-              Planos de mídia
-            </Button>
-          </Link>
-
-          {/* Criar novo plano */}
-          <Link to="/media-plans/new">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start gap-2 h-8 text-xs text-primary hover:text-primary mb-2"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Novo plano
-            </Button>
-          </Link>
-
-          {/* Rascunhos */}
-          <Collapsible open={openSections.draftPlans} onOpenChange={() => toggleSection('draftPlans')}>
+          {/* Planos de mídia - Expansível */}
+          <Collapsible open={openSections.mediaPlans} onOpenChange={() => toggleSection('mediaPlans')}>
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
-                {openSections.draftPlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                <span className="font-medium">Rascunhos</span>
-                <span className="ml-auto text-[10px] text-muted-foreground">{draftPlans.data?.length || 0}</span>
+              <Button 
+                variant={isActive('/media-plans') ? 'secondary' : 'ghost'} 
+                size="sm" 
+                className="w-full justify-start gap-2 h-8 text-xs"
+              >
+                {openSections.mediaPlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                <FileText className="h-3.5 w-3.5" />
+                <span>Planos de mídia</span>
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
-              {draftPlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                <PlanItemRow
-                  key={plan.id}
-                  id={plan.id}
-                  name={plan.name}
-                  onDelete={() => softDelete.mutate(plan.id)}
-                />
-              ))}
-              {(draftPlans.data?.length || 0) > MAX_ITEMS && (
-                <Link to="/media-plans?status=draft">
-                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                    ... ver todos ({draftPlans.data?.length})
-                  </Button>
-                </Link>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
+              {/* Criar novo plano */}
+              <Link to="/media-plans/new">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                >
+                  <Plus className="h-3 w-3" />
+                  Novo plano
+                </Button>
+              </Link>
 
-          {/* Ativos */}
-          <Collapsible open={openSections.activePlans} onOpenChange={() => toggleSection('activePlans')}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
-                {openSections.activePlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                <span className="font-medium">Ativos</span>
-                <span className="ml-auto text-[10px] text-muted-foreground">{activePlans.data?.length || 0}</span>
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pl-4">
-              {activePlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                <PlanItemRow
-                  key={plan.id}
-                  id={plan.id}
-                  name={plan.name}
-                  onDelete={() => softDelete.mutate(plan.id)}
-                />
-              ))}
-              {(activePlans.data?.length || 0) > MAX_ITEMS && (
-                <Link to="/media-plans?status=active">
-                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                    ... ver todos ({activePlans.data?.length})
+              {/* Rascunhos */}
+              <Collapsible open={openSections.draftPlans} onOpenChange={() => toggleSection('draftPlans')}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-7 text-xs">
+                    {openSections.draftPlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    <span className="font-medium">Rascunhos</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{draftPlans.data?.length || 0}</span>
                   </Button>
-                </Link>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-4">
+                  {draftPlans.data?.slice(0, MAX_ITEMS).map(plan => (
+                    <PlanItemRow
+                      key={plan.id}
+                      id={plan.id}
+                      name={plan.name}
+                      onDelete={() => softDelete.mutate(plan.id)}
+                    />
+                  ))}
+                  {(draftPlans.data?.length || 0) > MAX_ITEMS && (
+                    <Link to="/media-plans?status=draft">
+                      <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
+                        Ver todos ({draftPlans.data?.length})
+                      </Button>
+                    </Link>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
 
-          {/* Finalizados */}
-          <Collapsible open={openSections.finishedPlans} onOpenChange={() => toggleSection('finishedPlans')}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
-                {openSections.finishedPlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                <span className="font-medium">Finalizados</span>
-                <span className="ml-auto text-[10px] text-muted-foreground">{finishedPlans.data?.length || 0}</span>
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pl-4">
-              {finishedPlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                <PlanItemRow
-                  key={plan.id}
-                  id={plan.id}
-                  name={plan.name}
-                  onDelete={() => softDelete.mutate(plan.id)}
-                />
-              ))}
-              {(finishedPlans.data?.length || 0) > MAX_ITEMS && (
-                <Link to="/media-plans?status=completed">
-                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                    ... ver todos ({finishedPlans.data?.length})
+              {/* Ativos */}
+              <Collapsible open={openSections.activePlans} onOpenChange={() => toggleSection('activePlans')}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-7 text-xs">
+                    {openSections.activePlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    <span className="font-medium">Ativos</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{activePlans.data?.length || 0}</span>
                   </Button>
-                </Link>
-              )}
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-4">
+                  {activePlans.data?.slice(0, MAX_ITEMS).map(plan => (
+                    <PlanItemRow
+                      key={plan.id}
+                      id={plan.id}
+                      name={plan.name}
+                      onDelete={() => softDelete.mutate(plan.id)}
+                    />
+                  ))}
+                  {(activePlans.data?.length || 0) > MAX_ITEMS && (
+                    <Link to="/media-plans?status=active">
+                      <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
+                        Ver todos ({activePlans.data?.length})
+                      </Button>
+                    </Link>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Finalizados */}
+              <Collapsible open={openSections.finishedPlans} onOpenChange={() => toggleSection('finishedPlans')}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-7 text-xs">
+                    {openSections.finishedPlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    <span className="font-medium">Finalizados</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{finishedPlans.data?.length || 0}</span>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-4">
+                  {finishedPlans.data?.slice(0, MAX_ITEMS).map(plan => (
+                    <PlanItemRow
+                      key={plan.id}
+                      id={plan.id}
+                      name={plan.name}
+                      onDelete={() => softDelete.mutate(plan.id)}
+                    />
+                  ))}
+                  {(finishedPlans.data?.length || 0) > MAX_ITEMS && (
+                    <Link to="/media-plans?status=completed">
+                      <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
+                        Ver todos ({finishedPlans.data?.length})
+                      </Button>
+                    </Link>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
             </CollapsibleContent>
           </Collapsible>
         </div>
