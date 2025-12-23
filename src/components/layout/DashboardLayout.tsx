@@ -3,6 +3,7 @@ import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SidebarCollapseProvider } from '@/hooks/useSidebarCollapse';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -12,47 +13,49 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex w-full bg-background">
-      {/* Desktop Sidebar */}
-      <div className="hidden md:block">
-        <AppSidebar />
+    <SidebarCollapseProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        {/* Desktop Sidebar */}
+        <div className="hidden md:block">
+          <AppSidebar />
+        </div>
+
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Mobile Sidebar */}
+        <div className={cn(
+          "fixed inset-y-0 left-0 z-50 md:hidden transition-transform duration-300 bg-sidebar shadow-xl",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}>
+          <AppSidebar />
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Mobile Header */}
+          <header className="md:hidden sticky top-0 z-30 h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+            <span className="ml-3 font-display font-semibold">MediaPlan</span>
+          </header>
+
+          {/* Page Content */}
+          <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
+            {children}
+          </main>
+        </div>
       </div>
-
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Mobile Sidebar */}
-      <div className={cn(
-        "fixed inset-y-0 left-0 z-50 md:hidden transition-transform duration-300 bg-sidebar shadow-xl",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <AppSidebar />
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile Header */}
-        <header className="md:hidden sticky top-0 z-30 h-14 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center px-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
-          <span className="ml-3 font-display font-semibold">MediaPlan</span>
-        </header>
-
-        {/* Page Content */}
-        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
-          {children}
-        </main>
-      </div>
-    </div>
+    </SidebarCollapseProvider>
   );
 }

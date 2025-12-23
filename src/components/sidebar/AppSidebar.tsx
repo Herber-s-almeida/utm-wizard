@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, createContext, useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -19,7 +19,9 @@ import {
   User,
   Library,
   Eye,
-  CircleDot
+  CircleDot,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates, useBehavioralSegmentations } from '@/hooks/useConfigData';
@@ -30,6 +32,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ConfigItemRow } from './ConfigItemRow';
 import { PlanItemRow } from './PlanItemRow';
 import { cn } from '@/lib/utils';
+import { useSidebarCollapse } from '@/hooks/useSidebarCollapse';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Dialogs
 import { SubdivisionDialog } from '@/components/config/SubdivisionDialog';
@@ -44,6 +48,17 @@ export function AppSidebar() {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Try to use collapse context, fallback to local state if not in provider
+  let isCollapsed = false;
+  let toggleCollapse = () => {};
+  try {
+    const collapseContext = useSidebarCollapse();
+    isCollapsed = collapseContext.isCollapsed;
+    toggleCollapse = collapseContext.toggleCollapse;
+  } catch {
+    // Not in provider, use default values
+  }
   
   const { activePlans, finishedPlans, trashedPlans, softDelete, restore, permanentDelete } = useMediaPlans();
   const subdivisions = useSubdivisions();
@@ -138,18 +153,186 @@ export function AppSidebar() {
   const getStatusNames = () => statuses.data?.map(s => s.name) || [];
 
   return (
-    <div className="flex flex-col h-full w-64 border-r border-sidebar-border bg-sidebar overflow-x-hidden">
+    <div className={cn(
+      "flex flex-col h-full border-r border-sidebar-border bg-sidebar overflow-x-hidden transition-all duration-300",
+      isCollapsed ? "w-16" : "w-80"
+    )}>
       {/* Header */}
-      <div className="p-4 border-b border-sidebar-border">
-        <Link to="/dashboard" className="flex items-center gap-3">
-          <img src="/logo.png" alt="AdsPlanning Pro" className="h-8 w-auto" />
-          <div className="flex flex-col">
-            <span className="font-display font-bold text-sm text-primary">AdsPlanning</span>
-            <span className="text-[10px] font-semibold text-accent tracking-wider">PRO</span>
-          </div>
-        </Link>
+      <div className="p-3 border-b border-sidebar-border">
+        <div className="flex items-center justify-between gap-2">
+          <Link to="/dashboard" className={cn(
+            "flex items-center gap-3 min-w-0",
+            isCollapsed && "justify-center"
+          )}>
+            <img src="/logo.png" alt="AdsPlanning Pro" className="h-8 w-auto shrink-0" />
+            {!isCollapsed && (
+              <div className="flex flex-col min-w-0">
+                <span className="font-display font-bold text-sm text-primary truncate">AdsPlanning</span>
+                <span className="text-[10px] font-semibold text-accent tracking-wider">PRO</span>
+              </div>
+            )}
+          </Link>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 shrink-0"
+                onClick={toggleCollapse}
+              >
+                {isCollapsed ? (
+                  <PanelLeftOpen className="h-4 w-4" />
+                ) : (
+                  <PanelLeftClose className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {isCollapsed ? "Expandir menu" : "Recolher menu"}
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
+      {/* Collapsed state - show only icons */}
+      {isCollapsed ? (
+        <div className="flex-1 py-3 px-2 flex flex-col items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/dashboard">
+                <Button 
+                  variant={isActive('/dashboard') ? 'secondary' : 'ghost'} 
+                  size="icon"
+                  className="h-9 w-9"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Dashboard</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/media-plans">
+                <Button 
+                  variant={isActive('/media-plans') ? 'secondary' : 'ghost'} 
+                  size="icon"
+                  className="h-9 w-9"
+                >
+                  <FileText className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Planos de mídia</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/media-plans/new">
+                <Button 
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-primary"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Novo plano</TooltipContent>
+          </Tooltip>
+
+          <div className="w-8 h-px bg-border my-2" />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/config/subdivisions">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Layers className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Subdivisões de Plano</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/config/moments">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Clock className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Momentos de Campanha</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/config/funnel-stages">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Filter className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Fases do Funil</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/config/mediums">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Radio className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Meios</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/config/vehicles">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Tv className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Veículos e Canais</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/config/targets">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Users className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Segmentação e Target</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/config/formats">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Image className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Formatos e Especificações</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/config/statuses">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <CircleDot className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Status</TooltipContent>
+          </Tooltip>
+        </div>
+      ) : (
       <ScrollArea className="flex-1 py-3 px-2 overflow-x-hidden">
         {/* PLANOS DE MÍDIA */}
         <div className="mb-4">
@@ -788,22 +971,44 @@ export function AppSidebar() {
           </Collapsible>
         </div>
       </ScrollArea>
+      )}
 
       {/* Footer with user info */}
-      <div className="p-3 border-t border-sidebar-border">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-          <User className="h-3.5 w-3.5" />
-          <span className="truncate flex-1">{user?.email}</span>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleSignOut}
-          className="w-full justify-start gap-2 h-8 text-xs text-destructive hover:text-destructive"
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          Sair
-        </Button>
+      <div className={cn(
+        "p-3 border-t border-sidebar-border",
+        isCollapsed && "flex flex-col items-center"
+      )}>
+        {isCollapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSignOut}
+                className="h-9 w-9 text-destructive hover:text-destructive"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Sair</TooltipContent>
+          </Tooltip>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+              <User className="h-3.5 w-3.5" />
+              <span className="truncate flex-1">{user?.email}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="w-full justify-start gap-2 h-8 text-xs text-destructive hover:text-destructive"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sair
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Dialogs */}
