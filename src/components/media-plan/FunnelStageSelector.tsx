@@ -35,8 +35,9 @@ export function FunnelStageSelector({
   const [newItemName, setNewItemName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
+  // Filter out "Geral" (system items with name "Geral") and already selected items
   const availableItems = existingItems.filter(
-    e => !selectedItems.find(i => i.id === e.id)
+    e => !selectedItems.find(i => i.id === e.id) && e.name.toLowerCase() !== 'geral'
   );
   const canAddMore = maxItems === undefined || selectedItems.length < maxItems;
 
