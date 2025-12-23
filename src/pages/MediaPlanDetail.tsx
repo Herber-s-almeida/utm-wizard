@@ -290,7 +290,7 @@ export default function MediaPlanDetail() {
 
   const { planSubdivisions, planMoments, planFunnelStages } = getPlanHierarchyOptions();
 
-  // Build hierarchy data for EditableHierarchyCard
+  // Build hierarchy data for EditableHierarchyCard - Must be before early returns!
   const hierarchyData = useMemo(() => {
     const getSubdivisionName = (refId: string | null): string => {
       if (!refId) return 'Geral';
@@ -425,6 +425,18 @@ export default function MediaPlanDetail() {
       };
     });
   }, [lines, budgetDistributions, subdivisions.data, moments.data, funnelStages.data]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!plan) return null;
 
   return (
     <DashboardLayout>
