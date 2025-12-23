@@ -41,7 +41,7 @@ import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
 import { VehicleDialog } from '@/components/config/VehicleDialog';
 import { ChannelDialog } from '@/components/config/ChannelDialog';
 import { TargetDialog } from '@/components/config/TargetDialog';
-import { FormatDialog } from '@/components/config/FormatDialog';
+import { FormatWizardDialog } from '@/components/config/FormatWizardDialog';
 import { SegmentDialog } from '@/components/config/SegmentDialog';
 
 export function AppSidebar() {
@@ -1118,17 +1118,12 @@ export function AppSidebar() {
         mode="create"
       />
 
-      <FormatDialog
+      <FormatWizardDialog
         open={creativeDialogOpen}
         onOpenChange={setCreativeDialogOpen}
-        onSave={(name) => {
-          creativeTemplates.create.mutate({
-            name: name,
-            format: 'custom',
-          });
+        onComplete={() => {
+          // Refresh will happen automatically via query invalidation
         }}
-        existingNames={getCreativeNames()}
-        mode="create"
       />
 
       <SegmentDialog
