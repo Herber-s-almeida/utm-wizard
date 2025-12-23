@@ -627,7 +627,7 @@ export function MediaLineWizard({
                         onChange={(e) => setLineDetails(prev => ({ ...prev, start_date: e.target.value }))}
                       />
                       {plan.start_date && lineDetails.start_date && lineDetails.start_date < plan.start_date && (
-                        <p className="text-xs text-destructive">A data de início não pode ser anterior à data do plano ({new Date(plan.start_date).toLocaleDateString('pt-BR')})</p>
+                        <p className="text-xs text-destructive">A data de início não pode ser anterior à data do plano ({(() => { const [y,m,d] = plan.start_date.split('-').map(Number); return new Date(y, m-1, d).toLocaleDateString('pt-BR'); })()})</p>
                       )}
                     </div>
                     
@@ -645,7 +645,7 @@ export function MediaLineWizard({
                         <p className="text-xs text-destructive">A data de fim deve ser posterior à data de início</p>
                       )}
                       {plan.end_date && lineDetails.end_date && lineDetails.end_date > plan.end_date && (
-                        <p className="text-xs text-destructive">A data de fim não pode ser posterior à data do plano ({new Date(plan.end_date).toLocaleDateString('pt-BR')})</p>
+                        <p className="text-xs text-destructive">A data de fim não pode ser posterior à data do plano ({(() => { const [y,m,d] = plan.end_date.split('-').map(Number); return new Date(y, m-1, d).toLocaleDateString('pt-BR'); })()})</p>
                       )}
                     </div>
                   </div>

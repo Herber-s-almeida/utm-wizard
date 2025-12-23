@@ -31,7 +31,11 @@ export function PlanSummaryCard({ planData, onEdit, showEditButton = true }: Pla
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('pt-BR', {
+    // Parse date as local time to avoid timezone issues
+    // Date string format: YYYY-MM-DD
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
