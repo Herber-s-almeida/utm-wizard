@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, Loader2, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Loader2, X, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,8 +17,9 @@ import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { MediaPlan } from '@/types/media';
+import { MediaPlan, MediaCreative } from '@/types/media';
 import { cn } from '@/lib/utils';
+import { CreativesManager } from '@/components/media/CreativesManager';
 
 interface PlanHierarchyOption {
   id: string | null;
@@ -73,6 +74,8 @@ export function MediaLineWizard({
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<WizardStep>('subdivision');
   const [saving, setSaving] = useState(false);
+  const [savedLineId, setSavedLineId] = useState<string | null>(null);
+  const [creatives, setCreatives] = useState<MediaCreative[]>([]);
   
   // Selection state
   const [selectedSubdivision, setSelectedSubdivision] = useState<string | null>(null);
@@ -135,6 +138,8 @@ export function MediaLineWizard({
           destination_url: editingLine.destination_url || '',
           notes: editingLine.notes || '',
         });
+        setSavedLineId(editingLine.id);
+        loadCreatives(editingLine.id);
       } else {
         // Create mode - prefill with hierarchy from where user clicked
         const subValue = getHierarchyValue(prefillData?.subdivisionId, planSubdivisions);
@@ -155,6 +160,8 @@ export function MediaLineWizard({
           destination_url: '',
           notes: '',
         });
+        setSavedLineId(null);
+        setCreatives([]);
         
         // Determine starting step - skip hierarchy steps if only one option
         let startStep: WizardStep = 'subdivision';
@@ -171,6 +178,15 @@ export function MediaLineWizard({
       }
     }
   }, [open, plan, editingLine, initialStep, prefillData, planSubdivisions, planMoments, planFunnelStages]);
+
+  const loadCreatives = async (lineId: string) => {
+    const { data } = await supabase
+      .from('media_creatives')
+      .select('*')
+      .eq('media_line_id', lineId)
+      .order('created_at', { ascending: false });
+    setCreatives((data as MediaCreative[]) || []);
+  };
 
   const currentStepIndex = STEP_ORDER.indexOf(currentStep);
 
@@ -272,14 +288,14 @@ export function MediaLineWizard({
     return code;
   };
 
-  const handleSave = async () => {
+  const handleSave = async (goToCreatives: boolean = false) => {
     if (!user) return;
     
     setSaving(true);
     try {
       // Generate line code for new lines
-      let lineCode = editingLine?.line_code || null;
-      if (!editingLine) {
+      let lineCode = editingLine?.line_code || (savedLineId ? undefined : null);
+      if (!editingLine && !savedLineId) {
         lineCode = await generateLineCode();
       }
 
@@ -301,34 +317,48 @@ export function MediaLineWizard({
         line_code: lineCode,
       };
 
-      if (editingLine) {
+      if (editingLine || savedLineId) {
         // Update existing line
         const { error } = await supabase
           .from('media_lines')
           .update(lineData)
-          .eq('id', editingLine.id);
+          .eq('id', editingLine?.id || savedLineId);
 
         if (error) throw error;
-        toast.success('Linha de mídia atualizada!');
+        toast.success('Linha de mídia salva!');
+        
+        if (goToCreatives) {
+          setCurrentStep('creatives');
+        } else if (currentStep === 'creatives') {
+          onComplete();
+          onOpenChange(false);
+        }
       } else {
         // Create new line
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('media_lines')
           .insert({
             ...lineData,
             media_plan_id: plan.id,
             user_id: user.id,
-          });
+          })
+          .select()
+          .single();
 
         if (error) throw error;
         toast.success('Linha de mídia criada!');
+        
+        if (goToCreatives && data) {
+          setSavedLineId(data.id);
+          setCurrentStep('creatives');
+        } else {
+          onComplete();
+          onOpenChange(false);
+        }
       }
-
-      onComplete();
-      onOpenChange(false);
     } catch (error) {
       console.error('Error saving line:', error);
-      toast.error(editingLine ? 'Erro ao atualizar linha de mídia' : 'Erro ao criar linha de mídia');
+      toast.error('Erro ao salvar linha de mídia');
     } finally {
       setSaving(false);
     }
@@ -577,8 +607,13 @@ export function MediaLineWizard({
                 <div className="space-y-4">
                   <h3 className="text-sm font-medium text-primary">Criativos da Linha:</h3>
                   
-                  {editingLine ? (
-                    <CreativesSection lineId={editingLine.id} />
+                  {(editingLine || savedLineId) && user ? (
+                    <CreativesManager
+                      mediaLineId={editingLine?.id || savedLineId!}
+                      userId={user.id}
+                      creatives={creatives}
+                      onUpdate={() => loadCreatives(editingLine?.id || savedLineId!)}
+                    />
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       <p>Os criativos podem ser adicionados após salvar a linha.</p>
@@ -690,140 +725,66 @@ export function MediaLineWizard({
               {currentStepIndex === 0 ? 'Cancelar' : 'Voltar'}
             </Button>
             
-            {(currentStep === 'details' && !editingLine) || currentStep === 'creatives' ? (
-              <Button
-                onClick={handleSave}
-                disabled={!canProceed() || saving}
-                className="gap-2"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4" />
-                    {editingLine ? 'Salvar Alterações' : 'Criar Linha'}
-                  </>
-                )}
-              </Button>
-            ) : (
-              <Button
-                onClick={handleNext}
-                disabled={!canProceed()}
-                className="gap-2"
-              >
-                Próximo
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {currentStep === 'details' && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleSave(false)}
+                    disabled={!canProceed() || saving}
+                    className="gap-2"
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Salvar
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={() => handleSave(true)}
+                    disabled={!canProceed() || saving}
+                    className="gap-2"
+                  >
+                    Próximo
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </>
+              )}
+              
+              {currentStep === 'creatives' && (
+                <Button
+                  onClick={() => {
+                    onComplete();
+                    onOpenChange(false);
+                  }}
+                  className="gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  Concluir
+                </Button>
+              )}
+              
+              {currentStep !== 'details' && currentStep !== 'creatives' && (
+                <Button
+                  onClick={handleNext}
+                  disabled={!canProceed()}
+                  className="gap-2"
+                >
+                  Próximo
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
     </>
-  );
-}
-
-// Creatives Section Component
-function CreativesSection({ lineId }: { lineId: string }) {
-  const { user } = useAuth();
-  const [creatives, setCreatives] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [newCreativeName, setNewCreativeName] = useState('');
-  const [adding, setAdding] = useState(false);
-
-  useEffect(() => {
-    loadCreatives();
-  }, [lineId]);
-
-  const loadCreatives = async () => {
-    setLoading(true);
-    const { data } = await supabase
-      .from('media_creatives')
-      .select('*')
-      .eq('media_line_id', lineId)
-      .order('created_at', { ascending: false });
-    setCreatives(data || []);
-    setLoading(false);
-  };
-
-  const addCreative = async () => {
-    if (!newCreativeName.trim() || !user) return;
-    
-    setAdding(true);
-    const { error } = await supabase
-      .from('media_creatives')
-      .insert({
-        media_line_id: lineId,
-        user_id: user.id,
-        name: newCreativeName.trim(),
-      });
-    
-    if (!error) {
-      setNewCreativeName('');
-      await loadCreatives();
-      toast.success('Criativo adicionado!');
-    }
-    setAdding(false);
-  };
-
-  const deleteCreative = async (id: string) => {
-    await supabase.from('media_creatives').delete().eq('id', id);
-    await loadCreatives();
-    toast.success('Criativo removido');
-  };
-
-  if (loading) {
-    return <div className="text-center py-4"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Add new creative */}
-      <div className="flex gap-2">
-        <Input
-          placeholder="Nome do criativo..."
-          value={newCreativeName}
-          onChange={(e) => setNewCreativeName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addCreative()}
-        />
-        <Button onClick={addCreative} disabled={adding || !newCreativeName.trim()}>
-          {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Adicionar'}
-        </Button>
-      </div>
-
-      {/* List of creatives */}
-      {creatives.length === 0 ? (
-        <div className="text-center py-6 text-muted-foreground border rounded-lg">
-          Nenhum criativo adicionado ainda.
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {creatives.map((creative) => (
-            <div
-              key={creative.id}
-              className="flex items-center justify-between p-3 border rounded-lg bg-background"
-            >
-              <div>
-                <div className="font-medium">{creative.name}</div>
-                {creative.creative_type && (
-                  <div className="text-xs text-muted-foreground">{creative.creative_type}</div>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-destructive hover:text-destructive"
-                onClick={() => deleteCreative(creative.id)}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }

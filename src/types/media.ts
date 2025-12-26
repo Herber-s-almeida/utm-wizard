@@ -63,6 +63,7 @@ export interface MediaCreative {
   media_line_id: string;
   user_id: string;
   name: string;
+  format_id: string | null;
   copy_text: string | null;
   creative_type: string;
   asset_url: string | null;
