@@ -324,6 +324,7 @@ export type Database = {
           asset_url: string | null
           copy_text: string | null
           created_at: string | null
+          creative_id: string | null
           creative_type: string | null
           format_id: string | null
           id: string
@@ -337,6 +338,7 @@ export type Database = {
           asset_url?: string | null
           copy_text?: string | null
           created_at?: string | null
+          creative_id?: string | null
           creative_type?: string | null
           format_id?: string | null
           id?: string
@@ -350,6 +352,7 @@ export type Database = {
           asset_url?: string | null
           copy_text?: string | null
           created_at?: string | null
+          creative_id?: string | null
           creative_type?: string | null
           format_id?: string | null
           id?: string
@@ -1080,7 +1083,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_creative_id: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
