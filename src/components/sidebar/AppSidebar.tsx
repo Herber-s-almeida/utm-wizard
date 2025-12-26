@@ -21,7 +21,8 @@ import {
   Eye,
   CircleDot,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Palette
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates, useBehavioralSegmentations } from '@/hooks/useConfigData';
@@ -82,6 +83,10 @@ export function AppSidebar() {
     draftPlans: false,
     activePlans: true,
     finishedPlans: false,
+    mediaResources: false,
+    resourcesDraftPlans: false,
+    resourcesActivePlans: false,
+    resourcesFinishedPlans: false,
     subdivisions: false,
     moments: false,
     funnelStages: false,
@@ -253,6 +258,17 @@ export function AppSidebar() {
               </Link>
             </TooltipTrigger>
             <TooltipContent side="right">Novo plano</TooltipContent>
+          </Tooltip>
+
+          <div className="w-8 h-px bg-border my-2" />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Palette className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Recursos de Mídia</TooltipContent>
           </Tooltip>
 
           <div className="w-8 h-px bg-border my-2" />
@@ -471,6 +487,120 @@ export function AppSidebar() {
                         Ver todos ({finishedPlans.data?.length})
                       </Button>
                     </Link>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+
+        {/* RECURSOS DE MÍDIA */}
+        <div className="mb-4">
+          <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+            <Palette className="h-3 w-3" />
+            Recursos de Mídia
+          </h3>
+
+          {/* Planos de Mídia para recursos */}
+          <Collapsible open={openSections.mediaResources} onOpenChange={() => toggleSection('mediaResources')}>
+            <CollapsibleTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full justify-start gap-2 h-8 text-xs"
+              >
+                {openSections.mediaResources ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                <FileText className="h-3.5 w-3.5" />
+                <span>Planos de Mídia</span>
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4">
+              {/* Rascunhos */}
+              <Collapsible open={openSections.resourcesDraftPlans} onOpenChange={() => toggleSection('resourcesDraftPlans')}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-7 text-xs">
+                    {openSections.resourcesDraftPlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    <span className="font-medium">Rascunhos</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{draftPlans.data?.length || 0}</span>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-4">
+                  {draftPlans.data?.slice(0, MAX_ITEMS).map(plan => (
+                    <Link key={plan.id} to={`/media-plans/${plan.id}/resources`}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start h-7 text-xs font-normal truncate"
+                      >
+                        <Image className="h-3 w-3 mr-2 shrink-0" />
+                        <span className="truncate">{plan.name}</span>
+                      </Button>
+                    </Link>
+                  ))}
+                  {(draftPlans.data?.length || 0) > MAX_ITEMS && (
+                    <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
+                      Ver todos ({draftPlans.data?.length})
+                    </Button>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Ativos */}
+              <Collapsible open={openSections.resourcesActivePlans} onOpenChange={() => toggleSection('resourcesActivePlans')}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-7 text-xs">
+                    {openSections.resourcesActivePlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    <span className="font-medium">Ativos</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{activePlans.data?.length || 0}</span>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-4">
+                  {activePlans.data?.slice(0, MAX_ITEMS).map(plan => (
+                    <Link key={plan.id} to={`/media-plans/${plan.id}/resources`}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start h-7 text-xs font-normal truncate"
+                      >
+                        <Image className="h-3 w-3 mr-2 shrink-0" />
+                        <span className="truncate">{plan.name}</span>
+                      </Button>
+                    </Link>
+                  ))}
+                  {(activePlans.data?.length || 0) > MAX_ITEMS && (
+                    <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
+                      Ver todos ({activePlans.data?.length})
+                    </Button>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Finalizados */}
+              <Collapsible open={openSections.resourcesFinishedPlans} onOpenChange={() => toggleSection('resourcesFinishedPlans')}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-7 text-xs">
+                    {openSections.resourcesFinishedPlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    <span className="font-medium">Finalizados</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{finishedPlans.data?.length || 0}</span>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-4">
+                  {finishedPlans.data?.slice(0, MAX_ITEMS).map(plan => (
+                    <Link key={plan.id} to={`/media-plans/${plan.id}/resources`}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start h-7 text-xs font-normal truncate"
+                      >
+                        <Image className="h-3 w-3 mr-2 shrink-0" />
+                        <span className="truncate">{plan.name}</span>
+                      </Button>
+                    </Link>
+                  ))}
+                  {(finishedPlans.data?.length || 0) > MAX_ITEMS && (
+                    <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
+                      Ver todos ({finishedPlans.data?.length})
+                    </Button>
                   )}
                 </CollapsibleContent>
               </Collapsible>
