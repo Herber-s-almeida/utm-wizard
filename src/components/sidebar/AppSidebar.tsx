@@ -511,7 +511,7 @@ export function AppSidebar() {
               >
                 {openSections.mediaResources ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                 <FileText className="h-3.5 w-3.5" />
-                <span>Planos de Mídia</span>
+                <span>Recursos por Plano</span>
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
