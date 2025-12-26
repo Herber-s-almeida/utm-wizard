@@ -103,12 +103,12 @@ export function CreativesManager({ mediaLineId, userId, creatives, onUpdate }: C
 
   const handleEdit = (creative: MediaCreative) => {
     setForm({
-      format_id: (creative as any).format_id || null,
+      format_id: creative.format_id || null,
       message: creative.copy_text || '',
       notes: creative.notes || '',
     });
     setEditingId(creative.id);
-    setStep((creative as any).format_id ? 'fill-details' : 'select-format');
+    setStep(creative.format_id ? 'fill-details' : 'select-format');
   };
 
   const handleDelete = async (id: string) => {
@@ -153,7 +153,7 @@ export function CreativesManager({ mediaLineId, userId, creatives, onUpdate }: C
       <AnimatePresence mode="popLayout">
         {/* List existing creatives */}
         {creatives.map((creative) => {
-          const formatName = getFormatName((creative as any).format_id);
+          const formatName = getFormatName(creative.format_id);
           return (
             <motion.div
               key={creative.id}
