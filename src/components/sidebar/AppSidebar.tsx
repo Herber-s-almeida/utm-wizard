@@ -371,17 +371,29 @@ export function AppSidebar() {
 
           {/* Planos de Mídia - Expansível */}
           <Collapsible open={openSections.mediaPlans} onOpenChange={() => toggleSection('mediaPlans')}>
-            <CollapsibleTrigger asChild>
-              <Button 
-                variant={isActive('/dashboard') || isActive('/media-plans') ? 'secondary' : 'ghost'} 
-                size="sm" 
-                className="w-full justify-start gap-2 h-8 text-xs"
-              >
-                {openSections.mediaPlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                <LayoutDashboard className="h-3.5 w-3.5" />
-                <span>Planos de Mídia</span>
-              </Button>
-            </CollapsibleTrigger>
+            <div className="flex items-center">
+              <CollapsibleTrigger asChild>
+                <Button 
+                  variant={isActive('/dashboard') || isActive('/media-plans') ? 'secondary' : 'ghost'} 
+                  size="sm" 
+                  className="flex-1 justify-start gap-2 h-8 text-xs"
+                >
+                  {openSections.mediaPlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  <LayoutDashboard className="h-3.5 w-3.5" />
+                  <span>Planos de Mídia</span>
+                </Button>
+              </CollapsibleTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/dashboard">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Ver todos os planos</TooltipContent>
+              </Tooltip>
+            </div>
             <CollapsibleContent className="pl-4">
               {/* Criar novo plano */}
               <Link to="/media-plans/new">
