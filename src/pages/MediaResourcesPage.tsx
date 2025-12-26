@@ -427,11 +427,39 @@ function ApprovalCell({
     }
   };
 
+  const handleUnapprove = async () => {
+    const { error } = await supabase
+      .from('media_creatives')
+      .update({ 
+        production_status: 'solicitado',
+        approved_date: null
+      })
+      .eq('id', creativeId);
+    
+    if (error) {
+      toast.error('Erro ao desaprovar');
+    } else {
+      toast.success('Aprovação removida');
+      onUpdate();
+    }
+  };
+
   if (isApproved && approvedDate) {
     return (
-      <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-        <Check className="h-3 w-3" />
-        {format(new Date(approvedDate), 'dd/MM/yy', { locale: ptBR })}
+      <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+          <Check className="h-3 w-3" />
+          {format(new Date(approvedDate), 'dd/MM/yy', { locale: ptBR })}
+        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+          onClick={handleUnapprove}
+          title="Desaprovar"
+        >
+          <X className="h-3 w-3" />
+        </Button>
       </div>
     );
   }
