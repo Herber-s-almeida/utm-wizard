@@ -369,29 +369,17 @@ export function AppSidebar() {
             Planos de Mídia
           </h3>
 
-          {/* Dashboard */}
-          <Link to="/dashboard">
-            <Button 
-              variant={isActive('/dashboard') ? 'secondary' : 'ghost'} 
-              size="sm" 
-              className="w-full justify-start gap-2 h-8 text-xs mb-1"
-            >
-              <LayoutDashboard className="h-3.5 w-3.5" />
-              Dashboard
-            </Button>
-          </Link>
-
-          {/* Planos de mídia - Expansível */}
+          {/* Planos de Mídia - Expansível */}
           <Collapsible open={openSections.mediaPlans} onOpenChange={() => toggleSection('mediaPlans')}>
             <CollapsibleTrigger asChild>
               <Button 
-                variant={isActive('/media-plans') ? 'secondary' : 'ghost'} 
+                variant={isActive('/dashboard') || isActive('/media-plans') ? 'secondary' : 'ghost'} 
                 size="sm" 
                 className="w-full justify-start gap-2 h-8 text-xs"
               >
                 {openSections.mediaPlans ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                <FileText className="h-3.5 w-3.5" />
-                <span>Planos de mídia</span>
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                <span>Planos de Mídia</span>
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pl-4">
