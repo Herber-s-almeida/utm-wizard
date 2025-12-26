@@ -325,6 +325,7 @@ export type Database = {
           copy_text: string | null
           created_at: string | null
           creative_type: string | null
+          format_id: string | null
           id: string
           media_line_id: string
           name: string
@@ -337,6 +338,7 @@ export type Database = {
           copy_text?: string | null
           created_at?: string | null
           creative_type?: string | null
+          format_id?: string | null
           id?: string
           media_line_id: string
           name: string
@@ -349,6 +351,7 @@ export type Database = {
           copy_text?: string | null
           created_at?: string | null
           creative_type?: string | null
+          format_id?: string | null
           id?: string
           media_line_id?: string
           name?: string
@@ -357,6 +360,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "media_creatives_format_id_fkey"
+            columns: ["format_id"]
+            isOneToOne: false
+            referencedRelation: "formats"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "media_creatives_media_line_id_fkey"
             columns: ["media_line_id"]
