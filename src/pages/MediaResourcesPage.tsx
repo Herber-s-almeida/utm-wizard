@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -7,10 +7,33 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Image, FileText, ExternalLink, ChevronDown, ChevronRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, Image, FileText, ExternalLink, ChevronDown, ChevronRight, Check, Plus, Calendar, Link as LinkIcon, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+
+const PRODUCTION_STATUSES = [
+  { value: 'solicitado', label: 'Solicitado', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
+  { value: 'enviado', label: 'Enviado', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },
+  { value: 'em_andamento', label: 'Em Andamento', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' },
+  { value: 'finalizado', label: 'Finalizado', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
+  { value: 'entregue', label: 'Entregue', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' },
+  { value: 'alteracao', label: 'Alteração', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' },
+  { value: 'aprovado', label: 'Aprovado', color: 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200' },
+];
+
+interface ChangeLog {
+  id: string;
+  change_date: string;
+  notes: string | null;
+}
 
 interface FormatCreativeType {
   id: string;
@@ -49,6 +72,11 @@ interface MediaCreativeWithDetails {
   format_id: string | null;
   media_line_id: string;
   created_at: string;
+  production_status: string | null;
+  opening_date: string | null;
+  received_date: string | null;
+  approved_date: string | null;
+  piece_link: string | null;
   format: {
     id: string;
     name: string;
@@ -67,6 +95,7 @@ interface MediaCreativeWithDetails {
     funnel_stage_ref: { name: string } | null;
   } | null;
   format_details?: FormatCreativeType[];
+  change_logs?: ChangeLog[];
 }
 
 function SpecificationsCell({ formatDetails }: { formatDetails?: FormatCreativeType[] }) {
@@ -150,9 +179,361 @@ function SpecificationsCell({ formatDetails }: { formatDetails?: FormatCreativeT
   );
 }
 
+function StatusCell({ 
+  creativeId, 
+  currentStatus, 
+  onUpdate 
+}: { 
+  creativeId: string; 
+  currentStatus: string | null; 
+  onUpdate: () => void;
+}) {
+  const status = PRODUCTION_STATUSES.find(s => s.value === currentStatus) || PRODUCTION_STATUSES[0];
+
+  const handleChange = async (newStatus: string) => {
+    const { error } = await supabase
+      .from('media_creatives')
+      .update({ production_status: newStatus })
+      .eq('id', creativeId);
+    
+    if (error) {
+      toast.error('Erro ao atualizar status');
+    } else {
+      onUpdate();
+    }
+  };
+
+  return (
+    <Select value={currentStatus || 'solicitado'} onValueChange={handleChange}>
+      <SelectTrigger className="h-7 w-[130px] text-xs">
+        <SelectValue>
+          <Badge className={`${status.color} text-xs font-normal`}>
+            {status.label}
+          </Badge>
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {PRODUCTION_STATUSES.map(s => (
+          <SelectItem key={s.value} value={s.value}>
+            <Badge className={`${s.color} text-xs font-normal`}>
+              {s.label}
+            </Badge>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function DateCell({ 
+  date, 
+  creativeId, 
+  field, 
+  onUpdate,
+  readOnly = false 
+}: { 
+  date: string | null; 
+  creativeId: string;
+  field: string;
+  onUpdate: () => void;
+  readOnly?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const handleSelect = async (selectedDate: Date | undefined) => {
+    if (!selectedDate) return;
+    
+    const { error } = await supabase
+      .from('media_creatives')
+      .update({ [field]: selectedDate.toISOString() })
+      .eq('id', creativeId);
+    
+    if (error) {
+      toast.error('Erro ao atualizar data');
+    } else {
+      onUpdate();
+      setOpen(false);
+    }
+  };
+
+  if (readOnly) {
+    return (
+      <span className="text-xs">
+        {date ? format(new Date(date), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
+      </span>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
+          <Calendar className="h-3 w-3" />
+          {date ? format(new Date(date), 'dd/MM/yy', { locale: ptBR }) : '—'}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <CalendarComponent
+          mode="single"
+          selected={date ? new Date(date) : undefined}
+          onSelect={handleSelect}
+          locale={ptBR}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function ChangeLogsCell({ 
+  creativeId, 
+  logs, 
+  userId,
+  onUpdate 
+}: { 
+  creativeId: string; 
+  logs: ChangeLog[];
+  userId: string;
+  onUpdate: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [addingNew, setAddingNew] = useState(false);
+  const [newNotes, setNewNotes] = useState('');
+
+  const handleAddLog = async () => {
+    const { error } = await supabase
+      .from('creative_change_logs')
+      .insert({
+        creative_id: creativeId,
+        user_id: userId,
+        notes: newNotes || null,
+      });
+
+    if (error) {
+      toast.error('Erro ao adicionar alteração');
+    } else {
+      // Also update status to "alteracao"
+      await supabase
+        .from('media_creatives')
+        .update({ production_status: 'alteracao' })
+        .eq('id', creativeId);
+      
+      toast.success('Alteração registrada');
+      setNewNotes('');
+      setAddingNew(false);
+      onUpdate();
+    }
+  };
+
+  const handleDeleteLog = async (logId: string) => {
+    const { error } = await supabase
+      .from('creative_change_logs')
+      .delete()
+      .eq('id', logId);
+
+    if (error) {
+      toast.error('Erro ao remover alteração');
+    } else {
+      onUpdate();
+    }
+  };
+
+  return (
+    <div className="min-w-[150px]">
+      <Collapsible open={expanded} onOpenChange={setExpanded}>
+        <div className="flex items-center gap-1">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1">
+              {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              {logs.length} alteração(ões)
+            </Button>
+          </CollapsibleTrigger>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-6 w-6 p-0"
+            onClick={() => { setExpanded(true); setAddingNew(true); }}
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
+        </div>
+        <CollapsibleContent className="mt-2 space-y-2">
+          {addingNew && (
+            <div className="flex items-center gap-1 p-2 bg-muted/50 rounded">
+              <Input
+                value={newNotes}
+                onChange={(e) => setNewNotes(e.target.value)}
+                placeholder="Observação..."
+                className="h-6 text-xs flex-1"
+              />
+              <Button size="sm" className="h-6 w-6 p-0" onClick={handleAddLog}>
+                <Check className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setAddingNew(false)}>
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+          {logs.map((log) => (
+            <div key={log.id} className="flex items-center justify-between text-xs p-2 bg-muted/50 rounded group">
+              <div>
+                <span className="font-medium">
+                  {format(new Date(log.change_date), 'dd/MM/yy HH:mm', { locale: ptBR })}
+                </span>
+                {log.notes && <span className="text-muted-foreground ml-2">{log.notes}</span>}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100"
+                onClick={() => handleDeleteLog(log.id)}
+              >
+                <X className="h-3 w-3 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+}
+
+function ApprovalCell({ 
+  creativeId, 
+  approvedDate, 
+  currentStatus,
+  onUpdate 
+}: { 
+  creativeId: string; 
+  approvedDate: string | null;
+  currentStatus: string | null;
+  onUpdate: () => void;
+}) {
+  const isApproved = currentStatus === 'aprovado' || !!approvedDate;
+
+  const handleApprove = async () => {
+    const { error } = await supabase
+      .from('media_creatives')
+      .update({ 
+        production_status: 'aprovado',
+        approved_date: new Date().toISOString()
+      })
+      .eq('id', creativeId);
+    
+    if (error) {
+      toast.error('Erro ao aprovar');
+    } else {
+      toast.success('Criativo aprovado!');
+      onUpdate();
+    }
+  };
+
+  if (isApproved && approvedDate) {
+    return (
+      <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+        <Check className="h-3 w-3" />
+        {format(new Date(approvedDate), 'dd/MM/yy', { locale: ptBR })}
+      </div>
+    );
+  }
+
+  return (
+    <Button 
+      variant="outline" 
+      size="sm" 
+      className="h-6 px-2 text-xs gap-1"
+      onClick={handleApprove}
+    >
+      <Check className="h-3 w-3" />
+      Aprovar
+    </Button>
+  );
+}
+
+function PieceLinkCell({ 
+  creativeId, 
+  link, 
+  onUpdate 
+}: { 
+  creativeId: string; 
+  link: string | null;
+  onUpdate: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(link || '');
+
+  const handleSave = async () => {
+    const { error } = await supabase
+      .from('media_creatives')
+      .update({ piece_link: value || null })
+      .eq('id', creativeId);
+    
+    if (error) {
+      toast.error('Erro ao salvar link');
+    } else {
+      setEditing(false);
+      onUpdate();
+    }
+  };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <Input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="https://..."
+          className="h-6 text-xs w-[150px]"
+        />
+        <Button size="sm" className="h-6 w-6 p-0" onClick={handleSave}>
+          <Check className="h-3 w-3" />
+        </Button>
+        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setEditing(false)}>
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
+    );
+  }
+
+  if (link) {
+    return (
+      <div className="flex items-center gap-1">
+        <a 
+          href={link} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-xs text-primary hover:underline flex items-center gap-1 max-w-[120px] truncate"
+        >
+          <LinkIcon className="h-3 w-3 flex-shrink-0" />
+          <span className="truncate">{link}</span>
+        </a>
+        <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => setEditing(true)}>
+          <ChevronRight className="h-3 w-3" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Button 
+      variant="ghost" 
+      size="sm" 
+      className="h-6 px-2 text-xs gap-1 text-muted-foreground"
+      onClick={() => setEditing(true)}
+    >
+      <Plus className="h-3 w-3" />
+      Adicionar
+    </Button>
+  );
+}
+
 export default function MediaResourcesPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const refetch = () => {
+    queryClient.invalidateQueries({ queryKey: ['media-resources', id] });
+  };
 
   // Fetch media plan details
   const { data: mediaPlan, isLoading: loadingPlan } = useQuery({
@@ -208,6 +589,11 @@ export default function MediaResourcesPage() {
           format_id,
           media_line_id,
           created_at,
+          production_status,
+          opening_date,
+          received_date,
+          approved_date,
+          piece_link,
           format:formats(id, name)
         `)
         .in('media_line_id', lineIds)
@@ -215,60 +601,64 @@ export default function MediaResourcesPage() {
 
       if (creativesError) throw creativesError;
 
+      // Get change logs for all creatives
+      const creativeIds = (creativesData || []).map(c => c.id);
+      let changeLogsMap: Record<string, ChangeLog[]> = {};
+      
+      if (creativeIds.length > 0) {
+        const { data: changeLogs } = await supabase
+          .from('creative_change_logs')
+          .select('id, creative_id, change_date, notes')
+          .in('creative_id', creativeIds)
+          .order('change_date', { ascending: false });
+
+        (changeLogs || []).forEach(log => {
+          if (!changeLogsMap[log.creative_id]) {
+            changeLogsMap[log.creative_id] = [];
+          }
+          changeLogsMap[log.creative_id].push({
+            id: log.id,
+            change_date: log.change_date,
+            notes: log.notes,
+          });
+        });
+      }
+
       // Get format details (creative types with specifications)
       const formatIds = [...new Set((creativesData || []).map(c => c.format_id).filter(Boolean))] as string[];
       
       let formatCreativeTypesMap: Record<string, FormatCreativeType[]> = {};
       
       if (formatIds.length > 0) {
-        // Get creative types for these formats
         const { data: creativeTypes } = await supabase
           .from('format_creative_types')
-          .select(`
-            id,
-            name,
-            format_id
-          `)
+          .select(`id, name, format_id`)
           .in('format_id', formatIds);
 
         if (creativeTypes && creativeTypes.length > 0) {
           const typeIds = creativeTypes.map(t => t.id);
           
-          // Get specifications for these creative types
           const { data: specs } = await supabase
             .from('creative_type_specifications')
-            .select(`
-              id,
-              name,
-              creative_type_id,
-              has_duration,
-              duration_value,
-              duration_unit,
-              max_weight,
-              weight_unit
-            `)
+            .select(`id, name, creative_type_id, has_duration, duration_value, duration_unit, max_weight, weight_unit`)
             .in('creative_type_id', typeIds);
 
-          // Get dimensions
           const specIds = specs?.map(s => s.id) || [];
           const { data: dimensions } = await supabase
             .from('specification_dimensions')
             .select('id, specification_id, width, height, unit, description')
             .in('specification_id', specIds);
 
-          // Get extensions
           const { data: extensionsData } = await supabase
             .from('specification_extensions')
             .select('id, specification_id, extension_id, extension:file_extensions(name)')
             .in('specification_id', specIds);
 
-          // Get copy fields
           const { data: copyFields } = await supabase
             .from('specification_copy_fields')
             .select('id, specification_id, name, max_characters, observation')
             .in('specification_id', specIds);
 
-          // Build the map
           creativeTypes.forEach(type => {
             const formatId = type.format_id;
             if (!formatCreativeTypesMap[formatId]) {
@@ -287,22 +677,13 @@ export default function MediaResourcesPage() {
                 weight_unit: spec.weight_unit,
                 dimensions: (dimensions || [])
                   .filter(d => d.specification_id === spec.id)
-                  .map(d => ({
-                    width: d.width,
-                    height: d.height,
-                    unit: d.unit,
-                    description: d.description,
-                  })),
+                  .map(d => ({ width: d.width, height: d.height, unit: d.unit, description: d.description })),
                 extensions: (extensionsData || [])
                   .filter(e => e.specification_id === spec.id)
                   .map(e => ({ name: (e.extension as any)?.name || '' })),
                 copy_fields: (copyFields || [])
                   .filter(cf => cf.specification_id === spec.id)
-                  .map(cf => ({
-                    name: cf.name,
-                    max_characters: cf.max_characters,
-                    observation: cf.observation,
-                  })),
+                  .map(cf => ({ name: cf.name, max_characters: cf.max_characters, observation: cf.observation })),
               }));
 
             formatCreativeTypesMap[formatId].push({
@@ -314,11 +695,11 @@ export default function MediaResourcesPage() {
         }
       }
 
-      // Map creatives with line details and format details
       return (creativesData || []).map(creative => ({
         ...creative,
         media_line: lines.find(l => l.id === creative.media_line_id),
         format_details: creative.format_id ? formatCreativeTypesMap[creative.format_id] : undefined,
+        change_logs: changeLogsMap[creative.id] || [],
       })) as MediaCreativeWithDetails[];
     },
     enabled: !!id && !!user,
@@ -384,7 +765,13 @@ export default function MediaResourcesPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="whitespace-nowrap">ID Criativo</TableHead>
+                      <TableHead className="whitespace-nowrap">ID</TableHead>
+                      <TableHead className="whitespace-nowrap">Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Abertura</TableHead>
+                      <TableHead className="whitespace-nowrap">Recebimento</TableHead>
+                      <TableHead className="whitespace-nowrap">Alterações</TableHead>
+                      <TableHead className="whitespace-nowrap">Aprovação</TableHead>
+                      <TableHead className="whitespace-nowrap">Link da Peça</TableHead>
                       <TableHead className="whitespace-nowrap">Subdivisão</TableHead>
                       <TableHead className="whitespace-nowrap">Momento</TableHead>
                       <TableHead className="whitespace-nowrap">Fase</TableHead>
@@ -407,13 +794,60 @@ export default function MediaResourcesPage() {
                             {creative.creative_id || '—'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell>
+                          <StatusCell 
+                            creativeId={creative.id} 
+                            currentStatus={creative.production_status} 
+                            onUpdate={refetch}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <DateCell 
+                            date={creative.opening_date} 
+                            creativeId={creative.id}
+                            field="opening_date"
+                            onUpdate={refetch}
+                            readOnly
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <DateCell 
+                            date={creative.received_date} 
+                            creativeId={creative.id}
+                            field="received_date"
+                            onUpdate={refetch}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <ChangeLogsCell 
+                            creativeId={creative.id}
+                            logs={creative.change_logs || []}
+                            userId={user?.id || ''}
+                            onUpdate={refetch}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <ApprovalCell 
+                            creativeId={creative.id}
+                            approvedDate={creative.approved_date}
+                            currentStatus={creative.production_status}
+                            onUpdate={refetch}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <PieceLinkCell 
+                            creativeId={creative.id}
+                            link={creative.piece_link}
+                            onUpdate={refetch}
+                          />
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-xs">
                           {creative.media_line?.subdivision?.name || '—'}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell className="whitespace-nowrap text-xs">
                           {creative.media_line?.moment?.name || '—'}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell className="whitespace-nowrap text-xs">
                           {creative.media_line?.funnel_stage_ref?.name || 
                            (creative.media_line?.funnel_stage === 'top' ? 'Topo' : 
                             creative.media_line?.funnel_stage === 'middle' ? 'Meio' : 
@@ -422,30 +856,30 @@ export default function MediaResourcesPage() {
                         <TableCell className="font-mono text-xs whitespace-nowrap">
                           {creative.media_line?.line_code || '—'}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell className="whitespace-nowrap text-xs">
                           {creative.media_line?.medium?.name || '—'}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell className="whitespace-nowrap text-xs">
                           {creative.media_line?.vehicle?.name || '—'}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell className="whitespace-nowrap text-xs">
                           {creative.media_line?.channel?.name || '—'}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell className="whitespace-nowrap text-xs">
                           {creative.media_line?.target?.name || '—'}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           {creative.format?.name ? (
-                            <Badge variant="secondary">{creative.format.name}</Badge>
+                            <Badge variant="secondary" className="text-xs">{creative.format.name}</Badge>
                           ) : '—'}
                         </TableCell>
-                        <TableCell className="max-w-[200px]">
-                          <span className="text-sm line-clamp-2">
+                        <TableCell className="max-w-[150px]">
+                          <span className="text-xs line-clamp-2">
                             {creative.copy_text || '—'}
                           </span>
                         </TableCell>
-                        <TableCell className="max-w-[200px]">
-                          <span className="text-sm text-muted-foreground line-clamp-2">
+                        <TableCell className="max-w-[150px]">
+                          <span className="text-xs text-muted-foreground line-clamp-2">
                             {creative.notes || '—'}
                           </span>
                         </TableCell>
@@ -463,7 +897,7 @@ export default function MediaResourcesPage() {
 
         {/* Stats */}
         {creatives && creatives.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold">{creatives.length}</div>
@@ -473,17 +907,25 @@ export default function MediaResourcesPage() {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold">
-                  {creatives.filter(c => c.format_id).length}
+                  {creatives.filter(c => c.production_status === 'aprovado').length}
                 </div>
-                <p className="text-xs text-muted-foreground">Com Formato Definido</p>
+                <p className="text-xs text-muted-foreground">Aprovados</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold">
-                  {new Set(creatives.map(c => c.format?.name).filter(Boolean)).size}
+                  {creatives.filter(c => c.production_status === 'em_andamento').length}
                 </div>
-                <p className="text-xs text-muted-foreground">Formatos Diferentes</p>
+                <p className="text-xs text-muted-foreground">Em Andamento</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-2xl font-bold">
+                  {creatives.filter(c => c.production_status === 'solicitado').length}
+                </div>
+                <p className="text-xs text-muted-foreground">Solicitados</p>
               </CardContent>
             </Card>
           </div>

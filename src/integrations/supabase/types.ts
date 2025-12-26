@@ -79,6 +79,41 @@ export type Database = {
           },
         ]
       }
+      creative_change_logs: {
+        Row: {
+          change_date: string
+          created_at: string
+          creative_id: string
+          id: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          change_date?: string
+          created_at?: string
+          creative_id: string
+          id?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          change_date?: string
+          created_at?: string
+          creative_id?: string
+          id?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_change_logs_creative_id_fkey"
+            columns: ["creative_id"]
+            isOneToOne: false
+            referencedRelation: "media_creatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creative_templates: {
         Row: {
           created_at: string
@@ -321,6 +356,7 @@ export type Database = {
       }
       media_creatives: {
         Row: {
+          approved_date: string | null
           asset_url: string | null
           copy_text: string | null
           created_at: string | null
@@ -331,10 +367,15 @@ export type Database = {
           media_line_id: string
           name: string
           notes: string | null
+          opening_date: string | null
+          piece_link: string | null
+          production_status: string | null
+          received_date: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          approved_date?: string | null
           asset_url?: string | null
           copy_text?: string | null
           created_at?: string | null
@@ -345,10 +386,15 @@ export type Database = {
           media_line_id: string
           name: string
           notes?: string | null
+          opening_date?: string | null
+          piece_link?: string | null
+          production_status?: string | null
+          received_date?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          approved_date?: string | null
           asset_url?: string | null
           copy_text?: string | null
           created_at?: string | null
@@ -359,6 +405,10 @@ export type Database = {
           media_line_id?: string
           name?: string
           notes?: string | null
+          opening_date?: string | null
+          piece_link?: string | null
+          production_status?: string | null
+          received_date?: string | null
           updated_at?: string | null
           user_id?: string
         }
