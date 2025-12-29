@@ -1,1 +1,4 @@
 project_id = "akfvitjbmtrbtosfwmwj"
+
+[functions.invite-to-plan]
+verify_jwt = true
