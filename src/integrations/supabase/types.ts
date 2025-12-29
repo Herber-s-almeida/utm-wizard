@@ -883,6 +883,47 @@ export type Database = {
           },
         ]
       }
+      plan_roles: {
+        Row: {
+          accepted_at: string | null
+          created_at: string | null
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          media_plan_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          media_plan_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          media_plan_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_roles_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "media_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_subdivisions: {
         Row: {
           created_at: string
@@ -1224,9 +1265,21 @@ export type Database = {
     }
     Functions: {
       generate_creative_id: { Args: never; Returns: string }
+      get_plan_role: {
+        Args: { _plan_id: string; _user_id: string }
+        Returns: string
+      }
+      has_plan_role: {
+        Args: {
+          _plan_id: string
+          _roles?: Database["public"]["Enums"]["app_role"][]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "owner" | "editor" | "viewer" | "approver"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1353,6 +1406,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["owner", "editor", "viewer", "approver"],
+    },
   },
 } as const

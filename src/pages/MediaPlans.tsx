@@ -17,10 +17,12 @@ import {
   Trash2,
   MoreVertical,
   Settings2,
-  List
+  List,
+  Users
 } from 'lucide-react';
 import { MediaPlan } from '@/types/media';
 import { StatusSelector } from '@/components/media-plan/StatusSelector';
+import { RoleBadgeCompact } from '@/components/media-plan/RoleBadge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +41,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 export default function MediaPlans() {
   const { user } = useAuth();
@@ -58,10 +61,11 @@ export default function MediaPlans() {
 
   const fetchPlans = async () => {
     try {
+      // Fetch plans where user is owner OR has a role assigned
+      // The RLS policy already handles this, so we just need to query
       const { data, error } = await supabase
         .from('media_plans')
         .select('*')
-        .eq('user_id', user?.id)
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
@@ -258,9 +262,18 @@ export default function MediaPlans() {
                     </div>
 
                     <Link to={`/media-plans/${plan.id}`}>
-                      <h3 className="font-display font-semibold text-lg mb-1 group-hover:text-primary transition-colors">
-                        {plan.name}
-                      </h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-display font-semibold text-lg group-hover:text-primary transition-colors">
+                          {plan.name}
+                        </h3>
+                        <RoleBadgeCompact planId={plan.id} />
+                        {plan.user_id !== user?.id && (
+                          <Badge variant="outline" className="text-xs gap-1 bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400">
+                            <Users className="h-3 w-3" />
+                            Compartilhado
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground mb-4">
                         {plan.client || 'Sem cliente'} • {plan.campaign || 'Sem campanha'}
                       </p>
