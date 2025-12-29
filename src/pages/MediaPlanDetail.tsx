@@ -105,7 +105,7 @@ export default function MediaPlanDetail() {
   const statuses = useStatuses();
   
   // Plan roles for permissions
-  const { canEdit, canManageTeam, userRole } = usePlanRoles(id);
+  const { canEdit, canManageTeam, userRole, isLoadingRole } = usePlanRoles(id);
 
   useEffect(() => {
     if (user?.id && id) {
@@ -523,7 +523,7 @@ export default function MediaPlanDetail() {
               <History className="w-4 h-4" />
               Histórico
             </Button>
-            <SaveVersionButton planId={id!} disabled={!canEdit} />
+            <SaveVersionButton planId={id!} disabled={isLoadingRole || !canEdit} />
             <Button 
               variant="outline" 
               onClick={() => exportMediaPlanToXlsx({
@@ -548,12 +548,12 @@ export default function MediaPlanDetail() {
               variant="outline" 
               onClick={() => navigate(`/media-plans/${id}/edit`)} 
               className="gap-2"
-              disabled={!canEdit}
+              disabled={isLoadingRole || !canEdit}
             >
               <Settings2 className="w-4 h-4" />
               Editar Plano
             </Button>
-            <Button onClick={() => setWizardOpen(true)} className="gap-2" disabled={!canEdit}>
+            <Button onClick={() => setWizardOpen(true)} className="gap-2" disabled={isLoadingRole || !canEdit}>
               <Plus className="w-4 h-4" />
               Nova Linha
             </Button>
@@ -561,7 +561,7 @@ export default function MediaPlanDetail() {
               variant="outline" 
               onClick={() => setTeamDialogOpen(true)} 
               className="gap-2"
-              disabled={!canManageTeam}
+              disabled={isLoadingRole || !canManageTeam}
             >
               <Users className="w-4 h-4" />
               Equipe
