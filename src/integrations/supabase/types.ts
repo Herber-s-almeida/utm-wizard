@@ -703,6 +703,47 @@ export type Database = {
           },
         ]
       }
+      media_plan_versions: {
+        Row: {
+          change_log: string | null
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          media_plan_id: string
+          snapshot_data: Json
+          version_number: number
+        }
+        Insert: {
+          change_log?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          media_plan_id: string
+          snapshot_data?: Json
+          version_number?: number
+        }
+        Update: {
+          change_log?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          media_plan_id?: string
+          snapshot_data?: Json
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_plan_versions_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "media_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_plans: {
         Row: {
           campaign: string | null
@@ -1358,6 +1399,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      create_plan_version_snapshot: {
+        Args: { _change_log?: string; _plan_id: string; _user_id: string }
+        Returns: string
       }
       generate_creative_id: { Args: never; Returns: string }
       get_plan_role: {

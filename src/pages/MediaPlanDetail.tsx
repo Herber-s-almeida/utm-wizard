@@ -13,7 +13,8 @@ import {
   Download,
   Calendar,
   AlertTriangle,
-  Users
+  Users,
+  History
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -53,6 +54,8 @@ import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization
 import { RoleBadge } from '@/components/media-plan/RoleBadge';
 import { usePlanRoles } from '@/hooks/usePlanRoles';
 import { TeamManagementDialog } from '@/components/media-plan/TeamManagementDialog';
+import { SaveVersionButton } from '@/components/media-plan/SaveVersionButton';
+import { VersionHistoryDialog } from '@/components/media-plan/VersionHistoryDialog';
 
 interface BudgetDistribution {
   id: string;
@@ -85,6 +88,7 @@ export default function MediaPlanDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lineToDelete, setLineToDelete] = useState<MediaLine | null>(null);
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [filteredLines, setFilteredLines] = useState<MediaLine[]>([]);
 
   // Library data for display
@@ -462,7 +466,18 @@ export default function MediaPlanDetail() {
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button 
+              variant="outline" 
+              onClick={() => setVersionHistoryOpen(true)}
+              className="gap-2"
+            >
+              <History className="w-4 h-4" />
+              Histórico
+            </Button>
+            {canEdit && (
+              <SaveVersionButton planId={id!} />
+            )}
             <Button 
               variant="outline" 
               onClick={() => exportMediaPlanToXlsx({
@@ -794,6 +809,14 @@ export default function MediaPlanDetail() {
         planId={id!}
         open={teamDialogOpen}
         onOpenChange={setTeamDialogOpen}
+      />
+
+      {/* Version History Dialog */}
+      <VersionHistoryDialog
+        planId={id!}
+        open={versionHistoryOpen}
+        onOpenChange={setVersionHistoryOpen}
+        onRestored={fetchData}
       />
     </DashboardLayout>
   );
