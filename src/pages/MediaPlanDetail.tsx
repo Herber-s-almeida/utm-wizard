@@ -523,9 +523,7 @@ export default function MediaPlanDetail() {
               <History className="w-4 h-4" />
               Histórico
             </Button>
-            {canEdit && (
-              <SaveVersionButton planId={id!} />
-            )}
+            <SaveVersionButton planId={id!} disabled={!canEdit} />
             <Button 
               variant="outline" 
               onClick={() => exportMediaPlanToXlsx({
@@ -546,32 +544,28 @@ export default function MediaPlanDetail() {
               <Download className="w-4 h-4" />
               Exportar XLSX
             </Button>
-            {canEdit && (
-              <>
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate(`/media-plans/${id}/edit`)} 
-                  className="gap-2"
-                >
-                  <Settings2 className="w-4 h-4" />
-                  Editar Plano
-                </Button>
-                <Button onClick={() => setWizardOpen(true)} className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Nova Linha
-                </Button>
-              </>
-            )}
-            {canManageTeam && (
-              <Button 
-                variant="outline" 
-                onClick={() => setTeamDialogOpen(true)} 
-                className="gap-2"
-              >
-                <Users className="w-4 h-4" />
-                Equipe
-              </Button>
-            )}
+            <Button 
+              variant="outline" 
+              onClick={() => navigate(`/media-plans/${id}/edit`)} 
+              className="gap-2"
+              disabled={!canEdit}
+            >
+              <Settings2 className="w-4 h-4" />
+              Editar Plano
+            </Button>
+            <Button onClick={() => setWizardOpen(true)} className="gap-2" disabled={!canEdit}>
+              <Plus className="w-4 h-4" />
+              Nova Linha
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setTeamDialogOpen(true)} 
+              className="gap-2"
+              disabled={!canManageTeam}
+            >
+              <Users className="w-4 h-4" />
+              Equipe
+            </Button>
           </div>
         </div>
 

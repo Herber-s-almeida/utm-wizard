@@ -18,13 +18,15 @@ interface SaveVersionButtonProps {
   variant?: 'default' | 'outline' | 'ghost' | 'secondary';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   className?: string;
+  disabled?: boolean;
 }
 
 export function SaveVersionButton({ 
   planId, 
   variant = 'outline',
   size = 'default',
-  className 
+  className,
+  disabled = false
 }: SaveVersionButtonProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [changeLog, setChangeLog] = useState('');
@@ -49,6 +51,7 @@ export function SaveVersionButton({
         size={size}
         className={className}
         onClick={() => setDialogOpen(true)}
+        disabled={disabled}
       >
         <Save className="w-4 h-4 mr-2" />
         Salvar Versão
