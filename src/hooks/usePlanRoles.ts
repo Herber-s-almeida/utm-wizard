@@ -119,7 +119,7 @@ export function usePlanRoles(planId: string | undefined) {
 
   // Get current user's role in the plan
   const userRoleQuery = useQuery({
-    queryKey: ['plan_role', planId, user?.id],
+    queryKey: ['plan_role_value', planId, user?.id],
     queryFn: async () => {
       if (!planId || !user) return null;
 
@@ -260,7 +260,7 @@ export function useUserPlanRole(planId: string | undefined) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['plan_role', planId, user?.id],
+    queryKey: ['plan_role_badge', planId, user?.id],
     queryFn: async () => {
       if (!planId || !user) return null;
 
