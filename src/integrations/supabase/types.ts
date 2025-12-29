@@ -55,6 +55,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          slug: string | null
           updated_at: string
           user_id: string
           vehicle_id: string
@@ -66,6 +67,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          slug?: string | null
           updated_at?: string
           user_id: string
           vehicle_id: string
@@ -77,6 +79,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          slug?: string | null
           updated_at?: string
           user_id?: string
           vehicle_id?: string
@@ -332,6 +335,7 @@ export type Database = {
           is_active: boolean | null
           is_system: boolean
           name: string
+          slug: string | null
           updated_at: string
           user_id: string
         }
@@ -342,6 +346,7 @@ export type Database = {
           is_active?: boolean | null
           is_system?: boolean
           name: string
+          slug?: string | null
           updated_at?: string
           user_id: string
         }
@@ -352,6 +357,7 @@ export type Database = {
           is_active?: boolean | null
           is_system?: boolean
           name?: string
+          slug?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -367,6 +373,7 @@ export type Database = {
           is_system: boolean
           name: string
           order_index: number
+          slug: string | null
           updated_at: string
           user_id: string
         }
@@ -379,6 +386,7 @@ export type Database = {
           is_system?: boolean
           name: string
           order_index?: number
+          slug?: string | null
           updated_at?: string
           user_id: string
         }
@@ -391,6 +399,7 @@ export type Database = {
           is_system?: boolean
           name?: string
           order_index?: number
+          slug?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -548,6 +557,9 @@ export type Database = {
           utm_medium: string | null
           utm_source: string | null
           utm_term: string | null
+          utm_validated: boolean | null
+          utm_validated_at: string | null
+          utm_validated_by: string | null
           vehicle_id: string | null
         }
         Insert: {
@@ -588,6 +600,9 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           utm_term?: string | null
+          utm_validated?: boolean | null
+          utm_validated_at?: string | null
+          utm_validated_by?: string | null
           vehicle_id?: string | null
         }
         Update: {
@@ -628,6 +643,9 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           utm_term?: string | null
+          utm_validated?: boolean | null
+          utm_validated_at?: string | null
+          utm_validated_by?: string | null
           vehicle_id?: string | null
         }
         Relationships: [
@@ -803,6 +821,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          slug: string | null
           updated_at: string
           user_id: string
         }
@@ -813,6 +832,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          slug?: string | null
           updated_at?: string
           user_id: string
         }
@@ -823,6 +843,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          slug?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -837,6 +858,7 @@ export type Database = {
           is_active: boolean | null
           is_system: boolean
           name: string
+          slug: string | null
           updated_at: string
           user_id: string
         }
@@ -848,6 +870,7 @@ export type Database = {
           is_active?: boolean | null
           is_system?: boolean
           name: string
+          slug?: string | null
           updated_at?: string
           user_id: string
         }
@@ -859,6 +882,7 @@ export type Database = {
           is_active?: boolean | null
           is_system?: boolean
           name?: string
+          slug?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1013,6 +1037,7 @@ export type Database = {
           is_system: boolean
           name: string
           parent_id: string | null
+          slug: string | null
           updated_at: string
           user_id: string
         }
@@ -1025,6 +1050,7 @@ export type Database = {
           is_system?: boolean
           name: string
           parent_id?: string | null
+          slug?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1037,6 +1063,7 @@ export type Database = {
           is_system?: boolean
           name?: string
           parent_id?: string | null
+          slug?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1311,6 +1338,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          slug: string | null
           updated_at: string
           user_id: string
         }
@@ -1324,6 +1352,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          slug?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1337,6 +1366,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          slug?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1351,6 +1381,7 @@ export type Database = {
           is_active: boolean | null
           medium_id: string | null
           name: string
+          slug: string | null
           updated_at: string
           user_id: string
         }
@@ -1362,6 +1393,7 @@ export type Database = {
           is_active?: boolean | null
           medium_id?: string | null
           name: string
+          slug?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1373,6 +1405,7 @@ export type Database = {
           is_active?: boolean | null
           medium_id?: string | null
           name?: string
+          slug?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1405,6 +1438,7 @@ export type Database = {
         Returns: string
       }
       generate_creative_id: { Args: never; Returns: string }
+      generate_slug: { Args: { input_text: string }; Returns: string }
       get_plan_role: {
         Args: { _plan_id: string; _user_id: string }
         Returns: string

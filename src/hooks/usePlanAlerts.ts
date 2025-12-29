@@ -140,6 +140,17 @@ export function usePlanAlerts({
           lineId: line.id,
           category: 'utm',
         });
+      } else if (!(line as any).utm_validated) {
+        // UTM exists but not validated
+        result.push({
+          id: `utm-pending-${line.id}`,
+          level: 'info',
+          title: 'UTM pendente validação',
+          description: `A linha "${line.platform}" tem UTMs configurados mas não validados`,
+          action: 'Revise e valide os parâmetros UTM',
+          lineId: line.id,
+          category: 'utm',
+        });
       }
 
       // 7. Active lines outside period
