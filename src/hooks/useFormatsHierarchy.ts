@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { useSoftDeleteMutations, filterSoftDeleteItems } from './useSoftDelete';
 
 // Types
 export interface Format {
@@ -11,6 +12,8 @@ export interface Format {
   user_id: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
 }
 
 export interface FormatCreativeType {
@@ -20,6 +23,8 @@ export interface FormatCreativeType {
   user_id: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
   specifications?: CreativeTypeSpecification[];
 }
 
@@ -35,6 +40,8 @@ export interface CreativeTypeSpecification {
   user_id: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
   copy_fields?: SpecificationCopyField[];
   dimensions?: SpecificationDimension[];
   extensions?: SpecificationExtension[];
@@ -47,6 +54,8 @@ export interface SpecificationCopyField {
   max_characters: number | null;
   observation: string | null;
   user_id: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
 }
 
 export interface SpecificationDimension {
@@ -58,6 +67,8 @@ export interface SpecificationDimension {
   description: string | null;
   observation: string | null;
   user_id: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
 }
 
 export interface SpecificationExtension {
@@ -81,6 +92,7 @@ export interface FormatWithHierarchy extends Format {
 export function useFormats() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('formats', 'formats', 'Formato');
 
   const query = useQuery({
     queryKey: ['formats', user?.id],
@@ -133,17 +145,23 @@ export function useFormats() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('formats').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['formats'] });
-      queryClient.invalidateQueries({ queryKey: ['formats_hierarchy'] });
-      toast.success('Formato removido!');
+      await softDelete.mutateAsync(id);
     },
   });
 
-  return { ...query, create, update, remove };
+  const { active, archived } = filterSoftDeleteItems(query.data);
+
+  return { 
+    ...query, 
+    activeItems: active,
+    archivedItems: archived,
+    create, 
+    update, 
+    remove,
+    softDelete,
+    restore,
+    permanentDelete,
+  };
 }
 
 // Hook for Creative Types (within a format)

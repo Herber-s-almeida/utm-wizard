@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, ArrowLeft, ChevronDown, ChevronRight, Lock } from 'lucide-react';
+import { Plus, Pencil, Archive, ArrowLeft, ChevronDown, ChevronRight, Lock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useSubdivisions } from '@/hooks/useConfigData';
 import { SubdivisionDialog } from '@/components/config/SubdivisionDialog';
+import { ArchivedSection } from '@/components/config/ArchivedSection';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,22 +21,23 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export default function SubdivisionsPage() {
-  const { data: subdivisions, create, update, remove } = useSubdivisions();
+  const { data: subdivisions, activeItems, archivedItems, create, update, softDelete, restore, permanentDelete } = useSubdivisions();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [archiveId, setArchiveId] = useState<string | null>(null);
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({});
 
-  const parentSubdivisions = subdivisions?.filter(s => !s.parent_id) || [];
+  const parentSubdivisions = activeItems?.filter(s => !s.parent_id) || [];
+  const archivedParents = archivedItems?.filter(s => !s.parent_id) || [];
+
   const getChildSubdivisions = (parentId: string) => 
-    subdivisions?.filter(s => s.parent_id === parentId) || [];
+    subdivisions?.filter(s => s.parent_id === parentId && !s.deleted_at) || [];
 
   const existingNames = parentSubdivisions.map(s => s.name);
 
   const handleCreate = (data: { name: string; description: string; details: { name: string; description: string }[] }) => {
     create.mutate({ name: data.name, description: data.description }, {
       onSuccess: (newSub: any) => {
-        // Create child subdivisions for details
         data.details.forEach(detail => {
           create.mutate({ name: detail.name, description: detail.description, parent_id: newSub.id });
         });
@@ -122,11 +124,11 @@ export default function SubdivisionsPage() {
                         </div>
                         {!(sub as any).is_system && (
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(sub)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(sub)}>
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => setDeleteId(sub.id)} className="text-destructive">
-                              <Trash2 className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" onClick={() => setArchiveId(sub.id)} className="text-orange-600">
+                              <Archive className="h-4 w-4" />
                             </Button>
                           </div>
                         )}
@@ -145,8 +147,8 @@ export default function SubdivisionsPage() {
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDeleteId(child.id)}>
-                                    <Trash2 className="h-3 w-3" />
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-orange-600" onClick={() => setArchiveId(child.id)}>
+                                    <Archive className="h-3 w-3" />
                                   </Button>
                                 </div>
                               </div>
@@ -162,6 +164,15 @@ export default function SubdivisionsPage() {
           )}
         </div>
 
+        <ArchivedSection
+          items={archivedParents}
+          onRestore={(id) => restore.mutate(id)}
+          onPermanentDelete={(id) => permanentDelete.mutate(id)}
+          itemLabel="subdivisão"
+          isRestoring={restore.isPending}
+          isDeleting={permanentDelete.isPending}
+        />
+
         <SubdivisionDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
@@ -171,24 +182,24 @@ export default function SubdivisionsPage() {
           mode={editingItem ? 'edit' : 'create'}
         />
 
-        <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialog open={!!archiveId} onOpenChange={() => setArchiveId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Excluir subdivisão?</AlertDialogTitle>
+              <AlertDialogTitle>Arquivar subdivisão?</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta ação não pode ser desfeita. Se esta subdivisão estiver vinculada a algum plano, a exclusão falhará.
+                Esta subdivisão será arquivada e não poderá ser usada em novos planos, mas permanecerá visível em planos existentes. Você pode restaurá-la a qualquer momento.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
-                  if (deleteId) remove.mutate(deleteId);
-                  setDeleteId(null);
+                  if (archiveId) softDelete.mutate(archiveId);
+                  setArchiveId(null);
                 }}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                className="bg-orange-600 text-white hover:bg-orange-700"
               >
-                Excluir
+                Arquivar
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

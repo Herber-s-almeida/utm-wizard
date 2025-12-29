@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { useSoftDeleteMutations, filterSoftDeleteItems } from './useSoftDelete';
 
 // Types
 export interface Subdivision {
@@ -11,6 +12,8 @@ export interface Subdivision {
   parent_id: string | null;
   user_id: string;
   created_at: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
 }
 
 export interface Moment {
@@ -18,6 +21,8 @@ export interface Moment {
   name: string;
   description?: string;
   user_id: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
 }
 
 export interface FunnelStage {
@@ -26,6 +31,8 @@ export interface FunnelStage {
   description?: string;
   order_index: number;
   user_id: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
 }
 
 export interface Medium {
@@ -33,6 +40,8 @@ export interface Medium {
   name: string;
   description?: string;
   user_id: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
 }
 
 export interface Vehicle {
@@ -41,6 +50,8 @@ export interface Vehicle {
   description?: string;
   medium_id: string | null;
   user_id: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
 }
 
 export interface Channel {
@@ -49,6 +60,8 @@ export interface Channel {
   description?: string;
   vehicle_id: string;
   user_id: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
 }
 
 export interface Target {
@@ -59,6 +72,8 @@ export interface Target {
   behavior: string | null;
   description: string | null;
   user_id: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
 }
 
 export interface BehavioralSegmentation {
@@ -68,6 +83,8 @@ export interface BehavioralSegmentation {
   user_id: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
 }
 
 export interface CreativeTemplate {
@@ -79,12 +96,15 @@ export interface CreativeTemplate {
   message: string | null;
   objective: string | null;
   user_id: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
 }
 
 // Hook for Subdivisions
 export function useSubdivisions() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('plan_subdivisions', 'subdivisions', 'Subdivisão');
 
   const query = useQuery({
     queryKey: ['subdivisions', user?.id],
@@ -129,24 +149,34 @@ export function useSubdivisions() {
     },
   });
 
+  // Legacy remove that now does soft delete
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('plan_subdivisions').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subdivisions'] });
-      toast.success('Subdivisão removida!');
+      await softDelete.mutateAsync(id);
     },
   });
 
-  return { ...query, create, update, remove };
+  const { active, archived } = filterSoftDeleteItems(query.data);
+
+  return { 
+    ...query, 
+    data: query.data,
+    activeItems: active,
+    archivedItems: archived,
+    create, 
+    update, 
+    remove,
+    softDelete,
+    restore,
+    permanentDelete,
+  };
 }
 
 // Hook for Moments
 export function useMoments() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('moments', 'moments', 'Momento');
 
   const query = useQuery({
     queryKey: ['moments', user?.id],
@@ -176,17 +206,31 @@ export function useMoments() {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from('moments').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['moments'] }); toast.success('Momento removido!'); },
+    mutationFn: async (id: string) => {
+      await softDelete.mutateAsync(id);
+    },
   });
 
-  return { ...query, create, update, remove };
+  const { active, archived } = filterSoftDeleteItems(query.data);
+
+  return { 
+    ...query, 
+    activeItems: active,
+    archivedItems: archived,
+    create, 
+    update, 
+    remove,
+    softDelete,
+    restore,
+    permanentDelete,
+  };
 }
 
 // Hook for Funnel Stages
 export function useFunnelStages() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('funnel_stages', 'funnel_stages', 'Fase do funil');
 
   const query = useQuery({
     queryKey: ['funnel_stages', user?.id],
@@ -200,7 +244,8 @@ export function useFunnelStages() {
 
   const create = useMutation({
     mutationFn: async ({ name, description }: { name: string; description?: string }) => {
-      const maxOrder = query.data?.reduce((max, s) => Math.max(max, s.order_index), -1) ?? -1;
+      const activeStages = query.data?.filter(s => !s.deleted_at) || [];
+      const maxOrder = activeStages.reduce((max, s) => Math.max(max, s.order_index), -1);
       const { data, error } = await supabase.from('funnel_stages').insert({ name, description: description || null, order_index: maxOrder + 1, user_id: user!.id }).select().single();
       if (error) throw error;
       return data;
@@ -217,17 +262,31 @@ export function useFunnelStages() {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from('funnel_stages').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['funnel_stages'] }); toast.success('Fase do funil removida!'); },
+    mutationFn: async (id: string) => {
+      await softDelete.mutateAsync(id);
+    },
   });
 
-  return { ...query, create, update, remove };
+  const { active, archived } = filterSoftDeleteItems(query.data);
+
+  return { 
+    ...query, 
+    activeItems: active,
+    archivedItems: archived,
+    create, 
+    update, 
+    remove,
+    softDelete,
+    restore,
+    permanentDelete,
+  };
 }
 
 // Hook for Mediums
 export function useMediums() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('mediums', 'mediums', 'Meio');
 
   const query = useQuery({
     queryKey: ['mediums', user?.id],
@@ -257,17 +316,31 @@ export function useMediums() {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from('mediums').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['mediums'] }); toast.success('Meio removido!'); },
+    mutationFn: async (id: string) => {
+      await softDelete.mutateAsync(id);
+    },
   });
 
-  return { ...query, create, update, remove };
+  const { active, archived } = filterSoftDeleteItems(query.data);
+
+  return { 
+    ...query, 
+    activeItems: active,
+    archivedItems: archived,
+    create, 
+    update, 
+    remove,
+    softDelete,
+    restore,
+    permanentDelete,
+  };
 }
 
 // Hook for Vehicles
 export function useVehicles() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('vehicles', 'vehicles', 'Veículo');
 
   const query = useQuery({
     queryKey: ['vehicles', user?.id],
@@ -297,17 +370,31 @@ export function useVehicles() {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from('vehicles').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['vehicles'] }); toast.success('Veículo removido!'); },
+    mutationFn: async (id: string) => {
+      await softDelete.mutateAsync(id);
+    },
   });
 
-  return { ...query, create, update, remove };
+  const { active, archived } = filterSoftDeleteItems(query.data);
+
+  return { 
+    ...query, 
+    activeItems: active,
+    archivedItems: archived,
+    create, 
+    update, 
+    remove,
+    softDelete,
+    restore,
+    permanentDelete,
+  };
 }
 
 // Hook for Channels
 export function useChannels() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('channels', 'channels', 'Canal');
 
   const query = useQuery({
     queryKey: ['channels', user?.id],
@@ -337,17 +424,31 @@ export function useChannels() {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from('channels').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['channels'] }); toast.success('Canal removido!'); },
+    mutationFn: async (id: string) => {
+      await softDelete.mutateAsync(id);
+    },
   });
 
-  return { ...query, create, update, remove };
+  const { active, archived } = filterSoftDeleteItems(query.data);
+
+  return { 
+    ...query, 
+    activeItems: active,
+    archivedItems: archived,
+    create, 
+    update, 
+    remove,
+    softDelete,
+    restore,
+    permanentDelete,
+  };
 }
 
 // Hook for Behavioral Segmentations
 export function useBehavioralSegmentations() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('behavioral_segmentations', 'behavioral_segmentations', 'Segmentação');
 
   const query = useQuery({
     queryKey: ['behavioral_segmentations', user?.id],
@@ -377,17 +478,31 @@ export function useBehavioralSegmentations() {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from('behavioral_segmentations').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['behavioral_segmentations'] }); toast.success('Segmentação comportamental removida!'); },
+    mutationFn: async (id: string) => {
+      await softDelete.mutateAsync(id);
+    },
   });
 
-  return { ...query, create, update, remove };
+  const { active, archived } = filterSoftDeleteItems(query.data);
+
+  return { 
+    ...query, 
+    activeItems: active,
+    archivedItems: archived,
+    create, 
+    update, 
+    remove,
+    softDelete,
+    restore,
+    permanentDelete,
+  };
 }
 
 // Hook for Targets
 export function useTargets() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('targets', 'targets', 'Segmentação');
 
   const query = useQuery({
     queryKey: ['targets', user?.id],
@@ -417,17 +532,31 @@ export function useTargets() {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from('targets').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['targets'] }); toast.success('Segmentação removida!'); },
+    mutationFn: async (id: string) => {
+      await softDelete.mutateAsync(id);
+    },
   });
 
-  return { ...query, create, update, remove };
+  const { active, archived } = filterSoftDeleteItems(query.data);
+
+  return { 
+    ...query, 
+    activeItems: active,
+    archivedItems: archived,
+    create, 
+    update, 
+    remove,
+    softDelete,
+    restore,
+    permanentDelete,
+  };
 }
 
 // Hook for Creative Templates
 export function useCreativeTemplates() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('creative_templates', 'creative_templates', 'Criativo');
 
   const query = useQuery({
     queryKey: ['creative_templates', user?.id],
@@ -457,11 +586,24 @@ export function useCreativeTemplates() {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from('creative_templates').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['creative_templates'] }); toast.success('Criativo removido!'); },
+    mutationFn: async (id: string) => {
+      await softDelete.mutateAsync(id);
+    },
   });
 
-  return { ...query, create, update, remove };
+  const { active, archived } = filterSoftDeleteItems(query.data);
+
+  return { 
+    ...query, 
+    activeItems: active,
+    archivedItems: archived,
+    create, 
+    update, 
+    remove,
+    softDelete,
+    restore,
+    permanentDelete,
+  };
 }
 
 // Hook for Media Plans with soft delete

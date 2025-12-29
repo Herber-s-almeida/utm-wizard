@@ -17,24 +17,30 @@ export type Database = {
       behavioral_segmentations: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
+          is_active: boolean | null
           name: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           name: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           name?: string
           updated_at?: string
           user_id?: string
@@ -44,8 +50,10 @@ export type Database = {
       channels: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
+          is_active: boolean | null
           name: string
           updated_at: string
           user_id: string
@@ -53,8 +61,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           name: string
           updated_at?: string
           user_id: string
@@ -62,8 +72,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           name?: string
           updated_at?: string
           user_id?: string
@@ -118,11 +130,13 @@ export type Database = {
         Row: {
           created_at: string
           creative_type_id: string | null
+          deleted_at: string | null
           dimension: string | null
           dimensions: Json | null
           duration: string | null
           format: string
           id: string
+          is_active: boolean | null
           message: string | null
           name: string
           objective: string | null
@@ -132,11 +146,13 @@ export type Database = {
         Insert: {
           created_at?: string
           creative_type_id?: string | null
+          deleted_at?: string | null
           dimension?: string | null
           dimensions?: Json | null
           duration?: string | null
           format: string
           id?: string
+          is_active?: boolean | null
           message?: string | null
           name: string
           objective?: string | null
@@ -146,11 +162,13 @@ export type Database = {
         Update: {
           created_at?: string
           creative_type_id?: string | null
+          deleted_at?: string | null
           dimension?: string | null
           dimensions?: Json | null
           duration?: string | null
           format?: string
           id?: string
+          is_active?: boolean | null
           message?: string | null
           name?: string
           objective?: string | null
@@ -171,10 +189,12 @@ export type Database = {
         Row: {
           created_at: string
           creative_type_id: string
+          deleted_at: string | null
           duration_unit: string | null
           duration_value: number | null
           has_duration: boolean | null
           id: string
+          is_active: boolean | null
           max_weight: number | null
           name: string
           updated_at: string
@@ -184,10 +204,12 @@ export type Database = {
         Insert: {
           created_at?: string
           creative_type_id: string
+          deleted_at?: string | null
           duration_unit?: string | null
           duration_value?: number | null
           has_duration?: boolean | null
           id?: string
+          is_active?: boolean | null
           max_weight?: number | null
           name: string
           updated_at?: string
@@ -197,10 +219,12 @@ export type Database = {
         Update: {
           created_at?: string
           creative_type_id?: string
+          deleted_at?: string | null
           duration_unit?: string | null
           duration_value?: number | null
           has_duration?: boolean | null
           id?: string
+          is_active?: boolean | null
           max_weight?: number | null
           name?: string
           updated_at?: string
@@ -262,24 +286,30 @@ export type Database = {
       format_creative_types: {
         Row: {
           created_at: string
+          deleted_at: string | null
           format_id: string
           id: string
+          is_active: boolean | null
           name: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           format_id: string
           id?: string
+          is_active?: boolean | null
           name: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           format_id?: string
           id?: string
+          is_active?: boolean | null
           name?: string
           updated_at?: string
           user_id?: string
@@ -297,7 +327,9 @@ export type Database = {
       formats: {
         Row: {
           created_at: string
+          deleted_at: string | null
           id: string
+          is_active: boolean | null
           is_system: boolean
           name: string
           updated_at: string
@@ -305,7 +337,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
+          is_active?: boolean | null
           is_system?: boolean
           name: string
           updated_at?: string
@@ -313,7 +347,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
+          is_active?: boolean | null
           is_system?: boolean
           name?: string
           updated_at?: string
@@ -324,8 +360,10 @@ export type Database = {
       funnel_stages: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
+          is_active: boolean | null
           is_system: boolean
           name: string
           order_index: number
@@ -334,8 +372,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           is_system?: boolean
           name: string
           order_index?: number
@@ -344,8 +384,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           is_system?: boolean
           name?: string
           order_index?: number
@@ -715,24 +757,30 @@ export type Database = {
       mediums: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
+          is_active: boolean | null
           name: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           name: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           name?: string
           updated_at?: string
           user_id?: string
@@ -742,8 +790,10 @@ export type Database = {
       moments: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
+          is_active: boolean | null
           is_system: boolean
           name: string
           updated_at: string
@@ -751,8 +801,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           is_system?: boolean
           name: string
           updated_at?: string
@@ -760,8 +812,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           is_system?: boolean
           name?: string
           updated_at?: string
@@ -832,8 +886,10 @@ export type Database = {
       plan_subdivisions: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
+          is_active: boolean | null
           is_system: boolean
           name: string
           parent_id: string | null
@@ -842,8 +898,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           is_system?: boolean
           name: string
           parent_id?: string | null
@@ -852,8 +910,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           is_system?: boolean
           name?: string
           parent_id?: string | null
@@ -900,7 +960,9 @@ export type Database = {
       specification_copy_fields: {
         Row: {
           created_at: string
+          deleted_at: string | null
           id: string
+          is_active: boolean | null
           max_characters: number | null
           name: string
           observation: string | null
@@ -910,7 +972,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
+          is_active?: boolean | null
           max_characters?: number | null
           name: string
           observation?: string | null
@@ -920,7 +984,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
+          is_active?: boolean | null
           max_characters?: number | null
           name?: string
           observation?: string | null
@@ -941,9 +1007,11 @@ export type Database = {
       specification_dimensions: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           height: number
           id: string
+          is_active: boolean | null
           observation: string | null
           specification_id: string
           unit: string
@@ -953,9 +1021,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           height: number
           id?: string
+          is_active?: boolean | null
           observation?: string | null
           specification_id: string
           unit?: string
@@ -965,9 +1035,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           height?: number
           id?: string
+          is_active?: boolean | null
           observation?: string | null
           specification_id?: string
           unit?: string
@@ -1027,8 +1099,10 @@ export type Database = {
       statuses: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
+          is_active: boolean | null
           is_system: boolean
           name: string
           updated_at: string
@@ -1036,8 +1110,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           is_system?: boolean
           name: string
           updated_at?: string
@@ -1045,8 +1121,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           is_system?: boolean
           name?: string
           updated_at?: string
@@ -1059,9 +1137,11 @@ export type Database = {
           age_range: string | null
           behavior: string | null
           created_at: string
+          deleted_at: string | null
           description: string | null
           geolocation: Json | null
           id: string
+          is_active: boolean | null
           name: string
           updated_at: string
           user_id: string
@@ -1070,9 +1150,11 @@ export type Database = {
           age_range?: string | null
           behavior?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           geolocation?: Json | null
           id?: string
+          is_active?: boolean | null
           name: string
           updated_at?: string
           user_id: string
@@ -1081,9 +1163,11 @@ export type Database = {
           age_range?: string | null
           behavior?: string | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           geolocation?: Json | null
           id?: string
+          is_active?: boolean | null
           name?: string
           updated_at?: string
           user_id?: string
@@ -1093,8 +1177,10 @@ export type Database = {
       vehicles: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
+          is_active: boolean | null
           medium_id: string | null
           name: string
           updated_at: string
@@ -1102,8 +1188,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           medium_id?: string | null
           name: string
           updated_at?: string
@@ -1111,8 +1199,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           medium_id?: string | null
           name?: string
           updated_at?: string
