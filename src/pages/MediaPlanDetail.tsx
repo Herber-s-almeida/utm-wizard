@@ -12,7 +12,8 @@ import {
   Settings2,
   Download,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  Users
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -49,6 +50,8 @@ import {
 } from '@/components/ui/tooltip';
 import { BudgetAllocation } from '@/hooks/useMediaPlanWizard';
 import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization';
+import { RoleBadge } from '@/components/media-plan/RoleBadge';
+import { usePlanRoles } from '@/hooks/usePlanRoles';
 
 interface BudgetDistribution {
   id: string;
@@ -91,6 +94,9 @@ export default function MediaPlanDetail() {
   const channels = useChannels();
   const targets = useTargets();
   const statuses = useStatuses();
+  
+  // Plan roles for permissions
+  const { canEdit, canManageTeam, userRole } = usePlanRoles(id);
 
   useEffect(() => {
     if (user?.id && id) {
@@ -447,6 +453,7 @@ export default function MediaPlanDetail() {
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[plan.status]}`}>
                   {STATUS_LABELS[plan.status]}
                 </span>
+                <RoleBadge planId={id!} />
               </div>
               <p className="text-muted-foreground">
                 {plan.client || 'Sem cliente'} • {plan.campaign || 'Sem campanha'}
@@ -474,18 +481,32 @@ export default function MediaPlanDetail() {
               <Download className="w-4 h-4" />
               Exportar XLSX
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate(`/media-plans/${id}/edit`)} 
-              className="gap-2"
-            >
-              <Settings2 className="w-4 h-4" />
-              Editar Plano
-            </Button>
-            <Button onClick={() => setWizardOpen(true)} className="gap-2">
-              <Plus className="w-4 h-4" />
-              Nova Linha
-            </Button>
+            {canEdit && (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate(`/media-plans/${id}/edit`)} 
+                  className="gap-2"
+                >
+                  <Settings2 className="w-4 h-4" />
+                  Editar Plano
+                </Button>
+                <Button onClick={() => setWizardOpen(true)} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Nova Linha
+                </Button>
+              </>
+            )}
+            {canManageTeam && (
+              <Button 
+                variant="outline" 
+                onClick={() => toast.info('Gerenciamento de equipe em desenvolvimento')} 
+                className="gap-2"
+              >
+                <Users className="w-4 h-4" />
+                Equipe
+              </Button>
+            )}
           </div>
         </div>
 
