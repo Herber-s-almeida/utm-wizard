@@ -41,6 +41,8 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { PlanAlert } from '@/hooks/usePlanAlerts';
+import { LineAlertIndicator } from '@/components/media-plan/LineAlertIndicator';
 
 // Columns that can be toggled (excludes: Código, Orçamento, Status, Início, Fim, Ações)
 type ToggleableColumn = 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target' | 'creatives';
@@ -118,6 +120,7 @@ interface HierarchicalMediaTableProps {
   moments?: Moment[];
   funnelStages?: FunnelStage[];
   statuses?: Status[];
+  lineAlerts?: (lineId: string) => PlanAlert[];
   onEditLine: (line: MediaLine, initialStep?: string) => void;
   onDeleteLine: (line: MediaLine) => void;
   onAddLine: (prefill?: { subdivisionId?: string; momentId?: string; funnelStageId?: string }) => void;
@@ -180,6 +183,7 @@ export function HierarchicalMediaTable({
   moments: momentsList = [],
   funnelStages: funnelStagesList = [],
   statuses: statusesList = [],
+  lineAlerts,
   onEditLine,
   onDeleteLine,
   onAddLine,
@@ -1590,7 +1594,8 @@ export function HierarchicalMediaTable({
                                     />
                                     
                                     {/* Action buttons */}
-                                    <div className="w-[90px] p-2 border-r flex items-center gap-1 shrink-0">
+                                    <div className="w-[100px] p-2 border-r flex items-center gap-1 shrink-0">
+                                      {lineAlerts && <LineAlertIndicator alerts={lineAlerts(line.id)} size="sm" />}
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Button

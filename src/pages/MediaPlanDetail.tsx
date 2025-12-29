@@ -56,6 +56,8 @@ import { usePlanRoles } from '@/hooks/usePlanRoles';
 import { TeamManagementDialog } from '@/components/media-plan/TeamManagementDialog';
 import { SaveVersionButton } from '@/components/media-plan/SaveVersionButton';
 import { VersionHistoryDialog } from '@/components/media-plan/VersionHistoryDialog';
+import { usePlanAlerts } from '@/hooks/usePlanAlerts';
+import { AlertsSummaryCard } from '@/components/media-plan/AlertsSummaryCard';
 
 interface BudgetDistribution {
   id: string;
@@ -90,6 +92,7 @@ export default function MediaPlanDetail() {
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [filteredLines, setFilteredLines] = useState<MediaLine[]>([]);
+  const [filterByAlerts, setFilterByAlerts] = useState(false);
 
   // Library data for display
   const subdivisions = useSubdivisions();
@@ -428,6 +431,22 @@ export default function MediaPlanDetail() {
     });
   }, [lines, budgetDistributions, subdivisions.data, moments.data, funnelStages.data]);
 
+  // Plan alerts
+  const planAlerts = usePlanAlerts({
+    totalBudget: plan?.total_budget || 0,
+    lines,
+    creatives,
+    budgetDistributions,
+    planStartDate: plan?.start_date || null,
+    planEndDate: plan?.end_date || null,
+  });
+
+  // Filter lines by alerts if enabled
+  const displayedLines = useMemo(() => {
+    if (!filterByAlerts) return lines;
+    return lines.filter(line => planAlerts.linesWithAlerts.has(line.id));
+  }, [lines, filterByAlerts, planAlerts.linesWithAlerts]);
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -526,6 +545,16 @@ export default function MediaPlanDetail() {
             )}
           </div>
         </div>
+
+        {/* Alerts Summary */}
+        <AlertsSummaryCard
+          alerts={planAlerts.alerts}
+          errorCount={planAlerts.errorAlerts.length}
+          warningCount={planAlerts.warningAlerts.length}
+          infoCount={planAlerts.infoAlerts.length}
+          onFilterByAlerts={setFilterByAlerts}
+          filterEnabled={filterByAlerts}
+        />
 
         {/* Stats */}
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
@@ -727,7 +756,7 @@ export default function MediaPlanDetail() {
         {/* Hierarchical Media Table */}
         <HierarchicalMediaTable
           plan={plan}
-          lines={lines}
+          lines={filterByAlerts ? displayedLines : lines}
           creatives={creatives}
           budgetDistributions={budgetDistributions}
           monthlyBudgets={monthlyBudgets}
@@ -739,6 +768,7 @@ export default function MediaPlanDetail() {
           moments={moments.data || []}
           funnelStages={funnelStages.data || []}
           statuses={statuses.data || []}
+          lineAlerts={planAlerts.getLineAlerts}
           onEditLine={(line, initialStep) => {
             setEditingLine(line);
             setEditInitialStep(initialStep);
