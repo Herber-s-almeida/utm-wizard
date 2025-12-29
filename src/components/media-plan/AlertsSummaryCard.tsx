@@ -202,8 +202,8 @@ export function AlertsSummaryCard({
             </div>
 
             {/* Alerts list */}
-            <ScrollArea className="max-h-[300px]">
-              <div className="space-y-2">
+            <ScrollArea className="h-[250px]">
+              <div className="space-y-2 pr-4">
                 {filteredAlerts.map((alert) => (
                   <div
                     key={alert.id}
