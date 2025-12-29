@@ -2,6 +2,7 @@ import { Crown, Pencil, Eye, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUserPlanRole, AppRole } from '@/hooks/usePlanRoles';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface RoleBadgeProps {
   planId: string;
@@ -33,7 +34,11 @@ const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
 export function RoleBadge({ planId, showTooltip = true, className = '' }: RoleBadgeProps) {
   const { data: roleInfo, isLoading } = useUserPlanRole(planId);
 
-  if (isLoading || !roleInfo || !roleInfo.role) return null;
+  if (isLoading) {
+    return <Skeleton className="h-5 w-24 rounded-full" />;
+  }
+
+  if (!roleInfo || !roleInfo.role) return null;
 
   const Icon = ROLE_ICONS[roleInfo.role];
   const colorClass = ROLE_COLORS[roleInfo.role];
