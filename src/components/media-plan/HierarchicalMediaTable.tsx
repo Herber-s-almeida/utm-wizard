@@ -128,6 +128,7 @@ interface HierarchicalMediaTableProps {
   onUpdateLine: (lineId: string, updates: Partial<MediaLine>) => Promise<void>;
   onUpdateMonthlyBudgets: () => void;
   onFilteredLinesChange?: (lines: MediaLine[]) => void;
+  onValidateUTM?: (lineId: string, validated: boolean) => Promise<void>;
 }
 
 interface SubdivisionInfo {
@@ -191,10 +192,12 @@ export function HierarchicalMediaTable({
   onUpdateLine,
   onUpdateMonthlyBudgets,
   onFilteredLinesChange,
+  onValidateUTM,
 }: HierarchicalMediaTableProps) {
   const [editingLineId, setEditingLineId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<EditingField>(null);
   const [editValue, setEditValue] = useState<string>('');
+  const [validatingLineId, setValidatingLineId] = useState<string | null>(null);
 
   // Column visibility state
   const [visibleColumns, setVisibleColumns] = useState<Record<ToggleableColumn, boolean>>({
@@ -1607,6 +1610,23 @@ export function HierarchicalMediaTable({
                                         }}
                                         isValidated={(line as any).utm_validated || false}
                                         compact
+                                        validating={validatingLineId === line.id}
+                                        onValidate={onValidateUTM ? async () => {
+                                          setValidatingLineId(line.id);
+                                          try {
+                                            await onValidateUTM(line.id, true);
+                                          } finally {
+                                            setValidatingLineId(null);
+                                          }
+                                        } : undefined}
+                                        onInvalidate={onValidateUTM ? async () => {
+                                          setValidatingLineId(line.id);
+                                          try {
+                                            await onValidateUTM(line.id, false);
+                                          } finally {
+                                            setValidatingLineId(null);
+                                          }
+                                        } : undefined}
                                       />
                                       <Tooltip>
                                         <TooltipTrigger asChild>

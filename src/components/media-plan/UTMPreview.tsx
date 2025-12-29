@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Copy, ExternalLink, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Check, Copy, ExternalLink, CheckCircle2, AlertCircle, Clock, Loader2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -20,8 +20,10 @@ interface UTMPreviewProps {
   destinationUrl: string | null;
   utmParams: Partial<UTMParams>;
   isValidated?: boolean;
-  onValidate?: () => void;
+  onValidate?: () => Promise<void> | void;
+  onInvalidate?: () => Promise<void> | void;
   compact?: boolean;
+  validating?: boolean;
 }
 
 export function UTMPreview({
@@ -29,9 +31,12 @@ export function UTMPreview({
   utmParams,
   isValidated = false,
   onValidate,
+  onInvalidate,
   compact = false,
+  validating = false,
 }: UTMPreviewProps) {
   const [copied, setCopied] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const hasUTM = utmParams.utm_source || utmParams.utm_medium || utmParams.utm_campaign;
   
@@ -51,10 +56,23 @@ export function UTMPreview({
     }
   };
 
+  const handleValidate = async () => {
+    if (onValidate) {
+      await onValidate();
+      setIsOpen(false);
+    }
+  };
+
+  const handleInvalidate = async () => {
+    if (onInvalidate) {
+      await onInvalidate();
+    }
+  };
+
   if (compact) {
     return (
       <TooltipProvider>
-        <Popover>
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="ghost"
@@ -68,7 +86,9 @@ export function UTMPreview({
                   : 'text-muted-foreground'
               )}
             >
-              {hasUTM ? (
+              {validating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : hasUTM ? (
                 isValidated ? (
                   <CheckCircle2 className="w-4 h-4" />
                 ) : (
@@ -84,9 +104,11 @@ export function UTMPreview({
               utmParams={utmParams}
               fullUrl={fullUrl}
               isValidated={isValidated}
-              onValidate={onValidate}
+              onValidate={onValidate ? handleValidate : undefined}
+              onInvalidate={onInvalidate ? handleInvalidate : undefined}
               onCopy={handleCopy}
               copied={copied}
+              validating={validating}
             />
           </PopoverContent>
         </Popover>
@@ -101,8 +123,10 @@ export function UTMPreview({
         fullUrl={fullUrl}
         isValidated={isValidated}
         onValidate={onValidate}
+        onInvalidate={onInvalidate}
         onCopy={handleCopy}
         copied={copied}
+        validating={validating}
       />
     </div>
   );
@@ -112,9 +136,11 @@ interface UTMDetailsProps {
   utmParams: Partial<UTMParams>;
   fullUrl: string | null;
   isValidated: boolean;
-  onValidate?: () => void;
+  onValidate?: () => Promise<void> | void;
+  onInvalidate?: () => Promise<void> | void;
   onCopy: () => void;
   copied: boolean;
+  validating?: boolean;
 }
 
 function UTMDetails({
@@ -122,8 +148,10 @@ function UTMDetails({
   fullUrl,
   isValidated,
   onValidate,
+  onInvalidate,
   onCopy,
   copied,
+  validating = false,
 }: UTMDetailsProps) {
   const utmFields = [
     { key: 'utm_source', label: 'Source', value: utmParams.utm_source, required: true },
@@ -196,19 +224,36 @@ function UTMDetails({
       )}
 
       {/* Actions */}
-      {onValidate && !isValidated && (
-        <div className="pt-2 border-t">
+      <div className="pt-2 border-t flex gap-2">
+        {onValidate && !isValidated && (
           <Button
             variant="outline"
             size="sm"
             onClick={onValidate}
-            className="w-full"
+            disabled={validating}
+            className="flex-1"
           >
-            <CheckCircle2 className="w-4 h-4 mr-2" />
+            {validating ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+            )}
             Validar UTM
           </Button>
-        </div>
-      )}
+        )}
+        {onInvalidate && isValidated && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onInvalidate}
+            disabled={validating}
+            className="flex-1 text-destructive hover:text-destructive"
+          >
+            <XCircle className="w-4 h-4 mr-2" />
+            Remover Validação
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
