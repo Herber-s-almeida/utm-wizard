@@ -924,6 +924,44 @@ export type Database = {
           },
         ]
       }
+      plan_status_history: {
+        Row: {
+          changed_at: string | null
+          changed_by: string
+          comment: string | null
+          from_status: string | null
+          id: string
+          media_plan_id: string
+          to_status: string
+        }
+        Insert: {
+          changed_at?: string | null
+          changed_by: string
+          comment?: string | null
+          from_status?: string | null
+          id?: string
+          media_plan_id: string
+          to_status: string
+        }
+        Update: {
+          changed_at?: string | null
+          changed_by?: string
+          comment?: string | null
+          from_status?: string | null
+          id?: string
+          media_plan_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_status_history_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "media_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_subdivisions: {
         Row: {
           created_at: string
@@ -1137,6 +1175,54 @@ export type Database = {
           },
         ]
       }
+      status_transitions: {
+        Row: {
+          created_at: string | null
+          from_status_id: string | null
+          id: string
+          is_system: boolean | null
+          required_roles: Database["public"]["Enums"]["app_role"][]
+          requires_comment: boolean | null
+          to_status_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          from_status_id?: string | null
+          id?: string
+          is_system?: boolean | null
+          required_roles?: Database["public"]["Enums"]["app_role"][]
+          requires_comment?: boolean | null
+          to_status_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          from_status_id?: string | null
+          id?: string
+          is_system?: boolean | null
+          required_roles?: Database["public"]["Enums"]["app_role"][]
+          requires_comment?: boolean | null
+          to_status_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_transitions_from_status_id_fkey"
+            columns: ["from_status_id"]
+            isOneToOne: false
+            referencedRelation: "statuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "status_transitions_to_status_id_fkey"
+            columns: ["to_status_id"]
+            isOneToOne: false
+            referencedRelation: "statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       statuses: {
         Row: {
           created_at: string
@@ -1264,10 +1350,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_transition_status: {
+        Args: {
+          _from_status: string
+          _plan_id: string
+          _to_status: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       generate_creative_id: { Args: never; Returns: string }
       get_plan_role: {
         Args: { _plan_id: string; _user_id: string }
         Returns: string
+      }
+      get_valid_transitions: {
+        Args: { _from_status: string; _plan_id: string; _user_id: string }
+        Returns: {
+          required_roles: Database["public"]["Enums"]["app_role"][]
+          requires_comment: boolean
+          to_status: string
+          to_status_id: string
+        }[]
       }
       has_plan_role: {
         Args: {
