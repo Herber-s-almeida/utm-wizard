@@ -31,6 +31,21 @@ const newPasswordSchema = z.object({
   path: ['confirmPassword'],
 });
 
+// Centralized error mapping to avoid exposing internal error details
+const getAuthErrorMessage = (error: Error): string => {
+  const message = error.message.toLowerCase();
+  if (message.includes('invalid login')) return 'Email ou senha incorretos';
+  if (message.includes('already registered')) return 'Este email já está cadastrado';
+  if (message.includes('invalid email')) return 'Email inválido';
+  if (message.includes('weak password')) return 'Senha muito fraca';
+  if (message.includes('network') || message.includes('fetch')) return 'Erro de conexão. Tente novamente';
+  if (message.includes('user not found')) return 'Usuário não encontrado';
+  if (message.includes('email not confirmed')) return 'Por favor, confirme seu email';
+  if (message.includes('rate limit')) return 'Muitas tentativas. Aguarde um momento';
+  if (message.includes('expired')) return 'Link expirado. Solicite um novo';
+  return 'Erro ao processar solicitação. Tente novamente';
+};
+
 type AuthMode = 'login' | 'signup' | 'forgot' | 'reset';
 
 export default function Auth() {
@@ -73,11 +88,7 @@ export default function Auth() {
 
         const { error } = await signIn(email, password);
         if (error) {
-          if (error.message.includes('Invalid login credentials')) {
-            toast.error('Email ou senha incorretos');
-          } else {
-            toast.error(error.message);
-          }
+          toast.error(getAuthErrorMessage(error));
         } else {
           toast.success('Login realizado com sucesso!');
           navigate('/dashboard');
@@ -92,11 +103,7 @@ export default function Auth() {
 
         const { error } = await signUp(email, password, fullName);
         if (error) {
-          if (error.message.includes('already registered')) {
-            toast.error('Este email já está cadastrado');
-          } else {
-            toast.error(error.message);
-          }
+          toast.error(getAuthErrorMessage(error));
         } else {
           toast.success('Conta criada com sucesso!');
           navigate('/dashboard');
@@ -111,7 +118,7 @@ export default function Auth() {
 
         const { error } = await resetPassword(email);
         if (error) {
-          toast.error(error.message);
+          toast.error(getAuthErrorMessage(error));
         } else {
           toast.success('Email de recuperação enviado! Verifique sua caixa de entrada.');
           setMode('login');
@@ -126,7 +133,7 @@ export default function Auth() {
 
         const { error } = await updatePassword(password);
         if (error) {
-          toast.error(error.message);
+          toast.error(getAuthErrorMessage(error));
         } else {
           toast.success('Senha atualizada com sucesso!');
           navigate('/dashboard');
