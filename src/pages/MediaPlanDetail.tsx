@@ -52,6 +52,7 @@ import { BudgetAllocation } from '@/hooks/useMediaPlanWizard';
 import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization';
 import { RoleBadge } from '@/components/media-plan/RoleBadge';
 import { usePlanRoles } from '@/hooks/usePlanRoles';
+import { TeamManagementDialog } from '@/components/media-plan/TeamManagementDialog';
 
 interface BudgetDistribution {
   id: string;
@@ -83,6 +84,7 @@ export default function MediaPlanDetail() {
   } | undefined>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lineToDelete, setLineToDelete] = useState<MediaLine | null>(null);
+  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
   const [filteredLines, setFilteredLines] = useState<MediaLine[]>([]);
 
   // Library data for display
@@ -118,11 +120,11 @@ export default function MediaPlanDetail() {
     if (!user?.id || !id) return;
     
     try {
+      // RLS handles permission check - just fetch by id
       const { data: planData, error: planError } = await supabase
         .from('media_plans')
         .select('*')
         .eq('id', id)
-        .eq('user_id', user.id)
         .maybeSingle();
 
       if (planError) throw planError;
@@ -500,7 +502,7 @@ export default function MediaPlanDetail() {
             {canManageTeam && (
               <Button 
                 variant="outline" 
-                onClick={() => toast.info('Gerenciamento de equipe em desenvolvimento')} 
+                onClick={() => setTeamDialogOpen(true)} 
                 className="gap-2"
               >
                 <Users className="w-4 h-4" />
@@ -786,6 +788,13 @@ export default function MediaPlanDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Team Management Dialog */}
+      <TeamManagementDialog
+        planId={id!}
+        open={teamDialogOpen}
+        onOpenChange={setTeamDialogOpen}
+      />
     </DashboardLayout>
   );
 }
