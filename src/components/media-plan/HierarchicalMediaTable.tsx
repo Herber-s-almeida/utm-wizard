@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle } from 'lucide-react';
+import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle, Link } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -43,6 +43,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { PlanAlert } from '@/hooks/usePlanAlerts';
 import { LineAlertIndicator } from '@/components/media-plan/LineAlertIndicator';
+import { UTMPreview } from '@/components/media-plan/UTMPreview';
 
 // Columns that can be toggled (excludes: Código, Orçamento, Status, Início, Fim, Ações)
 type ToggleableColumn = 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target' | 'creatives';
@@ -1596,6 +1597,17 @@ export function HierarchicalMediaTable({
                                     {/* Action buttons */}
                                     <div className="w-[100px] p-2 border-r flex items-center gap-1 shrink-0">
                                       {lineAlerts && <LineAlertIndicator alerts={lineAlerts(line.id)} size="sm" />}
+                                      <UTMPreview
+                                        destinationUrl={line.destination_url}
+                                        utmParams={{
+                                          utm_source: line.utm_source || undefined,
+                                          utm_medium: line.utm_medium || undefined,
+                                          utm_campaign: line.utm_campaign || undefined,
+                                          utm_term: line.utm_term || undefined,
+                                        }}
+                                        isValidated={(line as any).utm_validated || false}
+                                        compact
+                                      />
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Button

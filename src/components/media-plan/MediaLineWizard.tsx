@@ -20,6 +20,8 @@ import { toast } from 'sonner';
 import { MediaPlan, MediaCreative } from '@/types/media';
 import { cn } from '@/lib/utils';
 import { CreativesManager } from '@/components/media/CreativesManager';
+import { generateUTM, toSlug } from '@/utils/utmGenerator';
+import { UTMPreview } from './UTMPreview';
 
 interface PlanHierarchyOption {
   id: string | null;
@@ -299,6 +301,26 @@ export function MediaLineWizard({
         lineCode = await generateLineCode();
       }
 
+      // Get slugs for UTM generation
+      const subdivision = subdivisions.data?.find(s => s.id === selectedSubdivision);
+      const moment = moments.data?.find(m => m.id === selectedMoment);
+      const funnelStage = funnelStages.data?.find(f => f.id === selectedFunnelStage);
+      const vehicle = vehicles.data?.find(v => v.id === selectedVehicle);
+      const channel = channels.data?.find(c => c.id === selectedChannel);
+      const target = targets.data?.find(t => t.id === selectedTarget);
+
+      // Generate UTM parameters
+      const utmParams = generateUTM({
+        lineCode: lineCode || '',
+        campaignName: plan.campaign,
+        subdivisionSlug: (subdivision as any)?.slug || toSlug(subdivision?.name),
+        momentSlug: (moment as any)?.slug || toSlug(moment?.name),
+        funnelStageSlug: (funnelStage as any)?.slug || toSlug(funnelStage?.name),
+        vehicleSlug: (vehicle as any)?.slug || toSlug(vehicle?.name),
+        channelSlug: (channel as any)?.slug || toSlug(channel?.name),
+        targetSlug: (target as any)?.slug || toSlug(target?.name),
+      });
+
       const lineData = {
         subdivision_id: selectedSubdivision,
         moment_id: selectedMoment,
@@ -315,6 +337,12 @@ export function MediaLineWizard({
         platform: vehicles.data?.find(v => v.id === selectedVehicle)?.name || 'Outro',
         funnel_stage: 'top', // Legacy field
         line_code: lineCode,
+        // UTM fields
+        utm_source: utmParams.utm_source || null,
+        utm_medium: utmParams.utm_medium || null,
+        utm_campaign: utmParams.utm_campaign || null,
+        utm_term: utmParams.utm_term || null,
+        utm_validated: false,
       };
 
       if (editingLine || savedLineId) {
@@ -709,6 +737,27 @@ export function MediaLineWizard({
                       <div className="col-span-2"><span className="text-muted-foreground">Target:</span> {targets.data?.find(t => t.id === selectedTarget)?.name || '-'}</div>
                     </div>
                   </div>
+
+                  {/* UTM Preview */}
+                  {lineDetails.destination_url && (
+                    <div className="mt-4">
+                      <h4 className="font-medium mb-2">Preview dos UTMs:</h4>
+                      <UTMPreview
+                        destinationUrl={lineDetails.destination_url}
+                        utmParams={generateUTM({
+                          lineCode: editingLine?.line_code || 'NEW',
+                          campaignName: plan.campaign,
+                          subdivisionSlug: toSlug(subdivisions.data?.find(s => s.id === selectedSubdivision)?.name),
+                          momentSlug: toSlug(moments.data?.find(m => m.id === selectedMoment)?.name),
+                          funnelStageSlug: toSlug(funnelStages.data?.find(f => f.id === selectedFunnelStage)?.name),
+                          vehicleSlug: toSlug(vehicles.data?.find(v => v.id === selectedVehicle)?.name),
+                          channelSlug: toSlug(channels.data?.find(c => c.id === selectedChannel)?.name),
+                          targetSlug: toSlug(targets.data?.find(t => t.id === selectedTarget)?.name),
+                        })}
+                        isValidated={false}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </motion.div>

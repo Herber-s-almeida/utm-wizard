@@ -17,7 +17,7 @@ import { STATUS_LABELS } from '@/types/media';
 const planSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório').max(100),
   client: z.string().max(100).optional(),
-  campaign: z.string().max(100).optional(),
+  campaign: z.string().min(1, 'Campanha é obrigatório para geração de UTM').max(100),
   start_date: z.string().optional(),
   end_date: z.string().optional(),
   total_budget: z.number().min(0).optional(),
@@ -138,13 +138,17 @@ export default function NewMediaPlan() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="campaign">Campanha</Label>
+                  <Label htmlFor="campaign">Campanha *</Label>
                   <Input
                     id="campaign"
-                    placeholder="Nome da campanha"
+                    placeholder="Nome da campanha (usado para UTM)"
                     value={formData.campaign}
                     onChange={(e) => setFormData({ ...formData, campaign: e.target.value })}
+                    required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    O nome da campanha será usado para gerar os parâmetros UTM automaticamente
+                  </p>
                 </div>
               </div>
 
