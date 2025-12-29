@@ -242,6 +242,35 @@ export default function MediaPlanDetail() {
     }
   };
 
+  const handleValidateUTM = async (lineId: string, validated: boolean) => {
+    try {
+      const updates = validated 
+        ? { 
+            utm_validated: true, 
+            utm_validated_at: new Date().toISOString(),
+            utm_validated_by: user?.id 
+          }
+        : { 
+            utm_validated: false, 
+            utm_validated_at: null,
+            utm_validated_by: null 
+          };
+
+      const { error } = await supabase
+        .from('media_lines')
+        .update(updates)
+        .eq('id', lineId);
+
+      if (error) throw error;
+
+      setLines(lines.map(l => l.id === lineId ? { ...l, ...updates } : l));
+      toast.success(validated ? 'UTM validado com sucesso!' : 'Validação removida');
+    } catch (error) {
+      console.error('Error validating UTM:', error);
+      toast.error('Erro ao validar UTM');
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -787,6 +816,7 @@ export default function MediaPlanDetail() {
           onUpdateLine={handleUpdateLine}
           onUpdateMonthlyBudgets={fetchData}
           onFilteredLinesChange={setFilteredLines}
+          onValidateUTM={handleValidateUTM}
         />
       </div>
 

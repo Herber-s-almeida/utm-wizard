@@ -739,9 +739,9 @@ export function MediaLineWizard({
                   </div>
 
                   {/* UTM Preview */}
-                  {lineDetails.destination_url && (
-                    <div className="mt-4">
-                      <h4 className="font-medium mb-2">Preview dos UTMs:</h4>
+                  <div className="mt-4">
+                    <h4 className="font-medium mb-2">Preview dos UTMs:</h4>
+                    {lineDetails.destination_url ? (
                       <UTMPreview
                         destinationUrl={lineDetails.destination_url}
                         utmParams={generateUTM({
@@ -754,10 +754,14 @@ export function MediaLineWizard({
                           channelSlug: toSlug(channels.data?.find(c => c.id === selectedChannel)?.name),
                           targetSlug: toSlug(targets.data?.find(t => t.id === selectedTarget)?.name),
                         })}
-                        isValidated={false}
+                        isValidated={editingLine?.utm_validated || false}
                       />
-                    </div>
-                  )}
+                    ) : (
+                      <div className="p-3 bg-muted/50 rounded-lg border text-sm text-muted-foreground">
+                        Preencha a URL de destino para visualizar os parâmetros UTM gerados automaticamente.
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </motion.div>
