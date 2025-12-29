@@ -33,10 +33,12 @@ const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
 export function RoleBadge({ planId, showTooltip = true, className = '' }: RoleBadgeProps) {
   const { data: roleInfo, isLoading } = useUserPlanRole(planId);
 
-  if (isLoading || !roleInfo) return null;
+  if (isLoading || !roleInfo || !roleInfo.role) return null;
 
   const Icon = ROLE_ICONS[roleInfo.role];
   const colorClass = ROLE_COLORS[roleInfo.role];
+
+  if (!Icon) return null;
 
   const badge = (
     <Badge variant="outline" className={`${colorClass} gap-1 text-xs ${className}`}>
@@ -63,10 +65,12 @@ export function RoleBadge({ planId, showTooltip = true, className = '' }: RoleBa
 export function RoleBadgeCompact({ planId }: { planId: string }) {
   const { data: roleInfo, isLoading } = useUserPlanRole(planId);
 
-  if (isLoading || !roleInfo || roleInfo.role === 'owner') return null;
+  if (isLoading || !roleInfo || !roleInfo.role || roleInfo.role === 'owner') return null;
 
   const Icon = ROLE_ICONS[roleInfo.role];
   const colorClass = ROLE_COLORS[roleInfo.role];
+
+  if (!Icon) return null;
 
   return (
     <TooltipProvider>
