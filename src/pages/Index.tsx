@@ -52,11 +52,8 @@ export default function Index() {
           </div>
           <div className="flex items-center gap-4">
             <Link to="/auth">
-              <Button variant="ghost" className="text-purple-200 hover:text-white hover:bg-purple-500/20">Entrar</Button>
-            </Link>
-            <Link to="/auth">
               <Button className="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white border-0 shadow-lg shadow-purple-500/30">
-                Começar grátis
+                Entrar
               </Button>
             </Link>
           </div>
@@ -98,15 +95,8 @@ export default function Index() {
               <Link to="/auth">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button size="xl" className="gap-2 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white border-0 shadow-xl shadow-purple-500/30 px-8">
-                    Criar minha conta
+                    Entrar
                     <ArrowRight className="w-5 h-5" />
-                  </Button>
-                </motion.div>
-              </Link>
-              <Link to="/auth">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button size="xl" variant="outline" className="border-purple-500/40 text-purple-200 hover:bg-purple-500/10 hover:border-purple-400/60 hover:text-white backdrop-blur-sm">
-                    Já tenho conta
                   </Button>
                 </motion.div>
               </Link>
@@ -210,7 +200,7 @@ export default function Index() {
                 <Link to="/auth">
                   <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                     <Button size="xl" className="gap-2 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white border-0 shadow-xl shadow-purple-500/30 px-8">
-                      Criar conta grátis
+                      Entrar
                       <ArrowRight className="w-5 h-5" />
                     </Button>
                   </motion.div>
