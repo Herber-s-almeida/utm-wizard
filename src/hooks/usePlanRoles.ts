@@ -226,14 +226,17 @@ export function usePlanRoles(planId: string | undefined) {
     },
   });
 
+  // Derived permissions - when loading, default to false but components should check isLoadingRole
+  const userRole = userRoleQuery.data;
+  
   // Check if current user can edit (owner or editor)
-  const canEdit = userRoleQuery.data === 'owner' || userRoleQuery.data === 'editor';
+  const canEdit = userRole === 'owner' || userRole === 'editor';
   
   // Check if current user can manage team (only owner)
-  const canManageTeam = userRoleQuery.data === 'owner';
+  const canManageTeam = userRole === 'owner';
   
   // Check if current user can change status (owner, editor, or approver)
-  const canChangeStatus = ['owner', 'editor', 'approver'].includes(userRoleQuery.data || '');
+  const canChangeStatus = ['owner', 'editor', 'approver'].includes(userRole || '');
 
   return {
     members: membersQuery.data || [],
