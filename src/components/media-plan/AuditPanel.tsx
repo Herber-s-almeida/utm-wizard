@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { 
   History, 
   GitBranch, 
@@ -46,7 +46,10 @@ export function AuditPanel({ planId }: AuditPanelProps) {
   const [filter, setFilter] = useState<FilterType>('all');
 
   useEffect(() => {
-    fetchAuditData();
+    if (planId) {
+      fetchAuditData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planId]);
 
   const fetchAuditData = async () => {
@@ -273,30 +276,43 @@ export function AuditPanel({ planId }: AuditPanelProps) {
           <History className="w-5 h-5" />
           Histórico de Auditoria
         </CardTitle>
-        <div className="pt-2">
-          <ToggleGroup 
-            type="single" 
-            value={filter} 
-            onValueChange={(value) => value && setFilter(value as FilterType)}
-            className="justify-start flex-wrap gap-1"
+        <div className="pt-2 flex flex-wrap gap-1">
+          <Button
+            variant={filter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            className="text-xs px-2 h-7"
+            onClick={() => setFilter('all')}
           >
-            <ToggleGroupItem value="all" size="sm" className="text-xs px-2 h-7">
-              <Filter className="w-3 h-3 mr-1" />
-              Todos ({events.length})
-            </ToggleGroupItem>
-            <ToggleGroupItem value="version" size="sm" className="text-xs px-2 h-7">
-              <GitBranch className="w-3 h-3 mr-1" />
-              Versões ({eventCounts.version})
-            </ToggleGroupItem>
-            <ToggleGroupItem value="status" size="sm" className="text-xs px-2 h-7">
-              <History className="w-3 h-3 mr-1" />
-              Status ({eventCounts.status})
-            </ToggleGroupItem>
-            <ToggleGroupItem value="utm" size="sm" className="text-xs px-2 h-7">
-              <CheckCircle2 className="w-3 h-3 mr-1" />
-              UTMs ({eventCounts.utm})
-            </ToggleGroupItem>
-          </ToggleGroup>
+            <Filter className="w-3 h-3 mr-1" />
+            Todos ({events.length})
+          </Button>
+          <Button
+            variant={filter === 'version' ? 'default' : 'outline'}
+            size="sm"
+            className="text-xs px-2 h-7"
+            onClick={() => setFilter('version')}
+          >
+            <GitBranch className="w-3 h-3 mr-1" />
+            Versões ({eventCounts.version})
+          </Button>
+          <Button
+            variant={filter === 'status' ? 'default' : 'outline'}
+            size="sm"
+            className="text-xs px-2 h-7"
+            onClick={() => setFilter('status')}
+          >
+            <History className="w-3 h-3 mr-1" />
+            Status ({eventCounts.status})
+          </Button>
+          <Button
+            variant={filter === 'utm' ? 'default' : 'outline'}
+            size="sm"
+            className="text-xs px-2 h-7"
+            onClick={() => setFilter('utm')}
+          >
+            <CheckCircle2 className="w-3 h-3 mr-1" />
+            UTMs ({eventCounts.utm})
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
