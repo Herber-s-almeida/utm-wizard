@@ -1,18 +1,18 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  History, 
-  GitBranch, 
-  CheckCircle2, 
+import {
+  History,
+  GitBranch,
+  CheckCircle2,
   ArrowRight,
   User,
   Clock,
-  Filter
+  Filter,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -149,8 +149,8 @@ export function AuditPanel({ planId }: AuditPanelProps) {
       });
 
       // Sort by timestamp descending
-      allEvents.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      allEvents.sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
       );
 
       setEvents(allEvents);
@@ -177,9 +177,17 @@ export function AuditPanel({ planId }: AuditPanelProps) {
       case 'version':
         return <Badge variant="secondary">Versão</Badge>;
       case 'status':
-        return <Badge variant="outline" className="border-amber-500 text-amber-600">Status</Badge>;
+        return (
+          <Badge variant="outline" className="border-amber-500 text-amber-600">
+            Status
+          </Badge>
+        );
       case 'utm':
-        return <Badge variant="outline" className="border-green-500 text-green-600">UTM</Badge>;
+        return (
+          <Badge variant="outline" className="border-green-500 text-green-600">
+            UTM
+          </Badge>
+        );
     }
   };
 
@@ -194,9 +202,7 @@ export function AuditPanel({ planId }: AuditPanelProps) {
           <div>
             <span className="font-medium">Versão {event.details.versionNumber}</span>
             {event.details.changeLog && (
-              <p className="text-sm text-muted-foreground mt-1">
-                "{event.details.changeLog}"
-              </p>
+              <p className="text-sm text-muted-foreground mt-1">"{event.details.changeLog}"</p>
             )}
           </div>
         );
@@ -215,9 +221,7 @@ export function AuditPanel({ planId }: AuditPanelProps) {
               {STATUS_LABELS[event.details.toStatus || ''] || event.details.toStatus}
             </span>
             {event.details.comment && (
-              <p className="text-sm text-muted-foreground w-full mt-1">
-                "{event.details.comment}"
-              </p>
+              <p className="text-sm text-muted-foreground w-full mt-1">"{event.details.comment}"</p>
             )}
           </div>
         );
@@ -225,9 +229,7 @@ export function AuditPanel({ planId }: AuditPanelProps) {
         return (
           <div>
             <span className="font-medium">UTM validado</span>
-            <span className="text-sm text-muted-foreground ml-1">
-              na linha "{event.details.lineName}"
-            </span>
+            <span className="text-sm text-muted-foreground ml-1">na linha "{event.details.lineName}"</span>
           </div>
         );
     }
@@ -259,15 +261,25 @@ export function AuditPanel({ planId }: AuditPanelProps) {
     );
   }
 
-  const filteredEvents = filter === 'all' 
-    ? events 
-    : events.filter(e => e.type === filter);
+  const grouped = useMemo(() => {
+    const byType: Record<EventType, AuditEvent[]> = { version: [], status: [], utm: [] };
+    for (const e of events) byType[e.type].push(e);
+    return byType;
+  }, [events]);
 
-  const eventCounts = {
-    version: events.filter(e => e.type === 'version').length,
-    status: events.filter(e => e.type === 'status').length,
-    utm: events.filter(e => e.type === 'utm').length,
-  };
+  const eventCounts = useMemo(
+    () => ({
+      version: grouped.version.length,
+      status: grouped.status.length,
+      utm: grouped.utm.length,
+    }),
+    [grouped],
+  );
+
+  const filteredEvents = useMemo(() => {
+    if (filter === 'all') return events;
+    return grouped[filter];
+  }, [events, grouped, filter]);
 
   return (
     <Card>
@@ -278,6 +290,7 @@ export function AuditPanel({ planId }: AuditPanelProps) {
         </CardTitle>
         <div className="pt-2 flex flex-wrap gap-1">
           <Button
+            type="button"
             variant={filter === 'all' ? 'default' : 'outline'}
             size="sm"
             className="text-xs px-2 h-7"
@@ -287,6 +300,7 @@ export function AuditPanel({ planId }: AuditPanelProps) {
             Todos ({events.length})
           </Button>
           <Button
+            type="button"
             variant={filter === 'version' ? 'default' : 'outline'}
             size="sm"
             className="text-xs px-2 h-7"
@@ -296,6 +310,7 @@ export function AuditPanel({ planId }: AuditPanelProps) {
             Versões ({eventCounts.version})
           </Button>
           <Button
+            type="button"
             variant={filter === 'status' ? 'default' : 'outline'}
             size="sm"
             className="text-xs px-2 h-7"
@@ -305,6 +320,7 @@ export function AuditPanel({ planId }: AuditPanelProps) {
             Status ({eventCounts.status})
           </Button>
           <Button
+            type="button"
             variant={filter === 'utm' ? 'default' : 'outline'}
             size="sm"
             className="text-xs px-2 h-7"
@@ -318,7 +334,7 @@ export function AuditPanel({ planId }: AuditPanelProps) {
       <CardContent>
         {filteredEvents.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
-            {filter === 'all' 
+            {filter === 'all'
               ? 'Nenhuma atividade registrada ainda.'
               : 'Nenhum evento deste tipo encontrado.'}
           </p>
@@ -326,20 +342,17 @@ export function AuditPanel({ planId }: AuditPanelProps) {
           <ScrollArea className="h-[350px] pr-4">
             <div className="space-y-4">
               {filteredEvents.map((event, index) => (
-                <div 
-                  key={event.id} 
-                  className="relative flex gap-3 pb-4"
-                >
+                <div key={event.id} className="relative flex gap-3 pb-4">
                   {/* Timeline line */}
                   {index < filteredEvents.length - 1 && (
                     <div className="absolute left-4 top-8 bottom-0 w-px bg-border" />
                   )}
-                  
+
                   {/* Icon */}
                   <div className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                     {getEventIcon(event.type)}
                   </div>
-                  
+
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -349,11 +362,9 @@ export function AuditPanel({ planId }: AuditPanelProps) {
                         <span>{event.userEmail}</span>
                       </div>
                     </div>
-                    
-                    <div className="text-sm">
-                      {renderEventDetails(event)}
-                    </div>
-                    
+
+                    <div className="text-sm">{renderEventDetails(event)}</div>
+
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                       <Clock className="w-3 h-3" />
                       <span>{formatTimestamp(event.timestamp)}</span>
@@ -368,3 +379,4 @@ export function AuditPanel({ planId }: AuditPanelProps) {
     </Card>
   );
 }
+
