@@ -4,21 +4,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { 
   History, 
   GitBranch, 
   CheckCircle2, 
   ArrowRight,
   User,
-  Clock
+  Clock,
+  Filter
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { STATUS_LABELS } from '@/types/media';
 
+type EventType = 'version' | 'status' | 'utm';
+type FilterType = 'all' | EventType;
+
 interface AuditEvent {
   id: string;
-  type: 'version' | 'status' | 'utm';
+  type: EventType;
   timestamp: string;
   userEmail: string;
   details: {
@@ -38,6 +43,7 @@ interface AuditPanelProps {
 export function AuditPanel({ planId }: AuditPanelProps) {
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<FilterType>('all');
 
   useEffect(() => {
     fetchAuditData();
@@ -250,29 +256,66 @@ export function AuditPanel({ planId }: AuditPanelProps) {
     );
   }
 
+  const filteredEvents = filter === 'all' 
+    ? events 
+    : events.filter(e => e.type === filter);
+
+  const eventCounts = {
+    version: events.filter(e => e.type === 'version').length,
+    status: events.filter(e => e.type === 'status').length,
+    utm: events.filter(e => e.type === 'utm').length,
+  };
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <History className="w-5 h-5" />
           Histórico de Auditoria
         </CardTitle>
+        <div className="pt-2">
+          <ToggleGroup 
+            type="single" 
+            value={filter} 
+            onValueChange={(value) => value && setFilter(value as FilterType)}
+            className="justify-start flex-wrap gap-1"
+          >
+            <ToggleGroupItem value="all" size="sm" className="text-xs px-2 h-7">
+              <Filter className="w-3 h-3 mr-1" />
+              Todos ({events.length})
+            </ToggleGroupItem>
+            <ToggleGroupItem value="version" size="sm" className="text-xs px-2 h-7">
+              <GitBranch className="w-3 h-3 mr-1" />
+              Versões ({eventCounts.version})
+            </ToggleGroupItem>
+            <ToggleGroupItem value="status" size="sm" className="text-xs px-2 h-7">
+              <History className="w-3 h-3 mr-1" />
+              Status ({eventCounts.status})
+            </ToggleGroupItem>
+            <ToggleGroupItem value="utm" size="sm" className="text-xs px-2 h-7">
+              <CheckCircle2 className="w-3 h-3 mr-1" />
+              UTMs ({eventCounts.utm})
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       </CardHeader>
       <CardContent>
-        {events.length === 0 ? (
+        {filteredEvents.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
-            Nenhuma atividade registrada ainda.
+            {filter === 'all' 
+              ? 'Nenhuma atividade registrada ainda.'
+              : 'Nenhum evento deste tipo encontrado.'}
           </p>
         ) : (
-          <ScrollArea className="h-[400px] pr-4">
+          <ScrollArea className="h-[350px] pr-4">
             <div className="space-y-4">
-              {events.map((event, index) => (
+              {filteredEvents.map((event, index) => (
                 <div 
                   key={event.id} 
                   className="relative flex gap-3 pb-4"
                 >
                   {/* Timeline line */}
-                  {index < events.length - 1 && (
+                  {index < filteredEvents.length - 1 && (
                     <div className="absolute left-4 top-8 bottom-0 w-px bg-border" />
                   )}
                   
