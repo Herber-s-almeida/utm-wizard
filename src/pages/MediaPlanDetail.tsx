@@ -58,6 +58,7 @@ import { SaveVersionButton } from '@/components/media-plan/SaveVersionButton';
 import { VersionHistoryDialog } from '@/components/media-plan/VersionHistoryDialog';
 import { usePlanAlerts } from '@/hooks/usePlanAlerts';
 import { AlertsSummaryCard } from '@/components/media-plan/AlertsSummaryCard';
+import { AuditPanel } from '@/components/media-plan/AuditPanel';
 
 interface BudgetDistribution {
   id: string;
@@ -822,42 +823,48 @@ export default function MediaPlanDetail() {
           </Card>
         )}
 
-        {/* Hierarchical Media Table */}
-        <HierarchicalMediaTable
-          plan={plan}
-          lines={filterByAlerts ? displayedLines : lines}
-          creatives={creatives}
-          budgetDistributions={budgetDistributions}
-          monthlyBudgets={monthlyBudgets}
-          mediums={mediums.data || []}
-          vehicles={vehicles.data || []}
-          channels={channels.data || []}
-          targets={targets.data || []}
-          subdivisions={subdivisions.data || []}
-          moments={moments.data || []}
-          funnelStages={funnelStages.data || []}
-          statuses={statuses.data || []}
-          lineAlerts={planAlerts.getLineAlerts}
-          onEditLine={(line, initialStep) => {
-            setEditingLine(line);
-            setEditInitialStep(initialStep);
-            setWizardOpen(true);
-          }}
-          onDeleteLine={(line) => {
-            setLineToDelete(line);
-            setDeleteDialogOpen(true);
-          }}
-          onAddLine={(prefill) => {
-            setEditingLine(null);
-            setEditInitialStep(undefined);
-            setWizardPrefill(prefill);
-            setWizardOpen(true);
-          }}
-          onUpdateLine={handleUpdateLine}
-          onUpdateMonthlyBudgets={fetchData}
-          onFilteredLinesChange={setFilteredLines}
-          onValidateUTM={handleValidateUTM}
-        />
+        {/* Audit Panel & Table Grid */}
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          {/* Hierarchical Media Table */}
+          <HierarchicalMediaTable
+            plan={plan}
+            lines={filterByAlerts ? displayedLines : lines}
+            creatives={creatives}
+            budgetDistributions={budgetDistributions}
+            monthlyBudgets={monthlyBudgets}
+            mediums={mediums.data || []}
+            vehicles={vehicles.data || []}
+            channels={channels.data || []}
+            targets={targets.data || []}
+            subdivisions={subdivisions.data || []}
+            moments={moments.data || []}
+            funnelStages={funnelStages.data || []}
+            statuses={statuses.data || []}
+            lineAlerts={planAlerts.getLineAlerts}
+            onEditLine={(line, initialStep) => {
+              setEditingLine(line);
+              setEditInitialStep(initialStep);
+              setWizardOpen(true);
+            }}
+            onDeleteLine={(line) => {
+              setLineToDelete(line);
+              setDeleteDialogOpen(true);
+            }}
+            onAddLine={(prefill) => {
+              setEditingLine(null);
+              setEditInitialStep(undefined);
+              setWizardPrefill(prefill);
+              setWizardOpen(true);
+            }}
+            onUpdateLine={handleUpdateLine}
+            onUpdateMonthlyBudgets={fetchData}
+            onFilteredLinesChange={setFilteredLines}
+            onValidateUTM={handleValidateUTM}
+          />
+
+          {/* Audit Panel */}
+          <AuditPanel planId={id!} />
+        </div>
       </div>
 
       {/* Media Line Wizard */}
