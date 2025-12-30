@@ -514,59 +514,105 @@ export default function MediaPlanDetail() {
               </p>
             </div>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button 
-              variant="outline" 
-              onClick={() => setVersionHistoryOpen(true)}
-              className="gap-2"
-            >
-              <History className="w-4 h-4" />
-              Histórico
-            </Button>
-            <SaveVersionButton planId={id!} disabled={isLoadingRole || !canEdit} />
-            <Button 
-              variant="outline" 
-              onClick={() => exportMediaPlanToXlsx({
-                plan,
-                lines,
-                creatives,
-                subdivisions: subdivisions.data || [],
-                moments: moments.data || [],
-                funnelStages: funnelStages.data || [],
-                mediums: mediums.data || [],
-                vehicles: vehicles.data || [],
-                channels: channels.data || [],
-                targets: targets.data || [],
-                statuses: statuses.data || [],
-              })} 
-              className="gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Exportar XLSX
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate(`/media-plans/${id}/edit`)} 
-              className="gap-2"
-              disabled={isLoadingRole || !canEdit}
-            >
-              <Settings2 className="w-4 h-4" />
-              Editar Plano
-            </Button>
-            <Button onClick={() => setWizardOpen(true)} className="gap-2" disabled={isLoadingRole || !canEdit}>
-              <Plus className="w-4 h-4" />
-              Nova Linha
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setTeamDialogOpen(true)} 
-              className="gap-2"
-              disabled={isLoadingRole || !canManageTeam}
-            >
-              <Users className="w-4 h-4" />
-              Equipe
-            </Button>
-          </div>
+          <TooltipProvider>
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                variant="outline" 
+                onClick={() => setVersionHistoryOpen(true)}
+                className="gap-2"
+              >
+                <History className="w-4 h-4" />
+                Histórico
+              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <SaveVersionButton planId={id!} disabled={isLoadingRole || !canEdit} />
+                  </span>
+                </TooltipTrigger>
+                {!isLoadingRole && !canEdit && (
+                  <TooltipContent>
+                    <p>Apenas proprietários e editores podem salvar versões</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+              <Button 
+                variant="outline" 
+                onClick={() => exportMediaPlanToXlsx({
+                  plan,
+                  lines,
+                  creatives,
+                  subdivisions: subdivisions.data || [],
+                  moments: moments.data || [],
+                  funnelStages: funnelStages.data || [],
+                  mediums: mediums.data || [],
+                  vehicles: vehicles.data || [],
+                  channels: channels.data || [],
+                  targets: targets.data || [],
+                  statuses: statuses.data || [],
+                })} 
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Exportar XLSX
+              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => navigate(`/media-plans/${id}/edit`)} 
+                      className="gap-2"
+                      disabled={isLoadingRole || !canEdit}
+                    >
+                      <Settings2 className="w-4 h-4" />
+                      Editar Plano
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!isLoadingRole && !canEdit && (
+                  <TooltipContent>
+                    <p>Apenas proprietários e editores podem editar o plano</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button onClick={() => setWizardOpen(true)} className="gap-2" disabled={isLoadingRole || !canEdit}>
+                      <Plus className="w-4 h-4" />
+                      Nova Linha
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!isLoadingRole && !canEdit && (
+                  <TooltipContent>
+                    <p>Apenas proprietários e editores podem criar linhas</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setTeamDialogOpen(true)} 
+                      className="gap-2"
+                      disabled={isLoadingRole || !canManageTeam}
+                    >
+                      <Users className="w-4 h-4" />
+                      Equipe
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!isLoadingRole && !canManageTeam && (
+                  <TooltipContent>
+                    <p>Apenas o proprietário pode gerenciar a equipe</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         </div>
 
         {/* Alerts Summary */}
