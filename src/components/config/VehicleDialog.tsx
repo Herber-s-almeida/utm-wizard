@@ -9,6 +9,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Medium } from '@/hooks/useConfigData';
 import { toSlug } from '@/utils/utmGenerator';
+import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 
 interface Channel {
   name: string;
@@ -178,7 +179,9 @@ export function VehicleDialog({
         <div className="space-y-4 py-4">
           {/* Meio Selection - First and Required */}
           <div className="space-y-2">
-            <Label>Meio *</Label>
+            <LabelWithTooltip tooltip="Categoria principal a que este veículo pertence." required>
+              Meio
+            </LabelWithTooltip>
             {!showNewMediumForm ? (
               <div className="flex gap-2">
                 <Select value={mediumId} onValueChange={setMediumId}>
@@ -254,7 +257,9 @@ export function VehicleDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="name">Nome do veículo *</Label>
+            <LabelWithTooltip htmlFor="name" tooltip="Nome da plataforma. Máximo 25 caracteres." required>
+              Nome do veículo
+            </LabelWithTooltip>
             <Input
               id="name"
               value={name}
@@ -278,7 +283,9 @@ export function VehicleDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="slug">Source Slug (utm_source)</Label>
+            <LabelWithTooltip htmlFor="slug" tooltip="Será usado como utm_source nas URLs de rastreamento. Apenas letras minúsculas, números e hífens.">
+              Source Slug (utm_source)
+            </LabelWithTooltip>
             <Input
               id="slug"
               value={slug}
@@ -290,13 +297,15 @@ export function VehicleDialog({
               className="font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Usado como utm_source nas URLs. Gerado automaticamente do nome, mas pode ser editado.
+              Gerado automaticamente do nome, mas pode ser editado.
             </p>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Canais do veículo</Label>
+              <LabelWithTooltip tooltip="Canais são tipos de anúncio dentro do veículo. Ex: Search, Display, Video.">
+                Canais do veículo
+              </LabelWithTooltip>
               <Button type="button" variant="outline" size="sm" onClick={handleAddChannel}>
                 <Plus className="h-3 w-3 mr-1" />
                 Adicionar canal

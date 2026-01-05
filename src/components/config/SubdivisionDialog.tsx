@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 
 interface Detail {
   name: string;
@@ -117,7 +118,9 @@ export function SubdivisionDialog({
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome da subdivisão *</Label>
+            <LabelWithTooltip htmlFor="name" tooltip="Agrupa linhas de mídia por região, produto, marca ou objetivo." required>
+              Nome da subdivisão
+            </LabelWithTooltip>
             <Input
               id="name"
               value={name}
@@ -142,7 +145,9 @@ export function SubdivisionDialog({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Detalhamentos (opcional)</Label>
+              <LabelWithTooltip tooltip="Subdivisões podem ter subdivisões filhas para estruturas mais complexas (ex: Região > Estado > Cidade).">
+                Detalhamentos (opcional)
+              </LabelWithTooltip>
               <Button type="button" variant="outline" size="sm" onClick={handleAddDetail}>
                 <Plus className="h-3 w-3 mr-1" />
                 Adicionar

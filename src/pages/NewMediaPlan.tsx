@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { STATUS_LABELS } from '@/types/media';
+import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 
 const planSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório').max(100),
@@ -120,7 +121,13 @@ export default function NewMediaPlan() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="name">Nome do Plano *</Label>
+                <LabelWithTooltip 
+                  htmlFor="name" 
+                  tooltip="Nome interno para identificar o plano. Aparecerá na listagem e relatórios."
+                  required
+                >
+                  Nome do Plano
+                </LabelWithTooltip>
                 <Input
                   id="name"
                   placeholder="Ex: Campanha de Verão 2025"
@@ -132,7 +139,12 @@ export default function NewMediaPlan() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="client">Cliente</Label>
+                  <LabelWithTooltip 
+                    htmlFor="client" 
+                    tooltip="Empresa ou marca para a qual o plano foi criado. Opcional, mas ajuda na organização."
+                  >
+                    Cliente
+                  </LabelWithTooltip>
                   <Input
                     id="client"
                     placeholder="Nome do cliente"
@@ -142,7 +154,13 @@ export default function NewMediaPlan() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="campaign">Campanha *</Label>
+                  <LabelWithTooltip 
+                    htmlFor="campaign" 
+                    tooltip="Será usado como utm_campaign nas URLs de rastreamento. Use um nome descritivo e único."
+                    required
+                  >
+                    Campanha
+                  </LabelWithTooltip>
                   <Input
                     id="campaign"
                     placeholder="Nome da campanha (usado para UTM)"
@@ -150,14 +168,17 @@ export default function NewMediaPlan() {
                     onChange={(e) => setFormData({ ...formData, campaign: e.target.value })}
                     required
                   />
-                  <p className="text-xs text-muted-foreground">
-                    O nome da campanha será usado para gerar os parâmetros UTM automaticamente
-                  </p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="default_url">URL Padrão de Destino *</Label>
+                <LabelWithTooltip 
+                  htmlFor="default_url" 
+                  tooltip="URL para onde os usuários serão direcionados. Será usada em todas as linhas, mas pode ser substituída individualmente."
+                  required
+                >
+                  URL Padrão de Destino
+                </LabelWithTooltip>
                 <Input
                   id="default_url"
                   type="url"
@@ -166,14 +187,16 @@ export default function NewMediaPlan() {
                   onChange={(e) => setFormData({ ...formData, default_url: e.target.value })}
                   required
                 />
-                <p className="text-xs text-muted-foreground">
-                  URL padrão para todas as linhas de mídia. Pode ser substituída individualmente em cada linha ou criativo.
-                </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="start_date">Data de Início</Label>
+                  <LabelWithTooltip 
+                    htmlFor="start_date" 
+                    tooltip="As linhas de mídia deverão estar dentro deste período."
+                  >
+                    Data de Início
+                  </LabelWithTooltip>
                   <Input
                     id="start_date"
                     type="date"
@@ -183,7 +206,12 @@ export default function NewMediaPlan() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="end_date">Data de Término</Label>
+                  <LabelWithTooltip 
+                    htmlFor="end_date" 
+                    tooltip="As linhas de mídia deverão estar dentro deste período."
+                  >
+                    Data de Término
+                  </LabelWithTooltip>
                   <Input
                     id="end_date"
                     type="date"
@@ -195,7 +223,12 @@ export default function NewMediaPlan() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="total_budget">Orçamento Total (R$)</Label>
+                  <LabelWithTooltip 
+                    htmlFor="total_budget" 
+                    tooltip="Valor total planejado para a campanha. O sistema alertará se as linhas ultrapassarem este valor."
+                  >
+                    Orçamento Total (R$)
+                  </LabelWithTooltip>
                   <Input
                     id="total_budget"
                     type="number"
@@ -208,7 +241,12 @@ export default function NewMediaPlan() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
+                  <LabelWithTooltip 
+                    htmlFor="status" 
+                    tooltip="Rascunho: em construção. Ativo: campanha em veiculação. Finalizado: campanha encerrada."
+                  >
+                    Status
+                  </LabelWithTooltip>
                   <Select
                     value={formData.status}
                     onValueChange={(value: typeof formData.status) => 
