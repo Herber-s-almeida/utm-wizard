@@ -863,7 +863,7 @@ export default function MediaPlanDetail() {
           />
 
           {/* Audit Panel */}
-          <AuditPanel planId={id!} />
+          <AuditPanel key={`audit-${id}-v2`} planId={id!} />
         </div>
       </div>
 
