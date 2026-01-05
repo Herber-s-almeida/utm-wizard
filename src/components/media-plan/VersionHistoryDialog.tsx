@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   History, 
   RotateCcw, 
@@ -11,10 +12,12 @@ import {
   Loader2,
   AlertTriangle,
   ChevronRight,
-  Check
+  Check,
+  Archive,
+  Star
 } from 'lucide-react';
 import { usePlanVersions, PlanVersion } from '@/hooks/usePlanVersions';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   AlertDialog,
@@ -47,6 +50,16 @@ export function VersionHistoryDialog({
   const [showCompare, setShowCompare] = useState(false);
   const [confirmRestoreOpen, setConfirmRestoreOpen] = useState(false);
   const [versionToRestore, setVersionToRestore] = useState<PlanVersion | null>(null);
+  const [activeTab, setActiveTab] = useState<'saved' | 'auto'>('saved');
+
+  // Separate manual versions from auto-backups
+  const { savedVersions, autoBackups } = useMemo(() => {
+    const saved = versions.filter(v => !v.is_auto_backup);
+    const auto = versions.filter(v => v.is_auto_backup);
+    return { savedVersions: saved, autoBackups: auto };
+  }, [versions]);
+
+  const displayedVersions = activeTab === 'saved' ? savedVersions : autoBackups;
 
   const handleRestoreClick = (version: PlanVersion) => {
     setVersionToRestore(version);
@@ -81,6 +94,10 @@ export function VersionHistoryDialog({
 
   const formatDate = (dateStr: string) => {
     return format(new Date(dateStr), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  };
+
+  const formatRelativeTime = (dateStr: string) => {
+    return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: ptBR });
   };
 
   const getSnapshotSummary = (snapshot: PlanVersion['snapshot_data']) => {
@@ -123,7 +140,7 @@ export function VersionHistoryDialog({
                 Nenhuma versão salva ainda
               </p>
               <p className="text-sm text-muted-foreground/70">
-                Versões são criadas automaticamente quando o status do plano muda
+                Versões automáticas são criadas quando você edita o plano
               </p>
             </div>
           ) : showCompare && compareVersions[0] && compareVersions[1] ? (
@@ -141,89 +158,88 @@ export function VersionHistoryDialog({
               />
             </div>
           ) : (
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-3">
-                {compareVersions[0] && !compareVersions[1] && (
-                  <div className="bg-muted/50 rounded-lg p-3 mb-4">
-                    <p className="text-sm text-muted-foreground">
-                      Selecione outra versão para comparar com a versão {compareVersions[0].version_number}
-                    </p>
-                    <Button variant="ghost" size="sm" onClick={resetCompare} className="mt-2">
-                      Cancelar comparação
-                    </Button>
-                  </div>
-                )}
+            <div className="space-y-4">
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'saved' | 'auto')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="saved" className="gap-2">
+                    <Star className="w-3 h-3" />
+                    Versões Salvas ({savedVersions.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="auto" className="gap-2">
+                    <Archive className="w-3 h-3" />
+                    Backups Auto ({autoBackups.length})
+                  </TabsTrigger>
+                </TabsList>
 
-                {versions.map((version) => {
-                  const summary = getSnapshotSummary(version.snapshot_data);
-                  const isSelected = selectedVersion?.id === version.id;
-                  const isCompareSelected = compareVersions[0]?.id === version.id || compareVersions[1]?.id === version.id;
-
-                  return (
-                    <div
-                      key={version.id}
-                      className={cn(
-                        "border rounded-lg p-4 transition-colors cursor-pointer hover:bg-muted/30",
-                        isSelected && "ring-2 ring-primary",
-                        isCompareSelected && "bg-primary/5 border-primary/30"
-                      )}
-                      onClick={() => setSelectedVersion(isSelected ? null : version)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">v{version.version_number}</Badge>
-                            <span className="text-sm text-muted-foreground flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {formatDate(version.created_at)}
-                            </span>
-                          </div>
-                          {version.change_log && (
-                            <p className="text-sm">{version.change_log}</p>
-                          )}
-                          <div className="flex gap-4 text-xs text-muted-foreground mt-2">
-                            <span>{summary.linesCount} linhas</span>
-                            <span>{formatCurrency(summary.totalBudget)}</span>
-                            <span>Status: {summary.status}</span>
-                          </div>
-                        </div>
-                        {isCompareSelected && (
-                          <Check className="w-4 h-4 text-primary" />
-                        )}
-                      </div>
-
-                      {isSelected && (
-                        <div className="flex gap-2 mt-4 pt-4 border-t">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRestoreClick(version);
-                            }}
-                            disabled={isRestoring}
-                          >
-                            <RotateCcw className="w-4 h-4 mr-2" />
-                            Restaurar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCompareSelect(version);
-                            }}
-                          >
-                            <GitCompare className="w-4 h-4 mr-2" />
-                            Comparar
-                          </Button>
-                        </div>
-                      )}
+                <TabsContent value="saved" className="mt-4">
+                  {savedVersions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Star className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                      <p>Nenhuma versão salva manualmente</p>
+                      <p className="text-xs mt-1">Use o botão "Salvar Versão" para criar uma versão importante</p>
                     </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
+                  ) : (
+                    <ScrollArea className="h-[350px] pr-4">
+                      <VersionList 
+                        versions={savedVersions}
+                        selectedVersion={selectedVersion}
+                        compareVersions={compareVersions}
+                        onSelectVersion={setSelectedVersion}
+                        onRestoreClick={handleRestoreClick}
+                        onCompareSelect={handleCompareSelect}
+                        isRestoring={isRestoring}
+                        formatDate={formatDate}
+                        formatRelativeTime={formatRelativeTime}
+                        formatCurrency={formatCurrency}
+                        getSnapshotSummary={getSnapshotSummary}
+                        showVersionNumber
+                      />
+                    </ScrollArea>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="auto" className="mt-4">
+                  {autoBackups.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Archive className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                      <p>Nenhum backup automático ainda</p>
+                      <p className="text-xs mt-1">Backups são criados a cada edição e mantidos por 15 dias</p>
+                    </div>
+                  ) : (
+                    <ScrollArea className="h-[350px] pr-4">
+                      <div className="text-xs text-muted-foreground mb-3 p-2 bg-muted/50 rounded">
+                        Backups automáticos são mantidos por 15 dias
+                      </div>
+                      <VersionList 
+                        versions={autoBackups}
+                        selectedVersion={selectedVersion}
+                        compareVersions={compareVersions}
+                        onSelectVersion={setSelectedVersion}
+                        onRestoreClick={handleRestoreClick}
+                        onCompareSelect={handleCompareSelect}
+                        isRestoring={isRestoring}
+                        formatDate={formatDate}
+                        formatRelativeTime={formatRelativeTime}
+                        formatCurrency={formatCurrency}
+                        getSnapshotSummary={getSnapshotSummary}
+                        showVersionNumber={false}
+                      />
+                    </ScrollArea>
+                  )}
+                </TabsContent>
+              </Tabs>
+
+              {compareVersions[0] && !compareVersions[1] && (
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-sm text-muted-foreground">
+                    Selecione outra versão para comparar
+                  </p>
+                  <Button variant="ghost" size="sm" onClick={resetCompare} className="mt-2">
+                    Cancelar comparação
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -236,7 +252,7 @@ export function VersionHistoryDialog({
               Restaurar versão?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação irá substituir todos os dados atuais do plano pela versão {versionToRestore?.version_number}. 
+              Esta ação irá substituir todos os dados atuais do plano. 
               Uma nova versão será criada automaticamente com o estado atual antes da restauração.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -259,6 +275,115 @@ export function VersionHistoryDialog({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+// Component for rendering the version list
+interface VersionListProps {
+  versions: PlanVersion[];
+  selectedVersion: PlanVersion | null;
+  compareVersions: [PlanVersion | null, PlanVersion | null];
+  onSelectVersion: (version: PlanVersion | null) => void;
+  onRestoreClick: (version: PlanVersion) => void;
+  onCompareSelect: (version: PlanVersion) => void;
+  isRestoring: boolean;
+  formatDate: (dateStr: string) => string;
+  formatRelativeTime: (dateStr: string) => string;
+  formatCurrency: (value: number) => string;
+  getSnapshotSummary: (snapshot: PlanVersion['snapshot_data']) => { linesCount: number; totalBudget: number; status: string };
+  showVersionNumber: boolean;
+}
+
+function VersionList({
+  versions,
+  selectedVersion,
+  compareVersions,
+  onSelectVersion,
+  onRestoreClick,
+  onCompareSelect,
+  isRestoring,
+  formatDate,
+  formatRelativeTime,
+  formatCurrency,
+  getSnapshotSummary,
+  showVersionNumber,
+}: VersionListProps) {
+  return (
+    <div className="space-y-3">
+      {versions.map((version) => {
+        const summary = getSnapshotSummary(version.snapshot_data);
+        const isSelected = selectedVersion?.id === version.id;
+        const isCompareSelected = compareVersions[0]?.id === version.id || compareVersions[1]?.id === version.id;
+
+        return (
+          <div
+            key={version.id}
+            className={cn(
+              "border rounded-lg p-4 transition-colors cursor-pointer hover:bg-muted/30",
+              isSelected && "ring-2 ring-primary",
+              isCompareSelected && "bg-primary/5 border-primary/30"
+            )}
+            onClick={() => onSelectVersion(isSelected ? null : version)}
+          >
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {showVersionNumber ? (
+                    <Badge variant="secondary">v{version.version_number}</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs">
+                      {formatRelativeTime(version.created_at)}
+                    </Badge>
+                  )}
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {formatDate(version.created_at)}
+                  </span>
+                </div>
+                {version.change_log && (
+                  <p className="text-sm">{version.change_log}</p>
+                )}
+                <div className="flex gap-4 text-xs text-muted-foreground mt-2">
+                  <span>{summary.linesCount} linhas</span>
+                  <span>{formatCurrency(summary.totalBudget)}</span>
+                </div>
+              </div>
+              {isCompareSelected && (
+                <Check className="w-4 h-4 text-primary" />
+              )}
+            </div>
+
+            {isSelected && (
+              <div className="flex gap-2 mt-4 pt-4 border-t">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRestoreClick(version);
+                  }}
+                  disabled={isRestoring}
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Restaurar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCompareSelect(version);
+                  }}
+                >
+                  <GitCompare className="w-4 h-4 mr-2" />
+                  Comparar
+                </Button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

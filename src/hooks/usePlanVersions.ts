@@ -10,13 +10,15 @@ export interface PlanVersion {
   snapshot_data: {
     plan: Record<string, unknown>;
     lines: Record<string, unknown>[];
-    budget_distributions: Record<string, unknown>[];
+    distributions?: Record<string, unknown>[];
+    budget_distributions?: Record<string, unknown>[];
     monthly_budgets: Record<string, unknown>[];
   };
   change_log: string | null;
   created_by: string;
   created_at: string;
   is_active: boolean;
+  is_auto_backup: boolean;
 }
 
 export function usePlanVersions(planId: string | undefined) {
@@ -31,10 +33,13 @@ export function usePlanVersions(planId: string | undefined) {
         .from('media_plan_versions')
         .select('*')
         .eq('media_plan_id', planId)
-        .order('version_number', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as PlanVersion[];
+      return (data || []).map(v => ({
+        ...v,
+        snapshot_data: v.snapshot_data as PlanVersion['snapshot_data'],
+      })) as PlanVersion[];
     },
     enabled: !!planId,
   });
@@ -107,9 +112,10 @@ export function usePlanVersions(planId: string | undefined) {
         .delete()
         .eq('media_plan_id', planId);
 
-      // Recreate budget distributions
-      if (snapshot.budget_distributions && snapshot.budget_distributions.length > 0) {
-        const distributions = snapshot.budget_distributions.map(d => ({
+      // Recreate budget distributions (support both old 'budget_distributions' and new 'distributions' keys)
+      const distributions = snapshot.distributions || snapshot.budget_distributions || [];
+      if (distributions.length > 0) {
+        const distData = distributions.map(d => ({
           id: d.id as string,
           media_plan_id: planId,
           user_id: user.id,
@@ -124,7 +130,7 @@ export function usePlanVersions(planId: string | undefined) {
 
         const { error: distError } = await supabase
           .from('plan_budget_distributions')
-          .insert(distributions);
+          .insert(distData);
 
         if (distError) throw distError;
       }
