@@ -346,8 +346,7 @@ export function TaxonomyTable({ data, planName, defaultUrl, userId, onUpdate }: 
                           size="sm"
                           className="h-6 text-xs"
                           onClick={() => handleValidate(line.id)}
-                          disabled={!line.destination_url && !defaultUrl}
-                          title={!line.destination_url && !defaultUrl ? 'Defina a URL de destino primeiro' : 'Validar UTM'}
+                          title="Validar UTM"
                         >
                           <Check className="h-3 w-3" />
                         </Button>
