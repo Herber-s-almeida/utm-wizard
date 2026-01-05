@@ -25,7 +25,8 @@ import {
   Palette,
   ShieldCheck,
   Building2,
-  Link2
+  Link2,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSystemAdmin } from '@/hooks/useSystemAdmin';
@@ -1412,6 +1413,16 @@ export function AppSidebar() {
                 </Button>
               </Link>
             )}
+            <Link to="/account">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 h-8 text-xs mb-1"
+              >
+                <Settings className="h-3.5 w-3.5" />
+                Minha Conta
+              </Button>
+            </Link>
             <Button
               variant="ghost"
               size="sm"
