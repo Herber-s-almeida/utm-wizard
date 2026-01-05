@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle, Link } from 'lucide-react';
+import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle, Link, LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { MediaLine, MediaPlan, MediaCreative, MediaLineMonthlyBudget } from '@/types/media';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -199,6 +200,9 @@ export function HierarchicalMediaTable({
   const [editingField, setEditingField] = useState<EditingField>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [validatingLineId, setValidatingLineId] = useState<string | null>(null);
+
+  // View mode: 'grouped' (hierarchical) or 'flat' (one line per row)
+  const [viewMode, setViewMode] = useState<'grouped' | 'flat'>('grouped');
 
   // Column visibility state
   const [visibleColumns, setVisibleColumns] = useState<Record<ToggleableColumn, boolean>>({
@@ -1099,6 +1103,23 @@ export function HierarchicalMediaTable({
       <div className="space-y-3">
         {/* Filters Bar */}
         <div className="flex items-center gap-2 flex-wrap">
+          {/* View Mode Toggle */}
+          <ToggleGroup 
+            type="single" 
+            value={viewMode} 
+            onValueChange={(val) => val && setViewMode(val as 'grouped' | 'flat')}
+            className="border rounded-md"
+          >
+            <ToggleGroupItem value="grouped" aria-label="Agrupado" className="h-8 px-3 gap-1.5 text-xs">
+              <LayoutGrid className="w-3.5 h-3.5" />
+              Agrupado
+            </ToggleGroupItem>
+            <ToggleGroupItem value="flat" aria-label="Um por linha" className="h-8 px-3 gap-1.5 text-xs">
+              <List className="w-3.5 h-3.5" />
+              Um por linha
+            </ToggleGroupItem>
+          </ToggleGroup>
+
           {/* Column Visibility Filter */}
           <Popover>
             <PopoverTrigger asChild>
@@ -1416,10 +1437,10 @@ export function HierarchicalMediaTable({
 
         <div className="border rounded-lg overflow-x-auto">
           {/* Header */}
-          <div className="flex bg-muted/50 text-xs font-medium text-muted-foreground border-b" style={{ minWidth: `${getMinWidth()}px` }}>
-            {visibleColumns.subdivision && <div className="w-[180px] p-3 border-r shrink-0">Subdivisão do plano</div>}
-            {visibleColumns.moment && <div className="w-[180px] p-3 border-r shrink-0">Momentos de Campanha</div>}
-            {visibleColumns.funnel_stage && <div className="w-[200px] p-3 border-r shrink-0">Fase</div>}
+          <div className="flex bg-muted/50 text-xs font-medium text-muted-foreground border-b" style={{ minWidth: `${viewMode === 'flat' ? getMinWidth() - 100 : getMinWidth()}px` }}>
+            {visibleColumns.subdivision && <div className={cn("p-3 border-r shrink-0", viewMode === 'flat' ? "w-[120px]" : "w-[180px]")}>Subdivisão</div>}
+            {visibleColumns.moment && <div className={cn("p-3 border-r shrink-0", viewMode === 'flat' ? "w-[120px]" : "w-[180px]")}>Momento</div>}
+            {visibleColumns.funnel_stage && <div className={cn("p-3 border-r shrink-0", viewMode === 'flat' ? "w-[100px]" : "w-[200px]")}>Fase</div>}
             <div className="w-[100px] p-3 border-r shrink-0">Código</div>
             {visibleColumns.medium && <div className="w-[80px] p-3 border-r shrink-0">Meio</div>}
             {visibleColumns.vehicle && <div className="w-[110px] p-3 border-r shrink-0">Veículo</div>}
@@ -1441,21 +1462,259 @@ export function HierarchicalMediaTable({
             ))}
           </div>
 
-          {/* Body */}
-          <div className="divide-y" style={{ minWidth: `${getMinWidth()}px` }}>
-            {filteredGroupedData.map((subdivisionGroup, subIdx) => (
-              <div key={subdivisionGroup.subdivision.distId || `no-sub-${subIdx}`} className="flex">
-                {/* Subdivision cell */}
-                {visibleColumns.subdivision && (
-                  <div className="w-[180px] p-2 border-r bg-background shrink-0">
-                    <BudgetCard
-                      label={subdivisionGroup.subdivision.name}
-                      planned={subdivisionGroup.subdivision.planned}
-                      allocated={subdivisionGroup.subdivisionAllocated}
-                      percentageLabel={`${subdivisionGroup.subdivision.percentage.toFixed(0)}% do plano`}
+          {/* Flat View - one line per row */}
+          {viewMode === 'flat' && (
+            <div className="divide-y" style={{ minWidth: `${getMinWidth() - 100}px` }}>
+              {filteredLines.map((line) => {
+                const info = getLineDisplayInfo(line);
+                const subdivisionName = subdivisionsList.find(s => s.id === line.subdivision_id)?.name || 'Geral';
+                const momentName = momentsList.find(m => m.id === line.moment_id)?.name || 'Geral';
+                const funnelName = funnelStagesList.find(f => f.id === line.funnel_stage_id)?.name || 'Geral';
+
+                return (
+                  <motion.div
+                    key={line.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex hover:bg-muted/30 transition-colors text-sm"
+                  >
+                    {/* Subdivision - simple text */}
+                    {visibleColumns.subdivision && (
+                      <div className="w-[120px] p-2 border-r truncate shrink-0" title={subdivisionName}>
+                        {subdivisionName}
+                      </div>
+                    )}
+                    
+                    {/* Moment - simple text */}
+                    {visibleColumns.moment && (
+                      <div className="w-[120px] p-2 border-r truncate shrink-0" title={momentName}>
+                        {momentName}
+                      </div>
+                    )}
+                    
+                    {/* Funnel Stage - simple text */}
+                    {visibleColumns.funnel_stage && (
+                      <div className="w-[100px] p-2 border-r truncate shrink-0" title={funnelName}>
+                        {funnelName}
+                      </div>
+                    )}
+
+                    {/* Editable Line Code */}
+                    <EditableCell
+                      line={line}
+                      field="line_code"
+                      displayValue={line.line_code || generateLineCode(line, existingLineCodes)}
+                      inputType="text"
+                      width="w-[100px]"
                     />
-                  </div>
-                )}
+                    
+                    {visibleColumns.medium && (
+                      <div className="w-[80px] p-2 border-r truncate shrink-0" title={info.medium}>
+                        {info.medium}
+                      </div>
+                    )}
+                    {visibleColumns.vehicle && (
+                      <div className="w-[110px] p-2 border-r truncate shrink-0" title={info.vehicle}>
+                        {info.vehicle}
+                      </div>
+                    )}
+                    {visibleColumns.channel && (
+                      <div className="w-[100px] p-2 border-r truncate shrink-0" title={info.channel}>
+                        {info.channel}
+                      </div>
+                    )}
+                    {visibleColumns.target && (
+                      <div className="w-[130px] p-2 border-r truncate shrink-0" title={info.target}>
+                        ({info.target})
+                      </div>
+                    )}
+                    
+                    {/* Editable Budget */}
+                    <EditableCell
+                      line={line}
+                      field="budget"
+                      displayValue={formatCurrency(Number(line.budget))}
+                      inputType="number"
+                      width="w-[120px]"
+                    />
+                    
+                    {/* Creatives with edit button */}
+                    {visibleColumns.creatives && (
+                      <div className="w-[80px] p-2 border-r flex items-center justify-between group shrink-0">
+                        <div className="flex items-center gap-1">
+                          <ImageIcon className="w-3 h-3 text-muted-foreground" />
+                          <span>{info.creativesCount}</span>
+                        </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => onEditLine(line, 'creatives')}
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Editar criativos</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    )}
+                    
+                    {/* Status select */}
+                    <div className="w-[100px] p-2 border-r shrink-0">
+                      <Select
+                        value={line.status_id || 'none'}
+                        onValueChange={(value) => handleStatusChange(line.id, value)}
+                      >
+                        <SelectTrigger className="h-6 text-xs">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">-</SelectItem>
+                          {statusesList.map(status => (
+                            <SelectItem key={status.id} value={status.id}>
+                              {status.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {/* Editable Start Date */}
+                    <EditableCell
+                      line={line}
+                      field="start_date"
+                      displayValue={formatDate(line.start_date)}
+                      inputType="date"
+                      width="w-[100px]"
+                    />
+                    
+                    {/* Editable End Date */}
+                    <EditableCell
+                      line={line}
+                      field="end_date"
+                      displayValue={formatDate(line.end_date)}
+                      inputType="date"
+                      width="w-[100px]"
+                    />
+                    
+                    {/* Action buttons */}
+                    <div className="w-[100px] p-2 border-r flex items-center gap-1 shrink-0">
+                      {lineAlerts && <LineAlertIndicator alerts={lineAlerts(line.id)} size="sm" />}
+                      <UTMPreview
+                        destinationUrl={line.destination_url}
+                        utmParams={{
+                          utm_source: line.utm_source || undefined,
+                          utm_medium: line.utm_medium || undefined,
+                          utm_campaign: line.utm_campaign || undefined,
+                          utm_term: line.utm_term || undefined,
+                        }}
+                        isValidated={(line as any).utm_validated || false}
+                        compact
+                        validating={validatingLineId === line.id}
+                        onValidate={onValidateUTM ? async () => {
+                          setValidatingLineId(line.id);
+                          try {
+                            await onValidateUTM(line.id, true);
+                          } finally {
+                            setValidatingLineId(null);
+                          }
+                        } : undefined}
+                        onInvalidate={onValidateUTM ? async () => {
+                          setValidatingLineId(line.id);
+                          try {
+                            await onValidateUTM(line.id, false);
+                          } finally {
+                            setValidatingLineId(null);
+                          }
+                        } : undefined}
+                      />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => onEditLine(line)}
+                          >
+                            <Settings2 className="w-3 h-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Editar linha completa</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive hover:text-destructive"
+                            onClick={() => onDeleteLine(line)}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Excluir linha</TooltipContent>
+                      </Tooltip>
+                    </div>
+                    
+                    {/* Campaign Days - fixed column */}
+                    <div className="w-[60px] p-2 border-r shrink-0 bg-primary/5 text-center text-xs">
+                      {getLineCampaignDays(line)}
+                    </div>
+                    
+                    {/* Allocated Budget - fixed column */}
+                    <div className="w-[100px] p-2 border-r shrink-0 bg-primary/5 text-xs font-medium">
+                      {formatCurrency(getLineAllocatedBudget(line.id))}
+                    </div>
+                    
+                    {/* Month columns - fixed columns */}
+                    {planMonths.map((month, idx) => (
+                      <MonthBudgetCell
+                        key={idx}
+                        lineId={line.id}
+                        line={line}
+                        month={month}
+                        value={getMonthBudget(line.id, month)}
+                        onUpdate={onUpdateMonthlyBudgets}
+                        isEditable={isMonthEditableForLine(line, month)}
+                      />
+                    ))}
+                  </motion.div>
+                );
+              })}
+              
+              {/* Add Line Button for flat view */}
+              <div className="p-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 text-xs border-dashed border-primary text-primary hover:bg-primary/10 gap-1"
+                  onClick={() => onAddLine({})}
+                >
+                  <Plus className="w-3 h-3" />
+                  Criar nova Linha
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Grouped View - hierarchical with budget cards */}
+          {viewMode === 'grouped' && (
+            <div className="divide-y" style={{ minWidth: `${getMinWidth()}px` }}>
+              {filteredGroupedData.map((subdivisionGroup, subIdx) => (
+                <div key={subdivisionGroup.subdivision.distId || `no-sub-${subIdx}`} className="flex">
+                  {/* Subdivision cell */}
+                  {visibleColumns.subdivision && (
+                    <div className="w-[180px] p-2 border-r bg-background shrink-0">
+                      <BudgetCard
+                        label={subdivisionGroup.subdivision.name}
+                        planned={subdivisionGroup.subdivision.planned}
+                        allocated={subdivisionGroup.subdivisionAllocated}
+                        percentageLabel={`${subdivisionGroup.subdivision.percentage.toFixed(0)}% do plano`}
+                      />
+                    </div>
+                  )}
 
                 {/* Moments column */}
                 <div className="flex-1 divide-y">
@@ -1703,12 +1962,13 @@ export function HierarchicalMediaTable({
               </div>
             ))}
           </div>
+          )}
 
           {/* Footer - Subtotal */}
-          <div className="flex bg-muted border-t" style={{ minWidth: `${getMinWidth()}px` }}>
-            {visibleColumns.subdivision && <div className="w-[180px] p-3 font-bold shrink-0">Subtotal:</div>}
-            {visibleColumns.moment && <div className="w-[180px] p-3 shrink-0"></div>}
-            {visibleColumns.funnel_stage && <div className="w-[200px] p-3 shrink-0"></div>}
+          <div className="flex bg-muted border-t" style={{ minWidth: `${viewMode === 'flat' ? getMinWidth() - 100 : getMinWidth()}px` }}>
+            {visibleColumns.subdivision && <div className={cn("p-3 font-bold shrink-0", viewMode === 'flat' ? "w-[120px]" : "w-[180px]")}>Subtotal:</div>}
+            {visibleColumns.moment && <div className={cn("p-3 shrink-0", viewMode === 'flat' ? "w-[120px]" : "w-[180px]")}></div>}
+            {visibleColumns.funnel_stage && <div className={cn("p-3 shrink-0", viewMode === 'flat' ? "w-[100px]" : "w-[200px]")}></div>}
             <div className="w-[100px] p-3 shrink-0"></div>
             {visibleColumns.medium && <div className="w-[80px] p-3 shrink-0"></div>}
             {visibleColumns.vehicle && <div className="w-[110px] p-3 shrink-0"></div>}
