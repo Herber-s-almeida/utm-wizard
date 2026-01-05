@@ -22,6 +22,17 @@ import { cn } from '@/lib/utils';
 import { CreativesManager } from '@/components/media/CreativesManager';
 import { generateUTM, toSlug } from '@/utils/utmGenerator';
 import { UTMPreview } from './UTMPreview';
+import { LabelWithTooltip } from '@/components/ui/info-tooltip';
+
+const STEP_TOOLTIPS: Record<string, string> = {
+  subdivision: 'Agrupa linhas por região, produto ou objetivo. Define a primeira parte da estrutura do plano.',
+  moment: 'Fase temporal da campanha: lançamento, sustentação, promoção, etc.',
+  funnel: 'Etapa da jornada do cliente: conhecimento, consideração ou conversão.',
+  medium: 'Categoria principal do canal: Digital, TV, OOH, Rádio, etc.',
+  vehicle: 'Plataforma específica de veiculação. Ex: Google Ads, Meta, Globo.',
+  channel: 'Formato ou tipo de anúncio dentro do veículo. Ex: Search, Display, Stories.',
+  target: 'Público-alvo para esta linha. Ex: Mulheres 25-45, Interessados em Tecnologia.',
+};
 
 interface PlanHierarchyOption {
   id: string | null;
@@ -654,7 +665,13 @@ export function MediaLineWizard({
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="budget">Investimento (R$) *</Label>
+                      <LabelWithTooltip 
+                        htmlFor="budget" 
+                        tooltip="Valor a ser investido nesta linha. Será somado ao total distribuído do plano."
+                        required
+                      >
+                        Investimento (R$)
+                      </LabelWithTooltip>
                       <Input
                         id="budget"
                         type="number"
@@ -667,7 +684,12 @@ export function MediaLineWizard({
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="destination_url">URL de Destino</Label>
+                      <LabelWithTooltip 
+                        htmlFor="destination_url" 
+                        tooltip="Deixe vazio para usar a URL padrão do plano, ou insira uma URL específica para esta linha."
+                      >
+                        URL de Destino
+                      </LabelWithTooltip>
                       <Input
                         id="destination_url"
                         type="url"
@@ -680,7 +702,13 @@ export function MediaLineWizard({
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="start_date">Data de Início *</Label>
+                      <LabelWithTooltip 
+                        htmlFor="start_date" 
+                        tooltip="Deve estar dentro do período do plano."
+                        required
+                      >
+                        Data de Início
+                      </LabelWithTooltip>
                       <Input
                         id="start_date"
                         type="date"
@@ -695,7 +723,13 @@ export function MediaLineWizard({
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="end_date">Data de Fim *</Label>
+                      <LabelWithTooltip 
+                        htmlFor="end_date" 
+                        tooltip="Deve estar dentro do período do plano e ser posterior à data de início."
+                        required
+                      >
+                        Data de Fim
+                      </LabelWithTooltip>
                       <Input
                         id="end_date"
                         type="date"
@@ -714,7 +748,12 @@ export function MediaLineWizard({
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="notes">Observações</Label>
+                    <LabelWithTooltip 
+                      htmlFor="notes" 
+                      tooltip="Observações internas sobre a linha. Não aparecem em exportações ou UTMs."
+                    >
+                      Observações
+                    </LabelWithTooltip>
                     <Textarea
                       id="notes"
                       placeholder="Notas adicionais sobre esta linha..."

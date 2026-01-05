@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Channel } from '@/hooks/useConfigData';
 import { toSlug } from '@/utils/utmGenerator';
 import { toast } from 'sonner';
+import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 
 interface ChannelDialogProps {
   open: boolean;
@@ -119,7 +120,9 @@ export function ChannelDialog({
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="channel-name">Nome do Canal *</Label>
+            <LabelWithTooltip htmlFor="channel-name" tooltip="Nome do tipo de anúncio. Ex: Search, Display, Video, Stories." required>
+              Nome do Canal
+            </LabelWithTooltip>
             <Input
               id="channel-name"
               value={name}
@@ -130,7 +133,9 @@ export function ChannelDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="channel-slug">Medium Slug (utm_medium)</Label>
+            <LabelWithTooltip htmlFor="channel-slug" tooltip="Será usado como utm_medium nas URLs de rastreamento. Apenas letras minúsculas, números e hífens.">
+              Medium Slug (utm_medium)
+            </LabelWithTooltip>
             <Input
               id="channel-slug"
               value={slug}
@@ -142,7 +147,7 @@ export function ChannelDialog({
               className="font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Usado como utm_medium nas URLs. Gerado automaticamente do nome, mas pode ser editado.
+              Gerado automaticamente do nome, mas pode ser editado.
             </p>
           </div>
 

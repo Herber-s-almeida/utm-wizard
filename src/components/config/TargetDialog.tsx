@@ -11,6 +11,7 @@ import { Plus, Trash2, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBrazilianCities, BrazilianCity } from '@/hooks/useBrazilianCities';
 import { useBehavioralSegmentations, BehavioralSegmentation } from '@/hooks/useConfigData';
+import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 
 interface Location {
   city: string;
@@ -341,7 +342,9 @@ export function TargetDialog({
         <div className="space-y-4 py-4">
           {/* Name Field */}
           <div className="space-y-2">
-            <Label htmlFor="name">Nome da segmentação *</Label>
+            <LabelWithTooltip htmlFor="name" tooltip="Nome único para identificar este público-alvo. Será usado na geração de utm_term." required>
+              Nome da segmentação
+            </LabelWithTooltip>
             <Input
               id="name"
               value={name}
@@ -354,7 +357,9 @@ export function TargetDialog({
 
           {/* Age Field */}
           <div className="space-y-2">
-            <Label>Idade</Label>
+            <LabelWithTooltip tooltip="Faixa etária do público-alvo. Marque 'Sem máximo' para 65+.">
+              Idade
+            </LabelWithTooltip>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">De</span>
@@ -395,7 +400,9 @@ export function TargetDialog({
 
           {/* Location Field */}
           <div className="space-y-3">
-            <Label>Localização</Label>
+            <LabelWithTooltip tooltip="Defina a região geográfica do público: país, estado, cidade ou raio específico.">
+              Localização
+            </LabelWithTooltip>
             
             {/* Country Type Selection */}
             <RadioGroup
