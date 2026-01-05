@@ -66,11 +66,11 @@ export function useTaxonomyData(planId: string) {
           utm_validated,
           utm_validated_at,
           utm_validated_by,
-          vehicle:vehicles(id, name, slug),
-          channel:channels(id, name, slug),
-          subdivision:plan_subdivisions(name, slug),
-          moment:moments(name, slug),
-          funnel_stage_ref:funnel_stages(name, slug)
+          vehicle:vehicles!vehicle_id(id, name, slug),
+          channel:channels!channel_id(id, name, slug),
+          subdivision:plan_subdivisions!subdivision_id(name, slug),
+          moment:moments!moment_id(name, slug),
+          funnel_stage_ref:funnel_stages!funnel_stage_id(name, slug)
         `)
         .eq('media_plan_id', planId)
         .order('line_code', { ascending: true });

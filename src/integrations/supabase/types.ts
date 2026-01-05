@@ -1448,6 +1448,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      build_utm_campaign_string: {
+        Args: {
+          p_campaign_name: string
+          p_funnel_slug: string
+          p_line_code: string
+          p_moment_slug: string
+          p_subdivision_slug: string
+        }
+        Returns: string
+      }
       can_transition_status: {
         Args: {
           _from_status: string
