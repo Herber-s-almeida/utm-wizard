@@ -884,8 +884,11 @@ export default function MediaPlanDetail() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="flex-1 flex flex-col items-center justify-end h-full cursor-help">
-                                <div className="text-center mb-1">
-                                  <span className="text-[8px] text-muted-foreground font-medium block">
+                                <div className="text-center mb-1 space-y-0.5">
+                                  <span className="text-[8px] text-foreground font-semibold block">
+                                    {month.amount > 0 ? formatCurrency(month.amount) : 'R$ 0'}
+                                  </span>
+                                  <span className="text-[7px] text-muted-foreground block">
                                     {month.amount > 0 ? `${((month.amount / monthlyTotals.reduce((a, b) => a + b.amount, 0)) * 100).toFixed(0)}%` : '0%'}
                                   </span>
                                 </div>
