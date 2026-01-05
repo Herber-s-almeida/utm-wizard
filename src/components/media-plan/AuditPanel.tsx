@@ -235,6 +235,26 @@ export function AuditPanel({ planId }: AuditPanelProps) {
     }
   };
 
+  const grouped = useMemo(() => {
+    const byType: Record<EventType, AuditEvent[]> = { version: [], status: [], utm: [] };
+    for (const e of events) byType[e.type].push(e);
+    return byType;
+  }, [events]);
+
+  const eventCounts = useMemo(
+    () => ({
+      version: grouped.version.length,
+      status: grouped.status.length,
+      utm: grouped.utm.length,
+    }),
+    [grouped],
+  );
+
+  const filteredEvents = useMemo(() => {
+    if (filter === 'all') return events;
+    return grouped[filter];
+  }, [events, grouped, filter]);
+
   if (loading) {
     return (
       <Card>
@@ -260,26 +280,6 @@ export function AuditPanel({ planId }: AuditPanelProps) {
       </Card>
     );
   }
-
-  const grouped = useMemo(() => {
-    const byType: Record<EventType, AuditEvent[]> = { version: [], status: [], utm: [] };
-    for (const e of events) byType[e.type].push(e);
-    return byType;
-  }, [events]);
-
-  const eventCounts = useMemo(
-    () => ({
-      version: grouped.version.length,
-      status: grouped.status.length,
-      utm: grouped.utm.length,
-    }),
-    [grouped],
-  );
-
-  const filteredEvents = useMemo(() => {
-    if (filter === 'all') return events;
-    return grouped[filter];
-  }, [events, grouped, filter]);
 
   return (
     <Card>
