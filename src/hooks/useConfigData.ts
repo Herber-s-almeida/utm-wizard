@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useEffectiveUserId } from './useEffectiveUserId';
 import { toast } from 'sonner';
 import { useSoftDeleteMutations, filterSoftDeleteItems } from './useSoftDelete';
 
@@ -103,20 +104,22 @@ export interface CreativeTemplate {
 // Hook for Subdivisions
 export function useSubdivisions() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('plan_subdivisions', 'subdivisions', 'Subdivisão');
 
   const query = useQuery({
-    queryKey: ['subdivisions', user?.id],
+    queryKey: ['subdivisions', effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('plan_subdivisions')
         .select('*')
+        .eq('user_id', effectiveUserId!)
         .order('created_at', { ascending: true });
       if (error) throw error;
       return data as Subdivision[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const create = useMutation({
@@ -175,17 +178,18 @@ export function useSubdivisions() {
 // Hook for Moments
 export function useMoments() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('moments', 'moments', 'Momento');
 
   const query = useQuery({
-    queryKey: ['moments', user?.id],
+    queryKey: ['moments', effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('moments').select('*').order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('moments').select('*').eq('user_id', effectiveUserId!).order('created_at', { ascending: true });
       if (error) throw error;
       return data as Moment[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const create = useMutation({
@@ -229,17 +233,18 @@ export function useMoments() {
 // Hook for Funnel Stages
 export function useFunnelStages() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('funnel_stages', 'funnel_stages', 'Fase do funil');
 
   const query = useQuery({
-    queryKey: ['funnel_stages', user?.id],
+    queryKey: ['funnel_stages', effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('funnel_stages').select('*').order('order_index', { ascending: true });
+      const { data, error } = await supabase.from('funnel_stages').select('*').eq('user_id', effectiveUserId!).order('order_index', { ascending: true });
       if (error) throw error;
       return data as FunnelStage[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const create = useMutation({
@@ -285,17 +290,18 @@ export function useFunnelStages() {
 // Hook for Mediums
 export function useMediums() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('mediums', 'mediums', 'Meio');
 
   const query = useQuery({
-    queryKey: ['mediums', user?.id],
+    queryKey: ['mediums', effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('mediums').select('*').order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('mediums').select('*').eq('user_id', effectiveUserId!).order('created_at', { ascending: true });
       if (error) throw error;
       return data as Medium[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const create = useMutation({
@@ -339,17 +345,18 @@ export function useMediums() {
 // Hook for Vehicles
 export function useVehicles() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('vehicles', 'vehicles', 'Veículo');
 
   const query = useQuery({
-    queryKey: ['vehicles', user?.id],
+    queryKey: ['vehicles', effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('vehicles').select('*').order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('vehicles').select('*').eq('user_id', effectiveUserId!).order('created_at', { ascending: true });
       if (error) throw error;
       return data as Vehicle[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const create = useMutation({
@@ -393,17 +400,18 @@ export function useVehicles() {
 // Hook for Channels
 export function useChannels() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('channels', 'channels', 'Canal');
 
   const query = useQuery({
-    queryKey: ['channels', user?.id],
+    queryKey: ['channels', effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('channels').select('*').order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('channels').select('*').eq('user_id', effectiveUserId!).order('created_at', { ascending: true });
       if (error) throw error;
       return data as Channel[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const create = useMutation({
@@ -447,17 +455,18 @@ export function useChannels() {
 // Hook for Behavioral Segmentations
 export function useBehavioralSegmentations() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('behavioral_segmentations', 'behavioral_segmentations', 'Segmentação');
 
   const query = useQuery({
-    queryKey: ['behavioral_segmentations', user?.id],
+    queryKey: ['behavioral_segmentations', effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('behavioral_segmentations').select('*').order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('behavioral_segmentations').select('*').eq('user_id', effectiveUserId!).order('created_at', { ascending: true });
       if (error) throw error;
       return data as BehavioralSegmentation[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const create = useMutation({
@@ -501,17 +510,18 @@ export function useBehavioralSegmentations() {
 // Hook for Targets
 export function useTargets() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('targets', 'targets', 'Segmentação');
 
   const query = useQuery({
-    queryKey: ['targets', user?.id],
+    queryKey: ['targets', effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('targets').select('*').order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('targets').select('*').eq('user_id', effectiveUserId!).order('created_at', { ascending: true });
       if (error) throw error;
       return data as Target[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const create = useMutation({
@@ -555,17 +565,18 @@ export function useTargets() {
 // Hook for Creative Templates
 export function useCreativeTemplates() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('creative_templates', 'creative_templates', 'Criativo');
 
   const query = useQuery({
-    queryKey: ['creative_templates', user?.id],
+    queryKey: ['creative_templates', effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('creative_templates').select('*').order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('creative_templates').select('*').eq('user_id', effectiveUserId!).order('created_at', { ascending: true });
       if (error) throw error;
       return data as CreativeTemplate[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const create = useMutation({
@@ -609,46 +620,47 @@ export function useCreativeTemplates() {
 // Hook for Media Plans with soft delete
 export function useMediaPlans() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
   const draftPlans = useQuery({
-    queryKey: ['media_plans', 'draft', user?.id],
+    queryKey: ['media_plans', 'draft', effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('media_plans').select('*').is('deleted_at', null).eq('status', 'draft').order('updated_at', { ascending: false });
+      const { data, error } = await supabase.from('media_plans').select('*').eq('user_id', effectiveUserId!).is('deleted_at', null).eq('status', 'draft').order('updated_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const activePlans = useQuery({
-    queryKey: ['media_plans', 'active', user?.id],
+    queryKey: ['media_plans', 'active', effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('media_plans').select('*').is('deleted_at', null).eq('status', 'active').order('updated_at', { ascending: false });
+      const { data, error } = await supabase.from('media_plans').select('*').eq('user_id', effectiveUserId!).is('deleted_at', null).eq('status', 'active').order('updated_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const finishedPlans = useQuery({
-    queryKey: ['media_plans', 'finished', user?.id],
+    queryKey: ['media_plans', 'finished', effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('media_plans').select('*').is('deleted_at', null).eq('status', 'completed').order('updated_at', { ascending: false });
+      const { data, error } = await supabase.from('media_plans').select('*').eq('user_id', effectiveUserId!).is('deleted_at', null).eq('status', 'completed').order('updated_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const trashedPlans = useQuery({
-    queryKey: ['media_plans', 'trashed', user?.id],
+    queryKey: ['media_plans', 'trashed', effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('media_plans').select('*').not('deleted_at', 'is', null).order('deleted_at', { ascending: false });
+      const { data, error } = await supabase.from('media_plans').select('*').eq('user_id', effectiveUserId!).not('deleted_at', 'is', null).order('deleted_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const softDelete = useMutation({

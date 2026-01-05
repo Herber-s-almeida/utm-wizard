@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useEffectiveUserId } from './useEffectiveUserId';
 import { toast } from 'sonner';
 import { useSoftDeleteMutations, filterSoftDeleteItems } from './useSoftDelete';
 
@@ -21,23 +22,24 @@ const SYSTEM_STATUSES = ['Ativo', 'Finalizado', 'Pendente'];
 
 export function useStatuses() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('statuses', 'statuses', 'Status');
 
   const query = useQuery({
-    queryKey: ['statuses', user?.id],
+    queryKey: ['statuses', effectiveUserId],
     queryFn: async () => {
       // Fetch user's own statuses AND system statuses (global)
       const { data, error } = await supabase
         .from('statuses')
         .select('*')
-        .or(`user_id.eq.${user!.id},is_system.eq.true`)
+        .or(`user_id.eq.${effectiveUserId},is_system.eq.true`)
         .order('is_system', { ascending: false })
         .order('created_at', { ascending: true });
       if (error) throw error;
       return data as Status[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const create = useMutation({

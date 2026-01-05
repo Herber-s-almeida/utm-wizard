@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ExternalLink, FileText } from "lucide-react";
+import { ExternalLink, FileText, LogIn } from "lucide-react";
 import { AdminUser, useAdminUserPlans } from "@/hooks/useAdminUsers";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 
 interface UserEnvironmentDialogProps {
   user: AdminUser | null;
@@ -45,10 +46,24 @@ export function UserEnvironmentDialog({
 }: UserEnvironmentDialogProps) {
   const navigate = useNavigate();
   const { data: plans, isLoading } = useAdminUserPlans(user?.id ?? null);
+  const { setViewingUser } = useEnvironment();
 
   const handleViewPlan = (planId: string) => {
     onOpenChange(false);
     navigate(`/media-plans/${planId}`);
+  };
+
+  const handleEnterEnvironment = () => {
+    if (user) {
+      setViewingUser({
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        company: user.company,
+      });
+      onOpenChange(false);
+      navigate('/dashboard');
+    }
   };
 
   const formatCurrency = (value: number | null) => {
@@ -67,12 +82,26 @@ export function UserEnvironmentDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Enter environment button */}
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
+            <div>
+              <p className="font-medium">Acessar ambiente completo</p>
+              <p className="text-sm text-muted-foreground">
+                Visualize todos os recursos deste usuário como se estivesse logado na conta dele
+              </p>
+            </div>
+            <Button onClick={handleEnterEnvironment} className="gap-2">
+              <LogIn className="h-4 w-4" />
+              Entrar no ambiente
+            </Button>
+          </div>
+
           <div className="flex items-center justify-between">
             <h3 className="font-medium">Planos de Mídia</h3>
             <Badge variant="outline">{plans?.length || 0} planos</Badge>
           </div>
 
-          <ScrollArea className="h-[400px] pr-4">
+          <ScrollArea className="h-[300px] pr-4">
             {isLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
