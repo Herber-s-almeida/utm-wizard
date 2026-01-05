@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminRoute } from "@/components/admin/AdminRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -26,6 +27,7 @@ import TargetsPage from "./pages/config/TargetsPage";
 import FormatsPage from "./pages/config/FormatsPage";
 import CreativeTypesPage from "./pages/config/CreativeTypesPage";
 import StatusesPage from "./pages/config/StatusesPage";
+import AdminUsers from "./pages/admin/AdminUsers";
 
 function App() {
   const [queryClient] = useState(() => new QueryClient());
@@ -55,6 +57,7 @@ function App() {
             <Route path="/config/formats" element={<ProtectedRoute><FormatsPage /></ProtectedRoute>} />
             <Route path="/config/creative-types" element={<ProtectedRoute><CreativeTypesPage /></ProtectedRoute>} />
             <Route path="/config/statuses" element={<ProtectedRoute><StatusesPage /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

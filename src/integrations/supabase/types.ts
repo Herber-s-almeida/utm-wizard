@@ -1327,6 +1327,30 @@ export type Database = {
         }
         Relationships: []
       }
+      system_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["system_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["system_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["system_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       targets: {
         Row: {
           age_range: string | null
@@ -1460,9 +1484,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_system_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "owner" | "editor" | "viewer" | "approver"
+      system_role: "system_admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1591,6 +1617,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "editor", "viewer", "approver"],
+      system_role: ["system_admin", "user"],
     },
   },
 } as const

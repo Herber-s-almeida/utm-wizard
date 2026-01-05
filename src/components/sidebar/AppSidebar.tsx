@@ -22,9 +22,11 @@ import {
   CircleDot,
   PanelLeftClose,
   PanelLeftOpen,
-  Palette
+  Palette,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useSystemAdmin } from '@/hooks/useSystemAdmin';
 import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates, useBehavioralSegmentations } from '@/hooks/useConfigData';
 import { useFormatsHierarchy } from '@/hooks/useFormatsHierarchy';
 import { useCreativeTypes } from '@/hooks/useCreativeTypes';
@@ -49,6 +51,7 @@ import { SegmentDialog } from '@/components/config/SegmentDialog';
 
 export function AppSidebar() {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useSystemAdmin();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -1251,6 +1254,18 @@ export function AppSidebar() {
               <User className="h-3.5 w-3.5" />
               <span className="truncate flex-1">{user?.email}</span>
             </div>
+            {isAdmin && (
+              <Link to="/admin/users">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2 h-8 text-xs mb-1"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Administração
+                </Button>
+              </Link>
+            )}
             <Button
               variant="ghost"
               size="sm"
