@@ -116,6 +116,7 @@ export function VehicleDialog({
 
   const handleSave = () => {
     const trimmedName = name.trim();
+    const finalSlug = slug || toSlug(trimmedName);
     
     if (!mediumId) {
       toast.error('Selecione um meio');
@@ -129,6 +130,12 @@ export function VehicleDialog({
 
     if (trimmedName.length > 25) {
       toast.error('Nome deve ter no máximo 25 caracteres');
+      return;
+    }
+
+    // Validate slug format
+    if (!finalSlug || !/^[a-z0-9-]+$/.test(finalSlug)) {
+      toast.error('Slug inválido. Use apenas letras minúsculas, números e hífens.');
       return;
     }
 
@@ -146,7 +153,7 @@ export function VehicleDialog({
       name: trimmedName,
       description: description.slice(0, 180),
       medium_id: mediumId,
-      slug: slug || toSlug(trimmedName),
+      slug: finalSlug,
       channels: channels.filter(c => c.name.trim())
     });
 

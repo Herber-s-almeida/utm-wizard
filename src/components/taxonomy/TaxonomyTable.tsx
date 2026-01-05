@@ -14,11 +14,12 @@ import { CreativeUTMRow } from './CreativeUTMRow';
 interface TaxonomyTableProps {
   data: TaxonomyLine[];
   planName: string;
+  defaultUrl?: string | null;
   userId: string;
   onUpdate: () => void;
 }
 
-export function TaxonomyTable({ data, planName, userId, onUpdate }: TaxonomyTableProps) {
+export function TaxonomyTable({ data, planName, defaultUrl, userId, onUpdate }: TaxonomyTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [editingUrl, setEditingUrl] = useState<string | null>(null);
   const [editingTerm, setEditingTerm] = useState<string | null>(null);
@@ -123,7 +124,8 @@ export function TaxonomyTable({ data, planName, userId, onUpdate }: TaxonomyTabl
   };
 
   const handleCopyUrl = (line: TaxonomyLine) => {
-    if (!line.destination_url) {
+    const destinationUrl = line.destination_url || defaultUrl;
+    if (!destinationUrl) {
       toast.error('URL de destino não definida');
       return;
     }
@@ -136,7 +138,7 @@ export function TaxonomyTable({ data, planName, userId, onUpdate }: TaxonomyTabl
       utm_content: line.utm_content || '',
     };
 
-    const fullUrl = buildUrlWithUTM(line.destination_url, utmParams);
+    const fullUrl = buildUrlWithUTM(destinationUrl, utmParams);
     navigator.clipboard.writeText(fullUrl);
     toast.success('URL copiada!');
   };
@@ -344,8 +346,8 @@ export function TaxonomyTable({ data, planName, userId, onUpdate }: TaxonomyTabl
                           size="sm"
                           className="h-6 text-xs"
                           onClick={() => handleValidate(line.id)}
-                          disabled={!line.destination_url}
-                          title={!line.destination_url ? 'Defina a URL de destino primeiro' : 'Validar UTM'}
+                          disabled={!line.destination_url && !defaultUrl}
+                          title={!line.destination_url && !defaultUrl ? 'Defina a URL de destino primeiro' : 'Validar UTM'}
                         >
                           <Check className="h-3 w-3" />
                         </Button>

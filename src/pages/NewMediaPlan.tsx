@@ -18,6 +18,7 @@ const planSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório').max(100),
   client: z.string().max(100).optional(),
   campaign: z.string().min(1, 'Campanha é obrigatório para geração de UTM').max(100),
+  default_url: z.string().url('URL inválida').min(1, 'URL padrão é obrigatória'),
   start_date: z.string().optional(),
   end_date: z.string().optional(),
   total_budget: z.number().min(0).optional(),
@@ -32,6 +33,7 @@ export default function NewMediaPlan() {
     name: '',
     client: '',
     campaign: '',
+    default_url: '',
     start_date: '',
     end_date: '',
     total_budget: '',
@@ -45,6 +47,7 @@ export default function NewMediaPlan() {
     try {
       const validation = planSchema.safeParse({
         ...formData,
+        default_url: formData.default_url.trim(),
         total_budget: formData.total_budget ? parseFloat(formData.total_budget) : 0,
       });
 
@@ -61,6 +64,7 @@ export default function NewMediaPlan() {
           name: formData.name,
           client: formData.client || null,
           campaign: formData.campaign || null,
+          default_url: formData.default_url.trim(),
           start_date: formData.start_date || null,
           end_date: formData.end_date || null,
           total_budget: formData.total_budget ? parseFloat(formData.total_budget) : 0,
@@ -150,6 +154,21 @@ export default function NewMediaPlan() {
                     O nome da campanha será usado para gerar os parâmetros UTM automaticamente
                   </p>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="default_url">URL Padrão de Destino *</Label>
+                <Input
+                  id="default_url"
+                  type="url"
+                  placeholder="https://seusite.com.br/landing-page"
+                  value={formData.default_url}
+                  onChange={(e) => setFormData({ ...formData, default_url: e.target.value })}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  URL padrão para todas as linhas de mídia. Pode ser substituída individualmente em cada linha ou criativo.
+                </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
