@@ -728,6 +728,7 @@ export type Database = {
           created_by: string
           id: string
           is_active: boolean
+          is_auto_backup: boolean
           media_plan_id: string
           snapshot_data: Json
           version_number: number
@@ -738,6 +739,7 @@ export type Database = {
           created_by: string
           id?: string
           is_active?: boolean
+          is_auto_backup?: boolean
           media_plan_id: string
           snapshot_data?: Json
           version_number?: number
@@ -748,6 +750,7 @@ export type Database = {
           created_by?: string
           id?: string
           is_active?: boolean
+          is_auto_backup?: boolean
           media_plan_id?: string
           snapshot_data?: Json
           version_number?: number
@@ -1472,6 +1475,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      cleanup_old_auto_backups: { Args: never; Returns: number }
+      create_auto_backup_snapshot: {
+        Args: {
+          _change_description?: string
+          _plan_id: string
+          _user_id: string
+        }
+        Returns: string
       }
       create_plan_version_snapshot: {
         Args: { _change_log?: string; _plan_id: string; _user_id: string }
