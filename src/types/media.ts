@@ -10,6 +10,7 @@ export interface MediaPlan {
   status: 'draft' | 'active' | 'completed' | 'paused';
   objectives: string[] | null;
   kpis: Record<string, number> | null;
+  default_url: string | null;
   created_at: string;
   updated_at: string;
 }

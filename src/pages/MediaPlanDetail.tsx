@@ -14,8 +14,13 @@ import {
   Calendar,
   AlertTriangle,
   Users,
-  History
+  History,
+  Link,
+  Pencil,
+  Check,
+  X
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { 
   MediaPlan, 
@@ -94,6 +99,8 @@ export default function MediaPlanDetail() {
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [filteredLines, setFilteredLines] = useState<MediaLine[]>([]);
   const [filterByAlerts, setFilterByAlerts] = useState(false);
+  const [editingDefaultUrl, setEditingDefaultUrl] = useState(false);
+  const [defaultUrlValue, setDefaultUrlValue] = useState('');
 
   // Library data for display
   const subdivisions = useSubdivisions();
@@ -163,6 +170,7 @@ export default function MediaPlanDetail() {
       const linesList = (linesData || []) as MediaLine[];
       setPlan(planData as MediaPlan);
       setLines(linesList);
+      setDefaultUrlValue(planData.default_url || '');
 
       // Fetch creatives for all lines
       if (linesList.length > 0) {
@@ -270,6 +278,31 @@ export default function MediaPlanDetail() {
       console.error('Error validating UTM:', error);
       toast.error('Erro ao validar UTM');
     }
+  };
+
+  const handleSaveDefaultUrl = async () => {
+    if (!plan) return;
+    
+    try {
+      const { error } = await supabase
+        .from('media_plans')
+        .update({ default_url: defaultUrlValue || null })
+        .eq('id', plan.id);
+
+      if (error) throw error;
+
+      setPlan({ ...plan, default_url: defaultUrlValue || null });
+      setEditingDefaultUrl(false);
+      toast.success('URL padrão atualizada');
+    } catch (error) {
+      console.error('Error updating default URL:', error);
+      toast.error('Erro ao atualizar URL padrão');
+    }
+  };
+
+  const handleCancelEditUrl = () => {
+    setDefaultUrlValue(plan?.default_url || '');
+    setEditingDefaultUrl(false);
   };
 
   const formatCurrency = (value: number) => {
@@ -696,6 +729,51 @@ export default function MediaPlanDetail() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Default URL */}
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <Link className="w-4 h-4 text-muted-foreground" />
+              <div className="flex-1">
+                <div className="text-sm text-muted-foreground mb-1">URL Padrão</div>
+                {editingDefaultUrl ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={defaultUrlValue}
+                      onChange={(e) => setDefaultUrlValue(e.target.value)}
+                      placeholder="https://exemplo.com.br/pagina"
+                      className="flex-1"
+                      autoFocus
+                    />
+                    <Button size="icon" variant="ghost" onClick={handleSaveDefaultUrl}>
+                      <Check className="w-4 h-4 text-success" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={handleCancelEditUrl}>
+                      <X className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm ${plan.default_url ? '' : 'text-muted-foreground italic'}`}>
+                      {plan.default_url || 'Nenhuma URL padrão definida'}
+                    </span>
+                    {canEdit && (
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-6 w-6"
+                        onClick={() => setEditingDefaultUrl(true)}
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Editable Hierarchy Card */}
         {hierarchyData.length > 0 && (
