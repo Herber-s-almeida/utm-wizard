@@ -29,6 +29,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useSystemAdmin } from '@/hooks/useSystemAdmin';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
+import { useCurrentProfile } from '@/hooks/useCurrentProfile';
 import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates, useBehavioralSegmentations } from '@/hooks/useConfigData';
 import { useFormatsHierarchy } from '@/hooks/useFormatsHierarchy';
 import { useCreativeTypes } from '@/hooks/useCreativeTypes';
@@ -55,6 +56,7 @@ export function AppSidebar() {
   const { user, signOut } = useAuth();
   const { isAdmin } = useSystemAdmin();
   const { isViewingOtherEnvironment, viewingUser } = useEnvironment();
+  const { data: currentProfile } = useCurrentProfile();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -83,10 +85,10 @@ export function AppSidebar() {
   const formatsHierarchy = useFormatsHierarchy();
   const creativeTypesGlobal = useCreativeTypes();
 
-  // Get environment display name
+  // Get environment display name - show for all users, not just when viewing other environments
   const environmentName = isViewingOtherEnvironment 
     ? (viewingUser?.company || viewingUser?.full_name || viewingUser?.email)
-    : null;
+    : (currentProfile?.company || currentProfile?.full_name || user?.email);
 
   // Section open states
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
