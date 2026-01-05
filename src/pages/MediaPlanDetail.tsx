@@ -755,14 +755,26 @@ export default function MediaPlanDetail() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <span className={`text-sm ${plan.default_url ? '' : 'text-muted-foreground italic'}`}>
-                      {plan.default_url || 'Nenhuma URL padrão definida'}
-                    </span>
+                    {plan.default_url ? (
+                      <a 
+                        href={plan.default_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline truncate max-w-md"
+                        title={plan.default_url}
+                      >
+                        {plan.default_url}
+                      </a>
+                    ) : (
+                      <span className="text-sm text-muted-foreground italic">
+                        Nenhuma URL padrão definida
+                      </span>
+                    )}
                     {canEdit && (
                       <Button 
                         size="icon" 
                         variant="ghost" 
-                        className="h-6 w-6"
+                        className="h-6 w-6 shrink-0"
                         onClick={() => setEditingDefaultUrl(true)}
                       >
                         <Pencil className="w-3 h-3" />
