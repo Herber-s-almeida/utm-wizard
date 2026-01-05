@@ -8,18 +8,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Medium } from '@/hooks/useConfigData';
+import { toSlug } from '@/utils/utmGenerator';
 
 interface Channel {
   name: string;
   description: string;
+  slug?: string;
 }
 
 interface VehicleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: { name: string; description: string; medium_id: string; channels: Channel[] }) => void;
+  onSave: (data: { name: string; description: string; medium_id: string; slug: string; channels: Channel[] }) => void;
   existingNames?: string[];
-  initialData?: { name: string; description: string; medium_id?: string; channels: Channel[] };
+  initialData?: { name: string; description: string; medium_id?: string; slug?: string; channels: Channel[] };
   mode?: 'create' | 'edit';
   mediums: Medium[];
   onCreateMedium: (data: { name: string; description: string }) => Promise<Medium | undefined>;
@@ -37,6 +39,8 @@ export function VehicleDialog({
 }: VehicleDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [slug, setSlug] = useState('');
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [mediumId, setMediumId] = useState<string>('');
   const [channels, setChannels] = useState<Channel[]>([]);
   const [showNewMediumForm, setShowNewMediumForm] = useState(false);
@@ -48,6 +52,8 @@ export function VehicleDialog({
     if (open) {
       setName(initialData?.name || '');
       setDescription(initialData?.description || '');
+      setSlug(initialData?.slug || '');
+      setSlugManuallyEdited(!!initialData?.slug);
       setMediumId(initialData?.medium_id || '');
       setChannels(initialData?.channels || []);
       setShowNewMediumForm(false);
@@ -56,8 +62,15 @@ export function VehicleDialog({
     }
   }, [open, initialData]);
 
+  // Auto-generate slug from name if not manually edited
+  useEffect(() => {
+    if (!slugManuallyEdited && name) {
+      setSlug(toSlug(name));
+    }
+  }, [name, slugManuallyEdited]);
+
   const handleAddChannel = () => {
-    setChannels([...channels, { name: '', description: '' }]);
+    setChannels([...channels, { name: '', description: '', slug: '' }]);
   };
 
   const handleRemoveChannel = (index: number) => {
@@ -133,11 +146,14 @@ export function VehicleDialog({
       name: trimmedName,
       description: description.slice(0, 180),
       medium_id: mediumId,
+      slug: slug || toSlug(trimmedName),
       channels: channels.filter(c => c.name.trim())
     });
 
     setName('');
     setDescription('');
+    setSlug('');
+    setSlugManuallyEdited(false);
     setMediumId('');
     setChannels([]);
     onOpenChange(false);
@@ -252,6 +268,23 @@ export function VehicleDialog({
               rows={2}
             />
             <p className="text-xs text-muted-foreground">{description.length}/180 caracteres</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="slug">Source Slug (utm_source)</Label>
+            <Input
+              id="slug"
+              value={slug}
+              onChange={(e) => {
+                setSlug(toSlug(e.target.value));
+                setSlugManuallyEdited(true);
+              }}
+              placeholder="google-ads"
+              className="font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Usado como utm_source nas URLs. Gerado automaticamente do nome, mas pode ser editado.
+            </p>
           </div>
 
           <div className="space-y-3">

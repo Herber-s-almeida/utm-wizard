@@ -59,6 +59,7 @@ export interface Channel {
   id: string;
   name: string;
   description?: string;
+  slug?: string;
   vehicle_id: string;
   user_id: string;
   deleted_at?: string | null;

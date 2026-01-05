@@ -11,12 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Channel } from '@/hooks/useConfigData';
+import { toSlug } from '@/utils/utmGenerator';
 
 interface ChannelDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: { name: string; description?: string; vehicle_id: string }) => void;
-  onUpdate?: (data: { id: string; name: string; description?: string }) => void;
+  onSave: (data: { name: string; description?: string; slug?: string; vehicle_id: string }) => void;
+  onUpdate?: (data: { id: string; name: string; description?: string; slug?: string }) => void;
   editingChannel?: Channel | null;
   vehicleId: string;
   vehicleName: string;
@@ -35,16 +36,29 @@ export function ChannelDialog({
 }: ChannelDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [slug, setSlug] = useState('');
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
 
   useEffect(() => {
     if (editingChannel) {
       setName(editingChannel.name);
       setDescription(editingChannel.description || '');
+      setSlug(editingChannel.slug || '');
+      setSlugManuallyEdited(!!editingChannel.slug);
     } else {
       setName('');
       setDescription('');
+      setSlug('');
+      setSlugManuallyEdited(false);
     }
   }, [editingChannel, open]);
+
+  // Auto-generate slug from name if not manually edited
+  useEffect(() => {
+    if (!slugManuallyEdited && name) {
+      setSlug(toSlug(name));
+    }
+  }, [name, slugManuallyEdited]);
 
   const handleSubmit = () => {
     if (!name.trim()) return;
@@ -63,11 +77,13 @@ export function ChannelDialog({
         id: editingChannel.id,
         name: name.trim(),
         description: description.trim() || undefined,
+        slug: slug || toSlug(name.trim()),
       });
     } else {
       onSave({
         name: name.trim(),
         description: description.trim() || undefined,
+        slug: slug || toSlug(name.trim()),
         vehicle_id: vehicleId,
       });
     }
@@ -97,6 +113,23 @@ export function ChannelDialog({
               placeholder="Ex: Search, Display, Video..."
               maxLength={50}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="channel-slug">Medium Slug (utm_medium)</Label>
+            <Input
+              id="channel-slug"
+              value={slug}
+              onChange={(e) => {
+                setSlug(toSlug(e.target.value));
+                setSlugManuallyEdited(true);
+              }}
+              placeholder="search"
+              className="font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Usado como utm_medium nas URLs. Gerado automaticamente do nome, mas pode ser editado.
+            </p>
           </div>
 
           <div className="space-y-2">
