@@ -18,6 +18,7 @@ import NewMediaPlanManual from "./pages/NewMediaPlanManual";
 import MediaPlanDetail from "./pages/MediaPlanDetail";
 import EditMediaPlan from "./pages/EditMediaPlan";
 import MediaResourcesPage from "./pages/MediaResourcesPage";
+import TaxonomyPage from "./pages/TaxonomyPage";
 import NotFound from "./pages/NotFound";
 import SubdivisionsPage from "./pages/config/SubdivisionsPage";
 import MomentsPage from "./pages/config/MomentsPage";
@@ -45,6 +46,7 @@ function AppWithEnvironment() {
           <Route path="/media-plans/:id" element={<ProtectedRoute><MediaPlanDetail /></ProtectedRoute>} />
           <Route path="/media-plans/:id/edit" element={<ProtectedRoute><EditMediaPlan /></ProtectedRoute>} />
           <Route path="/media-plans/:id/resources" element={<ProtectedRoute><MediaResourcesPage /></ProtectedRoute>} />
+          <Route path="/media-plans/:id/taxonomy" element={<ProtectedRoute><TaxonomyPage /></ProtectedRoute>} />
           <Route path="/config/subdivisions" element={<ProtectedRoute><SubdivisionsPage /></ProtectedRoute>} />
           <Route path="/config/moments" element={<ProtectedRoute><MomentsPage /></ProtectedRoute>} />
           <Route path="/config/funnel-stages" element={<ProtectedRoute><FunnelStagesPage /></ProtectedRoute>} />
