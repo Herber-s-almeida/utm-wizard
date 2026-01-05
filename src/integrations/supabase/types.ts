@@ -767,6 +767,7 @@ export type Database = {
           campaign: string | null
           client: string | null
           created_at: string | null
+          default_url: string | null
           deleted_at: string | null
           end_date: string | null
           id: string
@@ -783,6 +784,7 @@ export type Database = {
           campaign?: string | null
           client?: string | null
           created_at?: string | null
+          default_url?: string | null
           deleted_at?: string | null
           end_date?: string | null
           id?: string
@@ -799,6 +801,7 @@ export type Database = {
           campaign?: string | null
           client?: string | null
           created_at?: string | null
+          default_url?: string | null
           deleted_at?: string | null
           end_date?: string | null
           id?: string

@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Channel } from '@/hooks/useConfigData';
 import { toSlug } from '@/utils/utmGenerator';
+import { toast } from 'sonner';
 
 interface ChannelDialogProps {
   open: boolean;
@@ -61,29 +62,42 @@ export function ChannelDialog({
   }, [name, slugManuallyEdited]);
 
   const handleSubmit = () => {
-    if (!name.trim()) return;
+    const trimmedName = name.trim();
+    const finalSlug = slug || toSlug(trimmedName);
+
+    if (!trimmedName) {
+      toast.error('Nome do canal é obrigatório');
+      return;
+    }
+
+    // Validate slug format
+    if (!finalSlug || !/^[a-z0-9-]+$/.test(finalSlug)) {
+      toast.error('Slug inválido. Use apenas letras minúsculas, números e hífens.');
+      return;
+    }
 
     // Check for duplicate names
     const isDuplicate = existingNames.some(
-      (n) => n.toLowerCase() === name.trim().toLowerCase() && 
+      (n) => n.toLowerCase() === trimmedName.toLowerCase() && 
       (!editingChannel || n.toLowerCase() !== editingChannel.name.toLowerCase())
     );
     if (isDuplicate) {
+      toast.error('Já existe um canal com este nome');
       return;
     }
 
     if (editingChannel && onUpdate) {
       onUpdate({
         id: editingChannel.id,
-        name: name.trim(),
+        name: trimmedName,
         description: description.trim() || undefined,
-        slug: slug || toSlug(name.trim()),
+        slug: finalSlug,
       });
     } else {
       onSave({
-        name: name.trim(),
+        name: trimmedName,
         description: description.trim() || undefined,
-        slug: slug || toSlug(name.trim()),
+        slug: finalSlug,
         vehicle_id: vehicleId,
       });
     }

@@ -1,20 +1,20 @@
 import { useParams, Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, X, Link2, ChevronDown, ChevronRight, Copy, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TaxonomyTable } from '@/components/taxonomy/TaxonomyTable';
 import { useTaxonomyData } from '@/hooks/useTaxonomyData';
+import { exportUtmsToXlsx } from '@/utils/exportUtmsToXlsx';
 import { toast } from 'sonner';
 
 export default function TaxonomyPage() {
   const { id: planId } = useParams();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
 
   // Fetch plan details
   const { data: plan, isLoading: planLoading } = useQuery({
@@ -58,6 +58,21 @@ export default function TaxonomyPage() {
   const validatedCount = taxonomyData?.filter(line => line.utm_validated).length || 0;
   const totalCount = taxonomyData?.length || 0;
 
+  const handleExportXlsx = () => {
+    if (!taxonomyData || taxonomyData.length === 0) {
+      toast.error('Nenhum dado para exportar');
+      return;
+    }
+    
+    exportUtmsToXlsx({
+      planName: plan.name,
+      campaignName: plan.campaign || plan.name,
+      defaultUrl: plan.default_url,
+      lines: taxonomyData,
+    });
+    toast.success('Arquivo XLSX exportado!');
+  };
+
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
@@ -75,11 +90,22 @@ export default function TaxonomyPage() {
               <p className="text-muted-foreground text-sm">{plan.name}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Validados:</span>
-            <span className={validatedCount === totalCount && totalCount > 0 ? 'text-green-600 font-medium' : ''}>
-              {validatedCount}/{totalCount}
-            </span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Validados:</span>
+              <span className={validatedCount === totalCount && totalCount > 0 ? 'text-green-600 font-medium' : ''}>
+                {validatedCount}/{totalCount}
+              </span>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleExportXlsx}
+              disabled={!taxonomyData || taxonomyData.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar XLSX
+            </Button>
           </div>
         </div>
 
@@ -99,6 +125,7 @@ export default function TaxonomyPage() {
           <TaxonomyTable 
             data={taxonomyData} 
             planName={plan.campaign || plan.name}
+            defaultUrl={plan.default_url}
             userId={user?.id || ''}
             onUpdate={refetch}
           />
