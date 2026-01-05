@@ -71,7 +71,7 @@ interface LineFilters {
   target: string;
 }
 
-type TextFilterColumn = 'status' | 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target';
+type TextFilterColumn = 'code' | 'status' | 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target';
 type TextFilterOperator = 'contains' | 'equals' | 'not_contains' | 'regex';
 
 interface TextFilter {
@@ -81,6 +81,7 @@ interface TextFilter {
 }
 
 const TEXT_FILTER_COLUMNS: { key: TextFilterColumn; label: string }[] = [
+  { key: 'code', label: 'Código' },
   { key: 'status', label: 'Status' },
   { key: 'subdivision', label: 'Subdivisão' },
   { key: 'moment', label: 'Momento' },
@@ -262,6 +263,8 @@ export function HierarchicalMediaTable({
   // Helper to get the name for a column value
   const getColumnValueName = (line: MediaLine, column: TextFilterColumn): string => {
     switch (column) {
+      case 'code':
+        return line.line_code || '';
       case 'status':
         return statusesList.find(s => s.id === line.status_id)?.name || '';
       case 'subdivision':
