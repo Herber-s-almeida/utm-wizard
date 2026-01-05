@@ -23,10 +23,12 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Palette,
-  ShieldCheck
+  ShieldCheck,
+  Building2
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSystemAdmin } from '@/hooks/useSystemAdmin';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates, useBehavioralSegmentations } from '@/hooks/useConfigData';
 import { useFormatsHierarchy } from '@/hooks/useFormatsHierarchy';
 import { useCreativeTypes } from '@/hooks/useCreativeTypes';
@@ -52,6 +54,7 @@ import { SegmentDialog } from '@/components/config/SegmentDialog';
 export function AppSidebar() {
   const { user, signOut } = useAuth();
   const { isAdmin } = useSystemAdmin();
+  const { isViewingOtherEnvironment, viewingUser } = useEnvironment();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -79,6 +82,11 @@ export function AppSidebar() {
   const statuses = useStatuses();
   const formatsHierarchy = useFormatsHierarchy();
   const creativeTypesGlobal = useCreativeTypes();
+
+  // Get environment display name
+  const environmentName = isViewingOtherEnvironment 
+    ? (viewingUser?.company || viewingUser?.full_name || viewingUser?.email)
+    : null;
 
   // Section open states
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -213,6 +221,16 @@ export function AppSidebar() {
             </TooltipContent>
           </Tooltip>
         </div>
+        
+        {/* Environment name display */}
+        {!isCollapsed && environmentName && (
+          <div className="mt-2 px-2 py-1.5 bg-muted/50 rounded-md border border-border/50">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Building2 className="h-3 w-3 shrink-0" />
+              <span className="truncate font-medium">{environmentName}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Collapsed state - show only icons */}

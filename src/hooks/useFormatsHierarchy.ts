@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useEffectiveUserId } from './useEffectiveUserId';
 import { toast } from 'sonner';
 import { useSoftDeleteMutations, filterSoftDeleteItems } from './useSoftDelete';
 
@@ -91,21 +92,23 @@ export interface FormatWithHierarchy extends Format {
 // Hook for Formats
 export function useFormats() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('formats', 'formats', 'Formato');
 
   const query = useQuery({
-    queryKey: ['formats', user?.id],
+    queryKey: ['formats', effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('formats')
         .select('*')
+        .or(`user_id.eq.${effectiveUserId},is_system.eq.true`)
         .order('is_system', { ascending: false })
         .order('name', { ascending: true });
       if (error) throw error;
       return data as Format[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const create = useMutation({
@@ -582,14 +585,16 @@ export function useSpecificationExtensions(specificationId?: string) {
 // Hook for full hierarchy view
 export function useFormatsHierarchy() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
 
   return useQuery({
-    queryKey: ['formats_hierarchy', user?.id],
+    queryKey: ['formats_hierarchy', effectiveUserId],
     queryFn: async () => {
-      // Get all formats
+      // Get all formats (user's own + system)
       const { data: formats, error: formatsError } = await supabase
         .from('formats')
         .select('*')
+        .or(`user_id.eq.${effectiveUserId},is_system.eq.true`)
         .order('is_system', { ascending: false })
         .order('name', { ascending: true });
       
@@ -664,6 +669,6 @@ export function useFormatsHierarchy() {
 
       return result;
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 }
