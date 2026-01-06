@@ -552,21 +552,40 @@ export default function MediaPlanDetail() {
     }));
   }, [lines, moments.data]);
 
-  // Build moments timeline data
+  // Build moments timeline data - deduplicated and filtered
   const momentsForTimeline = useMemo(() => {
     const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment' && d.reference_id);
     
     if (momentDists.length === 0) return [];
     
-    return momentDists.map(dist => ({
-      id: dist.reference_id,
-      name: moments.data?.find(m => m.id === dist.reference_id)?.name || 'Momento',
-      startDate: dist.start_date || null,
-      endDate: dist.end_date || null,
-      budget: dist.amount,
-      percentage: dist.percentage,
-    }));
-  }, [budgetDistributions, moments.data]);
+    // Deduplicate by reference_id and aggregate budget from filtered lines
+    const uniqueMomentIds = [...new Set(momentDists.map(d => d.reference_id))];
+    
+    // Get moment IDs that have lines in the current filtered view
+    const filteredMomentIds = new Set(filteredLines.map(l => l.moment_id).filter(Boolean));
+    
+    return uniqueMomentIds
+      .filter(refId => filteredMomentIds.has(refId)) // Only show moments with filtered lines
+      .map(refId => {
+        // Get the first distribution for this moment to get dates
+        const dist = momentDists.find(d => d.reference_id === refId);
+        // Calculate budget from filtered lines
+        const momentBudget = filteredLines
+          .filter(l => l.moment_id === refId)
+          .reduce((acc, l) => acc + Number(l.budget || 0), 0);
+        // Calculate percentage based on filtered total
+        const filteredTotal = filteredLines.reduce((acc, l) => acc + Number(l.budget || 0), 0);
+        
+        return {
+          id: refId,
+          name: moments.data?.find(m => m.id === refId)?.name || 'Momento',
+          startDate: dist?.start_date || null,
+          endDate: dist?.end_date || null,
+          budget: momentBudget,
+          percentage: filteredTotal > 0 ? (momentBudget / filteredTotal) * 100 : 0,
+        };
+      });
+  }, [budgetDistributions, moments.data, filteredLines]);
 
   // Plan alerts
   const planAlerts = usePlanAlerts({
