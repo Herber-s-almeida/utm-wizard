@@ -197,6 +197,8 @@ export default function NewMediaPlanBudget() {
               percentage: mom.percentage,
               amount: momAmount,
               parent_distribution_id: subDistId,
+              start_date: mom.start_date || null,
+              end_date: mom.end_date || null,
             })
             .select('id')
             .single();
@@ -287,13 +289,18 @@ export default function NewMediaPlanBudget() {
 
   const handleMomentAdd = (key: string, item: BudgetAllocation) => {
     const current = state.moments[key] || [];
-    setMoments(key, [...current, item]);
+    // Set default dates from plan dates
+    setMoments(key, [...current, { 
+      ...item, 
+      start_date: state.planData.start_date,
+      end_date: state.planData.end_date 
+    }]);
   };
 
-  const handleMomentUpdate = (key: string, id: string, percentage: number) => {
+  const handleMomentUpdate = (key: string, id: string, percentage: number, dates?: { start_date?: string; end_date?: string }) => {
     const current = state.moments[key] || [];
     setMoments(key, current.map(m => 
-      m.id === id ? { ...m, percentage } : m
+      m.id === id ? { ...m, percentage, ...(dates || {}) } : m
     ));
   };
 
@@ -707,11 +714,14 @@ export default function NewMediaPlanBudget() {
                             existingItems={libraryData.moments}
                             totalBudget={budgetForSubdivision}
                             onAdd={(item) => handleMomentAdd(subdivision.id, item)}
-                            onUpdate={(id, percentage) => handleMomentUpdate(subdivision.id, id, percentage)}
+                            onUpdate={(id, percentage, dates) => handleMomentUpdate(subdivision.id, id, percentage, dates)}
                             onRemove={(id) => handleMomentRemove(subdivision.id, id)}
                             onCreate={handleCreateMoment}
                             label="Momento"
                             createLabel="Criar novo momento"
+                            showDates={true}
+                            planStartDate={state.planData.start_date}
+                            planEndDate={state.planData.end_date}
                           />
                         </div>
                       );

@@ -17,6 +17,8 @@ export interface BudgetAllocation {
   name: string;
   percentage: number;
   amount: number;
+  start_date?: string;
+  end_date?: string;
 }
 
 export interface WizardState {

@@ -107,6 +107,8 @@ interface BudgetDistribution {
   percentage: number;
   amount: number;
   parent_distribution_id: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 interface HierarchicalMediaTableProps {
@@ -147,6 +149,8 @@ interface MomentInfo {
   name: string;
   planned: number;
   percentage: number;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 interface FunnelStageInfo {
@@ -476,7 +480,15 @@ export function HierarchicalMediaTable({
           }
 
           momentNodes.push({
-            moment: { id: momRefId, distId: momDist.id, name: momName, planned: momDist.amount, percentage: momDist.percentage },
+            moment: { 
+              id: momRefId, 
+              distId: momDist.id, 
+              name: momName, 
+              planned: momDist.amount, 
+              percentage: momDist.percentage,
+              start_date: momDist.start_date,
+              end_date: momDist.end_date,
+            },
             momentAllocated: momAllocated,
             funnelStages: funnelNodes,
           });
@@ -992,20 +1004,38 @@ export function HierarchicalMediaTable({
     planned, 
     allocated, 
     percentageLabel,
-    description 
+    description,
+    startDate,
+    endDate,
   }: { 
     label: string;
     planned: number;
     allocated: number;
     percentageLabel?: string;
     description?: string;
+    startDate?: string | null;
+    endDate?: string | null;
   }) => {
     const isOverBudget = allocated > planned;
     const overBudgetAmount = allocated - planned;
     
+    // Format date range for display
+    const getDateRangeDisplay = () => {
+      if (!startDate && !endDate) return null;
+      const start = startDate ? formatDate(startDate) : '...';
+      const end = endDate ? formatDate(endDate) : '...';
+      return `${start} - ${end}`;
+    };
+    
     return (
       <div className="border rounded-lg p-2 h-full">
         <div className="font-medium text-sm">{label}</div>
+        {getDateRangeDisplay() && (
+          <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+            <span>📅</span>
+            <span>{getDateRangeDisplay()}</span>
+          </div>
+        )}
         <div className="text-lg font-bold mt-1">{formatCurrency(planned)}</div>
         <div className={cn(
           "text-sm font-medium mt-1 flex items-center gap-1",
@@ -1728,6 +1758,8 @@ export function HierarchicalMediaTable({
                             planned={momentGroup.moment.planned}
                             allocated={momentGroup.momentAllocated}
                             percentageLabel={`${momentGroup.moment.percentage.toFixed(0)}% de ${subdivisionGroup.subdivision.name}`}
+                            startDate={momentGroup.moment.start_date}
+                            endDate={momentGroup.moment.end_date}
                           />
                         </div>
                       )}
