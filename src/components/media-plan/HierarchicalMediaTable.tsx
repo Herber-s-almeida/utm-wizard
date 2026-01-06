@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle, Link, LayoutGrid, List } from 'lucide-react';
+import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle, Link, LayoutGrid, List, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -704,6 +704,46 @@ export function HierarchicalMediaTable({
     return lines.map(l => l.line_code).filter(Boolean) as string[];
   }, [lines]);
 
+  // Build map of line_codes that exist in multiple moments
+  const duplicateLineCodesMap = useMemo(() => {
+    const codeToMoments: Record<string, { momentId: string | null; momentName: string }[]> = {};
+    
+    lines.forEach(line => {
+      if (!line.line_code) return;
+      if (!codeToMoments[line.line_code]) {
+        codeToMoments[line.line_code] = [];
+      }
+      const momentName = momentsList.find(m => m.id === line.moment_id)?.name || 'Geral';
+      codeToMoments[line.line_code].push({
+        momentId: line.moment_id,
+        momentName,
+      });
+    });
+    
+    // Filter to only codes that appear in multiple moments
+    const duplicates: Record<string, { momentId: string | null; momentName: string }[]> = {};
+    Object.entries(codeToMoments).forEach(([code, moments]) => {
+      const uniqueMoments = moments.filter((m, i, arr) => 
+        arr.findIndex(x => x.momentId === m.momentId) === i
+      );
+      if (uniqueMoments.length > 1) {
+        duplicates[code] = uniqueMoments;
+      }
+    });
+    
+    return duplicates;
+  }, [lines, momentsList]);
+
+  // Get other moments for a line (for duplicate indicator)
+  const getOtherMoments = (line: MediaLine): string[] => {
+    if (!line.line_code) return [];
+    const allMoments = duplicateLineCodesMap[line.line_code];
+    if (!allMoments) return [];
+    return allMoments
+      .filter(m => m.momentId !== line.moment_id)
+      .map(m => m.momentName);
+  };
+
   const startEditingField = (line: MediaLine, field: EditingField) => {
     setEditingLineId(line.id);
     setEditingField(field);
@@ -927,15 +967,18 @@ export function HierarchicalMediaTable({
     field, 
     displayValue, 
     inputType = 'text',
-    width 
+    width,
+    duplicateMoments,
   }: { 
     line: MediaLine; 
     field: EditingField; 
     displayValue: string;
     inputType?: 'text' | 'number' | 'date';
     width: string;
+    duplicateMoments?: string[];
   }) => {
     const isEditing = isEditingField(line.id, field);
+    const hasDuplicates = duplicateMoments && duplicateMoments.length > 0;
     
     const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       let value = e.target.value;
@@ -983,8 +1026,28 @@ export function HierarchicalMediaTable({
             </Button>
           </div>
         ) : (
-          <div className="flex items-center justify-between">
-            <span className={field === 'budget' ? 'font-medium' : ''}>{displayValue}</span>
+          <div className="flex items-center justify-between gap-1">
+            <div className="flex items-center gap-1 min-w-0">
+              <span className={cn(
+                field === 'budget' ? 'font-medium' : '',
+                'truncate'
+              )}>{displayValue}</span>
+              {field === 'line_code' && hasDuplicates && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center justify-center shrink-0">
+                      <Link2 className="w-3.5 h-3.5 text-primary" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p className="font-medium text-sm">Linha em múltiplos momentos</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Este código também existe em: {duplicateMoments.join(', ')}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -1536,6 +1599,7 @@ export function HierarchicalMediaTable({
                       displayValue={line.line_code || generateLineCode(line, existingLineCodes)}
                       inputType="text"
                       width="w-[100px]"
+                      duplicateMoments={getOtherMoments(line)}
                     />
                     
                     {visibleColumns.medium && (
@@ -1798,6 +1862,7 @@ export function HierarchicalMediaTable({
                                       displayValue={line.line_code || generateLineCode(line, existingLineCodes)}
                                       inputType="text"
                                       width="w-[100px]"
+                                      duplicateMoments={getOtherMoments(line)}
                                     />
                                     
                                     {visibleColumns.medium && (
