@@ -168,6 +168,8 @@ export default function EditMediaPlan() {
           name: momData?.name || 'Momento',
           percentage: Number(momDist.percentage),
           amount: Number(momDist.amount),
+          start_date: momDist.start_date || undefined,
+          end_date: momDist.end_date || undefined,
         });
       }
 
@@ -393,6 +395,8 @@ export default function EditMediaPlan() {
               percentage: mom.percentage,
               amount: momAmount,
               parent_distribution_id: subDistId,
+              start_date: mom.start_date || null,
+              end_date: mom.end_date || null,
             })
             .select('id')
             .single();

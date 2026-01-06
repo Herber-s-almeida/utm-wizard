@@ -579,13 +579,14 @@ export default function MediaPlanDetail() {
       const momentName = getMomentName(momDist.reference_id);
       
       // Use the planned amount from distribution (not from lines)
+      // Fallback to plan dates if moment dates are not set
       timelineItems.push({
         id: momDist.id,
         subdivisionId: subdivisionRefId,
         momentId: momDist.reference_id,
         name: subdivisionDists.length > 1 ? `${subdivisionName} - ${momentName}` : momentName,
-        startDate: momDist.start_date || null,
-        endDate: momDist.end_date || null,
+        startDate: momDist.start_date || plan?.start_date || null,
+        endDate: momDist.end_date || plan?.end_date || null,
         budget: momDist.amount,
         percentage: momDist.percentage,
       });
