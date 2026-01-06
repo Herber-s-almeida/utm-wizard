@@ -2,3 +2,6 @@ project_id = "akfvitjbmtrbtosfwmwj"
 
 [functions.invite-to-plan]
 verify_jwt = true
+
+[functions.import-report-data]
+verify_jwt = false
