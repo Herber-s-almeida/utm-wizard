@@ -2076,6 +2076,7 @@ export function HierarchicalMediaTable({
             <div className="w-[100px] p-3 shrink-0"></div>
             <div className="w-[100px] p-3 shrink-0"></div>
             <div className="w-[100px] p-3 shrink-0"></div>
+            <div className="w-[100px] p-3 shrink-0"></div>
             {/* New columns totals */}
             <div className="w-[60px] p-3 shrink-0 bg-primary/5"></div>
             <div className="w-[100px] p-3 shrink-0 bg-primary/5 font-bold text-xs">
