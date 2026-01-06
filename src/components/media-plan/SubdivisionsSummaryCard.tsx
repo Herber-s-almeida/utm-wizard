@@ -59,7 +59,7 @@ export function SubdivisionsSummaryCard({ subdivisions, totalBudget, onEdit }: S
                   {formatCurrency(amount)}
                 </p>
                 <span className="text-sm text-primary font-medium">
-                  {sub.percentage}% do plano
+                  {sub.percentage.toFixed(2)}% do plano
                 </span>
               </div>
             );

@@ -19,6 +19,9 @@ import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization
 import { TemporalEqualizer, generateTemporalPeriods } from '@/components/media-plan/TemporalEqualizer';
 import { useMediaPlanWizard, BudgetAllocation, WizardPlanData } from '@/hooks/useMediaPlanWizard';
 import { KPI_OPTIONS } from '@/types/media';
+import { LabelWithTooltip } from '@/components/ui/info-tooltip';
+import { CreateKpiDialog } from '@/components/media-plan/CreateKpiDialog';
+import { useCustomKpis } from '@/hooks/useCustomKpis';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,6 +74,7 @@ export default function EditMediaPlan() {
   const [showOrphanWarning, setShowOrphanWarning] = useState(false);
   const [existingDistributions, setExistingDistributions] = useState<BudgetDistribution[]>([]);
   const [existingLines, setExistingLines] = useState<any[]>([]);
+  const { customKpis } = useCustomKpis();
 
   const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations, initializeFromPlan } = wizard;
 
@@ -300,7 +304,7 @@ export default function EditMediaPlan() {
         .update({
           name: state.planData.name,
           client: state.planData.client || null,
-          campaign: state.planData.campaign || null,
+          campaign: state.planData.name, // Campaign equals plan name
           start_date: state.planData.start_date,
           end_date: state.planData.end_date,
           total_budget: state.planData.total_budget,
