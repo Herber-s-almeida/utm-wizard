@@ -540,7 +540,7 @@ export default function MediaPlanDetail() {
     }));
   }, [lines, moments.data]);
 
-  // Build moments timeline data - showing subdivision + moment hierarchy
+  // Build moments timeline data - showing ALL subdivision + moment combinations from plan
   const momentsForTimeline = useMemo(() => {
     const subdivisionDists = budgetDistributions.filter(d => d.distribution_type === 'subdivision');
     const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
@@ -559,7 +559,7 @@ export default function MediaPlanDetail() {
       return found?.name || 'Geral';
     };
     
-    // Build timeline items showing subdivision + moment combinations
+    // Build timeline items showing ALL subdivision + moment combinations
     const timelineItems: Array<{
       id: string;
       subdivisionId: string | null;
@@ -578,20 +578,7 @@ export default function MediaPlanDetail() {
       const subdivisionName = getSubdivisionName(subdivisionRefId);
       const momentName = getMomentName(momDist.reference_id);
       
-      // Check if this subdivision+moment combination has filtered lines
-      const hasFilteredLines = filteredLines.some(l => 
-        l.subdivision_id === subdivisionRefId && l.moment_id === momDist.reference_id
-      );
-      
-      if (!hasFilteredLines) return;
-      
-      // Calculate budget from filtered lines for this specific combination
-      const combinationBudget = filteredLines
-        .filter(l => l.subdivision_id === subdivisionRefId && l.moment_id === momDist.reference_id)
-        .reduce((acc, l) => acc + Number(l.budget || 0), 0);
-      
-      const filteredTotal = filteredLines.reduce((acc, l) => acc + Number(l.budget || 0), 0);
-      
+      // Use the planned amount from distribution (not from lines)
       timelineItems.push({
         id: momDist.id,
         subdivisionId: subdivisionRefId,
@@ -599,19 +586,23 @@ export default function MediaPlanDetail() {
         name: subdivisionDists.length > 1 ? `${subdivisionName} - ${momentName}` : momentName,
         startDate: momDist.start_date || null,
         endDate: momDist.end_date || null,
-        budget: combinationBudget,
-        percentage: filteredTotal > 0 ? (combinationBudget / filteredTotal) * 100 : 0,
+        budget: momDist.amount,
+        percentage: momDist.percentage,
       });
     });
     
-    // Sort by start date
+    // Sort by subdivision name then by start date
     return timelineItems.sort((a, b) => {
+      // First sort by subdivision
+      const subCompare = a.name.localeCompare(b.name);
+      if (subCompare !== 0) return subCompare;
+      // Then by start date
       if (!a.startDate && !b.startDate) return 0;
       if (!a.startDate) return 1;
       if (!b.startDate) return -1;
       return a.startDate.localeCompare(b.startDate);
     });
-  }, [budgetDistributions, subdivisions.data, moments.data, filteredLines]);
+  }, [budgetDistributions, subdivisions.data, moments.data]);
 
   // Plan alerts
   const planAlerts = usePlanAlerts({
