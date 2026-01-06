@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, DollarSign, Percent } from 'lucide-react';
+import { Plus, Trash2, DollarSign, Percent, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,12 +7,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PercentageInput } from './PercentageInput';
 import { cn } from '@/lib/utils';
 import { Toggle } from '@/components/ui/toggle';
+import { MomentDatePicker } from './MomentDatePicker';
 
 interface AllocationItem {
   id: string;
   name: string;
   percentage: number;
   amount: number;
+  start_date?: string;
+  end_date?: string;
 }
 
 interface ExistingItem {
@@ -27,12 +30,15 @@ interface BudgetAllocationTableProps {
   existingItems: ExistingItem[];
   totalBudget: number;
   onAdd: (item: AllocationItem) => void;
-  onUpdate: (id: string, percentage: number) => void;
+  onUpdate: (id: string, percentage: number, dates?: { start_date?: string; end_date?: string }) => void;
   onRemove: (id: string) => void;
   onCreate?: (name: string) => Promise<ExistingItem>;
   label: string;
   createLabel: string;
   maxItems?: number;
+  showDates?: boolean;
+  planStartDate?: string;
+  planEndDate?: string;
 }
 
 export function BudgetAllocationTable({
@@ -46,6 +52,9 @@ export function BudgetAllocationTable({
   label,
   createLabel,
   maxItems,
+  showDates = false,
+  planStartDate,
+  planEndDate,
 }: BudgetAllocationTableProps) {
   const [selectedItem, setSelectedItem] = useState<string>('');
   const [newItemName, setNewItemName] = useState('');
@@ -219,6 +228,14 @@ export function BudgetAllocationTable({
             <TableHeader>
               <TableRow className="bg-muted/30">
                 <TableHead>{label}</TableHead>
+                {showDates && (
+                  <TableHead className="w-80">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span>Período</span>
+                    </div>
+                  </TableHead>
+                )}
                 <TableHead className="w-32 text-right">%</TableHead>
                 <TableHead className="w-40 text-right">Valor</TableHead>
                 <TableHead className="w-12"></TableHead>
@@ -230,6 +247,18 @@ export function BudgetAllocationTable({
                 return (
                   <TableRow key={item.id} className="group">
                     <TableCell className="font-medium">{item.name}</TableCell>
+                    {showDates && (
+                      <TableCell>
+                        <MomentDatePicker
+                          startDate={item.start_date || planStartDate || ''}
+                          endDate={item.end_date || planEndDate || ''}
+                          onStartDateChange={(date) => onUpdate(item.id, item.percentage, { start_date: date, end_date: item.end_date })}
+                          onEndDateChange={(date) => onUpdate(item.id, item.percentage, { start_date: item.start_date, end_date: date })}
+                          planStartDate={planStartDate}
+                          planEndDate={planEndDate}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       {inputMode === 'percentage' ? (
                         <PercentageInput
@@ -276,6 +305,7 @@ export function BudgetAllocationTable({
               {/* Total row */}
               <TableRow className="bg-muted/50 border-t-2">
                 <TableCell className="font-semibold">Total</TableCell>
+                {showDates && <TableCell />}
                 <TableCell className={cn(
                   "text-right font-semibold",
                   isValid ? "text-success" : "text-destructive"
