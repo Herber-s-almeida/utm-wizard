@@ -74,6 +74,8 @@ interface BudgetDistribution {
   percentage: number;
   amount: number;
   parent_distribution_id: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 export default function MediaPlanDetail() {
@@ -514,6 +516,32 @@ export default function MediaPlanDetail() {
       };
     });
   }, [lines, budgetDistributions, subdivisions.data, moments.data, funnelStages.data]);
+
+  // Build momentDates map for MediaLineWizard
+  const momentDates = useMemo(() => {
+    const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
+    const datesMap: Record<string, { start_date?: string | null; end_date?: string | null }> = {};
+    
+    momentDists.forEach(dist => {
+      if (dist.reference_id) {
+        datesMap[dist.reference_id] = {
+          start_date: dist.start_date,
+          end_date: dist.end_date,
+        };
+      }
+    });
+    
+    return datesMap;
+  }, [budgetDistributions]);
+
+  // Build existingLines list for duplicate detection
+  const existingLinesForWizard = useMemo(() => {
+    return lines.map(line => ({
+      line_code: line.line_code || '',
+      moment_id: line.moment_id || null,
+      moment_name: moments.data?.find(m => m.id === line.moment_id)?.name || 'Geral',
+    }));
+  }, [lines, moments.data]);
 
   // Plan alerts
   const planAlerts = usePlanAlerts({
@@ -1002,6 +1030,8 @@ export default function MediaPlanDetail() {
           planSubdivisions={planSubdivisions}
           planMoments={planMoments}
           planFunnelStages={planFunnelStages}
+          momentDates={momentDates}
+          existingLines={existingLinesForWizard}
           editingLine={editingLine}
           initialStep={editInitialStep as any}
           prefillData={wizardPrefill}

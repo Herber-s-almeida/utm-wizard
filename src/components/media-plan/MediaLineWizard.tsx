@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, Loader2, X, Save } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Loader2, X, Save, Link2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +23,8 @@ import { CreativesManager } from '@/components/media/CreativesManager';
 import { generateUTM, toSlug } from '@/utils/utmGenerator';
 import { UTMPreview } from './UTMPreview';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
+import { DuplicateLineDialog } from './DuplicateLineDialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const STEP_TOOLTIPS: Record<string, string> = {
   subdivision: 'Agrupa linhas por região, produto ou objetivo. Define a primeira parte da estrutura do plano.',
@@ -39,6 +41,11 @@ interface PlanHierarchyOption {
   name: string;
 }
 
+interface MomentDates {
+  start_date?: string | null;
+  end_date?: string | null;
+}
+
 interface MediaLineWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -47,6 +54,8 @@ interface MediaLineWizardProps {
   planSubdivisions: PlanHierarchyOption[];
   planMoments: PlanHierarchyOption[];
   planFunnelStages: PlanHierarchyOption[];
+  momentDates?: Record<string, MomentDates>; // moment_id -> dates
+  existingLines?: { line_code: string; moment_id: string | null; moment_name: string }[];
   editingLine?: any; // MediaLine to edit
   initialStep?: WizardStep | 'creatives';
   prefillData?: {
@@ -80,6 +89,8 @@ export function MediaLineWizard({
   planSubdivisions,
   planMoments,
   planFunnelStages,
+  momentDates = {},
+  existingLines = [],
   editingLine,
   initialStep,
   prefillData,
@@ -89,6 +100,11 @@ export function MediaLineWizard({
   const [saving, setSaving] = useState(false);
   const [savedLineId, setSavedLineId] = useState<string | null>(null);
   const [creatives, setCreatives] = useState<MediaCreative[]>([]);
+  
+  // Duplicate line dialog state
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [duplicateInfo, setDuplicateInfo] = useState<{ lineCode: string; existingMomentName: string } | null>(null);
+  const [pendingLineData, setPendingLineData] = useState<any>(null);
   
   // Selection state
   const [selectedSubdivision, setSelectedSubdivision] = useState<string | null>(null);
@@ -107,6 +123,24 @@ export function MediaLineWizard({
     destination_url: '',
     notes: '',
   });
+
+  // Get moment dates for selected moment
+  const selectedMomentDates = useMemo(() => {
+    if (!selectedMoment) return null;
+    return momentDates[selectedMoment] || null;
+  }, [selectedMoment, momentDates]);
+
+  // Get effective date boundaries (moment dates take priority over plan dates)
+  const effectiveDateBoundaries = useMemo(() => {
+    const momentStart = selectedMomentDates?.start_date;
+    const momentEnd = selectedMomentDates?.end_date;
+    
+    return {
+      minDate: momentStart || plan.start_date || undefined,
+      maxDate: momentEnd || plan.end_date || undefined,
+      hasMomentDates: !!(momentStart || momentEnd),
+    };
+  }, [selectedMomentDates, plan.start_date, plan.end_date]);
 
   // Hooks for library data
   const subdivisions = useSubdivisions();
@@ -230,15 +264,28 @@ export function MediaLineWizard({
         return !!selectedTarget;
       case 'details':
         const validDates = lineDetails.start_date && lineDetails.end_date && lineDetails.end_date > lineDetails.start_date;
-        // Validate that dates are within plan dates
-        const startWithinPlan = !plan.start_date || lineDetails.start_date >= plan.start_date;
-        const endWithinPlan = !plan.end_date || lineDetails.end_date <= plan.end_date;
-        return !!lineDetails.budget && validDates && startWithinPlan && endWithinPlan;
+        // Validate that dates are within moment dates (or plan dates if no moment dates)
+        const minDate = effectiveDateBoundaries.minDate;
+        const maxDate = effectiveDateBoundaries.maxDate;
+        const startWithinBoundary = !minDate || lineDetails.start_date >= minDate;
+        const endWithinBoundary = !maxDate || lineDetails.end_date <= maxDate;
+        return !!lineDetails.budget && validDates && startWithinBoundary && endWithinBoundary;
       case 'creatives':
         return true; // Always can proceed from creatives (optional step)
       default:
         return false;
     }
+  };
+
+  // Check if line_code already exists in another moment
+  const checkForDuplicateLineCode = (lineCode: string): { isDuplicate: boolean; existingMomentName: string } => {
+    const duplicateLine = existingLines.find(
+      line => line.line_code === lineCode && line.moment_id !== selectedMoment
+    );
+    return {
+      isDuplicate: !!duplicateLine,
+      existingMomentName: duplicateLine?.moment_name || 'Geral',
+    };
   };
 
   
@@ -301,7 +348,66 @@ export function MediaLineWizard({
     return code;
   };
 
-  const handleSave = async (goToCreatives: boolean = false) => {
+  // Get moment name for the target moment
+  const getSelectedMomentName = (): string => {
+    if (!selectedMoment) return 'Geral';
+    return planMoments.find(m => m.id === selectedMoment)?.name || 'Geral';
+  };
+
+  // Duplicate an existing line to the current moment
+  const handleDuplicateLine = async () => {
+    if (!pendingLineData) return;
+    
+    setSaving(true);
+    try {
+      // Find the existing line with same line_code
+      const existingLine = existingLines.find(l => l.line_code === pendingLineData.lineCode);
+      if (existingLine) {
+        // Fetch the full line data
+        const { data: sourceLineData } = await supabase
+          .from('media_lines')
+          .select('*')
+          .eq('media_plan_id', plan.id)
+          .eq('line_code', pendingLineData.lineCode)
+          .single();
+        
+        if (sourceLineData) {
+          // Create a copy for the new moment
+          const { error } = await supabase
+            .from('media_lines')
+            .insert({
+              ...sourceLineData,
+              id: undefined, // Let DB generate new ID
+              moment_id: selectedMoment,
+              start_date: lineDetails.start_date || sourceLineData.start_date,
+              end_date: lineDetails.end_date || sourceLineData.end_date,
+              created_at: undefined,
+              updated_at: undefined,
+            });
+          
+          if (error) throw error;
+          toast.success('Linha duplicada para este momento!');
+          onComplete();
+          onOpenChange(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error duplicating line:', error);
+      toast.error('Erro ao duplicar linha');
+    } finally {
+      setSaving(false);
+      setPendingLineData(null);
+    }
+  };
+
+  // Create new line with different code
+  const handleCreateNewLineCode = async () => {
+    setPendingLineData(null);
+    // Force generate a new unique code and save
+    await handleSave(false, true);
+  };
+
+  const handleSave = async (goToCreatives: boolean = false, forceNewCode: boolean = false) => {
     if (!user) return;
     
     setSaving(true);
@@ -310,6 +416,19 @@ export function MediaLineWizard({
       let lineCode = editingLine?.line_code || (savedLineId ? undefined : null);
       if (!editingLine && !savedLineId) {
         lineCode = await generateLineCode();
+        
+        // Check for duplicate if not forcing new code
+        if (!forceNewCode) {
+          const { isDuplicate, existingMomentName } = checkForDuplicateLineCode(lineCode);
+          if (isDuplicate) {
+            // Show duplicate dialog
+            setDuplicateInfo({ lineCode, existingMomentName });
+            setPendingLineData({ lineCode });
+            setShowDuplicateDialog(true);
+            setSaving(false);
+            return;
+          }
+        }
       }
 
       // Get slugs for UTM generation
@@ -700,11 +819,29 @@ export function MediaLineWizard({
                     </div>
                   </div>
                   
+                  {/* Moment date boundary alert */}
+                  {effectiveDateBoundaries.hasMomentDates && (
+                    <Alert className="bg-primary/5 border-primary/20">
+                      <Link2 className="h-4 w-4 text-primary" />
+                      <AlertDescription className="text-sm">
+                        As datas da linha devem estar dentro do período do momento selecionado
+                        {effectiveDateBoundaries.minDate && effectiveDateBoundaries.maxDate && (
+                          <span className="font-medium">
+                            {' '}({new Date(effectiveDateBoundaries.minDate + 'T00:00:00').toLocaleDateString('pt-BR')} - {new Date(effectiveDateBoundaries.maxDate + 'T00:00:00').toLocaleDateString('pt-BR')})
+                          </span>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <LabelWithTooltip 
                         htmlFor="start_date" 
-                        tooltip="Deve estar dentro do período do plano."
+                        tooltip={effectiveDateBoundaries.hasMomentDates 
+                          ? "Deve estar dentro do período do momento selecionado." 
+                          : "Deve estar dentro do período do plano."
+                        }
                         required
                       >
                         Data de Início
@@ -713,19 +850,24 @@ export function MediaLineWizard({
                         id="start_date"
                         type="date"
                         value={lineDetails.start_date}
-                        min={plan.start_date || undefined}
-                        max={lineDetails.end_date || plan.end_date || undefined}
+                        min={effectiveDateBoundaries.minDate}
+                        max={lineDetails.end_date || effectiveDateBoundaries.maxDate}
                         onChange={(e) => setLineDetails(prev => ({ ...prev, start_date: e.target.value }))}
                       />
-                      {plan.start_date && lineDetails.start_date && lineDetails.start_date < plan.start_date && (
-                        <p className="text-xs text-destructive">A data de início não pode ser anterior à data do plano ({(() => { const [y,m,d] = plan.start_date.split('-').map(Number); return new Date(y, m-1, d).toLocaleDateString('pt-BR'); })()})</p>
+                      {effectiveDateBoundaries.minDate && lineDetails.start_date && lineDetails.start_date < effectiveDateBoundaries.minDate && (
+                        <p className="text-xs text-destructive">
+                          A data de início não pode ser anterior a {new Date(effectiveDateBoundaries.minDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+                        </p>
                       )}
                     </div>
                     
                     <div className="space-y-2">
                       <LabelWithTooltip 
                         htmlFor="end_date" 
-                        tooltip="Deve estar dentro do período do plano e ser posterior à data de início."
+                        tooltip={effectiveDateBoundaries.hasMomentDates 
+                          ? "Deve estar dentro do período do momento e ser posterior à data de início." 
+                          : "Deve estar dentro do período do plano e ser posterior à data de início."
+                        }
                         required
                       >
                         Data de Fim
@@ -734,15 +876,17 @@ export function MediaLineWizard({
                         id="end_date"
                         type="date"
                         value={lineDetails.end_date}
-                        min={lineDetails.start_date || plan.start_date || undefined}
-                        max={plan.end_date || undefined}
+                        min={lineDetails.start_date || effectiveDateBoundaries.minDate}
+                        max={effectiveDateBoundaries.maxDate}
                         onChange={(e) => setLineDetails(prev => ({ ...prev, end_date: e.target.value }))}
                       />
                       {lineDetails.start_date && lineDetails.end_date && lineDetails.end_date <= lineDetails.start_date && (
                         <p className="text-xs text-destructive">A data de fim deve ser posterior à data de início</p>
                       )}
-                      {plan.end_date && lineDetails.end_date && lineDetails.end_date > plan.end_date && (
-                        <p className="text-xs text-destructive">A data de fim não pode ser posterior à data do plano ({(() => { const [y,m,d] = plan.end_date.split('-').map(Number); return new Date(y, m-1, d).toLocaleDateString('pt-BR'); })()})</p>
+                      {effectiveDateBoundaries.maxDate && lineDetails.end_date && lineDetails.end_date > effectiveDateBoundaries.maxDate && (
+                        <p className="text-xs text-destructive">
+                          A data de fim não pode ser posterior a {new Date(effectiveDateBoundaries.maxDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -877,6 +1021,18 @@ export function MediaLineWizard({
         </DialogContent>
       </Dialog>
 
+      {/* Duplicate Line Dialog */}
+      {duplicateInfo && (
+        <DuplicateLineDialog
+          open={showDuplicateDialog}
+          onOpenChange={setShowDuplicateDialog}
+          lineCode={duplicateInfo.lineCode}
+          existingMomentName={duplicateInfo.existingMomentName}
+          targetMomentName={getSelectedMomentName()}
+          onDuplicate={handleDuplicateLine}
+          onCreateNew={handleCreateNewLineCode}
+        />
+      )}
     </>
   );
 }
