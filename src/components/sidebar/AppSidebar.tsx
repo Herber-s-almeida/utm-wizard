@@ -26,7 +26,8 @@ import {
   ShieldCheck,
   Building2,
   Link2,
-  Settings
+  Settings,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSystemAdmin } from '@/hooks/useSystemAdmin';
@@ -94,6 +95,7 @@ export function AppSidebar() {
 
   // Section open states
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    reports: true,
     mediaPlans: true,
     draftPlans: false,
     activePlans: true,
@@ -261,6 +263,28 @@ export function AppSidebar() {
 
           <Tooltip>
             <TooltipTrigger asChild>
+              <Button 
+                variant={location.pathname.includes('/reports') ? 'secondary' : 'ghost'} 
+                size="icon"
+                className="h-9 w-9"
+                onClick={() => {
+                  // Navigate to first active plan reports if available
+                  const firstPlan = activePlans.data?.[0] || draftPlans.data?.[0];
+                  if (firstPlan) {
+                    navigate(`/media-plans/${firstPlan.id}/reports`);
+                  }
+                }}
+              >
+                <BarChart3 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Relatórios</TooltipContent>
+          </Tooltip>
+
+          <div className="w-8 h-px bg-border my-2" />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
               <Link to="/media-plans">
                 <Button 
                   variant={isActive('/media-plans') ? 'secondary' : 'ghost'} 
@@ -401,6 +425,51 @@ export function AppSidebar() {
         </div>
       ) : (
       <ScrollArea className="flex-1 py-3 px-2 overflow-x-hidden">
+        {/* RELATÓRIOS */}
+        <div className="mb-4">
+          <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Relatórios
+          </h3>
+
+          <Collapsible open={openSections.reports} onOpenChange={() => toggleSection('reports')}>
+            <CollapsibleTrigger asChild>
+              <Button 
+                variant={location.pathname.includes('/reports') ? 'secondary' : 'ghost'} 
+                size="sm" 
+                className="w-full justify-start gap-2 h-8 text-xs"
+              >
+                {openSections.reports ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                <BarChart3 className="h-3.5 w-3.5" />
+                <span>Relatórios por Plano</span>
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pl-4">
+              {/* Active plans with reports */}
+              {activePlans.data?.slice(0, MAX_ITEMS).map(plan => (
+                <Link key={plan.id} to={`/media-plans/${plan.id}/reports`}>
+                  <Button 
+                    variant={location.pathname === `/media-plans/${plan.id}/reports` ? 'secondary' : 'ghost'} 
+                    size="sm" 
+                    className="w-full justify-start h-7 text-xs truncate"
+                  >
+                    <span className="truncate">{plan.name}</span>
+                  </Button>
+                </Link>
+              ))}
+              {(activePlans.data?.length || 0) === 0 && (
+                <p className="text-[10px] text-muted-foreground px-3 py-2">
+                  Nenhum plano ativo
+                </p>
+              )}
+              {(activePlans.data?.length || 0) > MAX_ITEMS && (
+                <p className="text-[10px] text-muted-foreground px-3 py-1">
+                  +{(activePlans.data?.length || 0) - MAX_ITEMS} planos
+                </p>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+
         {/* PLANOS DE MÍDIA */}
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
