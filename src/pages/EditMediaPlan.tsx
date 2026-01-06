@@ -487,10 +487,10 @@ export default function EditMediaPlan() {
     setMoments(key, [...current, item]);
   };
 
-  const handleMomentUpdate = (key: string, itemId: string, percentage: number) => {
+  const handleMomentUpdate = (key: string, itemId: string, percentage: number, dates?: { start_date?: string; end_date?: string }) => {
     const current = state.moments[key] || [];
     setMoments(key, current.map(m => 
-      m.id === itemId ? { ...m, percentage } : m
+      m.id === itemId ? { ...m, percentage, ...(dates && { start_date: dates.start_date, end_date: dates.end_date }) } : m
     ));
   };
 
@@ -840,11 +840,14 @@ export default function EditMediaPlan() {
                             existingItems={libraryData.moments}
                             totalBudget={budgetForSubdivision}
                             onAdd={(item) => handleMomentAdd(subdivision.id, item)}
-                            onUpdate={(itemId, percentage) => handleMomentUpdate(subdivision.id, itemId, percentage)}
+                            onUpdate={(id, percentage, dates) => handleMomentUpdate(subdivision.id, id, percentage, dates)}
                             onRemove={(itemId) => handleMomentRemove(subdivision.id, itemId)}
                             onCreate={handleCreateMoment}
                             label="Momento"
                             createLabel="Criar novo momento"
+                            showDates={true}
+                            planStartDate={state.planData.start_date}
+                            planEndDate={state.planData.end_date}
                           />
                         </div>
                       );
