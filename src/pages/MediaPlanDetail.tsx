@@ -15,10 +15,6 @@ import {
   AlertTriangle,
   Users,
   History,
-  Link,
-  Pencil,
-  Check,
-  X,
   BarChart3
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -104,8 +100,6 @@ export default function MediaPlanDetail() {
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [filteredLines, setFilteredLines] = useState<MediaLine[]>([]);
   const [filterByAlerts, setFilterByAlerts] = useState(false);
-  const [editingDefaultUrl, setEditingDefaultUrl] = useState(false);
-  const [defaultUrlValue, setDefaultUrlValue] = useState('');
 
   // Library data for display
   const subdivisions = useSubdivisions();
@@ -175,7 +169,6 @@ export default function MediaPlanDetail() {
       const linesList = (linesData || []) as MediaLine[];
       setPlan(planData as MediaPlan);
       setLines(linesList);
-      setDefaultUrlValue(planData.default_url || '');
 
       // Fetch creatives for all lines
       if (linesList.length > 0) {
@@ -285,29 +278,44 @@ export default function MediaPlanDetail() {
     }
   };
 
-  const handleSaveDefaultUrl = async () => {
+  const handleUpdateMomentDates = async (momentRefId: string | null, startDate: string | null, endDate: string | null) => {
     if (!plan) return;
     
     try {
+      // Find all moment distributions with this reference_id
+      const momentDists = budgetDistributions.filter(
+        d => d.distribution_type === 'moment' && d.reference_id === momentRefId
+      );
+      
+      if (momentDists.length === 0) {
+        toast.error('Momento não encontrado');
+        return;
+      }
+      
+      // Update all matching distributions
       const { error } = await supabase
-        .from('media_plans')
-        .update({ default_url: defaultUrlValue || null })
-        .eq('id', plan.id);
-
+        .from('plan_budget_distributions')
+        .update({ start_date: startDate, end_date: endDate })
+        .eq('media_plan_id', plan.id)
+        .eq('distribution_type', 'moment')
+        .eq('reference_id', momentRefId);
+      
       if (error) throw error;
-
-      setPlan({ ...plan, default_url: defaultUrlValue || null });
-      setEditingDefaultUrl(false);
-      toast.success('URL padrão atualizada');
+      
+      // Update local state
+      setBudgetDistributions(prev => 
+        prev.map(d => 
+          d.distribution_type === 'moment' && d.reference_id === momentRefId
+            ? { ...d, start_date: startDate, end_date: endDate }
+            : d
+        )
+      );
+      
+      toast.success('Datas do momento atualizadas');
     } catch (error) {
-      console.error('Error updating default URL:', error);
-      toast.error('Erro ao atualizar URL padrão');
+      console.error('Error updating moment dates:', error);
+      toast.error('Erro ao atualizar datas');
     }
-  };
-
-  const handleCancelEditUrl = () => {
-    setDefaultUrlValue(plan?.default_url || '');
-    setEditingDefaultUrl(false);
   };
 
   const handleStatusChange = async (newStatus: MediaPlan['status']) => {
@@ -806,63 +814,6 @@ export default function MediaPlanDetail() {
           </Card>
         </div>
 
-        {/* Default URL */}
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <Link className="w-4 h-4 text-muted-foreground" />
-              <div className="flex-1">
-                <div className="text-sm text-muted-foreground mb-1">URL Padrão</div>
-                {editingDefaultUrl ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={defaultUrlValue}
-                      onChange={(e) => setDefaultUrlValue(e.target.value)}
-                      placeholder="https://exemplo.com.br/pagina"
-                      className="flex-1"
-                      autoFocus
-                    />
-                    <Button size="icon" variant="ghost" onClick={handleSaveDefaultUrl}>
-                      <Check className="w-4 h-4 text-success" />
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={handleCancelEditUrl}>
-                      <X className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    {plan.default_url ? (
-                      <a 
-                        href={plan.default_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline truncate max-w-md"
-                        title={plan.default_url}
-                      >
-                        {plan.default_url}
-                      </a>
-                    ) : (
-                      <span className="text-sm text-muted-foreground italic">
-                        Nenhuma URL padrão definida
-                      </span>
-                    )}
-                    {canEdit && (
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-6 w-6 shrink-0"
-                        onClick={() => setEditingDefaultUrl(true)}
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Moments Timeline - Show only if there are moments with dates */}
         {momentsForTimeline.length > 0 && plan.start_date && plan.end_date && (
           <Card>
@@ -871,6 +822,8 @@ export default function MediaPlanDetail() {
                 moments={momentsForTimeline}
                 planStartDate={plan.start_date}
                 planEndDate={plan.end_date}
+                canEdit={canEdit}
+                onUpdateMomentDates={handleUpdateMomentDates}
               />
             </CardContent>
           </Card>
