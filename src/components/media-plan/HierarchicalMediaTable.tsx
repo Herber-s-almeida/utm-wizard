@@ -1162,7 +1162,7 @@ export function HierarchicalMediaTable({
 
   // Calculate dynamic column widths based on visible columns
   const getMinWidth = () => {
-    let width = 100 + 120 + 100 + 100 + 100 + 90; // Fixed columns: Código, Orçamento, Status, Início, Fim, Ações
+    let width = 100 + 120 + 100 + 100 + 100 + 100; // Fixed columns: Código, Orçamento, Status, Início, Fim, Ações
     // New fixed columns: Dias, Orçamento Alocado, Months
     width += 60 + 100; // Dias + Orçamento Alocado
     width += planMonths.length * 90; // Each month column
@@ -1544,7 +1544,7 @@ export function HierarchicalMediaTable({
             <div className="w-[100px] p-3 border-r shrink-0">Status</div>
             <div className="w-[100px] p-3 border-r shrink-0">Início</div>
             <div className="w-[100px] p-3 border-r shrink-0">Fim</div>
-            <div className="w-[90px] p-3 border-r shrink-0">Ações</div>
+            <div className="w-[100px] p-3 border-r shrink-0">Ações</div>
             {/* New columns - always visible, not affected by column filter */}
             <div className="w-[60px] p-3 border-r shrink-0 bg-primary/5">Dias</div>
             <div className="w-[100px] p-3 border-r shrink-0 bg-primary/5">Orc. Alocado</div>
@@ -2086,7 +2086,6 @@ export function HierarchicalMediaTable({
                 {formatCurrency(lines.reduce((sum, l) => sum + getMonthBudget(l.id, month), 0))}
               </div>
             ))}
-            <div className="w-[90px] p-3 shrink-0"></div>
           </div>
         </div>
       </div>
