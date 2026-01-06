@@ -278,40 +278,28 @@ export default function MediaPlanDetail() {
     }
   };
 
-  const handleUpdateMomentDates = async (momentRefId: string | null, startDate: string | null, endDate: string | null) => {
-    if (!plan) return;
+  const handleUpdateMomentDates = async (distributionId: string | null, startDate: string | null, endDate: string | null) => {
+    if (!plan || !distributionId) return;
     
     try {
-      // Find all moment distributions with this reference_id
-      const momentDists = budgetDistributions.filter(
-        d => d.distribution_type === 'moment' && d.reference_id === momentRefId
-      );
-      
-      if (momentDists.length === 0) {
-        toast.error('Momento não encontrado');
-        return;
-      }
-      
-      // Update all matching distributions
+      // Update the specific distribution by its ID
       const { error } = await supabase
         .from('plan_budget_distributions')
         .update({ start_date: startDate, end_date: endDate })
-        .eq('media_plan_id', plan.id)
-        .eq('distribution_type', 'moment')
-        .eq('reference_id', momentRefId);
+        .eq('id', distributionId);
       
       if (error) throw error;
       
       // Update local state
       setBudgetDistributions(prev => 
         prev.map(d => 
-          d.distribution_type === 'moment' && d.reference_id === momentRefId
+          d.id === distributionId
             ? { ...d, start_date: startDate, end_date: endDate }
             : d
         )
       );
       
-      toast.success('Datas do momento atualizadas');
+      toast.success('Datas atualizadas');
     } catch (error) {
       console.error('Error updating moment dates:', error);
       toast.error('Erro ao atualizar datas');
@@ -552,40 +540,78 @@ export default function MediaPlanDetail() {
     }));
   }, [lines, moments.data]);
 
-  // Build moments timeline data - deduplicated and filtered
+  // Build moments timeline data - showing subdivision + moment hierarchy
   const momentsForTimeline = useMemo(() => {
-    const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment' && d.reference_id);
+    const subdivisionDists = budgetDistributions.filter(d => d.distribution_type === 'subdivision');
+    const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
     
     if (momentDists.length === 0) return [];
     
-    // Deduplicate by reference_id and aggregate budget from filtered lines
-    const uniqueMomentIds = [...new Set(momentDists.map(d => d.reference_id))];
+    const getSubdivisionName = (refId: string | null): string => {
+      if (!refId) return 'Geral';
+      const found = (subdivisions.data || []).find(s => s.id === refId);
+      return found?.name || 'Geral';
+    };
     
-    // Get moment IDs that have lines in the current filtered view
-    const filteredMomentIds = new Set(filteredLines.map(l => l.moment_id).filter(Boolean));
+    const getMomentName = (refId: string | null): string => {
+      if (!refId) return 'Geral';
+      const found = (moments.data || []).find(m => m.id === refId);
+      return found?.name || 'Geral';
+    };
     
-    return uniqueMomentIds
-      .filter(refId => filteredMomentIds.has(refId)) // Only show moments with filtered lines
-      .map(refId => {
-        // Get the first distribution for this moment to get dates
-        const dist = momentDists.find(d => d.reference_id === refId);
-        // Calculate budget from filtered lines
-        const momentBudget = filteredLines
-          .filter(l => l.moment_id === refId)
-          .reduce((acc, l) => acc + Number(l.budget || 0), 0);
-        // Calculate percentage based on filtered total
-        const filteredTotal = filteredLines.reduce((acc, l) => acc + Number(l.budget || 0), 0);
-        
-        return {
-          id: refId,
-          name: moments.data?.find(m => m.id === refId)?.name || 'Momento',
-          startDate: dist?.start_date || null,
-          endDate: dist?.end_date || null,
-          budget: momentBudget,
-          percentage: filteredTotal > 0 ? (momentBudget / filteredTotal) * 100 : 0,
-        };
+    // Build timeline items showing subdivision + moment combinations
+    const timelineItems: Array<{
+      id: string;
+      subdivisionId: string | null;
+      momentId: string | null;
+      name: string;
+      startDate: string | null;
+      endDate: string | null;
+      budget: number;
+      percentage: number;
+    }> = [];
+    
+    momentDists.forEach(momDist => {
+      // Find the parent subdivision
+      const parentSubDist = subdivisionDists.find(s => s.id === momDist.parent_distribution_id);
+      const subdivisionRefId = parentSubDist?.reference_id || null;
+      const subdivisionName = getSubdivisionName(subdivisionRefId);
+      const momentName = getMomentName(momDist.reference_id);
+      
+      // Check if this subdivision+moment combination has filtered lines
+      const hasFilteredLines = filteredLines.some(l => 
+        l.subdivision_id === subdivisionRefId && l.moment_id === momDist.reference_id
+      );
+      
+      if (!hasFilteredLines) return;
+      
+      // Calculate budget from filtered lines for this specific combination
+      const combinationBudget = filteredLines
+        .filter(l => l.subdivision_id === subdivisionRefId && l.moment_id === momDist.reference_id)
+        .reduce((acc, l) => acc + Number(l.budget || 0), 0);
+      
+      const filteredTotal = filteredLines.reduce((acc, l) => acc + Number(l.budget || 0), 0);
+      
+      timelineItems.push({
+        id: momDist.id,
+        subdivisionId: subdivisionRefId,
+        momentId: momDist.reference_id,
+        name: subdivisionDists.length > 1 ? `${subdivisionName} - ${momentName}` : momentName,
+        startDate: momDist.start_date || null,
+        endDate: momDist.end_date || null,
+        budget: combinationBudget,
+        percentage: filteredTotal > 0 ? (combinationBudget / filteredTotal) * 100 : 0,
       });
-  }, [budgetDistributions, moments.data, filteredLines]);
+    });
+    
+    // Sort by start date
+    return timelineItems.sort((a, b) => {
+      if (!a.startDate && !b.startDate) return 0;
+      if (!a.startDate) return 1;
+      if (!b.startDate) return -1;
+      return a.startDate.localeCompare(b.startDate);
+    });
+  }, [budgetDistributions, subdivisions.data, moments.data, filteredLines]);
 
   // Plan alerts
   const planAlerts = usePlanAlerts({

@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
 
 interface MomentPeriod {
-  id: string | null;
+  id: string; // Distribution ID (unique)
   name: string;
   startDate: string | null;
   endDate: string | null;
@@ -33,7 +33,7 @@ interface MomentsTimelineProps {
   planEndDate: string;
   className?: string;
   canEdit?: boolean;
-  onUpdateMomentDates?: (momentId: string | null, startDate: string | null, endDate: string | null) => void;
+  onUpdateMomentDates?: (distributionId: string, startDate: string | null, endDate: string | null) => void;
 }
 
 const MOMENT_COLORS = [
@@ -54,7 +54,7 @@ export function MomentsTimeline({
   canEdit = false,
   onUpdateMomentDates,
 }: MomentsTimelineProps) {
-  const [editingMomentId, setEditingMomentId] = useState<string | null | undefined>(undefined);
+  const [editingMomentId, setEditingMomentId] = useState<string | undefined>(undefined);
   const [editStartDate, setEditStartDate] = useState<Date | undefined>(undefined);
   const [editEndDate, setEditEndDate] = useState<Date | undefined>(undefined);
   const [startPopoverOpen, setStartPopoverOpen] = useState(false);
