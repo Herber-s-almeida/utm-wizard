@@ -18,12 +18,14 @@ import { SubdivisionsSummaryCard } from '@/components/media-plan/SubdivisionsSum
 import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization';
 import { SortableFunnelList } from '@/components/media-plan/SortableFunnelList';
 import { FunnelStageSelector } from '@/components/media-plan/FunnelStageSelector';
-
 import { TemporalEqualizer, generateTemporalPeriods } from '@/components/media-plan/TemporalEqualizer';
 import { useMediaPlanWizard, BudgetAllocation } from '@/hooks/useMediaPlanWizard';
 import { KPI_OPTIONS } from '@/types/media';
 import { Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LabelWithTooltip } from '@/components/ui/info-tooltip';
+import { CreateKpiDialog } from '@/components/media-plan/CreateKpiDialog';
+import { useCustomKpis } from '@/hooks/useCustomKpis';
 
 const WIZARD_STEPS = [
   { id: 1, title: 'Plano', description: 'Dados básicos' },
@@ -51,6 +53,7 @@ export default function NewMediaPlanBudget() {
   const [saving, setSaving] = useState(false);
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [temporalPeriods, setTemporalPeriods] = useState<any[]>([]);
+  const { customKpis } = useCustomKpis();
 
   const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations } = wizard;
 
@@ -121,7 +124,7 @@ export default function NewMediaPlanBudget() {
           user_id: user?.id,
           name: state.planData.name,
           client: state.planData.client || null,
-          campaign: state.planData.campaign || null,
+          campaign: state.planData.name, // Campaign equals plan name
           start_date: state.planData.start_date,
           end_date: state.planData.end_date,
           total_budget: state.planData.total_budget,
@@ -370,7 +373,13 @@ export default function NewMediaPlanBudget() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Nome do Plano *</Label>
+                      <LabelWithTooltip 
+                        htmlFor="name" 
+                        tooltip="O nome do plano será utilizado como identificador da campanha nos parâmetros UTM (utm_campaign)"
+                        required
+                      >
+                        Nome do Plano
+                      </LabelWithTooltip>
                       <Input
                         id="name"
                         placeholder="Ex: Campanha de Verão 2025"
@@ -379,25 +388,14 @@ export default function NewMediaPlanBudget() {
                       />
                     </div>
 
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="client">Cliente</Label>
-                        <Input
-                          id="client"
-                          placeholder="Nome do cliente"
-                          value={state.planData.client}
-                          onChange={(e) => updatePlanData({ client: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="campaign">Campanha</Label>
-                        <Input
-                          id="campaign"
-                          placeholder="Nome da campanha"
-                          value={state.planData.campaign}
-                          onChange={(e) => updatePlanData({ campaign: e.target.value })}
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="client">Cliente</Label>
+                      <Input
+                        id="client"
+                        placeholder="Nome do cliente"
+                        value={state.planData.client}
+                        onChange={(e) => updatePlanData({ client: e.target.value })}
+                      />
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -471,7 +469,16 @@ export default function NewMediaPlanBudget() {
                     </div>
 
                     <div className="space-y-3">
-                      <Label>KPIs Relevantes (opcional)</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>KPIs Relevantes (opcional)</Label>
+                        <CreateKpiDialog 
+                          onKpiCreated={(kpi) => {
+                            updatePlanData({ kpis: { ...state.planData.kpis, [kpi.key]: 0 } });
+                          }}
+                        />
+                      </div>
+                      
+                      {/* Standard KPIs */}
                       <div className="grid gap-3 sm:grid-cols-2">
                         {KPI_OPTIONS.map(kpi => (
                           <div key={kpi.key} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
@@ -506,6 +513,47 @@ export default function NewMediaPlanBudget() {
                           </div>
                         ))}
                       </div>
+
+                      {/* Custom KPIs */}
+                      {customKpis.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">KPIs Personalizados</p>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {customKpis.map(kpi => (
+                              <div key={kpi.key} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors border border-dashed border-border/50">
+                                <Checkbox
+                                  id={`custom-${kpi.key}`}
+                                  checked={kpi.key in state.planData.kpis}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      updatePlanData({ kpis: { ...state.planData.kpis, [kpi.key]: 0 } });
+                                    } else {
+                                      const { [kpi.key]: _, ...rest } = state.planData.kpis;
+                                      updatePlanData({ kpis: rest });
+                                    }
+                                  }}
+                                />
+                                <Label htmlFor={`custom-${kpi.key}`} className="text-sm font-normal flex-1 cursor-pointer">
+                                  {kpi.name}
+                                </Label>
+                                {kpi.key in state.planData.kpis && (
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    className="w-24"
+                                    placeholder={kpi.unit}
+                                    value={state.planData.kpis[kpi.key] || ''}
+                                    onChange={(e) => updatePlanData({
+                                      kpis: { ...state.planData.kpis, [kpi.key]: parseFloat(e.target.value) || 0 }
+                                    })}
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {editingSection === 'plan' && (

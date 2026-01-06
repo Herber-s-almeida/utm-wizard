@@ -265,6 +265,42 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_kpis: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          name: string
+          unit: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          name: string
+          unit?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          name?: string
+          unit?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       file_extensions: {
         Row: {
           created_at: string
@@ -899,11 +935,13 @@ export type Database = {
           amount: number
           created_at: string
           distribution_type: string
+          end_date: string | null
           id: string
           media_plan_id: string
           parent_distribution_id: string | null
           percentage: number
           reference_id: string | null
+          start_date: string | null
           temporal_date: string | null
           temporal_period: string | null
           updated_at: string
@@ -913,11 +951,13 @@ export type Database = {
           amount?: number
           created_at?: string
           distribution_type: string
+          end_date?: string | null
           id?: string
           media_plan_id: string
           parent_distribution_id?: string | null
           percentage?: number
           reference_id?: string | null
+          start_date?: string | null
           temporal_date?: string | null
           temporal_period?: string | null
           updated_at?: string
@@ -927,11 +967,13 @@ export type Database = {
           amount?: number
           created_at?: string
           distribution_type?: string
+          end_date?: string | null
           id?: string
           media_plan_id?: string
           parent_distribution_id?: string | null
           percentage?: number
           reference_id?: string | null
+          start_date?: string | null
           temporal_date?: string | null
           temporal_period?: string | null
           updated_at?: string
@@ -950,6 +992,48 @@ export type Database = {
             columns: ["parent_distribution_id"]
             isOneToOne: false
             referencedRelation: "plan_budget_distributions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_custom_kpis: {
+        Row: {
+          created_at: string | null
+          custom_kpi_id: string | null
+          id: string
+          kpi_key: string
+          media_plan_id: string
+          target_value: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_kpi_id?: string | null
+          id?: string
+          kpi_key: string
+          media_plan_id: string
+          target_value?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_kpi_id?: string | null
+          id?: string
+          kpi_key?: string
+          media_plan_id?: string
+          target_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_custom_kpis_custom_kpi_id_fkey"
+            columns: ["custom_kpi_id"]
+            isOneToOne: false
+            referencedRelation: "custom_kpis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_custom_kpis_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "media_plans"
             referencedColumns: ["id"]
           },
         ]

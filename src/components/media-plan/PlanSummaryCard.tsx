@@ -15,11 +15,12 @@ interface PlanSummaryCardProps {
     objectives: string[];
     kpis: Record<string, number>;
   };
+  customKpis?: Array<{ key: string; name: string; unit: string }>;
   onEdit: () => void;
   showEditButton?: boolean;
 }
 
-export function PlanSummaryCard({ planData, onEdit, showEditButton = true }: PlanSummaryCardProps) {
+export function PlanSummaryCard({ planData, customKpis = [], onEdit, showEditButton = true }: PlanSummaryCardProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -43,11 +44,27 @@ export function PlanSummaryCard({ planData, onEdit, showEditButton = true }: Pla
   };
 
   const getKpiLabel = (key: string) => {
-    return KPI_OPTIONS.find(k => k.key === key)?.label || key.toUpperCase();
+    // Check standard KPIs first
+    const standardKpi = KPI_OPTIONS.find(k => k.key === key);
+    if (standardKpi) return standardKpi.label;
+    
+    // Check custom KPIs
+    const customKpi = customKpis.find(k => k.key === key);
+    if (customKpi) return customKpi.name;
+    
+    return key.toUpperCase();
   };
 
   const getKpiUnit = (key: string) => {
-    return KPI_OPTIONS.find(k => k.key === key)?.unit || '';
+    // Check standard KPIs first
+    const standardKpi = KPI_OPTIONS.find(k => k.key === key);
+    if (standardKpi) return standardKpi.unit;
+    
+    // Check custom KPIs
+    const customKpi = customKpis.find(k => k.key === key);
+    if (customKpi) return customKpi.unit;
+    
+    return '';
   };
 
   return (
@@ -76,20 +93,15 @@ export function PlanSummaryCard({ planData, onEdit, showEditButton = true }: Pla
           <div className="bg-muted/50 rounded-xl p-4 border border-border/50">
             <span className="text-xs text-muted-foreground uppercase tracking-wide">Nome do Plano</span>
             <p className="font-display text-xl font-semibold mt-1">{planData.name || '-'}</p>
+            <span className="text-xs text-muted-foreground">Utilizado como identificador da campanha (UTM)</span>
           </div>
 
           {/* Grid de informações */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Campanha e Cliente */}
-            <div className="bg-muted/50 rounded-xl p-4 border border-border/50 space-y-2">
-              <div>
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">Campanha</span>
-                <p className="font-semibold text-lg">{planData.campaign || '-'}</p>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">Cliente</span>
-                <p className="text-muted-foreground">{planData.client || '-'}</p>
-              </div>
+            {/* Cliente */}
+            <div className="bg-muted/50 rounded-xl p-4 border border-border/50">
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">Cliente</span>
+              <p className="font-semibold text-lg">{planData.client || '-'}</p>
             </div>
 
             {/* Datas */}
@@ -142,12 +154,15 @@ export function PlanSummaryCard({ planData, onEdit, showEditButton = true }: Pla
               <div className="bg-muted/50 rounded-xl p-4 border border-border/50">
                 <span className="text-xs text-muted-foreground uppercase tracking-wide mb-2 block">KPIs</span>
                 <div className="grid grid-cols-2 gap-2">
-                  {Object.entries(planData.kpis).slice(0, 4).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground truncate">{getKpiLabel(key).split(' ')[0]}</span>
-                      <span className="font-semibold">{getKpiUnit(key) === 'R$' ? formatCurrency(value) : `${value}${getKpiUnit(key)}`}</span>
-                    </div>
-                  ))}
+                  {Object.entries(planData.kpis).slice(0, 4).map(([key, value]) => {
+                    const unit = getKpiUnit(key);
+                    return (
+                      <div key={key} className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground truncate">{getKpiLabel(key).split(' ')[0]}</span>
+                        <span className="font-semibold">{unit === 'R$' ? formatCurrency(value) : `${value}${unit}`}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
