@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { format, differenceInDays, parseISO, eachDayOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, Pencil, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -9,6 +9,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Calendar as CalendarPicker } from '@/components/ui/calendar';
 
 interface MomentPeriod {
   id: string | null;
@@ -25,6 +32,8 @@ interface MomentsTimelineProps {
   planStartDate: string;
   planEndDate: string;
   className?: string;
+  canEdit?: boolean;
+  onUpdateMomentDates?: (momentId: string | null, startDate: string | null, endDate: string | null) => void;
 }
 
 const MOMENT_COLORS = [
@@ -42,7 +51,15 @@ export function MomentsTimeline({
   planStartDate,
   planEndDate,
   className,
+  canEdit = false,
+  onUpdateMomentDates,
 }: MomentsTimelineProps) {
+  const [editingMomentId, setEditingMomentId] = useState<string | null | undefined>(undefined);
+  const [editStartDate, setEditStartDate] = useState<Date | undefined>(undefined);
+  const [editEndDate, setEditEndDate] = useState<Date | undefined>(undefined);
+  const [startPopoverOpen, setStartPopoverOpen] = useState(false);
+  const [endPopoverOpen, setEndPopoverOpen] = useState(false);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -55,6 +72,11 @@ export function MomentsTimeline({
   const formatDate = (date: string) => {
     const [year, month, day] = date.split('-').map(Number);
     return format(new Date(year, month - 1, day), "dd MMM", { locale: ptBR });
+  };
+
+  const formatFullDate = (date: string) => {
+    const [year, month, day] = date.split('-').map(Number);
+    return format(new Date(year, month - 1, day), "dd/MM/yyyy", { locale: ptBR });
   };
 
   const timelineData = useMemo(() => {
@@ -108,6 +130,34 @@ export function MomentsTimeline({
     
     return markers;
   }, [planStartDate, planEndDate]);
+
+  const handleStartEdit = (moment: typeof timelineData[0]) => {
+    setEditingMomentId(moment.id);
+    setEditStartDate(moment.startDate ? parseISO(moment.startDate) : parseISO(planStartDate));
+    setEditEndDate(moment.endDate ? parseISO(moment.endDate) : parseISO(planEndDate));
+  };
+
+  const handleSaveEdit = () => {
+    if (editingMomentId !== undefined && onUpdateMomentDates && editStartDate && editEndDate) {
+      onUpdateMomentDates(
+        editingMomentId,
+        format(editStartDate, 'yyyy-MM-dd'),
+        format(editEndDate, 'yyyy-MM-dd')
+      );
+    }
+    setEditingMomentId(undefined);
+    setEditStartDate(undefined);
+    setEditEndDate(undefined);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMomentId(undefined);
+    setEditStartDate(undefined);
+    setEditEndDate(undefined);
+  };
+
+  const planStartParsed = parseISO(planStartDate);
+  const planEndParsed = parseISO(planEndDate);
 
   if (moments.length === 0 || !planStartDate || !planEndDate) {
     return null;
@@ -189,17 +239,98 @@ export function MomentsTimeline({
           </TooltipProvider>
         </div>
         
-        {/* Legend */}
-        <div className="flex flex-wrap gap-3 mt-3">
-          {timelineData.map((moment, idx) => (
-            <div key={moment.id || idx} className="flex items-center gap-1.5">
-              <div
-                className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: moment.color }}
-              />
-              <span className="text-xs text-muted-foreground">{moment.name}</span>
-            </div>
-          ))}
+        {/* Legend with edit controls */}
+        <div className="flex flex-wrap gap-4 mt-3">
+          {timelineData.map((moment, idx) => {
+            const isEditing = editingMomentId === moment.id;
+            
+            return (
+              <div key={moment.id || idx} className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3 rounded-sm shrink-0"
+                  style={{ backgroundColor: moment.color }}
+                />
+                
+                {isEditing ? (
+                  <div className="flex items-center gap-2 bg-muted/50 rounded-md p-2">
+                    <span className="text-xs font-medium">{moment.name}:</span>
+                    
+                    <Popover open={startPopoverOpen} onOpenChange={setStartPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7 text-xs px-2">
+                          {editStartDate ? format(editStartDate, "dd/MM/yy") : "Início"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarPicker
+                          mode="single"
+                          selected={editStartDate}
+                          onSelect={(date) => {
+                            setEditStartDate(date);
+                            setStartPopoverOpen(false);
+                          }}
+                          disabled={(date) => date < planStartParsed || date > planEndParsed}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    
+                    <span className="text-xs text-muted-foreground">-</span>
+                    
+                    <Popover open={endPopoverOpen} onOpenChange={setEndPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7 text-xs px-2">
+                          {editEndDate ? format(editEndDate, "dd/MM/yy") : "Fim"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarPicker
+                          mode="single"
+                          selected={editEndDate}
+                          onSelect={(date) => {
+                            setEditEndDate(date);
+                            setEndPopoverOpen(false);
+                          }}
+                          disabled={(date) => 
+                            date < planStartParsed || 
+                            date > planEndParsed || 
+                            (editStartDate && date < editStartDate)
+                          }
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    
+                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleSaveEdit}>
+                      <Check className="h-3 w-3 text-green-600" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleCancelEdit}>
+                      <X className="h-3 w-3 text-destructive" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">{moment.name}</span>
+                    <span className="text-xs text-muted-foreground/70">
+                      ({formatFullDate(moment.actualStart)} - {formatFullDate(moment.actualEnd)})
+                    </span>
+                    {canEdit && onUpdateMomentDates && (
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-5 w-5"
+                        onClick={() => handleStartEdit(moment)}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
