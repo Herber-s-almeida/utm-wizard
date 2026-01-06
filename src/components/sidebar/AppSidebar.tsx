@@ -263,20 +263,15 @@ export function AppSidebar() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button 
-                variant={location.pathname.includes('/reports') ? 'secondary' : 'ghost'} 
-                size="icon"
-                className="h-9 w-9"
-                onClick={() => {
-                  // Navigate to first active plan reports if available
-                  const firstPlan = activePlans.data?.[0] || draftPlans.data?.[0];
-                  if (firstPlan) {
-                    navigate(`/media-plans/${firstPlan.id}/reports`);
-                  }
-                }}
-              >
-                <BarChart3 className="h-4 w-4" />
-              </Button>
+              <Link to="/reports">
+                <Button 
+                  variant={location.pathname.startsWith('/reports') ? 'secondary' : 'ghost'} 
+                  size="icon"
+                  className="h-9 w-9"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                </Button>
+              </Link>
             </TooltipTrigger>
             <TooltipContent side="right">Relatórios</TooltipContent>
           </Tooltip>
@@ -431,43 +426,28 @@ export function AppSidebar() {
             Relatórios
           </h3>
 
-          <Collapsible open={openSections.reports} onOpenChange={() => toggleSection('reports')}>
-            <CollapsibleTrigger asChild>
+          <div className="flex items-center">
+            <Link to="/reports" className="flex-1">
               <Button 
-                variant={location.pathname.includes('/reports') ? 'secondary' : 'ghost'} 
+                variant={location.pathname.startsWith('/reports') ? 'secondary' : 'ghost'} 
                 size="sm" 
                 className="w-full justify-start gap-2 h-8 text-xs"
               >
-                {openSections.reports ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                 <BarChart3 className="h-3.5 w-3.5" />
-                <span>Relatórios por Plano</span>
+                <span>Dashboard de Performance</span>
               </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pl-4">
-              {/* Active plans with reports */}
-              {activePlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                <Link key={plan.id} to={`/media-plans/${plan.id}/reports`}>
-                  <Button 
-                    variant={location.pathname === `/media-plans/${plan.id}/reports` ? 'secondary' : 'ghost'} 
-                    size="sm" 
-                    className="w-full justify-start h-7 text-xs truncate"
-                  >
-                    <span className="truncate">{plan.name}</span>
+            </Link>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link to="/reports">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                    <Eye className="h-3.5 w-3.5" />
                   </Button>
                 </Link>
-              ))}
-              {(activePlans.data?.length || 0) === 0 && (
-                <p className="text-[10px] text-muted-foreground px-3 py-2">
-                  Nenhum plano ativo
-                </p>
-              )}
-              {(activePlans.data?.length || 0) > MAX_ITEMS && (
-                <p className="text-[10px] text-muted-foreground px-3 py-1">
-                  +{(activePlans.data?.length || 0) - MAX_ITEMS} planos
-                </p>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
+              </TooltipTrigger>
+              <TooltipContent side="right">Ver todos os relatórios</TooltipContent>
+            </Tooltip>
+          </div>
         </div>
 
         {/* PLANOS DE MÍDIA */}

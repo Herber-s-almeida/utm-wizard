@@ -670,7 +670,7 @@ export default function MediaPlanDetail() {
               </Tooltip>
               <Button 
                 variant="outline" 
-                onClick={() => navigate(`/media-plans/${id}/reports`)} 
+                onClick={() => navigate(`/reports/${id}`)} 
                 className="gap-2"
               >
                 <BarChart3 className="w-4 h-4" />
