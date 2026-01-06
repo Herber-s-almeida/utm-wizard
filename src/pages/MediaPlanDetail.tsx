@@ -781,19 +781,19 @@ export default function MediaPlanDetail() {
         />
 
         {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-          <Card>
+        <div className="flex flex-wrap gap-4">
+          <Card className="flex-1 min-w-[160px]">
             <CardContent className="pt-6">
-              <div className="text-sm text-muted-foreground">Orçamento do Plano</div>
-              <div className="text-2xl font-bold font-display">
+              <div className="text-sm text-muted-foreground whitespace-nowrap">Orçamento do Plano</div>
+              <div className="text-2xl font-bold font-display whitespace-nowrap">
                 {formatCurrency(Number(plan.total_budget))}
               </div>
             </CardContent>
           </Card>
           <TooltipProvider>
-            <Card>
+            <Card className="flex-1 min-w-[160px]">
               <CardContent className="pt-6">
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
                   Orçamento Alocado
                   {totalLinesBudget > Number(plan.total_budget) && (
                     <Tooltip>
@@ -807,44 +807,44 @@ export default function MediaPlanDetail() {
                     </Tooltip>
                   )}
                 </div>
-                <div className="text-2xl font-bold font-display">
+                <div className="text-2xl font-bold font-display whitespace-nowrap">
                   {formatCurrency(totalLinesBudget)}
                 </div>
               </CardContent>
             </Card>
           </TooltipProvider>
-          <Card>
+          <Card className="flex-1 min-w-[120px]">
             <CardContent className="pt-6">
-              <div className="text-sm text-muted-foreground">Linhas de Mídia</div>
+              <div className="text-sm text-muted-foreground whitespace-nowrap">Linhas de Mídia</div>
               <div className="text-2xl font-bold font-display">{lines.length}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="flex-1 min-w-[120px]">
             <CardContent className="pt-6">
-              <div className="text-sm text-muted-foreground">Total de Criativos</div>
+              <div className="text-sm text-muted-foreground whitespace-nowrap">Total de Criativos</div>
               <div className="text-2xl font-bold font-display">
                 {Object.values(creatives).reduce((acc, c) => acc + c.length, 0)}
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="flex-1 min-w-[130px]">
             <CardContent className="pt-6">
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
                 <Calendar className="w-3 h-3" />
                 Data de Início
               </div>
-              <div className="text-xl font-bold font-display">
+              <div className="text-xl font-bold font-display whitespace-nowrap">
                 {formatDate(plan.start_date)}
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="flex-1 min-w-[130px]">
             <CardContent className="pt-6">
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
                 <Calendar className="w-3 h-3" />
                 Data de Término
               </div>
-              <div className="text-xl font-bold font-display">
+              <div className="text-xl font-bold font-display whitespace-nowrap">
                 {formatDate(plan.end_date)}
               </div>
             </CardContent>
