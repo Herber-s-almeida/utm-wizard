@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { MediaLineWizard } from '@/components/media-plan/MediaLineWizard';
+import { StatusSelector } from '@/components/media-plan/StatusSelector';
 import { HierarchicalMediaTable } from '@/components/media-plan/HierarchicalMediaTable';
 import { EditableHierarchyCard } from '@/components/media-plan/EditableHierarchyCard';
 import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, Subdivision, Moment, FunnelStage } from '@/hooks/useConfigData';
@@ -306,6 +307,25 @@ export default function MediaPlanDetail() {
     setEditingDefaultUrl(false);
   };
 
+  const handleStatusChange = async (newStatus: MediaPlan['status']) => {
+    if (!plan) return;
+    
+    try {
+      const { error } = await supabase
+        .from('media_plans')
+        .update({ status: newStatus })
+        .eq('id', plan.id);
+
+      if (error) throw error;
+
+      setPlan({ ...plan, status: newStatus });
+      toast.success('Status atualizado!');
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error('Erro ao atualizar status');
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -539,9 +559,11 @@ export default function MediaPlanDetail() {
             <div>
               <div className="flex items-center gap-3">
                 <h1 className="font-display text-2xl font-bold">{plan.name}</h1>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[plan.status]}`}>
-                  {STATUS_LABELS[plan.status]}
-                </span>
+                <StatusSelector
+                  status={plan.status}
+                  onStatusChange={handleStatusChange}
+                  disabled={isLoadingRole || !canEdit}
+                />
                 <RoleBadge planId={id!} />
               </div>
               <p className="text-muted-foreground">
