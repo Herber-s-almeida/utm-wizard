@@ -187,57 +187,76 @@ export function MomentsTimeline({
           ))}
         </div>
         
-        {/* Timeline track */}
-        <div className="relative h-12 bg-muted/30 rounded-lg border overflow-hidden">
-          {/* Background grid lines */}
-          <div className="absolute inset-0 flex">
-            {monthMarkers.map((marker, idx) => (
-              <div
-                key={idx}
-                className="absolute h-full w-px bg-border/50"
-                style={{ left: `${marker.position}%` }}
-              />
-            ))}
-          </div>
+        {/* Timeline track - multi-line layout */}
+        {(() => {
+          const ROW_HEIGHT = 24;
+          const ROW_GAP = 4;
+          const PADDING_Y = 6;
+          const trackHeight = PADDING_Y * 2 + timelineData.length * ROW_HEIGHT + (timelineData.length - 1) * ROW_GAP;
+          const maxHeight = 200;
           
-          {/* Moment bars */}
-          <TooltipProvider>
-            {timelineData.map((moment, idx) => (
-              <Tooltip key={moment.id || idx}>
-                <TooltipTrigger asChild>
+          return (
+            <div 
+              className="relative bg-muted/30 rounded-lg border overflow-y-auto"
+              style={{ height: Math.min(trackHeight, maxHeight) }}
+            >
+              <div className="relative" style={{ height: trackHeight, minHeight: '100%' }}>
+                {/* Background grid lines */}
+                {monthMarkers.map((marker, idx) => (
                   <div
-                    className="absolute top-1 bottom-1 rounded-md cursor-pointer transition-all hover:opacity-90 hover:scale-y-110 flex items-center justify-center overflow-hidden"
-                    style={{
-                      left: `${moment.startPercent}%`,
-                      width: `${Math.max(moment.widthPercent, 2)}%`,
-                      backgroundColor: moment.color,
-                    }}
-                  >
-                    <span className="text-xs font-medium text-white truncate px-2 drop-shadow-md">
-                      {moment.name}
-                    </span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  <div className="space-y-1">
-                    <p className="font-semibold">{moment.name}</p>
-                    <div className="text-xs space-y-0.5 text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{formatDate(moment.actualStart)} - {formatDate(moment.actualEnd)}</span>
-                        <span className="text-foreground font-medium">({moment.duration} dias)</span>
-                      </div>
-                      <div>
-                        <span className="text-foreground font-medium">{formatCurrency(moment.budget)}</span>
-                        <span> ({moment.percentage.toFixed(1)}% do plano)</span>
-                      </div>
-                    </div>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            ))}
-          </TooltipProvider>
-        </div>
+                    key={idx}
+                    className="absolute w-px bg-border/50"
+                    style={{ left: `${marker.position}%`, top: 0, bottom: 0 }}
+                  />
+                ))}
+                
+                {/* Moment bars - each on its own lane */}
+                <TooltipProvider>
+                  {timelineData.map((moment, idx) => {
+                    const top = PADDING_Y + idx * (ROW_HEIGHT + ROW_GAP);
+                    
+                    return (
+                      <Tooltip key={moment.id || idx}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="absolute rounded-md cursor-pointer transition-all hover:opacity-90 flex items-center justify-center overflow-hidden"
+                            style={{
+                              left: `${moment.startPercent}%`,
+                              width: `${Math.max(moment.widthPercent, 2)}%`,
+                              top: `${top}px`,
+                              height: `${ROW_HEIGHT}px`,
+                              backgroundColor: moment.color,
+                            }}
+                          >
+                            <span className="text-xs font-medium text-white truncate px-2 drop-shadow-md">
+                              {moment.name}
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="space-y-1">
+                            <p className="font-semibold">{moment.name}</p>
+                            <div className="text-xs space-y-0.5 text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span>{formatDate(moment.actualStart)} - {formatDate(moment.actualEnd)}</span>
+                                <span className="text-foreground font-medium">({moment.duration} dias)</span>
+                              </div>
+                              <div>
+                                <span className="text-foreground font-medium">{formatCurrency(moment.budget)}</span>
+                                <span> ({moment.percentage.toFixed(1)}% do plano)</span>
+                              </div>
+                            </div>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </TooltipProvider>
+              </div>
+            </div>
+          );
+        })()}
         
         {/* Legend with edit controls */}
         <div className="flex flex-wrap gap-4 mt-3">
