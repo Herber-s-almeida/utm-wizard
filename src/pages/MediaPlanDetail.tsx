@@ -18,7 +18,8 @@ import {
   Link,
   Pencil,
   Check,
-  X
+  X,
+  BarChart3
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -645,6 +646,14 @@ export default function MediaPlanDetail() {
                   </TooltipContent>
                 )}
               </Tooltip>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate(`/media-plans/${id}/reports`)} 
+                className="gap-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Relatórios
+              </Button>
             </div>
           </TooltipProvider>
         </div>
