@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,10 +16,13 @@ import {
   ArrowRight,
   Loader2
 } from 'lucide-react';
-import { MediaPlan, STATUS_LABELS, STATUS_COLORS } from '@/types/media';
+import { MediaPlan } from '@/types/media';
+import { StatusSelector } from '@/components/media-plan/StatusSelector';
+import { toast } from 'sonner';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [plans, setPlans] = useState<MediaPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -71,6 +75,24 @@ export default function Dashboard() {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (planId: string, newStatus: MediaPlan['status']) => {
+    try {
+      const { error } = await supabase
+        .from('media_plans')
+        .update({ status: newStatus })
+        .eq('id', planId);
+
+      if (error) throw error;
+
+      setPlans(plans.map(p => p.id === planId ? { ...p, status: newStatus } : p));
+      queryClient.invalidateQueries({ queryKey: ['media_plans'] });
+      toast.success('Status atualizado!');
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error('Erro ao atualizar status');
     }
   };
 
@@ -213,9 +235,11 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[plan.status]}`}>
-                            {STATUS_LABELS[plan.status]}
-                          </span>
+                          <StatusSelector
+                            status={plan.status}
+                            onStatusChange={(newStatus) => handleStatusChange(plan.id, newStatus)}
+                            size="sm"
+                          />
                           <span className="text-sm font-medium">
                             {formatCurrency(Number(plan.total_budget))}
                           </span>
