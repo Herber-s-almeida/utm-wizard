@@ -45,6 +45,7 @@ import { MediaLineWizard } from '@/components/media-plan/MediaLineWizard';
 import { StatusSelector } from '@/components/media-plan/StatusSelector';
 import { HierarchicalMediaTable } from '@/components/media-plan/HierarchicalMediaTable';
 import { EditableHierarchyCard } from '@/components/media-plan/EditableHierarchyCard';
+import { MomentsTimeline } from '@/components/media-plan/MomentsTimeline';
 import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, Subdivision, Moment, FunnelStage } from '@/hooks/useConfigData';
 import { exportMediaPlanToXlsx } from '@/utils/exportToXlsx';
 import { useStatuses } from '@/hooks/useStatuses';
@@ -543,6 +544,22 @@ export default function MediaPlanDetail() {
     }));
   }, [lines, moments.data]);
 
+  // Build moments timeline data
+  const momentsForTimeline = useMemo(() => {
+    const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment' && d.reference_id);
+    
+    if (momentDists.length === 0) return [];
+    
+    return momentDists.map(dist => ({
+      id: dist.reference_id,
+      name: moments.data?.find(m => m.id === dist.reference_id)?.name || 'Momento',
+      startDate: dist.start_date || null,
+      endDate: dist.end_date || null,
+      budget: dist.amount,
+      percentage: dist.percentage,
+    }));
+  }, [budgetDistributions, moments.data]);
+
   // Plan alerts
   const planAlerts = usePlanAlerts({
     totalBudget: plan?.total_budget || 0,
@@ -845,6 +862,19 @@ export default function MediaPlanDetail() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Moments Timeline - Show only if there are moments with dates */}
+        {momentsForTimeline.length > 0 && plan.start_date && plan.end_date && (
+          <Card>
+            <CardContent className="py-4">
+              <MomentsTimeline
+                moments={momentsForTimeline}
+                planStartDate={plan.start_date}
+                planEndDate={plan.end_date}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Editable Hierarchy Card */}
         {hierarchyData.length > 0 && (
