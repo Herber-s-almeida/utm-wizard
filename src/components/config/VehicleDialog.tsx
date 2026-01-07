@@ -14,7 +14,8 @@ import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 interface Channel {
   name: string;
   description: string;
-  slug?: string;
+  slug: string;
+  slugManuallyEdited?: boolean;
 }
 
 interface VehicleDialogProps {
@@ -71,16 +72,33 @@ export function VehicleDialog({
   }, [name, slugManuallyEdited]);
 
   const handleAddChannel = () => {
-    setChannels([...channels, { name: '', description: '', slug: '' }]);
+    setChannels([...channels, { name: '', description: '', slug: '', slugManuallyEdited: false }]);
   };
 
   const handleRemoveChannel = (index: number) => {
     setChannels(channels.filter((_, i) => i !== index));
   };
 
-  const handleChannelChange = (index: number, field: 'name' | 'description', value: string) => {
+  const handleChannelNameChange = (index: number, value: string) => {
     const newChannels = [...channels];
-    newChannels[index][field] = value;
+    newChannels[index].name = value;
+    // Auto-generate slug if not manually edited
+    if (!newChannels[index].slugManuallyEdited) {
+      newChannels[index].slug = toSlug(value);
+    }
+    setChannels(newChannels);
+  };
+
+  const handleChannelSlugChange = (index: number, value: string) => {
+    const newChannels = [...channels];
+    newChannels[index].slug = toSlug(value);
+    newChannels[index].slugManuallyEdited = true;
+    setChannels(newChannels);
+  };
+
+  const handleChannelDescriptionChange = (index: number, value: string) => {
+    const newChannels = [...channels];
+    newChannels[index].description = value;
     setChannels(newChannels);
   };
 
@@ -303,46 +321,64 @@ export function VehicleDialog({
             </p>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <LabelWithTooltip tooltip="Canais são tipos de anúncio dentro do veículo. Ex: Search, Display, Video.">
-                Canais do veículo
-              </LabelWithTooltip>
-              <Button type="button" variant="outline" size="sm" onClick={handleAddChannel}>
-                <Plus className="h-3 w-3 mr-1" />
-                Adicionar canal
-              </Button>
-            </div>
-
-            {channels.map((channel, index) => (
-              <div key={index} className="p-3 border rounded-lg space-y-2 bg-muted/30">
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={channel.name}
-                    onChange={(e) => handleChannelChange(index, 'name', e.target.value.slice(0, 25))}
-                    placeholder="Nome do canal"
-                    maxLength={25}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveChannel(index)}
-                    className="h-8 w-8 text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <Textarea
-                  value={channel.description}
-                  onChange={(e) => handleChannelChange(index, 'description', e.target.value.slice(0, 180))}
-                  placeholder="Descrição do canal..."
-                  rows={2}
-                />
+          {mode === 'create' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <LabelWithTooltip tooltip="Canais são tipos de anúncio dentro do veículo. Ex: Search, Display, Video.">
+                  Canais do veículo
+                </LabelWithTooltip>
+                <Button type="button" variant="outline" size="sm" onClick={handleAddChannel}>
+                  <Plus className="h-3 w-3 mr-1" />
+                  Adicionar canal
+                </Button>
               </div>
-            ))}
-          </div>
+
+              {channels.map((channel, index) => (
+                <div key={index} className="p-3 border rounded-lg space-y-3 bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={channel.name}
+                      onChange={(e) => handleChannelNameChange(index, e.target.value.slice(0, 25))}
+                      placeholder="Nome do canal"
+                      maxLength={25}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveChannel(index)}
+                      className="h-8 w-8 text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Medium Slug (utm_medium)</Label>
+                    <Input
+                      value={channel.slug}
+                      onChange={(e) => handleChannelSlugChange(index, e.target.value)}
+                      placeholder="search"
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  <Textarea
+                    value={channel.description}
+                    onChange={(e) => handleChannelDescriptionChange(index, e.target.value.slice(0, 180))}
+                    placeholder="Descrição do canal..."
+                    rows={2}
+                  />
+                  {/* UTM Preview */}
+                  {(slug || channel.slug) && (
+                    <div className="p-2 bg-background rounded text-xs font-mono text-muted-foreground border">
+                      <span className="text-foreground">utm_source=</span>{slug || 'vehicle-slug'}
+                      <span className="text-foreground">&utm_medium=</span>{channel.slug || 'channel-slug'}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <DialogFooter>
