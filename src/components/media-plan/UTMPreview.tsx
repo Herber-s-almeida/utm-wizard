@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/tooltip';
 import { UTMParams, buildUrlWithUTM } from '@/utils/utmGenerator';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface UTMPreviewProps {
   destinationUrl: string | null;
@@ -24,6 +25,8 @@ interface UTMPreviewProps {
   onInvalidate?: () => Promise<void> | void;
   compact?: boolean;
   validating?: boolean;
+  fallbackUrl?: string | null;
+  showActions?: boolean;
 }
 
 export function UTMPreview({
@@ -34,14 +37,18 @@ export function UTMPreview({
   onInvalidate,
   compact = false,
   validating = false,
+  fallbackUrl,
+  showActions = true,
 }: UTMPreviewProps) {
   const [copied, setCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
   const hasUTM = utmParams.utm_source || utmParams.utm_medium || utmParams.utm_campaign;
   
-  const fullUrl = destinationUrl && hasUTM 
-    ? buildUrlWithUTM(destinationUrl, utmParams as UTMParams) 
+  const effectiveUrl = destinationUrl || fallbackUrl;
+  
+  const fullUrl = effectiveUrl && hasUTM 
+    ? buildUrlWithUTM(effectiveUrl, utmParams as UTMParams) 
     : null;
 
   const handleCopy = async () => {
@@ -50,10 +57,17 @@ export function UTMPreview({
     try {
       await navigator.clipboard.writeText(fullUrl);
       setCopied(true);
+      toast.success('URL copiada!');
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
+      toast.error('Erro ao copiar URL');
     }
+  };
+
+  const handleOpenUrl = () => {
+    if (!fullUrl) return;
+    window.open(fullUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleValidate = async () => {
@@ -107,8 +121,11 @@ export function UTMPreview({
               onValidate={onValidate ? handleValidate : undefined}
               onInvalidate={onInvalidate ? handleInvalidate : undefined}
               onCopy={handleCopy}
+              onOpenUrl={handleOpenUrl}
               copied={copied}
               validating={validating}
+              showActions={showActions}
+              isUsingFallback={!destinationUrl && !!fallbackUrl}
             />
           </PopoverContent>
         </Popover>
@@ -125,8 +142,11 @@ export function UTMPreview({
         onValidate={onValidate}
         onInvalidate={onInvalidate}
         onCopy={handleCopy}
+        onOpenUrl={handleOpenUrl}
         copied={copied}
         validating={validating}
+        showActions={showActions}
+        isUsingFallback={!destinationUrl && !!fallbackUrl}
       />
     </div>
   );
@@ -139,8 +159,11 @@ interface UTMDetailsProps {
   onValidate?: () => Promise<void> | void;
   onInvalidate?: () => Promise<void> | void;
   onCopy: () => void;
+  onOpenUrl: () => void;
   copied: boolean;
   validating?: boolean;
+  showActions?: boolean;
+  isUsingFallback?: boolean;
 }
 
 function UTMDetails({
@@ -150,8 +173,11 @@ function UTMDetails({
   onValidate,
   onInvalidate,
   onCopy,
+  onOpenUrl,
   copied,
   validating = false,
+  showActions = true,
+  isUsingFallback = false,
 }: UTMDetailsProps) {
   const utmFields = [
     { key: 'utm_source', label: 'Source', value: utmParams.utm_source, required: true },
@@ -202,58 +228,93 @@ function UTMDetails({
       {/* Full URL */}
       {fullUrl && (
         <div className="pt-2 border-t">
-          <p className="text-xs text-muted-foreground mb-1">URL Completa:</p>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-xs text-muted-foreground">URL Completa:</p>
+            {isUsingFallback && (
+              <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                URL padrão do plano
+              </Badge>
+            )}
+          </div>
           <div className="flex items-center gap-2">
-            <code className="flex-1 text-xs bg-background p-2 rounded border overflow-x-auto">
+            <code className="flex-1 text-xs bg-background p-2 rounded border overflow-x-auto max-h-16">
               {fullUrl}
             </code>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onCopy}
-              className="h-8 w-8 p-0 shrink-0"
-            >
-              {copied ? (
-                <Check className="w-4 h-4 text-green-600" />
-              ) : (
-                <Copy className="w-4 h-4" />
-              )}
-            </Button>
+            {showActions && (
+              <>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onCopy}
+                        className="h-8 w-8 p-0 shrink-0"
+                      >
+                        {copied ? (
+                          <Check className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Copiar URL</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onOpenUrl}
+                        className="h-8 w-8 p-0 shrink-0"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Testar em nova aba</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </>
+            )}
           </div>
         </div>
       )}
 
       {/* Actions */}
-      <div className="pt-2 border-t flex gap-2">
-        {onValidate && !isValidated && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onValidate}
-            disabled={validating}
-            className="flex-1"
-          >
-            {validating ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-            )}
-            Validar UTM
-          </Button>
-        )}
-        {onInvalidate && isValidated && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onInvalidate}
-            disabled={validating}
-            className="flex-1 text-destructive hover:text-destructive"
-          >
-            <XCircle className="w-4 h-4 mr-2" />
-            Remover Validação
-          </Button>
-        )}
-      </div>
+      {showActions && (onValidate || onInvalidate) && (
+        <div className="pt-2 border-t flex gap-2">
+          {onValidate && !isValidated && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onValidate}
+              disabled={validating}
+              className="flex-1"
+            >
+              {validating ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+              )}
+              Validar UTM
+            </Button>
+          )}
+          {onInvalidate && isValidated && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onInvalidate}
+              disabled={validating}
+              className="flex-1 text-destructive hover:text-destructive"
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Remover Validação
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

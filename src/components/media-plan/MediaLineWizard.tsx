@@ -223,6 +223,22 @@ export function MediaLineWizard({
     }
   }, [open, plan, editingLine, initialStep, prefillData, planSubdivisions, planMoments, planFunnelStages]);
 
+  // Auto-fill dates when moment is selected (only in create mode)
+  useEffect(() => {
+    if (!open || editingLine) return;
+    
+    if (selectedMoment && selectedMomentDates) {
+      const newStartDate = selectedMomentDates.start_date || plan.start_date || '';
+      const newEndDate = selectedMomentDates.end_date || plan.end_date || '';
+      
+      setLineDetails(prev => ({
+        ...prev,
+        start_date: newStartDate,
+        end_date: newEndDate,
+      }));
+    }
+  }, [selectedMoment, selectedMomentDates, open, editingLine, plan.start_date, plan.end_date]);
+
   const loadCreatives = async (lineId: string) => {
     const { data } = await supabase
       .from('media_creatives')
@@ -870,28 +886,28 @@ export function MediaLineWizard({
                     </div>
                   </div>
 
-                  {/* UTM Preview */}
+                  {/* UTM Preview - always show with fallback URL */}
                   <div className="mt-4">
                     <h4 className="font-medium mb-2">Preview dos UTMs:</h4>
-                    {lineDetails.destination_url ? (
-                      <UTMPreview
-                        destinationUrl={lineDetails.destination_url}
-                        utmParams={generateUTM({
-                          lineCode: editingLine?.line_code || 'NEW',
-                          campaignName: plan.campaign,
-                          subdivisionSlug: toSlug(subdivisions.data?.find(s => s.id === selectedSubdivision)?.name),
-                          momentSlug: toSlug(moments.data?.find(m => m.id === selectedMoment)?.name),
-                          funnelStageSlug: toSlug(funnelStages.data?.find(f => f.id === selectedFunnelStage)?.name),
-                          vehicleSlug: toSlug(vehicles.data?.find(v => v.id === selectedVehicle)?.name),
-                          channelSlug: toSlug(channels.data?.find(c => c.id === selectedChannel)?.name),
-                          targetSlug: toSlug(targets.data?.find(t => t.id === selectedTarget)?.name),
-                        })}
-                        isValidated={editingLine?.utm_validated || false}
-                      />
-                    ) : (
-                      <div className="p-3 bg-muted/50 rounded-lg border text-sm text-muted-foreground">
-                        Preencha a URL de destino para visualizar os parâmetros UTM gerados automaticamente.
-                      </div>
+                    <UTMPreview
+                      destinationUrl={lineDetails.destination_url || null}
+                      fallbackUrl={(plan as any).default_url || null}
+                      utmParams={generateUTM({
+                        lineCode: editingLine?.line_code || 'NEW',
+                        campaignName: plan.campaign,
+                        subdivisionSlug: toSlug(subdivisions.data?.find(s => s.id === selectedSubdivision)?.name),
+                        momentSlug: toSlug(moments.data?.find(m => m.id === selectedMoment)?.name),
+                        funnelStageSlug: toSlug(funnelStages.data?.find(f => f.id === selectedFunnelStage)?.name),
+                        vehicleSlug: toSlug(vehicles.data?.find(v => v.id === selectedVehicle)?.name),
+                        channelSlug: toSlug(channels.data?.find(c => c.id === selectedChannel)?.name),
+                        targetSlug: toSlug(targets.data?.find(t => t.id === selectedTarget)?.name),
+                      })}
+                      isValidated={editingLine?.utm_validated || false}
+                    />
+                    {!lineDetails.destination_url && !(plan as any).default_url && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        💡 Dica: Preencha a URL de destino acima ou defina uma URL padrão nas configurações do plano.
+                      </p>
                     )}
                   </div>
                 </div>
