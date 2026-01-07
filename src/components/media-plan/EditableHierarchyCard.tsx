@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Check, X, Pencil, AlertTriangle, ChevronDown, Layers } from 'lucide-react';
+import { Check, X, Pencil, AlertTriangle, ChevronDown, Layers, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -187,14 +187,24 @@ export function EditableHierarchyCard({
           >
             <div className="flex items-center gap-3">
               <Layers className="h-4 w-4 text-primary" />
-              <div>
+              <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-sm">Hierarquia do Orçamento</h3>
-                {!isOpen && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {hierarchyData.length} subdivisão(ões) • Clique para expandir
-                  </p>
-                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center justify-center">
+                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs text-sm">
+                    Visualize e edite a distribuição do orçamento entre subdivisões, momentos e fases do funil. Clique nos valores para editar diretamente.
+                  </TooltipContent>
+                </Tooltip>
               </div>
+              {!isOpen && (
+                <p className="text-xs text-muted-foreground">
+                  {hierarchyData.length} subdivisão(ões) • Clique para expandir
+                </p>
+              )}
             </div>
             <ChevronDown 
               className={cn(

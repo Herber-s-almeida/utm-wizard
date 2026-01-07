@@ -15,7 +15,9 @@ import {
   AlertTriangle,
   Users,
   History,
-  BarChart3
+  BarChart3,
+  ChevronDown,
+  HelpCircle
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -54,6 +56,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { BudgetAllocation } from '@/hooks/useMediaPlanWizard';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization';
 import { RoleBadge } from '@/components/media-plan/RoleBadge';
 import { usePlanRoles } from '@/hooks/usePlanRoles';
@@ -851,19 +858,47 @@ export default function MediaPlanDetail() {
           </Card>
         </div>
 
-        {/* Moments Timeline - Show only if there are moments with dates */}
+        {/* Moments Timeline - Collapsible */}
         {momentsForTimeline.length > 0 && plan.start_date && plan.end_date && (
-          <Card>
-            <CardContent className="py-4">
-              <MomentsTimeline
-                moments={momentsForTimeline}
-                planStartDate={plan.start_date}
-                planEndDate={plan.end_date}
-                canEdit={canEdit}
-                onUpdateMomentDates={handleUpdateMomentDates}
-              />
-            </CardContent>
-          </Card>
+          <Collapsible defaultOpen={false} className="border rounded-lg overflow-hidden bg-card">
+            <CollapsibleTrigger asChild>
+              <button className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-colors text-left">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-sm">Timeline de Momentos</h3>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center justify-center">
+                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-sm">
+                          Visualização gráfica dos períodos de cada momento de campanha. Mostra a distribuição temporal das ações ao longo do plano.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {momentsForTimeline.length} momento(s) • Clique para expandir
+                  </span>
+                </div>
+                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 data-[state=open]:rotate-180" />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="p-4 border-t">
+                <MomentsTimeline
+                  moments={momentsForTimeline}
+                  planStartDate={plan.start_date}
+                  planEndDate={plan.end_date}
+                  canEdit={canEdit}
+                  onUpdateMomentDates={handleUpdateMomentDates}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         )}
 
         {/* Editable Hierarchy Card */}
@@ -919,80 +954,104 @@ export default function MediaPlanDetail() {
           );
         })()}
 
-        {/* Temporal Distribution Chart */}
+        {/* Temporal Distribution Chart - Collapsible */}
         {plan.start_date && plan.end_date && (
-          <Card className="border border-border/50 bg-card">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <Calendar className="h-5 w-5 text-primary" />
-                <h3 className="font-display text-lg font-semibold">Distribuição Temporal</h3>
-              </div>
-              {(() => {
-                // Calculate monthly sums from filtered lines monthly budgets
-                const planMonths = eachMonthOfInterval({
-                  start: parseISO(plan.start_date!),
-                  end: parseISO(plan.end_date!),
-                });
-
-                const monthlyTotals = planMonths.map(monthDate => {
-                  const monthStr = format(monthDate, 'yyyy-MM-01');
-                  let total = 0;
-                  
-                  filteredLines.forEach(line => {
-                    const lineBudgets = monthlyBudgets[line.id] || [];
-                    const found = lineBudgets.find(b => b.month_date === monthStr);
-                    if (found) {
-                      total += Number(found.amount) || 0;
-                    }
+          <Collapsible defaultOpen={false} className="border rounded-lg overflow-hidden bg-card">
+            <CollapsibleTrigger asChild>
+              <button className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-colors text-left">
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-sm">Distribuição Temporal</h3>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center justify-center">
+                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-sm">
+                          Gráfico de barras mostrando a soma dos orçamentos mensais das linhas de mídia filtradas. Útil para visualizar concentração de investimento ao longo do tempo.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    Clique para expandir
+                  </span>
+                </div>
+                <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 data-[state=open]:rotate-180" />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="p-4 border-t">
+                {(() => {
+                  // Calculate monthly sums from filtered lines monthly budgets
+                  const planMonths = eachMonthOfInterval({
+                    start: parseISO(plan.start_date!),
+                    end: parseISO(plan.end_date!),
                   });
 
-                  return {
-                    month: format(monthDate, 'MMM/yy', { locale: ptBR }),
-                    amount: total,
-                  };
-                });
+                  const monthlyTotals = planMonths.map(monthDate => {
+                    const monthStr = format(monthDate, 'yyyy-MM-01');
+                    let total = 0;
+                    
+                    filteredLines.forEach(line => {
+                      const lineBudgets = monthlyBudgets[line.id] || [];
+                      const found = lineBudgets.find(b => b.month_date === monthStr);
+                      if (found) {
+                        total += Number(found.amount) || 0;
+                      }
+                    });
 
-                const maxAmount = Math.max(...monthlyTotals.map(m => m.amount), 1);
+                    return {
+                      month: format(monthDate, 'MMM/yy', { locale: ptBR }),
+                      amount: total,
+                    };
+                  });
 
-                return (
-                  <div className="flex items-end gap-1 h-40 bg-muted/20 rounded-lg p-2">
-                    {monthlyTotals.map((month, index) => {
-                      const height = maxAmount > 0 ? (month.amount / maxAmount) * 100 : 0;
-                      return (
-                        <TooltipProvider key={index}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex-1 flex flex-col items-center justify-end h-full cursor-help">
-                                <div className="text-center mb-1 space-y-0.5">
-                                  <span className="text-[8px] text-foreground font-semibold block">
-                                    {month.amount > 0 ? formatCurrency(month.amount) : 'R$ 0'}
-                                  </span>
-                                  <span className="text-[7px] text-muted-foreground block">
-                                    {month.amount > 0 ? `${((month.amount / monthlyTotals.reduce((a, b) => a + b.amount, 0)) * 100).toFixed(0)}%` : '0%'}
+                  const maxAmount = Math.max(...monthlyTotals.map(m => m.amount), 1);
+
+                  return (
+                    <div className="flex items-end gap-1 h-40 bg-muted/20 rounded-lg p-2">
+                      {monthlyTotals.map((month, index) => {
+                        const height = maxAmount > 0 ? (month.amount / maxAmount) * 100 : 0;
+                        return (
+                          <TooltipProvider key={index}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex-1 flex flex-col items-center justify-end h-full cursor-help">
+                                  <div className="text-center mb-1 space-y-0.5">
+                                    <span className="text-[8px] text-foreground font-semibold block">
+                                      {month.amount > 0 ? formatCurrency(month.amount) : 'R$ 0'}
+                                    </span>
+                                    <span className="text-[7px] text-muted-foreground block">
+                                      {month.amount > 0 ? `${((month.amount / monthlyTotals.reduce((a, b) => a + b.amount, 0)) * 100).toFixed(0)}%` : '0%'}
+                                    </span>
+                                  </div>
+                                  <div 
+                                    className="w-full bg-primary rounded-t transition-all duration-300 min-h-[4px]"
+                                    style={{ height: `${Math.max(height, 2)}%` }}
+                                  />
+                                  <span className="text-[9px] text-muted-foreground text-center mt-1 whitespace-nowrap overflow-hidden max-w-full truncate">
+                                    {month.month}
                                   </span>
                                 </div>
-                                <div 
-                                  className="w-full bg-primary rounded-t transition-all duration-300 min-h-[4px]"
-                                  style={{ height: `${Math.max(height, 2)}%` }}
-                                />
-                                <span className="text-[9px] text-muted-foreground text-center mt-1 whitespace-nowrap overflow-hidden max-w-full truncate">
-                                  {month.month}
-                                </span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="font-semibold">{month.month}</p>
-                              <p>{formatCurrency(month.amount)}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </CardContent>
-          </Card>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="font-semibold">{month.month}</p>
+                                <p>{formatCurrency(month.amount)}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         )}
 
         {/* Hierarchical Media Table */}
