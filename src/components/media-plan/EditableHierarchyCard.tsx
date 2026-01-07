@@ -90,7 +90,10 @@ export function EditableHierarchyCard({
   onDistributionsUpdated,
 }: EditableHierarchyCardProps) {
   const { user } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(() => {
+    const stored = localStorage.getItem('collapsible-budget-hierarchy');
+    return stored === 'true';
+  });
   const [editingCell, setEditingCell] = useState<EditingCell>(null);
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -180,7 +183,7 @@ export function EditableHierarchyCard({
 
   return (
     <TooltipProvider>
-      <AnimatedCollapsible open={isOpen} onOpenChange={setIsOpen} className="border rounded-lg overflow-hidden bg-card">
+      <AnimatedCollapsible open={isOpen} onOpenChange={setIsOpen} storageKey="budget-hierarchy" className="border rounded-lg overflow-hidden bg-card">
         {/* Collapsed Header / Trigger */}
         <AnimatedCollapsibleTrigger asChild>
           <button 
