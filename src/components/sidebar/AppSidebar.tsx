@@ -417,6 +417,20 @@ export function AppSidebar() {
             </TooltipTrigger>
             <TooltipContent side="right">Status</TooltipContent>
           </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-9 w-9"
+                onClick={() => toggleSection('trash')}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Lixeira</TooltipContent>
+          </Tooltip>
         </div>
       ) : (
       <ScrollArea className="flex-1 py-3 px-2 overflow-x-hidden">
@@ -1431,19 +1445,43 @@ export function AppSidebar() {
         isCollapsed && "flex flex-col items-center"
       )}>
         {isCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSignOut}
-                className="h-9 w-9 text-destructive hover:text-destructive"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Sair</TooltipContent>
-          </Tooltip>
+          <>
+            {isAdmin && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/admin/users">
+                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                      <ShieldCheck className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Administração</TooltipContent>
+              </Tooltip>
+            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link to="/account">
+                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">Minha Conta</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleSignOut}
+                  className="h-9 w-9 text-destructive hover:text-destructive"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Sair</TooltipContent>
+            </Tooltip>
+          </>
         ) : (
           <>
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
