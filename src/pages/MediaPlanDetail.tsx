@@ -861,7 +861,7 @@ export default function MediaPlanDetail() {
 
         {/* Moments Timeline - Collapsible */}
         {momentsForTimeline.length > 0 && plan.start_date && plan.end_date && (
-          <AnimatedCollapsible open={false} className="border rounded-lg overflow-hidden bg-card">
+          <AnimatedCollapsible defaultOpen={false} className="border rounded-lg overflow-hidden bg-card">
             <AnimatedCollapsibleTrigger asChild>
               <button className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-colors text-left">
                 <div className="flex items-center gap-3">
@@ -962,7 +962,7 @@ export default function MediaPlanDetail() {
 
         {/* Temporal Distribution Chart - Collapsible */}
         {plan.start_date && plan.end_date && (
-          <AnimatedCollapsible open={false} className="border rounded-lg overflow-hidden bg-card">
+          <AnimatedCollapsible defaultOpen={false} className="border rounded-lg overflow-hidden bg-card">
             <AnimatedCollapsibleTrigger asChild>
               <button className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-colors text-left">
                 <div className="flex items-center gap-3">
