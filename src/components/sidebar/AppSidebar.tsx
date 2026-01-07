@@ -193,9 +193,9 @@ export function AppSidebar() {
       "flex flex-col h-full border-r border-sidebar-border bg-sidebar overflow-x-hidden transition-all duration-300",
       isCollapsed ? "w-16" : "w-80"
     )}>
-      {/* Header */}
+      {/* Header - Fixed at top */}
       <div className={cn(
-        "border-b border-sidebar-border",
+        "shrink-0 border-b border-sidebar-border",
         isCollapsed ? "p-2" : "p-3"
       )}>
         <div className={cn(
@@ -245,7 +245,7 @@ export function AppSidebar() {
 
       {/* Collapsed state - show only icons */}
       {isCollapsed ? (
-        <div className="flex-1 py-3 px-2 flex flex-col items-center gap-1">
+        <div className="flex-1 overflow-y-auto py-3 px-2 flex flex-col items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <Link to="/dashboard">
@@ -1425,9 +1425,9 @@ export function AppSidebar() {
       </ScrollArea>
       )}
 
-      {/* Footer with user info */}
+      {/* Footer with user info - Fixed at bottom */}
       <div className={cn(
-        "p-3 border-t border-sidebar-border",
+        "shrink-0 p-3 border-t border-sidebar-border",
         isCollapsed && "flex flex-col items-center"
       )}>
         {isCollapsed ? (
