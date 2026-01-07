@@ -934,18 +934,24 @@ export default function MediaPlanDetail() {
           
           if (!hasCustomFunnel) return null;
 
-          // Build funnel stages from budget distributions for filtered lines
-          const funnelStagesForViz: BudgetAllocation[] = funnelDists
-            .filter(d => d.reference_id !== null)
-            .map(d => {
-              const stage = (funnelStages.data || []).find(f => f.id === d.reference_id);
-              // Calculate allocated from filtered lines
+          // Get unique funnel stage IDs from distributions
+          const uniqueFunnelStageIds = [...new Set(
+            funnelDists
+              .filter(d => d.reference_id !== null)
+              .map(d => d.reference_id)
+          )];
+
+          // Build funnel stages with one entry per unique stage
+          const funnelStagesForViz: BudgetAllocation[] = uniqueFunnelStageIds
+            .map(stageId => {
+              const stage = (funnelStages.data || []).find(f => f.id === stageId);
+              // Calculate allocated from filtered lines for this stage
               const allocated = filteredLines
-                .filter(l => l.funnel_stage_id === d.reference_id)
+                .filter(l => l.funnel_stage_id === stageId)
                 .reduce((acc, l) => acc + Number(l.budget || 0), 0);
               
               return {
-                id: d.reference_id || 'geral',
+                id: stageId || 'geral',
                 name: stage?.name || 'Geral',
                 percentage: Number(plan.total_budget) > 0 ? (allocated / Number(plan.total_budget)) * 100 : 0,
                 amount: allocated,
