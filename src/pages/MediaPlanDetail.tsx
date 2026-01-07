@@ -941,12 +941,12 @@ export default function MediaPlanDetail() {
               .map(d => d.reference_id)
           )];
 
-          // Build funnel stages with one entry per unique stage
+          // Build funnel stages with one entry per unique stage (using ALL lines, not filtered)
           const funnelStagesForViz: BudgetAllocation[] = uniqueFunnelStageIds
             .map(stageId => {
               const stage = (funnelStages.data || []).find(f => f.id === stageId);
-              // Calculate allocated from filtered lines for this stage
-              const allocated = filteredLines
+              // Calculate allocated from ALL lines for this stage
+              const allocated = lines
                 .filter(l => l.funnel_stage_id === stageId)
                 .reduce((acc, l) => acc + Number(l.budget || 0), 0);
               
@@ -967,7 +967,7 @@ export default function MediaPlanDetail() {
             <FunnelVisualization
               funnelStages={funnelStagesForViz}
               parentBudget={totalAllocated}
-              parentName="Linhas Filtradas"
+              parentName="Total do Plano"
               onEdit={() => {}}
             />
           );
