@@ -19,7 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 
 export default function TargetsPage() {
-  const { data: targets, create, update, remove } = useTargets();
+  const { activeItems: targets, data: allTargets, create, update, remove } = useTargets();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);

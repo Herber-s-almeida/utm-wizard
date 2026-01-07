@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function MomentsPage() {
-  const { data: moments, create, update, remove } = useMoments();
+  const { activeItems: moments, data: allMoments, create, update, remove } = useMoments();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);

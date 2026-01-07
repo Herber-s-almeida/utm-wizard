@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function FunnelStagesPage() {
-  const { data: stages, create, update, remove } = useFunnelStages();
+  const { activeItems: stages, data: allStages, create, update, remove } = useFunnelStages();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);

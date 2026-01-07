@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function StatusesPage() {
-  const { data: statuses, create, update, remove, isSystemStatus } = useStatuses();
+  const { activeItems: statuses, data: allStatuses, create, update, remove, isSystemStatus } = useStatuses();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
