@@ -21,7 +21,14 @@ export interface CreateCustomKpiParams {
   description?: string;
 }
 
-const MAX_CUSTOM_KPIS = 10;
+export interface UpdateCustomKpiParams {
+  id: string;
+  name?: string;
+  unit?: string;
+  description?: string;
+}
+
+const MAX_CUSTOM_KPIS = 250;
 
 export function useCustomKpis() {
   const { user } = useAuth();
@@ -108,6 +115,49 @@ export function useCustomKpis() {
     },
   });
 
+  const updateKpi = useMutation({
+    mutationFn: async (params: UpdateCustomKpiParams) => {
+      if (!user?.id) throw new Error('User not authenticated');
+
+      const updateData: Record<string, unknown> = {};
+      
+      if (params.name !== undefined) {
+        updateData.name = params.name;
+        updateData.key = generateKey(params.name);
+      }
+      if (params.unit !== undefined) {
+        updateData.unit = params.unit;
+      }
+      if (params.description !== undefined) {
+        updateData.description = params.description || null;
+      }
+
+      const { data, error } = await supabase
+        .from('custom_kpis')
+        .update(updateData)
+        .eq('id', params.id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('Já existe um KPI com este nome');
+        }
+        throw error;
+      }
+
+      return data as CustomKpi;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['custom-kpis'] });
+      toast.success('KPI atualizado com sucesso');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Erro ao atualizar KPI');
+    },
+  });
+
   const deleteKpi = useMutation({
     mutationFn: async (kpiId: string) => {
       if (!user?.id) throw new Error('User not authenticated');
@@ -133,8 +183,10 @@ export function useCustomKpis() {
     customKpis,
     isLoading,
     createKpi,
+    updateKpi,
     deleteKpi,
     canCreateMore: customKpis.length < MAX_CUSTOM_KPIS,
     maxKpis: MAX_CUSTOM_KPIS,
+    generateKey,
   };
 }

@@ -31,6 +31,7 @@ import TargetsPage from "./pages/config/TargetsPage";
 import FormatsPage from "./pages/config/FormatsPage";
 import CreativeTypesPage from "./pages/config/CreativeTypesPage";
 import StatusesPage from "./pages/config/StatusesPage";
+import KpisPage from "./pages/config/KpisPage";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AccountPage from "./pages/AccountPage";
 
@@ -62,6 +63,7 @@ function AppWithEnvironment() {
           <Route path="/config/formats" element={<ProtectedRoute><FormatsPage /></ProtectedRoute>} />
           <Route path="/config/creative-types" element={<ProtectedRoute><CreativeTypesPage /></ProtectedRoute>} />
           <Route path="/config/statuses" element={<ProtectedRoute><StatusesPage /></ProtectedRoute>} />
+          <Route path="/config/kpis" element={<ProtectedRoute><KpisPage /></ProtectedRoute>} />
           <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="*" element={<NotFound />} />
