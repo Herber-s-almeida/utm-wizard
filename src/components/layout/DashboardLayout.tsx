@@ -41,7 +41,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         <div className="flex flex-1">
           {/* Desktop Sidebar */}
-          <div className="hidden md:block">
+          <div className="hidden md:block h-screen sticky top-0">
             <AppSidebar />
           </div>
 
