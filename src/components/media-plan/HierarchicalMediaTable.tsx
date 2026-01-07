@@ -1152,11 +1152,11 @@ export function HierarchicalMediaTable({
     <Button
       variant="outline"
       size="sm"
-      className="w-full h-8 text-xs border-dashed border-primary text-primary hover:bg-primary/10 gap-1"
+      className="w-full h-8 text-xs border-dashed border-primary text-primary hover:bg-primary/10 justify-start gap-1 pl-3"
       onClick={() => onAddLine({ subdivisionId, momentId, funnelStageId })}
     >
-      <Plus className="w-3 h-3" />
-      Criar nova Linha
+      <Plus className="w-3 h-3 shrink-0" />
+      <span className="truncate">Criar nova Linha</span>
     </Button>
   );
 
@@ -1783,11 +1783,11 @@ export function HierarchicalMediaTable({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full h-8 text-xs border-dashed border-primary text-primary hover:bg-primary/10 gap-1"
+                  className="w-full h-8 text-xs border-dashed border-primary text-primary hover:bg-primary/10 justify-start gap-1 pl-3"
                   onClick={() => onAddLine({})}
                 >
-                  <Plus className="w-3 h-3" />
-                  Criar nova Linha
+                  <Plus className="w-3 h-3 shrink-0" />
+                  <span className="truncate">Criar nova Linha</span>
                 </Button>
               </div>
             </div>
