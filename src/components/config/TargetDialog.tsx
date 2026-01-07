@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Plus, Trash2, Search, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Trash2, Search, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBrazilianCities, BrazilianCity } from '@/hooks/useBrazilianCities';
 import { useBehavioralSegmentations, BehavioralSegmentation } from '@/hooks/useConfigData';
@@ -28,6 +29,7 @@ interface TargetDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (data: {
     name: string;
+    slug: string;
     age_range: string;
     geolocation: Location[];
     behavior: string;
@@ -36,12 +38,26 @@ interface TargetDialogProps {
   existingNames?: string[];
   initialData?: {
     name: string;
+    slug?: string;
     age_range: string;
     geolocation: Location[];
     behavior: string;
     description?: string;
   };
   mode?: 'create' | 'edit';
+}
+
+// Função para gerar slug a partir do nome
+function toSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
+    .replace(/\s+/g, '-') // Espaços viram hífens
+    .replace(/-+/g, '-') // Remove hífens duplicados
+    .slice(0, 30);
 }
 
 export function TargetDialog({
@@ -53,6 +69,8 @@ export function TargetDialog({
   mode = 'create'
 }: TargetDialogProps) {
   const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [ageMin, setAgeMin] = useState('');
   const [ageMax, setAgeMax] = useState('');
   const [noMaxAge, setNoMaxAge] = useState(false);
@@ -78,19 +96,35 @@ export function TargetDialog({
   const { cities, searchCities, loading: loadingCities } = useBrazilianCities();
   const cityResults = cities.length > 0 ? searchCities(citySearch) : [];
   
-  // Behavioral Segmentations from database
-  const { data: behavioralSegmentations = [], create: createBehavioral } = useBehavioralSegmentations();
+  // Behavioral Segmentations from database - use activeItems to filter deleted ones
+  const { activeItems: behavioralSegmentations = [], create: createBehavioral } = useBehavioralSegmentations();
   
-  // Segmentation state
-  const [selectedSegmentation, setSelectedSegmentation] = useState('');
+  // Segmentation state - now supports multiple selections
+  const [selectedSegmentations, setSelectedSegmentations] = useState<string[]>([]);
   const [showNewSegmentationType, setShowNewSegmentationType] = useState(false);
   const [newSegmentationName, setNewSegmentationName] = useState('');
   const [newSegmentationDescription, setNewSegmentationDescription] = useState('');
+
+  // Auto-generate slug from name when not manually edited
+  useEffect(() => {
+    if (!slugManuallyEdited && name) {
+      setSlug(toSlug(name));
+    }
+  }, [name, slugManuallyEdited]);
 
   useEffect(() => {
     if (open) {
       setName(initialData?.name || '');
       setDescription(initialData?.description || '');
+      
+      // Load slug
+      if (initialData?.slug) {
+        setSlug(initialData.slug);
+        setSlugManuallyEdited(true);
+      } else {
+        setSlug(initialData?.name ? toSlug(initialData.name) : '');
+        setSlugManuallyEdited(false);
+      }
       
       // Parse age range
       const ageRangeParts = (initialData?.age_range || '').split('-');
@@ -115,13 +149,14 @@ export function TargetDialog({
       
       setLocations(initialData?.geolocation || []);
       
-      // Check if behavior matches existing types
+      // Load multiple behavioral segmentations
       const behaviorValue = initialData?.behavior || '';
-      const existingType = behavioralSegmentations.find(t => t.name === behaviorValue);
-      if (existingType) {
-        setSelectedSegmentation(behaviorValue);
+      if (behaviorValue) {
+        // Split by comma and filter valid ones
+        const segments = behaviorValue.split(',').map(s => s.trim()).filter(Boolean);
+        setSelectedSegmentations(segments);
       } else {
-        setSelectedSegmentation('');
+        setSelectedSegmentations([]);
       }
       
       // Reset location form
@@ -137,7 +172,12 @@ export function TargetDialog({
       setNewSegmentationName('');
       setNewSegmentationDescription('');
     }
-  }, [open, initialData, behavioralSegmentations]);
+  }, [open, initialData]);
+
+  const handleSlugChange = (value: string) => {
+    setSlug(toSlug(value));
+    setSlugManuallyEdited(true);
+  };
 
   const handleAgeChange = (type: 'min' | 'max', value: string) => {
     const numValue = value.replace(/\D/g, '').slice(0, 2);
@@ -227,6 +267,16 @@ export function TargetDialog({
     setLocations(locations.filter((_, i) => i !== index));
   };
 
+  const handleAddSegmentation = (segmentName: string) => {
+    if (!selectedSegmentations.includes(segmentName)) {
+      setSelectedSegmentations([...selectedSegmentations, segmentName]);
+    }
+  };
+
+  const handleRemoveSegmentation = (segmentName: string) => {
+    setSelectedSegmentations(selectedSegmentations.filter(s => s !== segmentName));
+  };
+
   const handleAddSegmentationType = async () => {
     const trimmedName = newSegmentationName.trim();
     if (!trimmedName) {
@@ -250,7 +300,8 @@ export function TargetDialog({
       setNewSegmentationName('');
       setNewSegmentationDescription('');
       setShowNewSegmentationType(false);
-      setSelectedSegmentation(trimmedName.toLowerCase());
+      // Add the newly created segmentation to selected list
+      handleAddSegmentation(trimmedName.toLowerCase());
     } catch (error) {
       toast.error('Erro ao criar segmentação comportamental');
     }
@@ -286,10 +337,12 @@ export function TargetDialog({
       ageRange = noMaxAge ? `${ageMin}+` : (ageMax ? `${ageMin}-${ageMax}` : ageMin);
     }
 
-    const finalBehavior = selectedSegmentation;
+    // Join multiple segmentations with comma
+    const finalBehavior = selectedSegmentations.join(',');
 
     onSave({
       name: trimmedName,
+      slug: slug || toSlug(trimmedName),
       age_range: ageRange,
       geolocation: locations.filter(l => l.city.trim()),
       behavior: finalBehavior,
@@ -297,11 +350,13 @@ export function TargetDialog({
     });
 
     setName('');
+    setSlug('');
+    setSlugManuallyEdited(false);
     setAgeMin('');
     setAgeMax('');
     setNoMaxAge(false);
     setLocations([]);
-    setSelectedSegmentation('');
+    setSelectedSegmentations([]);
     setDescription('');
     onOpenChange(false);
   };
@@ -331,6 +386,11 @@ export function TargetDialog({
     return locationStr;
   };
 
+  // Filter available segmentations (not already selected)
+  const availableSegmentations = behavioralSegmentations.filter(
+    seg => !selectedSegmentations.includes(seg.name)
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[650px] max-h-[85vh] overflow-y-auto">
@@ -354,6 +414,23 @@ export function TargetDialog({
               maxLength={35}
             />
             <p className="text-xs text-muted-foreground">{name.length}/35 caracteres</p>
+          </div>
+
+          {/* Slug Field */}
+          <div className="space-y-2">
+            <LabelWithTooltip htmlFor="slug" tooltip="Identificador para utm_term. Gerado automaticamente, mas pode ser editado manualmente. A edição manual tem prioridade.">
+              Slug (utm_term)
+            </LabelWithTooltip>
+            <Input
+              id="slug"
+              value={slug}
+              onChange={(e) => handleSlugChange(e.target.value)}
+              placeholder="jovens-urbanos"
+              maxLength={30}
+            />
+            <p className="text-xs text-muted-foreground">
+              Prévia: <code className="bg-muted px-1 rounded">utm_term={slug || 'seu-slug'}</code>
+            </p>
           </div>
 
           {/* Age Field */}
@@ -558,19 +635,42 @@ export function TargetDialog({
             )}
           </div>
 
-          {/* Behavioral Segmentation - Simple Dropdown */}
+          {/* Behavioral Segmentation - Multi-select */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Segmentação comportamental</Label>
             </div>
 
+            {/* Selected segmentations as badges */}
+            {selectedSegmentations.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedSegmentations.map((segName) => (
+                  <Badge key={segName} variant="secondary" className="flex items-center gap-1 pr-1">
+                    <span className="capitalize">{segName}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSegmentation(segName)}
+                      className="ml-1 hover:bg-muted rounded-full p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+
             <div className="flex gap-2">
-              <Select value={selectedSegmentation} onValueChange={setSelectedSegmentation}>
+              <Select 
+                value="" 
+                onValueChange={(value) => {
+                  if (value) handleAddSegmentation(value);
+                }}
+              >
                 <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Selecione o segmento" />
+                  <SelectValue placeholder={availableSegmentations.length > 0 ? "Adicionar segmento" : "Nenhum segmento disponível"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {behavioralSegmentations.map((type) => (
+                  {availableSegmentations.map((type) => (
                     <SelectItem key={type.id} value={type.name}>
                       <span className="capitalize">{type.name}</span>
                     </SelectItem>
