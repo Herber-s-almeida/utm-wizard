@@ -370,8 +370,8 @@ export function useVehicles() {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, name, description }: { id: string; name: string; description?: string }) => {
-      const { error } = await supabase.from('vehicles').update({ name, description: description || null }).eq('id', id);
+    mutationFn: async ({ id, name, description, medium_id }: { id: string; name: string; description?: string; medium_id?: string }) => {
+      const { error } = await supabase.from('vehicles').update({ name, description: description || null, medium_id: medium_id || null }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['vehicles'] }); toast.success('Veículo atualizado!'); },
