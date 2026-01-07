@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { HelpCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SimpleConfigDialogProps {
   open: boolean;
@@ -16,6 +18,7 @@ interface SimpleConfigDialogProps {
   existingNames?: string[];
   initialData?: { name: string; description: string };
   mode?: 'create' | 'edit';
+  helpText?: string;
 }
 
 export function SimpleConfigDialog({
@@ -27,7 +30,8 @@ export function SimpleConfigDialog({
   namePlaceholder,
   existingNames = [],
   initialData,
-  mode = 'create'
+  mode = 'create',
+  helpText
 }: SimpleConfigDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -76,7 +80,24 @@ export function SimpleConfigDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {title}
+            {helpText && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                  <p className="text-sm">{helpText}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </DialogTitle>
+          {helpText && (
+            <DialogDescription className="text-xs">
+              {helpText}
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         <div className="space-y-4 py-4">
