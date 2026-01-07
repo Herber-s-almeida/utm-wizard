@@ -13,10 +13,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+  AnimatedCollapsible,
+  AnimatedCollapsibleContent,
+  AnimatedCollapsibleTrigger,
+} from '@/components/ui/animated-collapsible';
+import { motion } from 'framer-motion';
 
 interface BudgetDistribution {
   id: string;
@@ -179,9 +180,9 @@ export function EditableHierarchyCard({
 
   return (
     <TooltipProvider>
-      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="border rounded-lg overflow-hidden bg-card">
+      <AnimatedCollapsible open={isOpen} onOpenChange={setIsOpen} className="border rounded-lg overflow-hidden bg-card">
         {/* Collapsed Header / Trigger */}
-        <CollapsibleTrigger asChild>
+        <AnimatedCollapsibleTrigger asChild>
           <button 
             className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-colors text-left"
           >
@@ -206,16 +207,16 @@ export function EditableHierarchyCard({
                 </p>
               )}
             </div>
-            <ChevronDown 
-              className={cn(
-                "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                isOpen && "rotate-180"
-              )} 
-            />
+            <motion.div
+              animate={{ rotate: isOpen ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            </motion.div>
           </button>
-        </CollapsibleTrigger>
+        </AnimatedCollapsibleTrigger>
 
-        <CollapsibleContent>
+        <AnimatedCollapsibleContent>
           {/* Description */}
           <div className="px-4 py-2 border-t bg-muted/30">
             <p className="text-xs text-muted-foreground">
@@ -336,8 +337,8 @@ export function EditableHierarchyCard({
               </tbody>
             </table>
           </div>
-        </CollapsibleContent>
-      </Collapsible>
+        </AnimatedCollapsibleContent>
+      </AnimatedCollapsible>
     </TooltipProvider>
   );
 }
