@@ -23,9 +23,11 @@ interface UsePlanAlertsParams {
     reference_id: string | null;
     amount: number;
     percentage: number;
+    parent_distribution_id?: string | null;
   }>;
   planStartDate: string | null;
   planEndDate: string | null;
+  moments?: Array<{ id: string; name: string }>;
 }
 
 export function usePlanAlerts({
@@ -35,6 +37,7 @@ export function usePlanAlerts({
   budgetDistributions,
   planStartDate,
   planEndDate,
+  moments = [],
 }: UsePlanAlertsParams) {
   const alerts = useMemo(() => {
     const result: PlanAlert[] = [];
@@ -97,24 +100,80 @@ export function usePlanAlerts({
       });
     }
 
+    // 4. NEW: Check moments without lines
+    const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
+    momentDists.forEach(dist => {
+      if (dist.reference_id) {
+        const momentLines = lines.filter(l => l.moment_id === dist.reference_id);
+        const momentName = moments.find(m => m.id === dist.reference_id)?.name || 'Momento';
+        
+        if (momentLines.length === 0 && dist.amount > 0) {
+          result.push({
+            id: `moment-empty-${dist.id}`,
+            level: 'warning',
+            title: 'Momento sem linhas',
+            description: `O momento "${momentName}" tem orçamento planejado (R$ ${dist.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) mas nenhuma linha alocada`,
+            action: 'Adicione linhas de mídia para este momento',
+            category: 'config',
+          });
+        }
+      }
+    });
+
+    // 5. NEW: Check budget concentration (single line > 50% of total)
+    if (totalBudget > 0 && lines.length > 1) {
+      lines.forEach(line => {
+        const lineBudget = Number(line.budget || 0);
+        const concentration = (lineBudget / totalBudget) * 100;
+        
+        if (concentration > 50) {
+          result.push({
+            id: `budget-concentration-${line.id}`,
+            level: 'warning',
+            title: 'Concentração de orçamento',
+            description: `A linha "${line.line_code || line.platform}" concentra ${concentration.toFixed(1)}% do orçamento total`,
+            action: 'Considere diversificar o orçamento entre mais linhas',
+            lineId: line.id,
+            category: 'budget',
+          });
+        }
+      });
+    }
+
+    // 6. NEW: Budget redistribution suggestion when allocated < 80% of planned
+    if (totalBudget > 0) {
+      const utilizationRate = (totalAllocated / totalBudget) * 100;
+      if (utilizationRate < 80 && lines.length > 0) {
+        const remaining = totalBudget - totalAllocated;
+        result.push({
+          id: 'budget-underutilized',
+          level: 'info',
+          title: 'Orçamento subutilizado',
+          description: `Apenas ${utilizationRate.toFixed(1)}% do orçamento foi alocado. Restam R$ ${remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+          action: 'Distribua o orçamento restante entre as linhas existentes ou crie novas linhas',
+          category: 'budget',
+        });
+      }
+    }
+
     // Per-line checks
     lines.forEach(line => {
       const lineCreatives = creatives[line.id] || [];
 
-      // 4. Lines without creatives
+      // 7. Lines without creatives
       if (lineCreatives.length === 0) {
         result.push({
           id: `no-creatives-${line.id}`,
           level: 'warning',
           title: 'Linha sem criativos',
-          description: `A linha "${line.platform}" não possui criativos cadastrados`,
+          description: `A linha "${line.line_code || line.platform}" não possui criativos cadastrados`,
           action: 'Adicione criativos para esta linha',
           lineId: line.id,
           category: 'creative',
         });
       }
 
-      // 5. Creatives without format specification
+      // 8. Creatives without format specification
       lineCreatives.forEach(creative => {
         if (!creative.format_id) {
           result.push({
@@ -129,13 +188,13 @@ export function usePlanAlerts({
         }
       });
 
-      // 6. Lines without UTMs configured
+      // 9. Lines without UTMs configured
       if (!line.utm_source && !line.utm_medium && !line.utm_campaign) {
         result.push({
           id: `no-utms-${line.id}`,
           level: 'info',
           title: 'UTMs não configurados',
-          description: `A linha "${line.platform}" não possui parâmetros UTM`,
+          description: `A linha "${line.line_code || line.platform}" não possui parâmetros UTM`,
           action: 'Configure os UTMs para rastreamento',
           lineId: line.id,
           category: 'utm',
@@ -146,14 +205,14 @@ export function usePlanAlerts({
           id: `utm-pending-${line.id}`,
           level: 'info',
           title: 'UTM pendente validação',
-          description: `A linha "${line.platform}" tem UTMs configurados mas não validados`,
+          description: `A linha "${line.line_code || line.platform}" tem UTMs configurados mas não validados`,
           action: 'Revise e valide os parâmetros UTM',
           lineId: line.id,
           category: 'utm',
         });
       }
 
-      // 7. Active lines outside period
+      // 10. Active lines outside period
       if (line.start_date && line.end_date) {
         const lineStart = line.start_date;
         const lineEnd = line.end_date;
@@ -164,7 +223,7 @@ export function usePlanAlerts({
             id: `line-before-plan-${line.id}`,
             level: 'warning',
             title: 'Linha inicia antes do plano',
-            description: `A linha "${line.platform}" começa antes da data de início do plano`,
+            description: `A linha "${line.line_code || line.platform}" começa antes da data de início do plano`,
             action: 'Ajuste a data de início da linha',
             lineId: line.id,
             category: 'timing',
@@ -176,7 +235,7 @@ export function usePlanAlerts({
             id: `line-after-plan-${line.id}`,
             level: 'warning',
             title: 'Linha termina após o plano',
-            description: `A linha "${line.platform}" termina após a data final do plano`,
+            description: `A linha "${line.line_code || line.platform}" termina após a data final do plano`,
             action: 'Ajuste a data final da linha',
             lineId: line.id,
             category: 'timing',
@@ -189,7 +248,7 @@ export function usePlanAlerts({
             id: `line-ended-${line.id}`,
             level: 'info',
             title: 'Linha encerrada',
-            description: `A linha "${line.platform}" já passou da data final`,
+            description: `A linha "${line.line_code || line.platform}" já passou da data final`,
             action: 'Verifique os resultados e atualize o status',
             lineId: line.id,
             category: 'timing',
@@ -197,27 +256,47 @@ export function usePlanAlerts({
         }
       }
 
-      // 8. Lines without dates
+      // 11. Lines without dates
       if (!line.start_date || !line.end_date) {
         result.push({
           id: `no-dates-${line.id}`,
           level: 'info',
           title: 'Datas não definidas',
-          description: `A linha "${line.platform}" não possui período definido`,
+          description: `A linha "${line.line_code || line.platform}" não possui período definido`,
           action: 'Defina as datas de início e fim',
           lineId: line.id,
           category: 'timing',
         });
       }
+
+      // 12. NEW: Lines with zero budget
+      if (Number(line.budget || 0) === 0) {
+        result.push({
+          id: `zero-budget-${line.id}`,
+          level: 'warning',
+          title: 'Linha sem orçamento',
+          description: `A linha "${line.line_code || line.platform}" não possui orçamento definido`,
+          action: 'Defina um orçamento para esta linha',
+          lineId: line.id,
+          category: 'budget',
+        });
+      }
     });
 
     return result;
-  }, [totalBudget, lines, creatives, budgetDistributions, planStartDate, planEndDate]);
+  }, [totalBudget, lines, creatives, budgetDistributions, planStartDate, planEndDate, moments]);
 
   // Group alerts by level
   const errorAlerts = alerts.filter(a => a.level === 'error');
   const warningAlerts = alerts.filter(a => a.level === 'warning');
   const infoAlerts = alerts.filter(a => a.level === 'info');
+
+  // Group alerts by category
+  const budgetAlerts = alerts.filter(a => a.category === 'budget');
+  const creativeAlerts = alerts.filter(a => a.category === 'creative');
+  const configAlerts = alerts.filter(a => a.category === 'config');
+  const timingAlerts = alerts.filter(a => a.category === 'timing');
+  const utmAlerts = alerts.filter(a => a.category === 'utm');
 
   // Get alerts for a specific line
   const getLineAlerts = (lineId: string) => {
@@ -232,6 +311,11 @@ export function usePlanAlerts({
     errorAlerts,
     warningAlerts,
     infoAlerts,
+    budgetAlerts,
+    creativeAlerts,
+    configAlerts,
+    timingAlerts,
+    utmAlerts,
     getLineAlerts,
     linesWithAlerts,
     hasErrors: errorAlerts.length > 0,

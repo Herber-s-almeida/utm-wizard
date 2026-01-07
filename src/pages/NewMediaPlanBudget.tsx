@@ -30,11 +30,11 @@ import { useWizardDraft, DraftData } from '@/hooks/useWizardDraft';
 import { DraftRecoveryDialog } from '@/components/media-plan/DraftRecoveryDialog';
 
 const WIZARD_STEPS = [
-  { id: 1, title: 'Plano', description: 'Dados básicos' },
-  { id: 2, title: 'Subdivisão', description: 'Opcional' },
-  { id: 3, title: 'Momentos', description: 'Opcional' },
-  { id: 4, title: 'Funil', description: 'Fases' },
-  { id: 5, title: 'Linhas', description: 'Detalhes' },
+  { id: 1, title: 'Plano', description: 'Dados básicos', helpText: 'Defina nome, datas, orçamento total e KPIs do plano. O nome será usado nos parâmetros UTM.' },
+  { id: 2, title: 'Subdivisão', description: 'Opcional', helpText: 'Divida o orçamento por região, produto ou objetivo. Pule se não precisar segmentar.' },
+  { id: 3, title: 'Momentos', description: 'Opcional', helpText: 'Divida por fases temporais: lançamento, sustentação, promoção. Defina datas para cada momento.' },
+  { id: 4, title: 'Funil', description: 'Fases', helpText: 'Distribua o orçamento entre as etapas do funil: conhecimento, consideração e conversão.' },
+  { id: 5, title: 'Revisão', description: 'Confirmar', helpText: 'Revise todas as configurações antes de salvar. Você pode voltar e ajustar qualquer etapa.' },
 ];
 
 const MAX_SUBDIVISIONS = 12;
@@ -110,6 +110,53 @@ export default function NewMediaPlanBudget() {
       currency: 'BRL',
     }).format(value);
   };
+
+  // Calculate completion percentage based on filled fields
+  const calculateCompletionPercentage = () => {
+    let filledFields = 0;
+    let totalFields = 0;
+    
+    // Step 1 fields (weight: 40%)
+    const step1Fields = [
+      !!state.planData.name.trim(),
+      !!state.planData.start_date,
+      !!state.planData.end_date,
+      state.planData.total_budget > 0,
+    ];
+    filledFields += step1Fields.filter(Boolean).length;
+    totalFields += step1Fields.length;
+    
+    // Steps completion (each additional step = progress)
+    if (state.step >= 2) filledFields += 1;
+    if (state.step >= 3) filledFields += 1;
+    if (state.step >= 4) filledFields += 1;
+    if (state.step >= 5) filledFields += 1;
+    totalFields += 4;
+    
+    // Subdivision configuration (bonus if configured)
+    if (state.subdivisions.length > 0 && wizard.validatePercentages(state.subdivisions)) {
+      filledFields += 1;
+    }
+    totalFields += 1;
+    
+    // Moments configuration (bonus if configured)
+    const hasValidMoments = Object.values(state.moments).some(m => m.length > 0);
+    if (hasValidMoments) {
+      filledFields += 1;
+    }
+    totalFields += 1;
+    
+    // Funnel stages (bonus if configured)
+    const hasValidFunnel = Object.values(state.funnelStages).some(f => f.length > 0);
+    if (hasValidFunnel) {
+      filledFields += 1;
+    }
+    totalFields += 1;
+    
+    return Math.round((filledFields / totalFields) * 100);
+  };
+
+  const completionPercentage = calculateCompletionPercentage();
 
   const canProceed = () => {
     switch (state.step) {
@@ -1031,6 +1078,7 @@ export default function NewMediaPlanBudget() {
           steps={WIZARD_STEPS}
           currentStep={state.step}
           onStepClick={goToStep}
+          completionPercentage={completionPercentage}
         />
 
         {/* Content */}
