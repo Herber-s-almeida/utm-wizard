@@ -8,6 +8,7 @@ interface AnimatedCollapsibleProps {
   onOpenChange?: (open: boolean) => void;
   children: React.ReactNode;
   className?: string;
+  storageKey?: string;
 }
 
 interface AnimatedCollapsibleTriggerProps {
@@ -35,8 +36,17 @@ export function AnimatedCollapsible({
   onOpenChange,
   children,
   className,
+  storageKey,
 }: AnimatedCollapsibleProps) {
-  const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = React.useState(() => {
+    if (storageKey) {
+      const stored = localStorage.getItem(`collapsible-${storageKey}`);
+      if (stored !== null) {
+        return stored === 'true';
+      }
+    }
+    return defaultOpen;
+  });
   
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
@@ -45,8 +55,11 @@ export function AnimatedCollapsible({
     if (!isControlled) {
       setInternalOpen(newOpen);
     }
+    if (storageKey) {
+      localStorage.setItem(`collapsible-${storageKey}`, String(newOpen));
+    }
     onOpenChange?.(newOpen);
-  }, [isControlled, onOpenChange]);
+  }, [isControlled, onOpenChange, storageKey]);
 
   return (
     <AnimatedCollapsibleContext.Provider value={{ open, onOpenChange: handleOpenChange }}>
