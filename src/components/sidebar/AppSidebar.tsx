@@ -245,7 +245,7 @@ export function AppSidebar() {
 
       {/* Collapsed state - show only icons */}
       {isCollapsed ? (
-        <div className="flex-1 overflow-y-auto py-3 px-2 flex flex-col items-center gap-1">
+        <div className="flex-1 overflow-y-auto py-3 px-2 flex flex-col items-center gap-1 bg-background">
           <Tooltip>
             <TooltipTrigger asChild>
               <Link to="/dashboard">
@@ -433,7 +433,7 @@ export function AppSidebar() {
           </Tooltip>
         </div>
       ) : (
-      <ScrollArea className="flex-1 py-3 px-2 overflow-x-hidden">
+      <ScrollArea className="flex-1 py-3 px-2 overflow-x-hidden bg-background">
         {/* RELATÓRIOS */}
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
