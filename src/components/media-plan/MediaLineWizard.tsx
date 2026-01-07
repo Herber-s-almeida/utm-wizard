@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Check, Loader2, X, Save, Link2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -97,6 +97,10 @@ export function MediaLineWizard({
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<WizardStep>('position');
   const [saving, setSaving] = useState(false);
+  
+  // Ref to track if wizard has been initialized to prevent resets on refocus
+  const hasInitialized = useRef(false);
+  const editingLineIdRef = useRef<string | undefined>(undefined);
   const [savedLineId, setSavedLineId] = useState<string | null>(null);
   const [creatives, setCreatives] = useState<MediaCreative[]>([]);
   
@@ -167,59 +171,74 @@ export function MediaLineWizard({
 
   useEffect(() => {
     if (open) {
-      if (editingLine) {
-        // Editing mode - prefill with existing values
-        // Map old step names to new ones
-        let mappedStep: WizardStep = 'position';
-        const oldHierarchySteps = ['subdivision', 'moment', 'funnel'];
-        if (initialStep && oldHierarchySteps.includes(initialStep)) {
-          mappedStep = 'position';
-        } else if (initialStep && STEP_ORDER.includes(initialStep as WizardStep)) {
-          mappedStep = initialStep as WizardStep;
+      // Only initialize if:
+      // 1. We haven't initialized yet, OR
+      // 2. We're editing a different line than before
+      const isNewEditingLine = editingLine?.id !== editingLineIdRef.current;
+      
+      if (!hasInitialized.current || isNewEditingLine) {
+        editingLineIdRef.current = editingLine?.id;
+        
+        if (editingLine) {
+          // Editing mode - prefill with existing values
+          // Map old step names to new ones
+          let mappedStep: WizardStep = 'position';
+          const oldHierarchySteps = ['subdivision', 'moment', 'funnel'];
+          if (initialStep && oldHierarchySteps.includes(initialStep)) {
+            mappedStep = 'position';
+          } else if (initialStep && STEP_ORDER.includes(initialStep as WizardStep)) {
+            mappedStep = initialStep as WizardStep;
+          }
+          setCurrentStep(mappedStep);
+          setSelectedSubdivision(editingLine.subdivision_id || null);
+          setSelectedMoment(editingLine.moment_id || null);
+          setSelectedFunnelStage(editingLine.funnel_stage_id || null);
+          setSelectedMedium(editingLine.medium_id || null);
+          setSelectedVehicle(editingLine.vehicle_id || null);
+          setSelectedChannel(editingLine.channel_id || null);
+          setSelectedTarget(editingLine.target_id || null);
+          setLineDetails({
+            budget: String(editingLine.budget || ''),
+            start_date: editingLine.start_date || plan.start_date || '',
+            end_date: editingLine.end_date || plan.end_date || '',
+            destination_url: editingLine.destination_url || '',
+            notes: editingLine.notes || '',
+          });
+          setSavedLineId(editingLine.id);
+          loadCreatives(editingLine.id);
+        } else {
+          // Create mode - prefill with hierarchy from where user clicked
+          const subValue = getHierarchyValue(prefillData?.subdivisionId, planSubdivisions);
+          const momValue = getHierarchyValue(prefillData?.momentId, planMoments);
+          const funValue = getHierarchyValue(prefillData?.funnelStageId, planFunnelStages);
+          
+          setSelectedSubdivision(subValue);
+          setSelectedMoment(momValue);
+          setSelectedFunnelStage(funValue);
+          setSelectedMedium(null);
+          setSelectedVehicle(null);
+          setSelectedChannel(null);
+          setSelectedTarget(null);
+          setLineDetails({
+            budget: '',
+            start_date: plan.start_date || '',
+            end_date: plan.end_date || '',
+            destination_url: '',
+            notes: '',
+          });
+          setSavedLineId(null);
+          setCreatives([]);
+          
+          // Always start at position step now (it handles skipping internally)
+          setCurrentStep('position');
         }
-        setCurrentStep(mappedStep);
-        setSelectedSubdivision(editingLine.subdivision_id || null);
-        setSelectedMoment(editingLine.moment_id || null);
-        setSelectedFunnelStage(editingLine.funnel_stage_id || null);
-        setSelectedMedium(editingLine.medium_id || null);
-        setSelectedVehicle(editingLine.vehicle_id || null);
-        setSelectedChannel(editingLine.channel_id || null);
-        setSelectedTarget(editingLine.target_id || null);
-        setLineDetails({
-          budget: String(editingLine.budget || ''),
-          start_date: editingLine.start_date || plan.start_date || '',
-          end_date: editingLine.end_date || plan.end_date || '',
-          destination_url: editingLine.destination_url || '',
-          notes: editingLine.notes || '',
-        });
-        setSavedLineId(editingLine.id);
-        loadCreatives(editingLine.id);
-      } else {
-        // Create mode - prefill with hierarchy from where user clicked
-        const subValue = getHierarchyValue(prefillData?.subdivisionId, planSubdivisions);
-        const momValue = getHierarchyValue(prefillData?.momentId, planMoments);
-        const funValue = getHierarchyValue(prefillData?.funnelStageId, planFunnelStages);
         
-        setSelectedSubdivision(subValue);
-        setSelectedMoment(momValue);
-        setSelectedFunnelStage(funValue);
-        setSelectedMedium(null);
-        setSelectedVehicle(null);
-        setSelectedChannel(null);
-        setSelectedTarget(null);
-        setLineDetails({
-          budget: '',
-          start_date: plan.start_date || '',
-          end_date: plan.end_date || '',
-          destination_url: '',
-          notes: '',
-        });
-        setSavedLineId(null);
-        setCreatives([]);
-        
-        // Always start at position step now (it handles skipping internally)
-        setCurrentStep('position');
+        hasInitialized.current = true;
       }
+    } else {
+      // Reset the flag when dialog closes
+      hasInitialized.current = false;
+      editingLineIdRef.current = undefined;
     }
   }, [open, plan, editingLine, initialStep, prefillData, planSubdivisions, planMoments, planFunnelStages]);
 
