@@ -33,6 +33,7 @@ import CreativeTypesPage from "./pages/config/CreativeTypesPage";
 import StatusesPage from "./pages/config/StatusesPage";
 import KpisPage from "./pages/config/KpisPage";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminMenuVisibility from "./pages/admin/AdminMenuVisibility";
 import AccountPage from "./pages/AccountPage";
 
 function AppWithEnvironment() {
@@ -66,6 +67,7 @@ function AppWithEnvironment() {
           <Route path="/config/kpis" element={<ProtectedRoute><KpisPage /></ProtectedRoute>} />
           <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+          <Route path="/admin/menu-visibility" element={<AdminRoute><AdminMenuVisibility /></AdminRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -891,6 +891,30 @@ export type Database = {
         }
         Relationships: []
       }
+      menu_visibility_settings: {
+        Row: {
+          id: string
+          is_hidden: boolean | null
+          menu_key: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          is_hidden?: boolean | null
+          menu_key: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          is_hidden?: boolean | null
+          menu_key?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       moments: {
         Row: {
           created_at: string
