@@ -23,6 +23,7 @@ interface ChannelDialogProps {
   editingChannel?: Channel | null;
   vehicleId: string;
   vehicleName: string;
+  vehicleSlug?: string;
   existingNames?: string[];
 }
 
@@ -34,6 +35,7 @@ export function ChannelDialog({
   editingChannel,
   vehicleId,
   vehicleName,
+  vehicleSlug = '',
   existingNames = [],
 }: ChannelDialogProps) {
   const [name, setName] = useState('');
@@ -158,8 +160,23 @@ export function ChannelDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Descrição do canal..."
-              rows={3}
+              rows={2}
             />
+          </div>
+
+          {/* UTM Preview */}
+          <div className="p-3 bg-muted/50 rounded-lg border">
+            <p className="text-xs font-medium text-muted-foreground mb-2">Prévia UTM</p>
+            <div className="space-y-1 font-mono text-xs">
+              <div className="flex gap-2">
+                <span className="text-muted-foreground">utm_source:</span>
+                <span className="text-foreground">{vehicleSlug || 'veiculo'}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="text-muted-foreground">utm_medium:</span>
+                <span className="text-foreground">{slug || 'canal'}</span>
+              </div>
+            </div>
           </div>
         </div>
 
