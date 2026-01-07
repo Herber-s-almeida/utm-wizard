@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle, Link, LayoutGrid, List, Link2 } from 'lucide-react';
+import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle, Link, LayoutGrid, List, Link2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -45,6 +45,8 @@ import { Badge } from '@/components/ui/badge';
 import { PlanAlert } from '@/hooks/usePlanAlerts';
 import { LineAlertIndicator } from '@/components/media-plan/LineAlertIndicator';
 import { UTMPreview } from '@/components/media-plan/UTMPreview';
+import { useResizableColumns, ColumnKey } from '@/hooks/useResizableColumns';
+import { ResizableColumnHeader } from '@/components/media-plan/ResizableColumnHeader';
 
 // Columns that can be toggled (excludes: Código, Orçamento, Status, Início, Fim, Ações)
 type ToggleableColumn = 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target' | 'creatives';
@@ -207,6 +209,9 @@ export function HierarchicalMediaTable({
 
   // View mode: 'grouped' (hierarchical) or 'flat' (one line per row)
   const [viewMode, setViewMode] = useState<'grouped' | 'flat'>('grouped');
+
+  // Resizable columns hook
+  const { getWidth, handleResize, resetWidths } = useResizableColumns(viewMode);
 
   // Column visibility state
   const [visibleColumns, setVisibleColumns] = useState<Record<ToggleableColumn, boolean>>({
@@ -974,7 +979,7 @@ export function HierarchicalMediaTable({
     field: EditingField; 
     displayValue: string;
     inputType?: 'text' | 'number' | 'date';
-    width: string;
+    width: number;
     duplicateMoments?: string[];
   }) => {
     const isEditing = isEditingField(line.id, field);
@@ -994,7 +999,7 @@ export function HierarchicalMediaTable({
     };
 
     return (
-      <div className={cn("p-2 border-r shrink-0 group relative", width)}>
+      <div className="p-2 border-r shrink-0 group relative" style={{ width }}>
         {isEditing ? (
           <div className="flex items-center gap-1">
             <Input
@@ -1164,18 +1169,19 @@ export function HierarchicalMediaTable({
 
   // Calculate dynamic column widths based on visible columns
   const getMinWidth = () => {
-    let width = 100 + 120 + 100 + 100 + 100 + 100; // Fixed columns: Código, Orçamento, Status, Início, Fim, Ações
+    let width = getWidth('line_code') + getWidth('budget') + getWidth('status') + 
+                getWidth('start_date') + getWidth('end_date') + getWidth('actions');
     // New fixed columns: Dias, Orçamento Alocado, Months
-    width += 60 + 100; // Dias + Orçamento Alocado
-    width += planMonths.length * 90; // Each month column
-    if (visibleColumns.subdivision) width += 180;
-    if (visibleColumns.moment) width += 180;
-    if (visibleColumns.funnel_stage) width += 200;
-    if (visibleColumns.medium) width += 80;
-    if (visibleColumns.vehicle) width += 110;
-    if (visibleColumns.channel) width += 100;
-    if (visibleColumns.target) width += 130;
-    if (visibleColumns.creatives) width += 80;
+    width += getWidth('days') + getWidth('allocated');
+    width += planMonths.length * getWidth('month');
+    if (visibleColumns.subdivision) width += getWidth('subdivision');
+    if (visibleColumns.moment) width += getWidth('moment');
+    if (visibleColumns.funnel_stage) width += getWidth('funnel_stage');
+    if (visibleColumns.medium) width += getWidth('medium');
+    if (visibleColumns.vehicle) width += getWidth('vehicle');
+    if (visibleColumns.channel) width += getWidth('channel');
+    if (visibleColumns.target) width += getWidth('target');
+    if (visibleColumns.creatives) width += getWidth('creatives');
     return width;
   };
 
@@ -1225,7 +1231,17 @@ export function HierarchicalMediaTable({
             </PopoverTrigger>
             <PopoverContent className="w-64 bg-popover" align="start">
               <div className="space-y-3">
-                <div className="font-medium text-sm">Exibir colunas</div>
+                <div className="flex items-center justify-between">
+                  <div className="font-medium text-sm">Exibir colunas</div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={resetWidths}>
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Resetar larguras das colunas</TooltipContent>
+                  </Tooltip>
+                </div>
                 <div className="relative">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -1533,27 +1549,75 @@ export function HierarchicalMediaTable({
         <div className="border rounded-lg overflow-x-auto">
           {/* Header */}
           <div className="flex bg-muted/50 text-xs font-medium text-muted-foreground border-b" style={{ minWidth: `${viewMode === 'flat' ? getMinWidth() - 100 : getMinWidth()}px` }}>
-            {visibleColumns.subdivision && <div className={cn("p-3 border-r shrink-0", viewMode === 'flat' ? "w-[120px]" : "w-[180px]")}>Subdivisão</div>}
-            {visibleColumns.moment && <div className={cn("p-3 border-r shrink-0", viewMode === 'flat' ? "w-[120px]" : "w-[180px]")}>Momento</div>}
-            {visibleColumns.funnel_stage && <div className={cn("p-3 border-r shrink-0", viewMode === 'flat' ? "w-[100px]" : "w-[200px]")}>Fase</div>}
-            <div className="w-[120px] p-3 border-r shrink-0">Código</div>
-            {visibleColumns.medium && <div className="w-[80px] p-3 border-r shrink-0">Meio</div>}
-            {visibleColumns.vehicle && <div className="w-[110px] p-3 border-r shrink-0">Veículo</div>}
-            {visibleColumns.channel && <div className="w-[100px] p-3 border-r shrink-0">Canal</div>}
-            {visibleColumns.target && <div className="w-[130px] p-3 border-r shrink-0">Segmentação</div>}
-            <div className="w-[120px] p-3 border-r shrink-0">Orçamento</div>
-            {visibleColumns.creatives && <div className="w-[90px] p-3 border-r shrink-0">Criativos</div>}
-            <div className="w-[100px] p-3 border-r shrink-0">Status</div>
-            <div className="w-[100px] p-3 border-r shrink-0">Início</div>
-            <div className="w-[100px] p-3 border-r shrink-0">Fim</div>
-            <div className="w-[100px] p-3 border-r shrink-0">Ações</div>
+            {visibleColumns.subdivision && (
+              <ResizableColumnHeader columnKey="subdivision" width={getWidth('subdivision')} onResize={handleResize} className="p-3 border-r">
+                Subdivisão
+              </ResizableColumnHeader>
+            )}
+            {visibleColumns.moment && (
+              <ResizableColumnHeader columnKey="moment" width={getWidth('moment')} onResize={handleResize} className="p-3 border-r">
+                Momento
+              </ResizableColumnHeader>
+            )}
+            {visibleColumns.funnel_stage && (
+              <ResizableColumnHeader columnKey="funnel_stage" width={getWidth('funnel_stage')} onResize={handleResize} className="p-3 border-r">
+                Fase
+              </ResizableColumnHeader>
+            )}
+            <ResizableColumnHeader columnKey="line_code" width={getWidth('line_code')} onResize={handleResize} className="p-3 border-r">
+              Código
+            </ResizableColumnHeader>
+            {visibleColumns.medium && (
+              <ResizableColumnHeader columnKey="medium" width={getWidth('medium')} onResize={handleResize} className="p-3 border-r">
+                Meio
+              </ResizableColumnHeader>
+            )}
+            {visibleColumns.vehicle && (
+              <ResizableColumnHeader columnKey="vehicle" width={getWidth('vehicle')} onResize={handleResize} className="p-3 border-r">
+                Veículo
+              </ResizableColumnHeader>
+            )}
+            {visibleColumns.channel && (
+              <ResizableColumnHeader columnKey="channel" width={getWidth('channel')} onResize={handleResize} className="p-3 border-r">
+                Canal
+              </ResizableColumnHeader>
+            )}
+            {visibleColumns.target && (
+              <ResizableColumnHeader columnKey="target" width={getWidth('target')} onResize={handleResize} className="p-3 border-r">
+                Segmentação
+              </ResizableColumnHeader>
+            )}
+            <ResizableColumnHeader columnKey="budget" width={getWidth('budget')} onResize={handleResize} className="p-3 border-r">
+              Orçamento
+            </ResizableColumnHeader>
+            {visibleColumns.creatives && (
+              <ResizableColumnHeader columnKey="creatives" width={getWidth('creatives')} onResize={handleResize} className="p-3 border-r">
+                Criativos
+              </ResizableColumnHeader>
+            )}
+            <ResizableColumnHeader columnKey="status" width={getWidth('status')} onResize={handleResize} className="p-3 border-r">
+              Status
+            </ResizableColumnHeader>
+            <ResizableColumnHeader columnKey="start_date" width={getWidth('start_date')} onResize={handleResize} className="p-3 border-r">
+              Início
+            </ResizableColumnHeader>
+            <ResizableColumnHeader columnKey="end_date" width={getWidth('end_date')} onResize={handleResize} className="p-3 border-r">
+              Fim
+            </ResizableColumnHeader>
+            <ResizableColumnHeader columnKey="actions" width={getWidth('actions')} onResize={handleResize} className="p-3 border-r">
+              Ações
+            </ResizableColumnHeader>
             {/* New columns - always visible, not affected by column filter */}
-            <div className="w-[60px] p-3 border-r shrink-0 bg-primary/5">Dias</div>
-            <div className="w-[100px] p-3 border-r shrink-0 bg-primary/5">Orc. Alocado</div>
+            <ResizableColumnHeader columnKey="days" width={getWidth('days')} onResize={handleResize} className="p-3 border-r bg-primary/5">
+              Dias
+            </ResizableColumnHeader>
+            <ResizableColumnHeader columnKey="allocated" width={getWidth('allocated')} onResize={handleResize} className="p-3 border-r bg-primary/5">
+              Orc. Alocado
+            </ResizableColumnHeader>
             {planMonths.map((month, idx) => (
-              <div key={idx} className="w-[90px] p-3 border-r shrink-0 bg-primary/5 text-center">
+              <ResizableColumnHeader key={idx} columnKey="month" width={getWidth('month')} onResize={handleResize} className="p-3 border-r bg-primary/5 text-center">
                 {formatMonthHeader(month)}
-              </div>
+              </ResizableColumnHeader>
             ))}
           </div>
 
@@ -1575,21 +1639,21 @@ export function HierarchicalMediaTable({
                   >
                     {/* Subdivision - simple text */}
                     {visibleColumns.subdivision && (
-                      <div className="w-[120px] p-2 border-r truncate shrink-0" title={subdivisionName}>
+                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('subdivision') }} title={subdivisionName}>
                         {subdivisionName}
                       </div>
                     )}
                     
                     {/* Moment - simple text */}
                     {visibleColumns.moment && (
-                      <div className="w-[120px] p-2 border-r truncate shrink-0" title={momentName}>
+                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('moment') }} title={momentName}>
                         {momentName}
                       </div>
                     )}
                     
                     {/* Funnel Stage - simple text */}
                     {visibleColumns.funnel_stage && (
-                      <div className="w-[100px] p-2 border-r truncate shrink-0" title={funnelName}>
+                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('funnel_stage') }} title={funnelName}>
                         {funnelName}
                       </div>
                     )}
@@ -1600,27 +1664,27 @@ export function HierarchicalMediaTable({
                       field="line_code"
                       displayValue={line.line_code || generateLineCode(line, existingLineCodes)}
                       inputType="text"
-                      width="w-[120px]"
+                      width={getWidth('line_code')}
                       duplicateMoments={getOtherMoments(line)}
                     />
                     
                     {visibleColumns.medium && (
-                      <div className="w-[80px] p-2 border-r truncate shrink-0" title={info.medium}>
+                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('medium') }} title={info.medium}>
                         {info.medium}
                       </div>
                     )}
                     {visibleColumns.vehicle && (
-                      <div className="w-[110px] p-2 border-r truncate shrink-0" title={info.vehicle}>
+                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('vehicle') }} title={info.vehicle}>
                         {info.vehicle}
                       </div>
                     )}
                     {visibleColumns.channel && (
-                      <div className="w-[100px] p-2 border-r truncate shrink-0" title={info.channel}>
+                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('channel') }} title={info.channel}>
                         {info.channel}
                       </div>
                     )}
                     {visibleColumns.target && (
-                      <div className="w-[130px] p-2 border-r truncate shrink-0" title={info.target}>
+                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('target') }} title={info.target}>
                         ({info.target})
                       </div>
                     )}
@@ -1631,12 +1695,12 @@ export function HierarchicalMediaTable({
                       field="budget"
                       displayValue={formatCurrency(Number(line.budget))}
                       inputType="number"
-                      width="w-[120px]"
+                      width={getWidth('budget')}
                     />
                     
                     {/* Creatives with counter and quick add button */}
                     {visibleColumns.creatives && (
-                      <div className="w-[90px] p-2 border-r flex items-center justify-between group shrink-0">
+                      <div className="p-2 border-r flex items-center justify-between group shrink-0" style={{ width: getWidth('creatives') }}>
                         <div className="flex items-center gap-1.5">
                           <ImageIcon className="w-3 h-3 text-muted-foreground" />
                           <span className={cn(
@@ -1680,7 +1744,7 @@ export function HierarchicalMediaTable({
                     )}
                     
                     {/* Status select */}
-                    <div className="w-[100px] p-2 border-r shrink-0">
+                    <div className="p-2 border-r shrink-0" style={{ width: getWidth('status') }}>
                       <Select
                         value={line.status_id || 'none'}
                         onValueChange={(value) => handleStatusChange(line.id, value)}
@@ -1705,7 +1769,7 @@ export function HierarchicalMediaTable({
                       field="start_date"
                       displayValue={formatDate(line.start_date)}
                       inputType="date"
-                      width="w-[100px]"
+                      width={getWidth('start_date')}
                     />
                     
                     {/* Editable End Date */}
@@ -1714,11 +1778,11 @@ export function HierarchicalMediaTable({
                       field="end_date"
                       displayValue={formatDate(line.end_date)}
                       inputType="date"
-                      width="w-[100px]"
+                      width={getWidth('end_date')}
                     />
                     
                     {/* Action buttons */}
-                    <div className="w-[100px] p-2 border-r flex items-center gap-1 shrink-0">
+                    <div className="p-2 border-r flex items-center gap-1 shrink-0" style={{ width: getWidth('actions') }}>
                       {lineAlerts && <LineAlertIndicator alerts={lineAlerts(line.id)} size="sm" />}
                       <UTMPreview
                         destinationUrl={line.destination_url}
@@ -1777,12 +1841,12 @@ export function HierarchicalMediaTable({
                     </div>
                     
                     {/* Campaign Days - fixed column */}
-                    <div className="w-[60px] p-2 border-r shrink-0 bg-primary/5 text-center text-xs">
+                    <div className="p-2 border-r shrink-0 bg-primary/5 text-center text-xs" style={{ width: getWidth('days') }}>
                       {getLineCampaignDays(line)}
                     </div>
                     
                     {/* Allocated Budget - fixed column */}
-                    <div className="w-[100px] p-2 border-r shrink-0 bg-primary/5 text-xs font-medium">
+                    <div className="p-2 border-r shrink-0 bg-primary/5 text-xs font-medium" style={{ width: getWidth('allocated') }}>
                       {formatCurrency(getLineAllocatedBudget(line.id))}
                     </div>
                     
@@ -1885,27 +1949,27 @@ export function HierarchicalMediaTable({
                                       field="line_code"
                                       displayValue={line.line_code || generateLineCode(line, existingLineCodes)}
                                       inputType="text"
-                                      width="w-[120px]"
+                                      width={getWidth('line_code')}
                                       duplicateMoments={getOtherMoments(line)}
                                     />
                                     
                                     {visibleColumns.medium && (
-                                      <div className="w-[80px] p-2 border-r truncate shrink-0" title={info.medium}>
+                                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('medium') }} title={info.medium}>
                                         {info.medium}
                                       </div>
                                     )}
                                     {visibleColumns.vehicle && (
-                                      <div className="w-[110px] p-2 border-r truncate shrink-0" title={info.vehicle}>
+                                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('vehicle') }} title={info.vehicle}>
                                         {info.vehicle}
                                       </div>
                                     )}
                                     {visibleColumns.channel && (
-                                      <div className="w-[100px] p-2 border-r truncate shrink-0" title={info.channel}>
+                                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('channel') }} title={info.channel}>
                                         {info.channel}
                                       </div>
                                     )}
                                     {visibleColumns.target && (
-                                      <div className="w-[130px] p-2 border-r truncate shrink-0" title={info.target}>
+                                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('target') }} title={info.target}>
                                         ({info.target})
                                       </div>
                                     )}
@@ -1916,12 +1980,12 @@ export function HierarchicalMediaTable({
                                       field="budget"
                                       displayValue={formatCurrency(Number(line.budget))}
                                       inputType="number"
-                                      width="w-[120px]"
+                                      width={getWidth('budget')}
                                     />
                                     
                                     {/* Creatives with counter and quick add button */}
                                     {visibleColumns.creatives && (
-                                      <div className="w-[90px] p-2 border-r flex items-center justify-between group shrink-0">
+                                      <div className="p-2 border-r flex items-center justify-between group shrink-0" style={{ width: getWidth('creatives') }}>
                                         <div className="flex items-center gap-1.5">
                                           <ImageIcon className="w-3 h-3 text-muted-foreground" />
                                           <span className={cn(
@@ -1965,7 +2029,7 @@ export function HierarchicalMediaTable({
                                     )}
                                     
                                     {/* Status select */}
-                                    <div className="w-[100px] p-2 border-r shrink-0">
+                                    <div className="p-2 border-r shrink-0" style={{ width: getWidth('status') }}>
                                       <Select
                                         value={line.status_id || 'none'}
                                         onValueChange={(value) => handleStatusChange(line.id, value)}
@@ -1990,7 +2054,7 @@ export function HierarchicalMediaTable({
                                       field="start_date"
                                       displayValue={formatDate(line.start_date)}
                                       inputType="date"
-                                      width="w-[100px]"
+                                      width={getWidth('start_date')}
                                     />
                                     
                                     {/* Editable End Date */}
@@ -1999,11 +2063,11 @@ export function HierarchicalMediaTable({
                                       field="end_date"
                                       displayValue={formatDate(line.end_date)}
                                       inputType="date"
-                                      width="w-[100px]"
+                                      width={getWidth('end_date')}
                                     />
                                     
                                     {/* Action buttons */}
-                                    <div className="w-[100px] p-2 border-r flex items-center gap-1 shrink-0">
+                                    <div className="p-2 border-r flex items-center gap-1 shrink-0" style={{ width: getWidth('actions') }}>
                                       {lineAlerts && <LineAlertIndicator alerts={lineAlerts(line.id)} size="sm" />}
                                       <UTMPreview
                                         destinationUrl={line.destination_url}
@@ -2062,12 +2126,12 @@ export function HierarchicalMediaTable({
                                     </div>
                                     
                                     {/* Campaign Days - fixed column */}
-                                    <div className="w-[60px] p-2 border-r shrink-0 bg-primary/5 text-center text-xs">
+                                    <div className="p-2 border-r shrink-0 bg-primary/5 text-center text-xs" style={{ width: getWidth('days') }}>
                                       {getLineCampaignDays(line)}
                                     </div>
                                     
                                     {/* Allocated Budget - fixed column */}
-                                    <div className="w-[100px] p-2 border-r shrink-0 bg-primary/5 text-xs font-medium">
+                                    <div className="p-2 border-r shrink-0 bg-primary/5 text-xs font-medium" style={{ width: getWidth('allocated') }}>
                                       {formatCurrency(getLineAllocatedBudget(line.id))}
                                     </div>
                                     
@@ -2109,27 +2173,27 @@ export function HierarchicalMediaTable({
 
           {/* Footer - Subtotal */}
           <div className="flex bg-muted border-t" style={{ minWidth: `${viewMode === 'flat' ? getMinWidth() - 100 : getMinWidth()}px` }}>
-            {visibleColumns.subdivision && <div className={cn("p-3 font-bold shrink-0", viewMode === 'flat' ? "w-[120px]" : "w-[180px]")}>Subtotal:</div>}
-            {visibleColumns.moment && <div className={cn("p-3 shrink-0", viewMode === 'flat' ? "w-[120px]" : "w-[180px]")}></div>}
-            {visibleColumns.funnel_stage && <div className={cn("p-3 shrink-0", viewMode === 'flat' ? "w-[100px]" : "w-[200px]")}></div>}
-            <div className="w-[100px] p-3 shrink-0"></div>
-            {visibleColumns.medium && <div className="w-[80px] p-3 shrink-0"></div>}
-            {visibleColumns.vehicle && <div className="w-[110px] p-3 shrink-0"></div>}
-            {visibleColumns.channel && <div className="w-[100px] p-3 shrink-0"></div>}
-            {visibleColumns.target && <div className="w-[130px] p-3 shrink-0"></div>}
-            <div className="w-[120px] p-3 font-bold shrink-0">{formatCurrency(totalBudget)}</div>
-            {visibleColumns.creatives && <div className="w-[90px] p-3 shrink-0"></div>}
-            <div className="w-[100px] p-3 shrink-0"></div>
-            <div className="w-[100px] p-3 shrink-0"></div>
-            <div className="w-[100px] p-3 shrink-0"></div>
-            <div className="w-[100px] p-3 shrink-0"></div>
+            {visibleColumns.subdivision && <div className="p-3 font-bold shrink-0" style={{ width: getWidth('subdivision') }}>Subtotal:</div>}
+            {visibleColumns.moment && <div className="p-3 shrink-0" style={{ width: getWidth('moment') }}></div>}
+            {visibleColumns.funnel_stage && <div className="p-3 shrink-0" style={{ width: getWidth('funnel_stage') }}></div>}
+            <div className="p-3 shrink-0" style={{ width: getWidth('line_code') }}></div>
+            {visibleColumns.medium && <div className="p-3 shrink-0" style={{ width: getWidth('medium') }}></div>}
+            {visibleColumns.vehicle && <div className="p-3 shrink-0" style={{ width: getWidth('vehicle') }}></div>}
+            {visibleColumns.channel && <div className="p-3 shrink-0" style={{ width: getWidth('channel') }}></div>}
+            {visibleColumns.target && <div className="p-3 shrink-0" style={{ width: getWidth('target') }}></div>}
+            <div className="p-3 font-bold shrink-0" style={{ width: getWidth('budget') }}>{formatCurrency(totalBudget)}</div>
+            {visibleColumns.creatives && <div className="p-3 shrink-0" style={{ width: getWidth('creatives') }}></div>}
+            <div className="p-3 shrink-0" style={{ width: getWidth('status') }}></div>
+            <div className="p-3 shrink-0" style={{ width: getWidth('start_date') }}></div>
+            <div className="p-3 shrink-0" style={{ width: getWidth('end_date') }}></div>
+            <div className="p-3 shrink-0" style={{ width: getWidth('actions') }}></div>
             {/* New columns totals */}
-            <div className="w-[60px] p-3 shrink-0 bg-primary/5"></div>
-            <div className="w-[100px] p-3 shrink-0 bg-primary/5 font-bold text-xs">
+            <div className="p-3 shrink-0 bg-primary/5" style={{ width: getWidth('days') }}></div>
+            <div className="p-3 shrink-0 bg-primary/5 font-bold text-xs" style={{ width: getWidth('allocated') }}>
               {formatCurrency(lines.reduce((sum, l) => sum + getLineAllocatedBudget(l.id), 0))}
             </div>
             {planMonths.map((month, idx) => (
-              <div key={idx} className="w-[90px] p-3 shrink-0 bg-primary/5 text-xs font-medium text-center">
+              <div key={idx} className="p-3 shrink-0 bg-primary/5 text-xs font-medium text-center" style={{ width: getWidth('month') }}>
                 {formatCurrency(lines.reduce((sum, l) => sum + getMonthBudget(l.id, month), 0))}
               </div>
             ))}
