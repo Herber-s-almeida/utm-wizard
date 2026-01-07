@@ -128,6 +128,13 @@ export default function MediaPlanDetail() {
     }
   }, [user?.id, id]);
 
+  // Initialize filteredLines with lines when lines change
+  useEffect(() => {
+    if (lines.length > 0 && filteredLines.length === 0) {
+      setFilteredLines(lines);
+    }
+  }, [lines]);
+
   // Open wizard if query param is set
   useEffect(() => {
     if (searchParams.get('openWizard') === 'true') {
