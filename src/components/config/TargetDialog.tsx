@@ -270,8 +270,9 @@ export function TargetDialog({
     }
 
     const normalizedName = trimmedName.toLowerCase();
+    const originalName = initialData?.name?.trim().toLowerCase();
     const isExisting = existingNames.some(
-      n => n.toLowerCase() === normalizedName && n !== initialData?.name?.toLowerCase()
+      n => n.trim().toLowerCase() === normalizedName && n.trim().toLowerCase() !== originalName
     );
     
     if (isExisting) {

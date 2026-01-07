@@ -24,7 +24,10 @@ export default function TargetsPage() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const existingNames = targets?.map(t => t.name) || [];
+  const editingNameLower = editingItem?.name?.trim().toLowerCase();
+  const existingNames = (targets?.map(t => t.name) || []).filter(
+    n => n.trim().toLowerCase() !== editingNameLower
+  );
 
   const handleCreate = (data: any) => {
     create.mutate(data);
