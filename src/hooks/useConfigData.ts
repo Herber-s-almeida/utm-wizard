@@ -362,8 +362,8 @@ export function useVehicles() {
   });
 
   const create = useMutation({
-    mutationFn: async ({ name, description, medium_id }: { name: string; description?: string; medium_id?: string }) => {
-      const { data, error } = await supabase.from('vehicles').insert({ name, description: description || null, medium_id: medium_id || null, user_id: user!.id }).select().single();
+    mutationFn: async ({ name, description, medium_id, slug }: { name: string; description?: string; medium_id?: string; slug?: string }) => {
+      const { data, error } = await supabase.from('vehicles').insert({ name, description: description || null, medium_id: medium_id || null, slug: slug || null, user_id: user!.id }).select().single();
       if (error) throw error;
       return data;
     },

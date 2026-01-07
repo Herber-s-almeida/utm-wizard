@@ -57,11 +57,11 @@ export default function VehiclesPage() {
     return names;
   };
 
-  const handleCreateVehicle = (data: { name: string; description: string; medium_id: string; channels: { name: string; description: string }[] }) => {
-    createVehicle.mutate({ name: data.name, description: data.description, medium_id: data.medium_id }, {
+  const handleCreateVehicle = (data: { name: string; description: string; medium_id: string; slug: string; channels: { name: string; description: string; slug?: string }[] }) => {
+    createVehicle.mutate({ name: data.name, description: data.description, medium_id: data.medium_id, slug: data.slug }, {
       onSuccess: (newVehicle: any) => {
         data.channels.forEach(ch => {
-          createChannel.mutate({ name: ch.name, description: ch.description, vehicle_id: newVehicle.id });
+          createChannel.mutate({ name: ch.name, description: ch.description, slug: ch.slug, vehicle_id: newVehicle.id });
         });
       }
     });
@@ -227,7 +227,8 @@ export default function VehiclesPage() {
             name: editingVehicle.name,
             description: editingVehicle.description || '',
             medium_id: editingVehicle.medium_id || '',
-            channels: getVehicleChannels(editingVehicle.id).map(c => ({ name: c.name, description: (c as any).description || '' }))
+            slug: editingVehicle.slug || '',
+            channels: getVehicleChannels(editingVehicle.id).map(c => ({ name: c.name, description: (c as any).description || '', slug: c.slug || '' }))
           } : undefined}
           mode={editingVehicle ? 'edit' : 'create'}
           mediums={activeMediums || []}
