@@ -26,6 +26,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 import { CreateKpiDialog } from '@/components/media-plan/CreateKpiDialog';
 import { useCustomKpis } from '@/hooks/useCustomKpis';
+import { useWizardDraft, DraftData } from '@/hooks/useWizardDraft';
+import { DraftRecoveryDialog } from '@/components/media-plan/DraftRecoveryDialog';
 
 const WIZARD_STEPS = [
   { id: 1, title: 'Plano', description: 'Dados básicos' },
@@ -54,8 +56,40 @@ export default function NewMediaPlanBudget() {
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [temporalPeriods, setTemporalPeriods] = useState<any[]>([]);
   const { customKpis } = useCustomKpis();
+  
+  // Draft recovery state
+  const [showDraftDialog, setShowDraftDialog] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState<DraftData | null>(null);
 
-  const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations } = wizard;
+  const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations, setFullState } = wizard;
+  
+  // Auto-save draft hook
+  const { checkForDraft, clearDraft, loadDraft } = useWizardDraft(state, setFullState, false);
+  
+  // Check for existing draft on mount
+  useEffect(() => {
+    const draft = checkForDraft();
+    if (draft) {
+      setPendingDraft(draft);
+      setShowDraftDialog(true);
+    }
+  }, []);
+  
+  const handleContinueDraft = () => {
+    if (pendingDraft) {
+      loadDraft(pendingDraft);
+      toast.success('Rascunho restaurado');
+    }
+    setShowDraftDialog(false);
+    setPendingDraft(null);
+  };
+  
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftDialog(false);
+    setPendingDraft(null);
+    toast.info('Rascunho descartado');
+  };
 
   // Generate temporal periods when dates or granularity change
   useEffect(() => {
@@ -259,6 +293,8 @@ export default function NewMediaPlanBudget() {
         }
       }
 
+      // Clear draft on successful save
+      clearDraft();
       toast.success('Plano salvo com sucesso!');
       navigate(`/media-plans/${plan.id}`);
     } catch (error) {
@@ -1037,6 +1073,15 @@ export default function NewMediaPlanBudget() {
           )}
         </div>
       </div>
+      
+      {/* Draft Recovery Dialog */}
+      <DraftRecoveryDialog
+        open={showDraftDialog}
+        onOpenChange={setShowDraftDialog}
+        draft={pendingDraft}
+        onContinue={handleContinueDraft}
+        onDiscard={handleDiscardDraft}
+      />
     </DashboardLayout>
   );
 }
