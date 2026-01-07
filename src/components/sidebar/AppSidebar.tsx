@@ -169,14 +169,14 @@ export function AppSidebar() {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Get parent subdivisions
-  const parentSubdivisions = subdivisions.data?.filter(s => !s.parent_id) || [];
+  // Get parent subdivisions (only active items)
+  const parentSubdivisions = subdivisions.activeItems?.filter(s => !s.parent_id) || [];
   const getChildSubdivisions = (parentId: string) => 
-    subdivisions.data?.filter(s => s.parent_id === parentId) || [];
+    subdivisions.activeItems?.filter(s => s.parent_id === parentId) || [];
 
-  // Get channels for a vehicle
+  // Get channels for a vehicle (only active items)
   const getVehicleChannels = (vehicleId: string) => 
-    channels.data?.filter(c => c.vehicle_id === vehicleId) || [];
+    channels.activeItems?.filter(c => c.vehicle_id === vehicleId) || [];
 
   const MAX_ITEMS = 3;
 
@@ -944,7 +944,7 @@ export function AppSidebar() {
               </Link>
             </div>
             <CollapsibleContent className="pl-4">
-              {moments.data?.slice(0, MAX_ITEMS).map(moment => (
+              {moments.activeItems?.slice(0, MAX_ITEMS).map(moment => (
                 <ConfigItemRow
                   key={moment.id}
                   name={moment.name}
@@ -964,10 +964,10 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
-              {(moments.data?.length || 0) > MAX_ITEMS && (
+              {(moments.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/moments">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                    ... ver todos ({moments.data?.length})
+                    ... ver todos ({moments.activeItems?.length})
                   </Button>
                 </Link>
               )}
@@ -991,7 +991,7 @@ export function AppSidebar() {
               </Link>
             </div>
             <CollapsibleContent className="pl-4">
-              {funnelStages.data?.slice(0, MAX_ITEMS).map(stage => (
+              {funnelStages.activeItems?.slice(0, MAX_ITEMS).map(stage => (
                 <ConfigItemRow
                   key={stage.id}
                   name={stage.name}
@@ -1011,10 +1011,10 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
-              {(funnelStages.data?.length || 0) > MAX_ITEMS && (
+              {(funnelStages.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/funnel-stages">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                    ... ver todos ({funnelStages.data?.length})
+                    ... ver todos ({funnelStages.activeItems?.length})
                   </Button>
                 </Link>
               )}
@@ -1038,7 +1038,7 @@ export function AppSidebar() {
               </Link>
             </div>
             <CollapsibleContent className="pl-4">
-              {mediums.data?.slice(0, MAX_ITEMS).map(medium => (
+              {mediums.activeItems?.slice(0, MAX_ITEMS).map(medium => (
                 <ConfigItemRow
                   key={medium.id}
                   name={medium.name}
@@ -1058,10 +1058,10 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
-              {(mediums.data?.length || 0) > MAX_ITEMS && (
+              {(mediums.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/mediums">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                    ... ver todos ({mediums.data?.length})
+                    ... ver todos ({mediums.activeItems?.length})
                   </Button>
                 </Link>
               )}
@@ -1085,7 +1085,7 @@ export function AppSidebar() {
               </Link>
             </div>
             <CollapsibleContent className="pl-4">
-              {vehicles.data?.slice(0, MAX_ITEMS).map(vehicle => (
+              {vehicles.activeItems?.slice(0, MAX_ITEMS).map(vehicle => (
                 <Collapsible 
                   key={vehicle.id} 
                   open={openVehicles[vehicle.id]} 
@@ -1145,10 +1145,10 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
-              {(vehicles.data?.length || 0) > MAX_ITEMS && (
+              {(vehicles.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/vehicles">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                    ... ver todos ({vehicles.data?.length})
+                    ... ver todos ({vehicles.activeItems?.length})
                   </Button>
                 </Link>
               )}
@@ -1178,11 +1178,11 @@ export function AppSidebar() {
                   <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-7 text-xs">
                     {openSections.segments ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
                     <span className="font-medium">Segmentos</span>
-                    <span className="ml-auto text-[10px] text-muted-foreground">{behavioralSegmentations.data?.length || 0}</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{behavioralSegmentations.activeItems?.length || 0}</span>
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
-                  {behavioralSegmentations.data?.slice(0, MAX_ITEMS).map(segment => (
+                  {behavioralSegmentations.activeItems?.slice(0, MAX_ITEMS).map(segment => (
                     <ConfigItemRow
                       key={segment.id}
                       name={segment.name}
@@ -1205,9 +1205,9 @@ export function AppSidebar() {
                     <Plus className="h-2.5 w-2.5" />
                     Novo
                   </Button>
-                  {(behavioralSegmentations.data?.length || 0) > MAX_ITEMS && (
+                  {(behavioralSegmentations.activeItems?.length || 0) > MAX_ITEMS && (
                     <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                      ... ver todos ({behavioralSegmentations.data?.length})
+                      ... ver todos ({behavioralSegmentations.activeItems?.length})
                     </Button>
                   )}
                 </CollapsibleContent>
@@ -1219,11 +1219,11 @@ export function AppSidebar() {
                   <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-7 text-xs">
                     {openSections.targetsList ? <ChevronDown className="h-2.5 w-2.5" /> : <ChevronRight className="h-2.5 w-2.5" />}
                     <span className="font-medium">Target</span>
-                    <span className="ml-auto text-[10px] text-muted-foreground">{targets.data?.length || 0}</span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{targets.activeItems?.length || 0}</span>
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
-                  {targets.data?.slice(0, MAX_ITEMS).map(target => (
+                  {targets.activeItems?.slice(0, MAX_ITEMS).map(target => (
                     <ConfigItemRow
                       key={target.id}
                       name={target.name}
@@ -1246,10 +1246,10 @@ export function AppSidebar() {
                     <Plus className="h-2.5 w-2.5" />
                     Novo
                   </Button>
-                  {(targets.data?.length || 0) > MAX_ITEMS && (
+                  {(targets.activeItems?.length || 0) > MAX_ITEMS && (
                     <Link to="/config/targets">
                       <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                        ... ver todos ({targets.data?.length})
+                        ... ver todos ({targets.activeItems?.length})
                       </Button>
                     </Link>
                   )}
@@ -1625,6 +1625,7 @@ export function AppSidebar() {
         nameLabel="Nome do meio"
         namePlaceholder="Ex: Digital"
         mode="create"
+        helpText="Meio é a categoria geral de comunicação utilizada (ex: Digital, TV, Rádio, OOH). Define o tipo de canal onde os anúncios serão veiculados. Cada meio pode ter vários veículos associados."
       />
 
       <VehicleDialog
@@ -1643,7 +1644,7 @@ export function AppSidebar() {
         }}
         existingNames={getVehicleNames()}
         mode="create"
-        mediums={mediums.data || []}
+        mediums={mediums.activeItems || []}
         onCreateMedium={async (data) => {
           return new Promise((resolve) => {
             mediums.create.mutate(data, {

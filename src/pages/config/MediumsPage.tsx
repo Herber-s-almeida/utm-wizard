@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function MediumsPage() {
-  const { data: mediums, create, update, remove } = useMediums();
+  const { activeItems: mediums, create, update, remove } = useMediums();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -100,6 +100,7 @@ export default function MediumsPage() {
           existingNames={existingNames}
           initialData={editingItem}
           mode={editingItem ? 'edit' : 'create'}
+          helpText="Meio é a categoria geral de comunicação utilizada (ex: Digital, TV, Rádio, OOH). Define o tipo de canal onde os anúncios serão veiculados. Cada meio pode ter vários veículos associados."
         />
 
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
