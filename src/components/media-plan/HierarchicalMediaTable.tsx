@@ -1001,7 +1001,7 @@ export function HierarchicalMediaTable({
               className="h-6 text-xs px-1 w-full"
               value={editValue}
               onChange={handleEditChange}
-              maxLength={field === 'line_code' ? 7 : undefined}
+              maxLength={field === 'line_code' ? 10 : undefined}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') saveFieldEdit();
                 if (e.key === 'Escape') cancelFieldEdit();
