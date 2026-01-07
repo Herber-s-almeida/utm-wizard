@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Pencil, Trash2, ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import { useVehicles, useChannels, useMediums, Medium } from '@/hooks/useConfigData';
 import { VehicleDialog } from '@/components/config/VehicleDialog';
-import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
+import { ChannelDialog } from '@/components/config/ChannelDialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   AlertDialog,
@@ -73,9 +73,21 @@ export default function VehiclesPage() {
     });
   };
 
-  const handleCreateChannel = (data: { name: string; description: string }) => {
-    if (!selectedVehicleId) return;
-    createChannel.mutate({ name: data.name, description: data.description, vehicle_id: selectedVehicleId });
+  const handleCreateChannel = (data: { name: string; description?: string; slug?: string; vehicle_id: string }) => {
+    createChannel.mutate({ name: data.name, description: data.description, slug: data.slug, vehicle_id: data.vehicle_id });
+  };
+
+  const getSelectedVehicle = () => {
+    if (editingChannel) {
+      return activeVehicles?.find(v => v.id === editingChannel.vehicle_id);
+    }
+    return activeVehicles?.find(v => v.id === selectedVehicleId);
+  };
+
+  const getChannelExistingNames = () => {
+    const vehicleId = editingChannel?.vehicle_id || selectedVehicleId;
+    if (!vehicleId) return [];
+    return getVehicleChannels(vehicleId).map(c => c.name);
   };
 
   const toggleItem = (id: string) => {
@@ -209,15 +221,16 @@ export default function VehiclesPage() {
           onCreateMedium={handleCreateMedium}
         />
 
-        <SimpleConfigDialog
+        <ChannelDialog
           open={channelDialogOpen}
-          onOpenChange={setChannelDialogOpen}
-          onSave={editingChannel ? (data) => { updateChannel.mutate({ id: editingChannel.id, name: data.name, description: data.description }); setEditingChannel(null); } : handleCreateChannel}
-          title={editingChannel ? 'Editar canal' : 'Criar novo canal no veículo'}
-          nameLabel="Nome do canal"
-          namePlaceholder="Ex: Search"
-          initialData={editingChannel}
-          mode={editingChannel ? 'edit' : 'create'}
+          onOpenChange={(open) => { setChannelDialogOpen(open); if (!open) setEditingChannel(null); }}
+          onSave={handleCreateChannel}
+          onUpdate={(data) => { updateChannel.mutate(data); setEditingChannel(null); }}
+          editingChannel={editingChannel}
+          vehicleId={editingChannel?.vehicle_id || selectedVehicleId || ''}
+          vehicleName={getSelectedVehicle()?.name || ''}
+          vehicleSlug={getSelectedVehicle()?.slug || ''}
+          existingNames={getChannelExistingNames()}
         />
 
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

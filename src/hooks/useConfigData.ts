@@ -49,6 +49,7 @@ export interface Vehicle {
   id: string;
   name: string;
   description?: string;
+  slug?: string;
   medium_id: string | null;
   user_id: string;
   deleted_at?: string | null;
@@ -416,8 +417,8 @@ export function useChannels() {
   });
 
   const create = useMutation({
-    mutationFn: async ({ name, description, vehicle_id }: { name: string; description?: string; vehicle_id: string }) => {
-      const { data, error } = await supabase.from('channels').insert({ name, description: description || null, vehicle_id, user_id: user!.id }).select().single();
+    mutationFn: async ({ name, description, slug, vehicle_id }: { name: string; description?: string; slug?: string; vehicle_id: string }) => {
+      const { data, error } = await supabase.from('channels').insert({ name, description: description || null, slug: slug || null, vehicle_id, user_id: user!.id }).select().single();
       if (error) throw error;
       return data;
     },
@@ -425,8 +426,8 @@ export function useChannels() {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, name, description }: { id: string; name: string; description?: string }) => {
-      const { error } = await supabase.from('channels').update({ name, description: description || null }).eq('id', id);
+    mutationFn: async ({ id, name, description, slug }: { id: string; name: string; description?: string; slug?: string }) => {
+      const { error } = await supabase.from('channels').update({ name, description: description || null, slug: slug || null }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['channels'] }); toast.success('Canal atualizado!'); },
