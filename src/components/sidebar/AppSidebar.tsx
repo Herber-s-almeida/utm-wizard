@@ -37,6 +37,7 @@ import { useCurrentProfile } from '@/hooks/useCurrentProfile';
 import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates, useBehavioralSegmentations } from '@/hooks/useConfigData';
 import { useFormatsHierarchy } from '@/hooks/useFormatsHierarchy';
 import { useCreativeTypes } from '@/hooks/useCreativeTypes';
+import { useMenuVisibility } from '@/hooks/useMenuVisibility';
 import { useStatuses } from '@/hooks/useStatuses';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -88,6 +89,7 @@ export function AppSidebar() {
   const statuses = useStatuses();
   const formatsHierarchy = useFormatsHierarchy();
   const creativeTypesGlobal = useCreativeTypes();
+  const { isMenuHidden } = useMenuVisibility();
 
   // Get environment display name - show for all users, not just when viewing other environments
   const environmentName = isViewingOtherEnvironment 
@@ -262,20 +264,22 @@ export function AppSidebar() {
             <TooltipContent side="right">Dashboard</TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/reports">
-                <Button 
-                  variant={location.pathname.startsWith('/reports') ? 'secondary' : 'ghost'} 
-                  size="icon"
-                  className="h-9 w-9"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Relatórios</TooltipContent>
-          </Tooltip>
+          {!isMenuHidden('reports') && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link to="/reports">
+                  <Button 
+                    variant={location.pathname.startsWith('/reports') ? 'secondary' : 'ghost'} 
+                    size="icon"
+                    className="h-9 w-9"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">Relatórios</TooltipContent>
+            </Tooltip>
+          )}
 
           <div className="w-8 h-px bg-border my-2" />
 
@@ -311,23 +315,27 @@ export function AppSidebar() {
 
           <div className="w-8 h-px bg-border my-2" />
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9">
-                <Palette className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Recursos de Mídia</TooltipContent>
-          </Tooltip>
+          {!isMenuHidden('media_resources') && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Palette className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Recursos de Mídia</TooltipContent>
+            </Tooltip>
+          )}
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9">
-                <Link2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Taxonomia UTM</TooltipContent>
-          </Tooltip>
+          {!isMenuHidden('taxonomy') && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Link2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Taxonomia UTM</TooltipContent>
+            </Tooltip>
+          )}
 
           <div className="w-8 h-px bg-border my-2" />
 
@@ -447,34 +455,36 @@ export function AppSidebar() {
       ) : (
       <ScrollArea className="flex-1 py-3 px-2 overflow-x-hidden bg-background">
         {/* RELATÓRIOS */}
-        <div className="mb-4">
-          <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Relatórios
-          </h3>
+        {!isMenuHidden('reports') && (
+          <div className="mb-4">
+            <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              Relatórios
+            </h3>
 
-          <div className="flex items-center">
-            <Link to="/reports" className="flex-1">
-              <Button 
-                variant={location.pathname.startsWith('/reports') ? 'secondary' : 'ghost'} 
-                size="sm" 
-                className="w-full justify-start gap-2 h-8 text-xs"
-              >
-                <BarChart3 className="h-3.5 w-3.5" />
-                <span>Dashboard de Performance</span>
-              </Button>
-            </Link>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link to="/reports">
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                    <Eye className="h-3.5 w-3.5" />
-                  </Button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Ver todos os relatórios</TooltipContent>
-            </Tooltip>
+            <div className="flex items-center">
+              <Link to="/reports" className="flex-1">
+                <Button 
+                  variant={location.pathname.startsWith('/reports') ? 'secondary' : 'ghost'} 
+                  size="sm" 
+                  className="w-full justify-start gap-2 h-8 text-xs"
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  <span>Dashboard de Performance</span>
+                </Button>
+              </Link>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/reports">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Ver todos os relatórios</TooltipContent>
+              </Tooltip>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* PLANOS DE MÍDIA */}
         <div className="mb-4">
@@ -608,6 +618,7 @@ export function AppSidebar() {
         </div>
 
         {/* RECURSOS DE MÍDIA */}
+        {!isMenuHidden('media_resources') && (
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
             <Palette className="h-3 w-3" />
@@ -720,8 +731,10 @@ export function AppSidebar() {
             </CollapsibleContent>
           </Collapsible>
         </div>
+        )}
 
         {/* TAXONOMIA */}
+        {!isMenuHidden('taxonomy') && (
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
             <Link2 className="h-3 w-3" />
@@ -833,6 +846,7 @@ export function AppSidebar() {
             </CollapsibleContent>
           </Collapsible>
         </div>
+        )}
 
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
@@ -1513,16 +1527,32 @@ export function AppSidebar() {
               <span className="truncate flex-1">{user?.email}</span>
             </div>
             {isAdmin && (
-              <Link to="/admin/users">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start gap-2 h-8 text-xs mb-1"
-                >
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Administração
-                </Button>
-              </Link>
+              <div className="mb-1">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1 px-2">
+                  <ShieldCheck className="h-3 w-3" />
+                  <span className="font-medium">Administração</span>
+                </div>
+                <Link to="/admin/users">
+                  <Button
+                    variant={location.pathname === '/admin/users' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start gap-2 h-7 text-xs pl-6"
+                  >
+                    <Users className="h-3 w-3" />
+                    Usuários
+                  </Button>
+                </Link>
+                <Link to="/admin/menu-visibility">
+                  <Button
+                    variant={location.pathname === '/admin/menu-visibility' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start gap-2 h-7 text-xs pl-6"
+                  >
+                    <Eye className="h-3 w-3" />
+                    Visibilidade do Menu
+                  </Button>
+                </Link>
+              </div>
             )}
             <Link to="/account">
               <Button
