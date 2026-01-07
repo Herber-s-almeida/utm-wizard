@@ -70,6 +70,7 @@ export interface Channel {
 export interface Target {
   id: string;
   name: string;
+  slug?: string | null;
   age_range: string | null;
   geolocation: any;
   behavior: string | null;
@@ -527,8 +528,16 @@ export function useTargets() {
   });
 
   const create = useMutation({
-    mutationFn: async (target: { name: string; age_range?: string; geolocation?: any; behavior?: string; description?: string }) => {
-      const { data, error } = await supabase.from('targets').insert({ name: target.name, age_range: target.age_range || null, geolocation: target.geolocation || [], behavior: target.behavior || null, description: target.description || null, user_id: user!.id }).select().single();
+    mutationFn: async (target: { name: string; slug?: string; age_range?: string; geolocation?: any; behavior?: string; description?: string }) => {
+      const { data, error } = await supabase.from('targets').insert({ 
+        name: target.name, 
+        slug: target.slug || null,
+        age_range: target.age_range || null, 
+        geolocation: target.geolocation || [], 
+        behavior: target.behavior || null, 
+        description: target.description || null, 
+        user_id: user!.id 
+      }).select().single();
       if (error) throw error;
       return data;
     },

@@ -116,7 +116,14 @@ export default function TargetsPage() {
           onOpenChange={setDialogOpen}
           onSave={editingItem ? handleUpdate : handleCreate}
           existingNames={existingNames}
-          initialData={editingItem}
+          initialData={editingItem ? {
+            name: editingItem.name,
+            slug: editingItem.slug,
+            age_range: editingItem.age_range || '',
+            geolocation: editingItem.geolocation || [],
+            behavior: editingItem.behavior || '',
+            description: editingItem.description
+          } : undefined}
           mode={editingItem ? 'edit' : 'create'}
         />
 
