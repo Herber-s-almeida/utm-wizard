@@ -70,7 +70,7 @@ export default function EditMediaPlan() {
   const [loading, setLoading] = useState(true);
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [temporalPeriods, setTemporalPeriods] = useState<any[]>([]);
-  const [orphanLinesCount, setOrphanLinesCount] = useState(0);
+  const [orphanLinesData, setOrphanLinesData] = useState<{ count: number; lines: { id: string; line_code: string; platform: string; reason: string }[] }>({ count: 0, lines: [] });
   const [showOrphanWarning, setShowOrphanWarning] = useState(false);
   const [existingDistributions, setExistingDistributions] = useState<BudgetDistribution[]>([]);
   const [existingLines, setExistingLines] = useState<any[]>([]);
@@ -128,6 +128,7 @@ export default function EditMediaPlan() {
         start_date: plan.start_date || '',
         end_date: plan.end_date || '',
         total_budget: Number(plan.total_budget) || 0,
+        default_url: plan.default_url || '',
         objectives: plan.objectives || [],
         kpis: (plan.kpis as Record<string, number>) || {},
       };
@@ -270,30 +271,40 @@ export default function EditMediaPlan() {
     }
   };
 
-  // Calculate orphan lines (lines that will be deleted)
-  const calculateOrphanLines = () => {
+  // Calculate orphan lines (lines that will be deleted) with details
+  const calculateOrphanLines = (): { count: number; lines: { id: string; line_code: string; platform: string; reason: string }[] } => {
     const newSubIds = new Set(state.subdivisions.map(s => s.id));
     const newMomIds = new Set(Object.values(state.moments).flat().map(m => m.id));
     const newFunnelIds = new Set(Object.values(state.funnelStages).flat().map(f => f.id));
 
-    let orphanCount = 0;
+    const orphanLines: { id: string; line_code: string; platform: string; reason: string }[] = [];
     for (const line of existingLines) {
       const subOrphan = line.subdivision_id && !newSubIds.has(line.subdivision_id);
       const momOrphan = line.moment_id && !newMomIds.has(line.moment_id);
       const funnelOrphan = line.funnel_stage_id && !newFunnelIds.has(line.funnel_stage_id);
       
       if (subOrphan || momOrphan || funnelOrphan) {
-        orphanCount++;
+        const reasons: string[] = [];
+        if (subOrphan) reasons.push('subdivisão');
+        if (momOrphan) reasons.push('momento');
+        if (funnelOrphan) reasons.push('fase do funil');
+        
+        orphanLines.push({
+          id: line.id,
+          line_code: line.line_code || 'Sem código',
+          platform: line.platform || 'N/A',
+          reason: reasons.join(', '),
+        });
       }
     }
-    return orphanCount;
+    return { count: orphanLines.length, lines: orphanLines };
   };
 
   const handleSave = async () => {
     // Check for orphan lines first
     const orphans = calculateOrphanLines();
-    if (orphans > 0 && !showOrphanWarning) {
-      setOrphanLinesCount(orphans);
+    if (orphans.count > 0 && !showOrphanWarning) {
+      setOrphanLinesData(orphans);
       setShowOrphanWarning(true);
       return;
     }
@@ -310,6 +321,7 @@ export default function EditMediaPlan() {
           start_date: state.planData.start_date,
           end_date: state.planData.end_date,
           total_budget: state.planData.total_budget,
+          default_url: state.planData.default_url || null,
           objectives: state.planData.objectives.length > 0 ? state.planData.objectives : null,
           kpis: Object.keys(state.planData.kpis).length > 0 ? state.planData.kpis : null,
         })
@@ -640,6 +652,25 @@ export default function EditMediaPlan() {
                         value={state.planData.total_budget || ''}
                         onChange={(e) => updatePlanData({ total_budget: parseFloat(e.target.value) || 0 })}
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <LabelWithTooltip 
+                        htmlFor="default_url" 
+                        tooltip="URL padrão de destino para as linhas de mídia. Será usada como base para os parâmetros UTM."
+                      >
+                        URL Padrão de Destino
+                      </LabelWithTooltip>
+                      <Input
+                        id="default_url"
+                        type="url"
+                        placeholder="https://seusite.com.br/campanha"
+                        value={state.planData.default_url}
+                        onChange={(e) => updatePlanData({ default_url: e.target.value })}
+                      />
+                      {state.planData.default_url && !/^https?:\/\/.+/.test(state.planData.default_url) && (
+                        <p className="text-xs text-destructive">URL inválida. Use o formato https://exemplo.com</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -1055,15 +1086,48 @@ export default function EditMediaPlan() {
 
       {/* Orphan Lines Warning Dialog */}
       <AlertDialog open={showOrphanWarning} onOpenChange={setShowOrphanWarning}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
               Linhas de mídia serão excluídas
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              {orphanLinesCount} linha(s) de mídia estão vinculadas a subdivisões, momentos ou fases que serão removidas.
-              Essas linhas serão <strong>excluídas permanentemente</strong>. Deseja continuar?
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  <strong>{orphanLinesData.count} linha(s)</strong> de mídia estão vinculadas a subdivisões, momentos ou fases que serão removidas.
+                  Essas linhas serão <strong className="text-destructive">excluídas permanentemente</strong>.
+                </p>
+                {orphanLinesData.lines.length > 0 && (
+                  <div className="max-h-40 overflow-y-auto border rounded-md">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50 sticky top-0">
+                        <tr>
+                          <th className="text-left px-2 py-1 font-medium">Código</th>
+                          <th className="text-left px-2 py-1 font-medium">Plataforma</th>
+                          <th className="text-left px-2 py-1 font-medium">Motivo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orphanLinesData.lines.slice(0, 10).map((line) => (
+                          <tr key={line.id} className="border-t">
+                            <td className="px-2 py-1 font-mono text-xs">{line.line_code}</td>
+                            <td className="px-2 py-1">{line.platform}</td>
+                            <td className="px-2 py-1 text-muted-foreground">{line.reason}</td>
+                          </tr>
+                        ))}
+                        {orphanLinesData.lines.length > 10 && (
+                          <tr className="border-t">
+                            <td colSpan={3} className="px-2 py-1 text-muted-foreground text-center">
+                              ...e mais {orphanLinesData.lines.length - 10} linha(s)
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

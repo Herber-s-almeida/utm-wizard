@@ -8,6 +8,7 @@ export interface WizardPlanData {
   start_date: string;
   end_date: string;
   total_budget: number;
+  default_url: string;
   objectives: string[];
   kpis: Record<string, number>;
 }
@@ -50,6 +51,7 @@ export function useMediaPlanWizard() {
       start_date: '',
       end_date: '',
       total_budget: 0,
+      default_url: '',
       objectives: [],
       kpis: {},
     },
@@ -125,6 +127,7 @@ export function useMediaPlanWizard() {
         start_date: '',
         end_date: '',
         total_budget: 0,
+        default_url: '',
         objectives: [],
         kpis: {},
       },
