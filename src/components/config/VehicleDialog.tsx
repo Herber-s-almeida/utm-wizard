@@ -142,8 +142,9 @@ export function VehicleDialog({
     }
 
     const normalizedName = trimmedName.toLowerCase();
+    const originalName = initialData?.name?.toLowerCase();
     const isExisting = existingNames.some(
-      n => n.toLowerCase() === normalizedName && n !== initialData?.name?.toLowerCase()
+      n => n.toLowerCase() === normalizedName && n.toLowerCase() !== originalName
     );
     
     if (isExisting) {
