@@ -128,6 +128,7 @@ export default function NewMediaPlanBudget() {
           start_date: state.planData.start_date,
           end_date: state.planData.end_date,
           total_budget: state.planData.total_budget,
+          default_url: state.planData.default_url || null,
           objectives: state.planData.objectives.length > 0 ? state.planData.objectives : null,
           kpis: Object.keys(state.planData.kpis).length > 0 ? state.planData.kpis : null,
           status: 'draft',
@@ -454,6 +455,25 @@ export default function NewMediaPlanBudget() {
                         value={state.planData.total_budget || ''}
                         onChange={(e) => updatePlanData({ total_budget: parseFloat(e.target.value) || 0 })}
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <LabelWithTooltip 
+                        htmlFor="default_url" 
+                        tooltip="URL padrão de destino para as linhas de mídia. Será usada como base para os parâmetros UTM."
+                      >
+                        URL Padrão de Destino
+                      </LabelWithTooltip>
+                      <Input
+                        id="default_url"
+                        type="url"
+                        placeholder="https://seusite.com.br/campanha"
+                        value={state.planData.default_url}
+                        onChange={(e) => updatePlanData({ default_url: e.target.value })}
+                      />
+                      {state.planData.default_url && !/^https?:\/\/.+/.test(state.planData.default_url) && (
+                        <p className="text-xs text-destructive">URL inválida. Use o formato https://exemplo.com</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
