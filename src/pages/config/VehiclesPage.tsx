@@ -47,7 +47,15 @@ export default function VehiclesPage() {
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({});
 
   const getVehicleChannels = (vehicleId: string) => activeChannels?.filter(c => c.vehicle_id === vehicleId) || [];
-  const existingVehicleNames = activeVehicles?.map(v => v.name) || [];
+  
+  // Filter out the editing item's name to allow saving without "already exists" error
+  const getExistingVehicleNames = () => {
+    const names = activeVehicles?.map(v => v.name) || [];
+    if (editingVehicle) {
+      return names.filter(n => n.toLowerCase() !== editingVehicle.name.toLowerCase());
+    }
+    return names;
+  };
 
   const handleCreateVehicle = (data: { name: string; description: string; medium_id: string; channels: { name: string; description: string }[] }) => {
     createVehicle.mutate({ name: data.name, description: data.description, medium_id: data.medium_id }, {
@@ -59,9 +67,9 @@ export default function VehiclesPage() {
     });
   };
 
-  const handleUpdateVehicle = (data: { name: string; description: string; medium_id: string; channels: { name: string; description: string }[] }) => {
+  const handleUpdateVehicle = (data: { name: string; description: string; medium_id: string; slug?: string; channels: { name: string; description: string }[] }) => {
     if (!editingVehicle) return;
-    updateVehicle.mutate({ id: editingVehicle.id, name: data.name, description: data.description });
+    updateVehicle.mutate({ id: editingVehicle.id, name: data.name, description: data.description, medium_id: data.medium_id, slug: data.slug });
   };
 
   const handleCreateMedium = async (data: { name: string; description: string }): Promise<Medium | undefined> => {
@@ -87,7 +95,12 @@ export default function VehiclesPage() {
   const getChannelExistingNames = () => {
     const vehicleId = editingChannel?.vehicle_id || selectedVehicleId;
     if (!vehicleId) return [];
-    return getVehicleChannels(vehicleId).map(c => c.name);
+    const names = getVehicleChannels(vehicleId).map(c => c.name);
+    // Filter out the editing channel's name to allow saving without "already exists" error
+    if (editingChannel) {
+      return names.filter(n => n.toLowerCase() !== editingChannel.name.toLowerCase());
+    }
+    return names;
   };
 
   const toggleItem = (id: string) => {
@@ -209,7 +222,7 @@ export default function VehiclesPage() {
           open={vehicleDialogOpen}
           onOpenChange={setVehicleDialogOpen}
           onSave={editingVehicle ? handleUpdateVehicle : handleCreateVehicle}
-          existingNames={existingVehicleNames}
+          existingNames={getExistingVehicleNames()}
           initialData={editingVehicle ? {
             name: editingVehicle.name,
             description: editingVehicle.description || '',
