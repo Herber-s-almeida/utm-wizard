@@ -20,9 +20,23 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function VehiclesPage() {
-  const { data: vehicles, create: createVehicle, update: updateVehicle, remove: removeVehicle } = useVehicles();
-  const { data: channels, create: createChannel, update: updateChannel, remove: removeChannel } = useChannels();
-  const { data: mediums, create: createMedium } = useMediums();
+  const {
+    activeItems: activeVehicles,
+    data: allVehicles,
+    create: createVehicle,
+    update: updateVehicle,
+    remove: removeVehicle,
+  } = useVehicles();
+
+  const {
+    activeItems: activeChannels,
+    data: allChannels,
+    create: createChannel,
+    update: updateChannel,
+    remove: removeChannel,
+  } = useChannels();
+
+  const { activeItems: activeMediums, data: allMediums, create: createMedium } = useMediums();
   
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [channelDialogOpen, setChannelDialogOpen] = useState(false);
@@ -32,8 +46,8 @@ export default function VehiclesPage() {
   const [deleteId, setDeleteId] = useState<{ type: 'vehicle' | 'channel'; id: string } | null>(null);
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({});
 
-  const getVehicleChannels = (vehicleId: string) => channels?.filter(c => c.vehicle_id === vehicleId) || [];
-  const existingVehicleNames = vehicles?.map(v => v.name) || [];
+  const getVehicleChannels = (vehicleId: string) => activeChannels?.filter(c => c.vehicle_id === vehicleId) || [];
+  const existingVehicleNames = activeVehicles?.map(v => v.name) || [];
 
   const handleCreateVehicle = (data: { name: string; description: string; medium_id: string; channels: { name: string; description: string }[] }) => {
     createVehicle.mutate({ name: data.name, description: data.description, medium_id: data.medium_id }, {
@@ -70,7 +84,7 @@ export default function VehiclesPage() {
 
   const getMediumName = (mediumId: string | null) => {
     if (!mediumId) return null;
-    return mediums?.find(m => m.id === mediumId)?.name;
+    return allMediums?.find(m => m.id === mediumId)?.name;
   };
 
   return (
@@ -96,14 +110,14 @@ export default function VehiclesPage() {
         </div>
 
         <div className="space-y-3">
-          {vehicles?.length === 0 ? (
+          {activeVehicles?.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
                 Nenhum veículo criado ainda
               </CardContent>
             </Card>
           ) : (
-            vehicles?.map(vehicle => {
+            activeVehicles?.map(vehicle => {
               const vehicleChannels = getVehicleChannels(vehicle.id);
               const mediumName = getMediumName(vehicle.medium_id);
               return (
@@ -191,7 +205,7 @@ export default function VehiclesPage() {
             channels: getVehicleChannels(editingVehicle.id).map(c => ({ name: c.name, description: (c as any).description || '' }))
           } : undefined}
           mode={editingVehicle ? 'edit' : 'create'}
-          mediums={mediums || []}
+          mediums={activeMediums || []}
           onCreateMedium={handleCreateMedium}
         />
 
