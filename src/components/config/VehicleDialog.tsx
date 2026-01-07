@@ -91,7 +91,8 @@ export function VehicleDialog({
       return;
     }
 
-    const existingMedium = mediums.find(m => m.name.toLowerCase() === trimmedName.toLowerCase());
+    const selectableMediums = mediums.filter(m => !m.deleted_at);
+    const existingMedium = selectableMediums.find(m => m.name.toLowerCase() === trimmedName.toLowerCase());
     if (existingMedium) {
       toast.error('Já existe um meio com este nome');
       return;
@@ -189,7 +190,7 @@ export function VehicleDialog({
                     <SelectValue placeholder="Selecione um meio" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border z-50">
-                    {mediums.map((medium) => (
+                    {mediums.filter(m => !m.deleted_at).map((medium) => (
                       <SelectItem key={medium.id} value={medium.id}>
                         {medium.name}
                       </SelectItem>
