@@ -1540,7 +1540,7 @@ export function HierarchicalMediaTable({
             {visibleColumns.channel && <div className="w-[100px] p-3 border-r shrink-0">Canal</div>}
             {visibleColumns.target && <div className="w-[130px] p-3 border-r shrink-0">Segmentação</div>}
             <div className="w-[120px] p-3 border-r shrink-0">Orçamento</div>
-            {visibleColumns.creatives && <div className="w-[80px] p-3 border-r shrink-0">Criativos</div>}
+            {visibleColumns.creatives && <div className="w-[90px] p-3 border-r shrink-0">Criativos</div>}
             <div className="w-[100px] p-3 border-r shrink-0">Status</div>
             <div className="w-[100px] p-3 border-r shrink-0">Início</div>
             <div className="w-[100px] p-3 border-r shrink-0">Fim</div>
@@ -1632,26 +1632,48 @@ export function HierarchicalMediaTable({
                       width="w-[120px]"
                     />
                     
-                    {/* Creatives with edit button */}
+                    {/* Creatives with counter and quick add button */}
                     {visibleColumns.creatives && (
-                      <div className="w-[80px] p-2 border-r flex items-center justify-between group shrink-0">
-                        <div className="flex items-center gap-1">
+                      <div className="w-[90px] p-2 border-r flex items-center justify-between group shrink-0">
+                        <div className="flex items-center gap-1.5">
                           <ImageIcon className="w-3 h-3 text-muted-foreground" />
-                          <span>{info.creativesCount}</span>
+                          <span className={cn(
+                            "text-xs font-medium",
+                            info.creativesCount > 0 ? "text-foreground" : "text-muted-foreground"
+                          )}>
+                            {info.creativesCount}
+                          </span>
                         </div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => onEditLine(line, 'creatives')}
-                            >
-                              <Pencil className="w-3 h-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Editar criativos</TooltipContent>
-                        </Tooltip>
+                        <div className="flex items-center gap-0.5">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-primary"
+                                onClick={() => onEditLine(line, 'creatives')}
+                              >
+                                <Plus className="w-3 h-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Adicionar criativo</TooltipContent>
+                          </Tooltip>
+                          {info.creativesCount > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => onEditLine(line, 'creatives')}
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar criativos</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
                       </div>
                     )}
                     
@@ -1895,26 +1917,48 @@ export function HierarchicalMediaTable({
                                       width="w-[120px]"
                                     />
                                     
-                                    {/* Creatives with edit button */}
+                                    {/* Creatives with counter and quick add button */}
                                     {visibleColumns.creatives && (
-                                      <div className="w-[80px] p-2 border-r flex items-center justify-between group shrink-0">
-                                        <div className="flex items-center gap-1">
+                                      <div className="w-[90px] p-2 border-r flex items-center justify-between group shrink-0">
+                                        <div className="flex items-center gap-1.5">
                                           <ImageIcon className="w-3 h-3 text-muted-foreground" />
-                                          <span>{info.creativesCount}</span>
+                                          <span className={cn(
+                                            "text-xs font-medium",
+                                            info.creativesCount > 0 ? "text-foreground" : "text-muted-foreground"
+                                          )}>
+                                            {info.creativesCount}
+                                          </span>
                                         </div>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                              onClick={() => onEditLine(line, 'creatives')}
-                                            >
-                                              <Pencil className="w-3 h-3" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Editar criativos</TooltipContent>
-                                        </Tooltip>
+                                        <div className="flex items-center gap-0.5">
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-primary"
+                                                onClick={() => onEditLine(line, 'creatives')}
+                                              >
+                                                <Plus className="w-3 h-3" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Adicionar criativo</TooltipContent>
+                                          </Tooltip>
+                                          {info.creativesCount > 0 && (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                  onClick={() => onEditLine(line, 'creatives')}
+                                                >
+                                                  <Pencil className="w-3 h-3" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Editar criativos</TooltipContent>
+                                            </Tooltip>
+                                          )}
+                                        </div>
                                       </div>
                                     )}
                                     
@@ -2072,7 +2116,7 @@ export function HierarchicalMediaTable({
             {visibleColumns.channel && <div className="w-[100px] p-3 shrink-0"></div>}
             {visibleColumns.target && <div className="w-[130px] p-3 shrink-0"></div>}
             <div className="w-[120px] p-3 font-bold shrink-0">{formatCurrency(totalBudget)}</div>
-            {visibleColumns.creatives && <div className="w-[80px] p-3 shrink-0"></div>}
+            {visibleColumns.creatives && <div className="w-[90px] p-3 shrink-0"></div>}
             <div className="w-[100px] p-3 shrink-0"></div>
             <div className="w-[100px] p-3 shrink-0"></div>
             <div className="w-[100px] p-3 shrink-0"></div>
