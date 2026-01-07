@@ -154,6 +154,7 @@ export function AppSidebar() {
   const [editingTarget, setEditingTarget] = useState<any>(null);
   const [editingCreative, setEditingCreative] = useState<any>(null);
   const [editingSegment, setEditingSegment] = useState<any>(null);
+  const [editingStatus, setEditingStatus] = useState<any>(null);
 
   // Track which vehicle is selected for creating a new channel
   const [selectedVehicleForChannel, setSelectedVehicleForChannel] = useState<{ id: string; name: string } | null>(null);
@@ -180,16 +181,16 @@ export function AppSidebar() {
 
   const MAX_ITEMS = 3;
 
-  // Helper to get existing names for validation
+  // Helper to get existing names for validation (use activeItems to exclude archived)
   const getSubdivisionNames = () => parentSubdivisions.map(s => s.name);
-  const getMomentNames = () => moments.data?.map(m => m.name) || [];
-  const getFunnelStageNames = () => funnelStages.data?.map(s => s.name) || [];
-  const getMediumNames = () => mediums.data?.map(m => m.name) || [];
-  const getVehicleNames = () => vehicles.data?.map(v => v.name) || [];
-  const getTargetNames = () => targets.data?.map(t => t.name) || [];
-  const getCreativeNames = () => creativeTemplates.data?.map(c => c.name) || [];
-  const getSegmentNames = () => behavioralSegmentations.data?.map(s => s.name) || [];
-  const getStatusNames = () => statuses.data?.map(s => s.name) || [];
+  const getMomentNames = () => moments.activeItems?.map(m => m.name) || [];
+  const getFunnelStageNames = () => funnelStages.activeItems?.map(s => s.name) || [];
+  const getMediumNames = () => mediums.activeItems?.map(m => m.name) || [];
+  const getVehicleNames = () => vehicles.activeItems?.map(v => v.name) || [];
+  const getTargetNames = () => targets.activeItems?.map(t => t.name) || [];
+  const getCreativeNames = () => creativeTemplates.activeItems?.map(c => c.name) || [];
+  const getSegmentNames = () => behavioralSegmentations.activeItems?.map(s => s.name) || [];
+  const getStatusNames = () => statuses.activeItems?.map(s => s.name) || [];
 
   return (
     <div className={cn(
@@ -1400,15 +1401,15 @@ export function AppSidebar() {
               </Link>
             </div>
             <CollapsibleContent className="pl-4">
-              {statuses.data?.filter(s => !s.is_system).slice(0, MAX_ITEMS).map(status => (
+              {statuses.activeItems?.filter(s => !s.is_system).slice(0, MAX_ITEMS).map(status => (
                 <ConfigItemRow
                   key={status.id}
                   name={status.name}
-                  onEdit={() => {}}
+                  onEdit={() => setEditingStatus(status)}
                   onDelete={() => statuses.remove.mutate(status.id)}
                 />
               ))}
-              {statuses.data?.filter(s => s.is_system).slice(0, MAX_ITEMS).map(status => (
+              {statuses.activeItems?.filter(s => s.is_system).slice(0, MAX_ITEMS).map(status => (
                 <div key={status.id} className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
                   <span className="truncate">{status.name}</span>
                   <span className="text-[10px]">(padrão)</span>
@@ -1594,57 +1595,131 @@ export function AppSidebar() {
         mode="create"
       />
 
+      {/* Moment Dialog - Create or Edit */}
       <SimpleConfigDialog
-        open={momentDialogOpen}
-        onOpenChange={setMomentDialogOpen}
-        onSave={(data) => moments.create.mutate({ name: data.name, description: data.description })}
-        existingNames={getMomentNames()}
-        title="Criar novo momento de campanha"
+        open={momentDialogOpen || !!editingMoment}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMomentDialogOpen(false);
+            setEditingMoment(null);
+          }
+        }}
+        onSave={(data) => {
+          if (editingMoment) {
+            moments.update.mutate({ id: editingMoment.id, name: data.name, description: data.description });
+          } else {
+            moments.create.mutate({ name: data.name, description: data.description });
+          }
+        }}
+        existingNames={getMomentNames().filter(n => n !== editingMoment?.name)}
+        title={editingMoment ? "Editar momento de campanha" : "Criar novo momento de campanha"}
         nameLabel="Nome do momento"
         namePlaceholder="Ex: Black Friday"
-        mode="create"
+        initialData={editingMoment ? { name: editingMoment.name, description: editingMoment.description || '' } : undefined}
+        mode={editingMoment ? 'edit' : 'create'}
       />
 
+      {/* Funnel Stage Dialog - Create or Edit */}
       <SimpleConfigDialog
-        open={funnelStageDialogOpen}
-        onOpenChange={setFunnelStageDialogOpen}
-        onSave={(data) => funnelStages.create.mutate({ name: data.name, description: data.description })}
-        existingNames={getFunnelStageNames()}
-        title="Criar nova fase de funil"
+        open={funnelStageDialogOpen || !!editingFunnelStage}
+        onOpenChange={(open) => {
+          if (!open) {
+            setFunnelStageDialogOpen(false);
+            setEditingFunnelStage(null);
+          }
+        }}
+        onSave={(data) => {
+          if (editingFunnelStage) {
+            funnelStages.update.mutate({ id: editingFunnelStage.id, name: data.name, description: data.description });
+          } else {
+            funnelStages.create.mutate({ name: data.name, description: data.description });
+          }
+        }}
+        existingNames={getFunnelStageNames().filter(n => n !== editingFunnelStage?.name)}
+        title={editingFunnelStage ? "Editar fase de funil" : "Criar nova fase de funil"}
         nameLabel="Nome da fase"
         namePlaceholder="Ex: Awareness"
-        mode="create"
+        initialData={editingFunnelStage ? { name: editingFunnelStage.name, description: editingFunnelStage.description || '' } : undefined}
+        mode={editingFunnelStage ? 'edit' : 'create'}
       />
 
+      {/* Medium Dialog - Create or Edit */}
       <SimpleConfigDialog
-        open={mediumDialogOpen}
-        onOpenChange={setMediumDialogOpen}
-        onSave={(data) => mediums.create.mutate({ name: data.name, description: data.description })}
-        existingNames={getMediumNames()}
-        title="Criar novo meio"
+        open={mediumDialogOpen || !!editingMedium}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMediumDialogOpen(false);
+            setEditingMedium(null);
+          }
+        }}
+        onSave={(data) => {
+          if (editingMedium) {
+            mediums.update.mutate({ id: editingMedium.id, name: data.name, description: data.description });
+          } else {
+            mediums.create.mutate({ name: data.name, description: data.description });
+          }
+        }}
+        existingNames={getMediumNames().filter(n => n !== editingMedium?.name)}
+        title={editingMedium ? "Editar meio" : "Criar novo meio"}
         nameLabel="Nome do meio"
         namePlaceholder="Ex: Digital"
-        mode="create"
+        initialData={editingMedium ? { name: editingMedium.name, description: editingMedium.description || '' } : undefined}
+        mode={editingMedium ? 'edit' : 'create'}
         helpText="Meio é a categoria geral de comunicação utilizada (ex: Digital, TV, Rádio, OOH). Define o tipo de canal onde os anúncios serão veiculados. Cada meio pode ter vários veículos associados."
       />
 
+      {/* Status Dialog - Edit only (create goes to dedicated page) */}
+      {editingStatus && (
+        <SimpleConfigDialog
+          open={!!editingStatus}
+          onOpenChange={(open) => {
+            if (!open) setEditingStatus(null);
+          }}
+          onSave={(data) => {
+            statuses.update.mutate({ id: editingStatus.id, name: data.name, description: data.description });
+          }}
+          existingNames={getStatusNames().filter(n => n !== editingStatus.name)}
+          title="Editar status"
+          nameLabel="Nome do status"
+          namePlaceholder="Ex: Em revisão"
+          initialData={{ name: editingStatus.name, description: editingStatus.description || '' }}
+          mode="edit"
+        />
+      )}
+
+      {/* Vehicle Dialog - Create or Edit */}
       <VehicleDialog
-        open={vehicleDialogOpen}
-        onOpenChange={setVehicleDialogOpen}
-        onSave={(data) => {
-          vehicles.create.mutate({ name: data.name, description: data.description, medium_id: data.medium_id }, {
-            onSuccess: (newVehicle: any) => {
-              data.channels.forEach(channel => {
-                if (channel.name.trim()) {
-                  channels.create.mutate({ name: channel.name, description: channel.description, vehicle_id: newVehicle.id });
-                }
-              });
-            }
-          });
+        open={vehicleDialogOpen || !!editingVehicle}
+        onOpenChange={(open) => {
+          if (!open) {
+            setVehicleDialogOpen(false);
+            setEditingVehicle(null);
+          }
         }}
-        existingNames={getVehicleNames()}
-        mode="create"
+        onSave={(data) => {
+          if (editingVehicle) {
+            vehicles.update.mutate({ id: editingVehicle.id, name: data.name, description: data.description, medium_id: data.medium_id });
+          } else {
+            vehicles.create.mutate({ name: data.name, description: data.description, medium_id: data.medium_id }, {
+              onSuccess: (newVehicle: any) => {
+                data.channels.forEach(channel => {
+                  if (channel.name.trim()) {
+                    channels.create.mutate({ name: channel.name, description: channel.description, vehicle_id: newVehicle.id });
+                  }
+                });
+              }
+            });
+          }
+        }}
+        existingNames={getVehicleNames().filter(n => n !== editingVehicle?.name)}
+        mode={editingVehicle ? 'edit' : 'create'}
         mediums={mediums.activeItems || []}
+        initialData={editingVehicle ? { 
+          name: editingVehicle.name, 
+          description: editingVehicle.description || '', 
+          medium_id: editingVehicle.medium_id,
+          channels: []
+        } : undefined}
         onCreateMedium={async (data) => {
           return new Promise((resolve) => {
             mediums.create.mutate(data, {
@@ -1674,12 +1749,25 @@ export function AppSidebar() {
         />
       )}
 
+      {/* Target Dialog - Create or Edit */}
       <TargetDialog
-        open={targetDialogOpen}
-        onOpenChange={setTargetDialogOpen}
-        onSave={(data) => targets.create.mutate(data)}
-        existingNames={getTargetNames()}
-        mode="create"
+        open={targetDialogOpen || !!editingTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTargetDialogOpen(false);
+            setEditingTarget(null);
+          }
+        }}
+        onSave={(data) => {
+          if (editingTarget) {
+            targets.update.mutate({ id: editingTarget.id, ...data });
+          } else {
+            targets.create.mutate(data);
+          }
+        }}
+        existingNames={getTargetNames().filter(n => n !== editingTarget?.name)}
+        mode={editingTarget ? 'edit' : 'create'}
+        initialData={editingTarget || undefined}
       />
 
       <FormatWizardDialog
