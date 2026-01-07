@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PercentageInput } from './PercentageInput';
+import { CurrencyInput } from './CurrencyInput';
 import { cn } from '@/lib/utils';
 import { Toggle } from '@/components/ui/toggle';
 import { MomentDatePicker } from './MomentDatePicker';
@@ -117,12 +118,6 @@ export function BudgetAllocationTable({
     // Calculate percentage from absolute value
     const percentage = totalBudget > 0 ? (absoluteValue / totalBudget) * 100 : 0;
     onUpdate(id, Math.round(percentage * 100) / 100); // Round to 2 decimal places
-  };
-
-  const parseCurrencyInput = (value: string): number => {
-    // Remove currency formatting and parse
-    const cleaned = value.replace(/[^\d,.-]/g, '').replace(',', '.');
-    return parseFloat(cleaned) || 0;
   };
 
   return (
@@ -274,13 +269,10 @@ export function BudgetAllocationTable({
                     </TableCell>
                     <TableCell className="text-right">
                       {inputMode === 'absolute' ? (
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={itemAmount.toFixed(2)}
-                          onChange={(e) => handleAbsoluteChange(item.id, parseFloat(e.target.value) || 0)}
-                          className="w-32 ml-auto text-right font-mono"
+                        <CurrencyInput
+                          value={itemAmount}
+                          onChange={(value) => handleAbsoluteChange(item.id, value)}
+                          className="w-32 ml-auto"
                         />
                       ) : (
                         <span className="font-mono text-muted-foreground">

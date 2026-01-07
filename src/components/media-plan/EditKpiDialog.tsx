@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,26 +19,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCustomKpis } from '@/hooks/useCustomKpis';
+import { useCustomKpis, CustomKpi } from '@/hooks/useCustomKpis';
 
 const UNIT_OPTIONS = [
   { value: 'R$', label: 'R$ (Reais)' },
   { value: '%', label: '% (Percentual)' },
   { value: 'x', label: 'x (Multiplicador)' },
-  { value: '', label: 'Número simples' },
+  { value: '_none', label: 'Número simples' },
 ];
 
-interface CreateKpiDialogProps {
-  onKpiCreated?: (kpi: { id: string; key: string; name: string; unit: string }) => void;
+interface EditKpiDialogProps {
+  kpi: CustomKpi;
+  trigger?: React.ReactNode;
+  onUpdated?: () => void;
 }
 
-export function CreateKpiDialog({ onKpiCreated }: CreateKpiDialogProps) {
+export function EditKpiDialog({ kpi, trigger, onUpdated }: EditKpiDialogProps) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [unit, setUnit] = useState('R$');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState(kpi.name);
+  const [unit, setUnit] = useState(kpi.unit || '_none');
+  const [description, setDescription] = useState(kpi.description || '');
   
-  const { createKpi, canCreateMore, maxKpis, customKpis } = useCustomKpis();
+  const { updateKpi } = useCustomKpis();
+
+  useEffect(() => {
+    if (open) {
+      setName(kpi.name);
+      setUnit(kpi.unit || '_none');
+      setDescription(kpi.description || '');
+    }
+  }, [open, kpi]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,22 +56,14 @@ export function CreateKpiDialog({ onKpiCreated }: CreateKpiDialogProps) {
     if (!name.trim()) return;
 
     try {
-      const result = await createKpi.mutateAsync({
+      await updateKpi.mutateAsync({
+        id: kpi.id,
         name: name.trim(),
-        unit,
+        unit: unit === '_none' ? '' : unit,
         description: description.trim() || undefined,
       });
 
-      onKpiCreated?.({
-        id: result.id,
-        key: result.key,
-        name: result.name,
-        unit: result.unit,
-      });
-
-      setName('');
-      setUnit('R$');
-      setDescription('');
+      onUpdated?.();
       setOpen(false);
     } catch {
       // Error handled by mutation
@@ -71,34 +73,25 @@ export function CreateKpiDialog({ onKpiCreated }: CreateKpiDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="gap-2"
-          disabled={!canCreateMore}
-        >
-          <Plus className="h-4 w-4" />
-          Criar KPI
-        </Button>
+        {trigger || (
+          <Button variant="ghost" size="icon" className="h-7 w-7">
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Criar KPI Personalizado</DialogTitle>
+          <DialogTitle>Editar KPI</DialogTitle>
           <DialogDescription>
-            Crie um KPI customizado para acompanhar métricas específicas do seu plano.
-            {customKpis.length > 0 && (
-              <span className="block mt-1 text-muted-foreground">
-                {customKpis.length} de {maxKpis} KPIs criados
-              </span>
-            )}
+            Atualize as informações do KPI personalizado.
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="kpi-name">Nome do KPI *</Label>
+            <Label htmlFor="edit-kpi-name">Nome do KPI *</Label>
             <Input
-              id="kpi-name"
+              id="edit-kpi-name"
               placeholder="Ex: Custo por Matrícula"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -107,14 +100,14 @@ export function CreateKpiDialog({ onKpiCreated }: CreateKpiDialogProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="kpi-unit">Unidade</Label>
+            <Label htmlFor="edit-kpi-unit">Unidade</Label>
             <Select value={unit} onValueChange={setUnit}>
-              <SelectTrigger id="kpi-unit">
+              <SelectTrigger id="edit-kpi-unit">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {UNIT_OPTIONS.map(opt => (
-                  <SelectItem key={opt.value} value={opt.value || '_none'}>
+                  <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
                 ))}
@@ -123,9 +116,9 @@ export function CreateKpiDialog({ onKpiCreated }: CreateKpiDialogProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="kpi-description">Descrição (opcional)</Label>
+            <Label htmlFor="edit-kpi-description">Descrição (opcional)</Label>
             <Input
-              id="kpi-description"
+              id="edit-kpi-description"
               placeholder="Descrição breve do KPI"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -140,8 +133,8 @@ export function CreateKpiDialog({ onKpiCreated }: CreateKpiDialogProps) {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={!name.trim() || createKpi.isPending}>
-              {createKpi.isPending ? 'Criando...' : 'Criar KPI'}
+            <Button type="submit" disabled={!name.trim() || updateKpi.isPending}>
+              {updateKpi.isPending ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>
         </form>
