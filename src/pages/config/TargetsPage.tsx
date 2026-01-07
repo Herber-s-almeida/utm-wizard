@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, ArrowLeft, MapPin } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, MapPin, Copy } from 'lucide-react';
 import { useTargets } from '@/hooks/useConfigData';
 import { TargetDialog } from '@/components/config/TargetDialog';
 import {
@@ -22,6 +22,7 @@ export default function TargetsPage() {
   const { activeItems: targets, data: allTargets, create, update, remove } = useTargets();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [duplicatingItem, setDuplicatingItem] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const editingNameLower = editingItem?.name?.trim().toLowerCase();
@@ -96,10 +97,13 @@ export default function TargetsPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        <Button variant="ghost" size="icon" onClick={() => { setEditingItem(target); setDialogOpen(true); }}>
+                        <Button variant="ghost" size="icon" onClick={() => { setDuplicatingItem(target); setEditingItem(null); setDialogOpen(true); }} title="Duplicar">
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => { setEditingItem(target); setDuplicatingItem(null); setDialogOpen(true); }} title="Editar">
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(target.id)} className="text-destructive">
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(target.id)} className="text-destructive" title="Excluir">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -113,8 +117,21 @@ export default function TargetsPage() {
 
         <TargetDialog
           open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          onSave={editingItem ? handleUpdate : handleCreate}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              setEditingItem(null);
+              setDuplicatingItem(null);
+            }
+          }}
+          onSave={(data) => {
+            if (editingItem) {
+              handleUpdate(data);
+            } else {
+              handleCreate(data);
+            }
+            setDuplicatingItem(null);
+          }}
           existingNames={existingNames}
           initialData={editingItem ? {
             name: editingItem.name,
@@ -123,6 +140,13 @@ export default function TargetsPage() {
             geolocation: editingItem.geolocation || [],
             behavior: editingItem.behavior || '',
             description: editingItem.description
+          } : duplicatingItem ? {
+            name: `${duplicatingItem.name} - cópia`,
+            slug: '',
+            age_range: duplicatingItem.age_range || '',
+            geolocation: duplicatingItem.geolocation || [],
+            behavior: duplicatingItem.behavior || '',
+            description: duplicatingItem.description
           } : undefined}
           mode={editingItem ? 'edit' : 'create'}
         />
