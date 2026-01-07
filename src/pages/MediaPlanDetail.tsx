@@ -1092,7 +1092,7 @@ export default function MediaPlanDetail() {
           subdivisions={subdivisions.data || []}
           moments={moments.data || []}
           funnelStages={funnelStages.data || []}
-          statuses={statuses.data || []}
+          statuses={statuses.activeItems || []}
           lineAlerts={planAlerts.getLineAlerts}
           onEditLine={(line, initialStep) => {
             setEditingLine(line);

@@ -531,14 +531,14 @@ export function MediaLineWizard({
   const getItemsForStep = (): HierarchyItem[] => {
     switch (currentStep) {
       case 'medium':
-        return (mediums.data || []).map(m => ({
+        return (mediums.activeItems || []).map(m => ({
           id: m.id,
           name: m.name,
           description: m.description,
         }));
       case 'vehicle':
         // Filter vehicles by selected medium
-        return (vehicles.data || [])
+        return (vehicles.activeItems || [])
           .filter(v => !selectedMedium || v.medium_id === selectedMedium || !v.medium_id)
           .map(v => ({
             id: v.id,
@@ -547,7 +547,7 @@ export function MediaLineWizard({
           }));
       case 'channel':
         // Filter channels by selected vehicle
-        return (channels.data || [])
+        return (channels.activeItems || [])
           .filter(c => !selectedVehicle || c.vehicle_id === selectedVehicle)
           .map(c => ({
             id: c.id,
@@ -555,7 +555,7 @@ export function MediaLineWizard({
             description: c.description,
           }));
       case 'target':
-        return (targets.data || []).map(t => ({
+        return (targets.activeItems || []).map(t => ({
           id: t.id,
           name: t.name,
           description: t.description,

@@ -178,14 +178,14 @@ export function useMediaPlanWizard() {
     setFullState,
     // Library data
     libraryData: {
-      subdivisions: subdivisions.data || [],
-      moments: moments.data || [],
-      funnelStages: funnelStages.data || [],
-      mediums: mediums.data || [],
-      vehicles: vehicles.data || [],
-      channels: channels.data || [],
-      targets: targets.data || [],
-      creativeTemplates: creativeTemplates.data || [],
+      subdivisions: subdivisions.activeItems || [],
+      moments: moments.activeItems || [],
+      funnelStages: funnelStages.activeItems || [],
+      mediums: mediums.activeItems || [],
+      vehicles: vehicles.activeItems || [],
+      channels: channels.activeItems || [],
+      targets: targets.activeItems || [],
+      creativeTemplates: creativeTemplates.activeItems || [],
     },
     libraryMutations: {
       createSubdivision: subdivisions.create,
