@@ -982,8 +982,10 @@ export function HierarchicalMediaTable({
     
     const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       let value = e.target.value;
-      // Limit code field to 7 characters
-      if (field === 'line_code' && value.length > 7) return;
+      // Limit code field to 10 characters (allow paste, truncate if needed)
+      if (field === 'line_code') {
+        value = value.slice(0, 10);
+      }
       // For budget fields, allow only numeric input with decimals
       if (inputType === 'number') {
         value = value.replace(/[^\d.,]/g, '').replace(',', '.');
@@ -1534,7 +1536,7 @@ export function HierarchicalMediaTable({
             {visibleColumns.subdivision && <div className={cn("p-3 border-r shrink-0", viewMode === 'flat' ? "w-[120px]" : "w-[180px]")}>Subdivisão</div>}
             {visibleColumns.moment && <div className={cn("p-3 border-r shrink-0", viewMode === 'flat' ? "w-[120px]" : "w-[180px]")}>Momento</div>}
             {visibleColumns.funnel_stage && <div className={cn("p-3 border-r shrink-0", viewMode === 'flat' ? "w-[100px]" : "w-[200px]")}>Fase</div>}
-            <div className="w-[100px] p-3 border-r shrink-0">Código</div>
+            <div className="w-[120px] p-3 border-r shrink-0">Código</div>
             {visibleColumns.medium && <div className="w-[80px] p-3 border-r shrink-0">Meio</div>}
             {visibleColumns.vehicle && <div className="w-[110px] p-3 border-r shrink-0">Veículo</div>}
             {visibleColumns.channel && <div className="w-[100px] p-3 border-r shrink-0">Canal</div>}
@@ -1598,7 +1600,7 @@ export function HierarchicalMediaTable({
                       field="line_code"
                       displayValue={line.line_code || generateLineCode(line, existingLineCodes)}
                       inputType="text"
-                      width="w-[100px]"
+                      width="w-[120px]"
                       duplicateMoments={getOtherMoments(line)}
                     />
                     
@@ -1883,7 +1885,7 @@ export function HierarchicalMediaTable({
                                       field="line_code"
                                       displayValue={line.line_code || generateLineCode(line, existingLineCodes)}
                                       inputType="text"
-                                      width="w-[100px]"
+                                      width="w-[120px]"
                                       duplicateMoments={getOtherMoments(line)}
                                     />
                                     
