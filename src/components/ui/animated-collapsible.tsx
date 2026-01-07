@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface AnimatedCollapsibleProps {
-  open: boolean;
+  open?: boolean;
+  defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   children: React.ReactNode;
   className?: string;
@@ -30,11 +31,12 @@ const AnimatedCollapsibleContext = React.createContext<{
 
 export function AnimatedCollapsible({
   open: controlledOpen,
+  defaultOpen = false,
   onOpenChange,
   children,
   className,
 }: AnimatedCollapsibleProps) {
-  const [internalOpen, setInternalOpen] = React.useState(controlledOpen ?? false);
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
   
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
