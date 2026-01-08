@@ -62,7 +62,7 @@ const createGeralAllocation = (budget: number): BudgetAllocation => ({
 });
 
 export default function EditMediaPlan() {
-  const { id } = useParams<{ id: string }>();
+  const { id: identifier } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const wizard = useMediaPlanWizard();
@@ -74,26 +74,33 @@ export default function EditMediaPlan() {
   const [showOrphanWarning, setShowOrphanWarning] = useState(false);
   const [existingDistributions, setExistingDistributions] = useState<BudgetDistribution[]>([]);
   const [existingLines, setExistingLines] = useState<any[]>([]);
+  const [planId, setPlanId] = useState<string | null>(null);
+  const [planSlug, setPlanSlug] = useState<string | null>(null);
   const { customKpis } = useCustomKpis();
 
   const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations, initializeFromPlan } = wizard;
 
   // Load existing plan data
   useEffect(() => {
-    if (user && id) {
+    if (user && identifier) {
       loadPlanData();
     }
-  }, [user, id]);
+  }, [user, identifier]);
 
   const loadPlanData = async () => {
     try {
-      // Fetch plan
-      const { data: plan, error: planError } = await supabase
-        .from('media_plans')
-        .select('*')
-        .eq('id', id)
-        .eq('user_id', user?.id)
-        .maybeSingle();
+      // Check if identifier is a UUID or a slug
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier || '');
+      
+      let query = supabase.from('media_plans').select('*');
+      if (isUUID) {
+        query = query.eq('id', identifier);
+      } else {
+        query = query.eq('slug', identifier);
+      }
+      query = query.eq('user_id', user?.id);
+      
+      const { data: plan, error: planError } = await query.maybeSingle();
 
       if (planError) throw planError;
       if (!plan) {
@@ -101,12 +108,25 @@ export default function EditMediaPlan() {
         navigate('/media-plans');
         return;
       }
+      
+      // Redirect from ID to slug if accessed via ID
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier || '')) {
+        if (plan.slug && identifier !== plan.slug) {
+          navigate(`/media-plans/${plan.slug}/edit`, { replace: true });
+          return;
+        }
+      }
+      
+      // Store actual ID and slug
+      const resolvedPlanId = plan.id;
+      setPlanId(resolvedPlanId);
+      setPlanSlug(plan.slug);
 
       // Fetch existing distributions
       const { data: distributions, error: distError } = await supabase
         .from('plan_budget_distributions')
         .select('*')
-        .eq('media_plan_id', id);
+        .eq('media_plan_id', resolvedPlanId);
 
       if (distError) throw distError;
       setExistingDistributions(distributions || []);
@@ -115,7 +135,7 @@ export default function EditMediaPlan() {
       const { data: lines, error: linesError } = await supabase
         .from('media_lines')
         .select('*')
-        .eq('media_plan_id', id);
+        .eq('media_plan_id', resolvedPlanId);
 
       if (linesError) throw linesError;
       setExistingLines(lines || []);
@@ -209,7 +229,7 @@ export default function EditMediaPlan() {
     } catch (error) {
       console.error('Error loading plan:', error);
       toast.error('Erro ao carregar plano');
-      navigate(`/media-plans/${id}`);
+      navigate(planSlug ? `/media-plans/${planSlug}` : '/media-plans');
     } finally {
       setLoading(false);
     }
@@ -325,7 +345,7 @@ export default function EditMediaPlan() {
           objectives: state.planData.objectives.length > 0 ? state.planData.objectives : null,
           kpis: Object.keys(state.planData.kpis).length > 0 ? state.planData.kpis : null,
         })
-        .eq('id', id);
+        .eq('id', planId);
 
       if (planError) throw planError;
 
@@ -348,7 +368,7 @@ export default function EditMediaPlan() {
       await supabase
         .from('plan_budget_distributions')
         .delete()
-        .eq('media_plan_id', id);
+        .eq('media_plan_id', planId);
 
       // 4. Save new budget distributions (same logic as create)
       const subdivisionDistIds: Record<string, string> = {};
@@ -365,7 +385,7 @@ export default function EditMediaPlan() {
           .from('plan_budget_distributions')
           .insert({
             user_id: user?.id,
-            media_plan_id: id,
+            media_plan_id: planId,
             distribution_type: 'subdivision',
             reference_id: sub.id === 'geral' ? null : sub.id,
             percentage: sub.percentage,
@@ -401,7 +421,7 @@ export default function EditMediaPlan() {
             .from('plan_budget_distributions')
             .insert({
               user_id: user?.id,
-              media_plan_id: id,
+              media_plan_id: planId,
               distribution_type: 'moment',
               reference_id: mom.id === 'geral' ? null : mom.id,
               percentage: mom.percentage,
@@ -449,7 +469,7 @@ export default function EditMediaPlan() {
               .from('plan_budget_distributions')
               .insert({
                 user_id: user?.id,
-                media_plan_id: id,
+                media_plan_id: planId,
                 distribution_type: 'funnel_stage',
                 reference_id: funnel.id === 'geral' ? null : funnel.id,
                 percentage: funnel.percentage,
@@ -465,7 +485,7 @@ export default function EditMediaPlan() {
       }
 
       toast.success('Plano atualizado com sucesso!');
-      navigate(`/media-plans/${id}`);
+      navigate(planSlug ? `/media-plans/${planSlug}` : '/media-plans');
     } catch (error) {
       console.error('Error updating plan:', error);
       toast.error('Erro ao atualizar plano');
@@ -1027,7 +1047,7 @@ export default function EditMediaPlan() {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/media-plans/${id}`)}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(planSlug ? `/media-plans/${planSlug}` : '/media-plans')}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>

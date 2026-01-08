@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -47,9 +47,10 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
+import { usePlanBySlug, getPlanUrl } from '@/hooks/usePlanBySlug';
 
 export default function MediaPlanReports() {
-  const { id } = useParams<{ id: string }>();
+  const { id: identifier } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -58,42 +59,42 @@ export default function MediaPlanReports() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importToDelete, setImportToDelete] = useState<ReportImport | null>(null);
 
-  // Fetch plan data
-  const { data: plan, isLoading: planLoading } = useQuery({
-    queryKey: ['media-plan', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('media_plans')
-        .select('*')
-        .eq('id', id)
-        .single();
+  // Fetch plan by slug or ID
+  const { data: plan, isLoading: planLoading } = usePlanBySlug(identifier);
 
-      if (error) throw error;
-      return data as MediaPlan;
-    },
-    enabled: !!id,
-  });
+  // Redirect from ID to slug
+  useEffect(() => {
+    if (plan && identifier) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+      if (isUUID && plan.slug && identifier !== plan.slug) {
+        navigate(`/media-plans/${plan.slug}/reports`, { replace: true });
+      }
+    }
+  }, [plan, identifier, navigate]);
+  
+  // Get actual plan ID for queries
+  const planId = plan?.id;
 
   // Fetch media lines
   const { data: mediaLines = [], isLoading: linesLoading } = useQuery({
-    queryKey: ['media-lines', id],
+    queryKey: ['media-lines', planId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('media_lines')
         .select('*')
-        .eq('media_plan_id', id);
+        .eq('media_plan_id', planId);
 
       if (error) throw error;
       return data as MediaLine[];
     },
-    enabled: !!id,
+    enabled: !!planId,
   });
 
   // Fetch report imports
-  const { data: reportImports = [], isLoading: importsLoading, refetch: refetchImports } = useReportImports(id || '');
+  const { data: reportImports = [], isLoading: importsLoading, refetch: refetchImports } = useReportImports(planId || '');
 
   // Fetch report data
-  const { data: reportData = [], isLoading: dataLoading, refetch: refetchData } = useReportData(id || '');
+  const { data: reportData = [], isLoading: dataLoading, refetch: refetchData } = useReportData(planId || '');
 
   // Get mappings for selected import
   const { data: selectedMappings = [] } = useColumnMappings(selectedImport?.id || '');
@@ -208,7 +209,7 @@ export default function MediaPlanReports() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(`/media-plans/${id}`)}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(getPlanUrl(plan))}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
@@ -321,7 +322,7 @@ export default function MediaPlanReports() {
               <ReportsTable
                 reportData={reportData}
                 mediaLines={mediaLines}
-                planId={id!}
+                planId={planId!}
                 planName={plan.name}
               />
             </TabsContent>
@@ -352,7 +353,7 @@ export default function MediaPlanReports() {
       <ImportConfigDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
-        planId={id!}
+        planId={planId!}
         existingImportId={selectedImport?.id}
         existingUrl={selectedImport?.source_url}
         existingMappings={selectedMappings.map((m) => ({
