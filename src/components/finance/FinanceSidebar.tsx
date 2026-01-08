@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   TrendingUp,
@@ -28,11 +28,16 @@ import {
   Library,
   PanelLeftClose,
   PanelLeftOpen,
+  User,
+  LogOut,
+  ShieldCheck,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
+import { useSystemAdmin } from "@/hooks/useSystemAdmin";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -135,9 +140,11 @@ const settingsItems = [
 
 export function FinanceSidebar() {
   const location = useLocation();
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const { isViewingOtherEnvironment, viewingUser } = useEnvironment();
   const { data: currentProfile } = useCurrentProfile();
+  const { isAdmin } = useSystemAdmin();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(
     location.pathname.includes("/finance/library")
@@ -156,12 +163,17 @@ export function FinanceSidebar() {
 
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
   return (
     <div className={cn(
       "flex flex-col h-full border-r border-sidebar-border bg-sidebar overflow-x-hidden transition-all duration-300",
       isCollapsed ? "w-16" : "w-80"
     )}>
-      {/* Header - Same structure as AppSidebar */}
+      {/* Header - Fixed at top */}
       <div className={cn(
         "shrink-0 border-b border-sidebar-border",
         isCollapsed ? "p-2" : "p-3"
@@ -285,7 +297,7 @@ export function FinanceSidebar() {
         </div>
       ) : (
         <>
-          {/* Expanded state */}
+          {/* Expanded state - Scrollable content */}
           <ScrollArea className="flex-1">
             <div className="py-3 px-2 bg-background">
               {/* Principal Section */}
@@ -384,20 +396,119 @@ export function FinanceSidebar() {
                   ))}
                 </div>
               </div>
+
+              {/* Back to AdsPlanning Pro link */}
+              <div className="mb-4">
+                <Link to="/media-plans">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full justify-start gap-2 h-8 text-xs"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+                    <span>Voltar ao AdsPlanning Pro</span>
+                  </Button>
+                </Link>
+              </div>
             </div>
           </ScrollArea>
 
-          {/* Footer */}
-          <div className="shrink-0 border-t border-sidebar-border p-3">
-            <Link
-              to="/media-plans"
-              className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Voltar ao AdsPlanning Pro
+          {/* Footer with user info - Fixed at bottom */}
+          <div className="shrink-0 p-3 border-t border-sidebar-border">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+              <User className="h-3.5 w-3.5" />
+              <span className="truncate flex-1">{user?.email}</span>
+            </div>
+            {isAdmin && (
+              <div className="mb-1">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1 px-2">
+                  <ShieldCheck className="h-3 w-3" />
+                  <span className="font-medium">Administração</span>
+                </div>
+                <Link to="/admin/users">
+                  <Button
+                    variant={location.pathname === '/admin/users' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start gap-2 h-7 text-xs pl-6"
+                  >
+                    <Users className="h-3 w-3" />
+                    Usuários
+                  </Button>
+                </Link>
+                <Link to="/admin/menu-visibility">
+                  <Button
+                    variant={location.pathname === '/admin/menu-visibility' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start gap-2 h-7 text-xs pl-6"
+                  >
+                    <Eye className="h-3 w-3" />
+                    Visibilidade do Menu
+                  </Button>
+                </Link>
+              </div>
+            )}
+            <Link to="/account">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 h-8 text-xs mb-1"
+              >
+                <Settings className="h-3.5 w-3.5" />
+                Minha Conta
+              </Button>
             </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="w-full justify-start gap-2 h-8 text-xs text-destructive hover:text-destructive"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sair
+            </Button>
           </div>
         </>
+      )}
+
+      {/* Collapsed footer */}
+      {isCollapsed && (
+        <div className="shrink-0 p-2 border-t border-sidebar-border flex flex-col items-center gap-1">
+          {isAdmin && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link to="/admin/users">
+                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <ShieldCheck className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">Administração</TooltipContent>
+            </Tooltip>
+          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/account">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Minha Conta</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSignOut}
+                className="h-9 w-9 text-destructive hover:text-destructive"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Sair</TooltipContent>
+          </Tooltip>
+        </div>
       )}
     </div>
   );
