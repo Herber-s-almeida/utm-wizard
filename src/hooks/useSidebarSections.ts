@@ -16,6 +16,7 @@ const DEFAULT_SECTIONS: Record<string, boolean> = {
   taxonomyDraftPlans: false,
   taxonomyActivePlans: false,
   taxonomyFinishedPlans: false,
+  clients: false,
   subdivisions: false,
   moments: false,
   funnelStages: false,
