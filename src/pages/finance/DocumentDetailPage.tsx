@@ -40,6 +40,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useFinancialDocuments } from "@/hooks/finance/useFinancialDocuments";
+import { useFinancialPayments } from "@/hooks/finance/useFinancialPayments";
+import { AddPaymentDialog } from "@/components/finance/AddPaymentDialog";
+import { EditDocumentDialog } from "@/components/finance/EditDocumentDialog";
+import { RegisterPaymentDialog } from "@/components/finance/RegisterPaymentDialog";
 import { format, isBefore, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DocumentStatus } from "@/types/finance";
@@ -66,6 +70,11 @@ export default function DocumentDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { deleteDocument, updateDocumentStatus } = useFinancialDocuments();
+  const { registerPayment, isRegistering } = useFinancialPayments();
+  
+  const [showAddPayment, setShowAddPayment] = useState(false);
+  const [showEditDocument, setShowEditDocument] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
 
   const { data: document, isLoading } = useQuery({
     queryKey: ["financial-document", id],
@@ -156,6 +165,10 @@ export default function DocumentDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowEditDocument(true)}>
+            <Edit className="w-4 h-4 mr-2" />
+            Editar
+          </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" className="text-red-600 hover:text-red-700">
@@ -317,7 +330,7 @@ export default function DocumentDetailPage() {
                 Pagamentos associados a este documento
               </CardDescription>
             </div>
-            <Button size="sm" disabled>
+            <Button size="sm" onClick={() => setShowAddPayment(true)} disabled={payments.length > 0}>
               <Plus className="w-4 h-4 mr-2" />
               Adicionar Pagamento
             </Button>
@@ -373,6 +386,29 @@ export default function DocumentDetailPage() {
           )}
         </CardContent>
       </Card>
+      {/* Dialogs */}
+      <AddPaymentDialog
+        open={showAddPayment}
+        onOpenChange={setShowAddPayment}
+        documentId={document.id}
+        documentAmount={Number(document.amount)}
+      />
+      
+      <EditDocumentDialog
+        open={showEditDocument}
+        onOpenChange={setShowEditDocument}
+        document={document}
+      />
+
+      {selectedPayment && (
+        <RegisterPaymentDialog
+          open={!!selectedPayment}
+          onOpenChange={(open) => !open && setSelectedPayment(null)}
+          payment={selectedPayment}
+          onSubmit={registerPayment}
+          isSubmitting={isRegistering}
+        />
+      )}
     </div>
   );
 }
