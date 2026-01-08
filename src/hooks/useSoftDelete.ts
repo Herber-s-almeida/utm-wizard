@@ -66,18 +66,28 @@ export function useSoftDeleteMutations(tableName: SoftDeleteTableName, queryKey:
 
   const permanentDelete = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from(tableName)
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select('id');
+      
       if (error) throw error;
+      
+      // Check if any rows were actually deleted
+      if (!data || data.length === 0) {
+        throw new Error('Nenhum registro encontrado ou você não tem permissão para excluir.');
+      }
+      
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKey] });
       toast.success(`${itemLabel} excluído(a) permanentemente!`);
     },
-    onError: () => {
-      toast.error(`Erro ao excluir ${itemLabel.toLowerCase()}. Pode estar em uso.`);
+    onError: (error: Error) => {
+      console.error('Permanent delete error:', error);
+      toast.error(error.message || `Erro ao excluir ${itemLabel.toLowerCase()}. Pode estar em uso.`);
     },
   });
 

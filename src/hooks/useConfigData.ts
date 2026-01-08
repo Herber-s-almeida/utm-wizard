@@ -685,8 +685,30 @@ export function useMediaPlans() {
   });
 
   const permanentDelete = useMutation({
-    mutationFn: async (id: string) => { const { error } = await supabase.from('media_plans').delete().eq('id', id); if (error) throw error; },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['media_plans'] }); toast.success('Plano excluído permanentemente'); },
+    mutationFn: async (id: string) => { 
+      const { data, error } = await supabase
+        .from('media_plans')
+        .delete()
+        .eq('id', id)
+        .select('id');
+      
+      if (error) throw error;
+      
+      // Check if any rows were actually deleted
+      if (!data || data.length === 0) {
+        throw new Error('Plano não encontrado ou você não tem permissão para excluir.');
+      }
+      
+      return data;
+    },
+    onSuccess: () => { 
+      queryClient.invalidateQueries({ queryKey: ['media_plans'] }); 
+      toast.success('Plano excluído permanentemente'); 
+    },
+    onError: (error: Error) => {
+      console.error('Permanent delete plan error:', error);
+      toast.error(error.message || 'Erro ao excluir plano. Você pode não ter permissão.');
+    },
   });
 
   const updateStatus = useMutation({
