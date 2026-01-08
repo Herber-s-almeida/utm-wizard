@@ -131,12 +131,12 @@ export default function RevenuePage() {
           <div className="flex items-center gap-4">
             <div className="flex-1 max-w-sm">
               <Label className="mb-2 block">Filtrar por Plano de Mídia</Label>
-              <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+              <Select value={selectedPlanId || "all"} onValueChange={(v) => setSelectedPlanId(v === "all" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos os planos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os planos</SelectItem>
+                  <SelectItem value="all">Todos os planos</SelectItem>
                   {plans.map((plan) => (
                     <SelectItem key={plan.id} value={plan.id}>
                       {plan.name}
@@ -330,12 +330,12 @@ export default function RevenuePage() {
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <Label>Plano de Mídia (opcional)</Label>
-                <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                <Select value={selectedPlanId || "none"} onValueChange={(v) => setSelectedPlanId(v === "none" ? "" : v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um plano" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum (receita geral)</SelectItem>
+                    <SelectItem value="none">Nenhum (receita geral)</SelectItem>
                     {plans.map((plan) => (
                       <SelectItem key={plan.id} value={plan.id}>
                         {plan.name}

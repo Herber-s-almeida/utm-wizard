@@ -152,14 +152,14 @@ export default function DocumentFormPage() {
               <div className="grid gap-2">
                 <Label htmlFor="vendor_id">Fornecedor Cadastrado</Label>
                 <Select 
-                  value={formData.vendor_id} 
-                  onValueChange={(v) => handleChange("vendor_id", v)}
+                  value={formData.vendor_id || "none"} 
+                  onValueChange={(v) => handleChange("vendor_id", v === "none" ? "" : v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione ou digite abaixo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {vendors.map((vendor) => (
                       <SelectItem key={vendor.id} value={vendor.id}>
                         {vendor.name}
