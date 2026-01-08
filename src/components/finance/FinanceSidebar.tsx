@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -22,63 +23,122 @@ import {
   Settings,
   ArrowLeft,
   Wallet,
-  Library,
   Building2,
+  Users,
+  Package,
+  Tags,
+  FileType,
+  ClipboardList,
+  UserCircle,
+  FolderKanban,
+  ShoppingBag,
+  Truck,
+  Receipt,
+  CircleDot,
+  ChevronDown,
+  ChevronRight,
+  Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const menuItems = [
-  {
-    title: "Dashboard",
-    url: "/finance",
-    icon: LayoutDashboard,
+  { title: "Dashboard", url: "/finance", icon: LayoutDashboard },
+  { title: "Forecast", url: "/finance/forecast", icon: TrendingUp },
+  { title: "Executado", url: "/finance/actuals", icon: BarChart3 },
+  { title: "Documentos", url: "/finance/documents", icon: FileText },
+  { title: "Pagamentos", url: "/finance/payments", icon: CreditCard },
+  { title: "Receita & ROI", url: "/finance/revenue", icon: DollarSign },
+];
+
+const libraryItems = [
+  { 
+    title: "Atendimento", 
+    url: "/finance/library/account-managers", 
+    icon: UserCircle,
+    tooltip: "Pessoa que solicitou a compra, abriu a ordem de compra, etc."
   },
-  {
-    title: "Forecast",
-    url: "/finance/forecast",
-    icon: TrendingUp,
+  { 
+    title: "Produto", 
+    url: "/finance/library/products", 
+    icon: ShoppingBag,
+    tooltip: "Compartilha a mesma base do AdsPlanning Pro"
   },
-  {
-    title: "Executado",
-    url: "/finance/actuals",
-    icon: BarChart3,
+  { 
+    title: "Campanha/Projeto", 
+    url: "/finance/library/campaigns", 
+    icon: FolderKanban,
+    tooltip: "Planos cadastrados e outras campanhas/projetos"
   },
-  {
-    title: "Documentos",
-    url: "/finance/documents",
-    icon: FileText,
+  { 
+    title: "Centro de Custos", 
+    url: "/finance/library/cost-centers", 
+    icon: Building2,
+    tooltip: "Nome e número do Centro de Custos (CR)"
   },
-  {
-    title: "Pagamentos",
-    url: "/finance/payments",
-    icon: CreditCard,
+  { 
+    title: "Equipes", 
+    url: "/finance/library/teams", 
+    icon: Users,
+    tooltip: "Times abaixo do CR"
   },
-  {
-    title: "Receita & ROI",
-    url: "/finance/revenue",
-    icon: DollarSign,
+  { 
+    title: "Conta Financeira", 
+    url: "/finance/library/accounts", 
+    icon: Wallet,
+    tooltip: "Cada conta utilizada"
+  },
+  { 
+    title: "Pacote", 
+    url: "/finance/library/packages", 
+    icon: Package,
+    tooltip: "Subdivisões do orçamento"
+  },
+  { 
+    title: "Classificação Macro", 
+    url: "/finance/library/macro-classifications", 
+    icon: Tags,
+    tooltip: "Categorias de classificação das despesas"
+  },
+  { 
+    title: "Classificação da Despesa", 
+    url: "/finance/library/expense-classifications", 
+    icon: FileType,
+    tooltip: "Subcategoria da classificação macro"
+  },
+  { 
+    title: "Fornecedor", 
+    url: "/finance/library/vendors", 
+    icon: Truck,
+    tooltip: "Cadastro de fornecedores"
+  },
+  { 
+    title: "Tipo do Documento", 
+    url: "/finance/library/document-types", 
+    icon: Receipt,
+    tooltip: "Boleto, cartão, fatura, recibo, etc."
+  },
+  { 
+    title: "Status", 
+    url: "/finance/library/statuses", 
+    icon: CircleDot,
+    tooltip: "Status exclusivos do financeiro"
+  },
+  { 
+    title: "Tipo de Solicitação", 
+    url: "/finance/library/request-types", 
+    icon: ClipboardList,
+    tooltip: "Compra no cartão, contrato, parecer técnico, etc."
   },
 ];
 
 const settingsItems = [
-  {
-    title: "Biblioteca",
-    url: "/finance/library",
-    icon: Library,
-  },
-  {
-    title: "Auditoria",
-    url: "/finance/audit",
-    icon: History,
-  },
-  {
-    title: "Configurações",
-    url: "/finance/settings",
-    icon: Settings,
-  },
+  { title: "Auditoria", url: "/finance/audit", icon: History },
+  { title: "Configurações", url: "/finance/settings", icon: Settings },
 ];
 
 export function FinanceSidebar() {
@@ -86,8 +146,10 @@ export function FinanceSidebar() {
   const { user } = useAuth();
   const { isViewingOtherEnvironment, viewingUser } = useEnvironment();
   const { data: currentProfile } = useCurrentProfile();
+  const [libraryOpen, setLibraryOpen] = useState(
+    location.pathname.includes("/finance/library")
+  );
 
-  // Get environment display name - show for all users
   const environmentName = isViewingOtherEnvironment 
     ? (viewingUser?.company || viewingUser?.full_name || viewingUser?.email)
     : (currentProfile?.company || currentProfile?.full_name || user?.email);
@@ -116,7 +178,6 @@ export function FinanceSidebar() {
           </div>
         </div>
         
-        {/* Environment name display */}
         {environmentName && (
           <div className="mt-3 px-2 py-1.5 bg-muted/50 rounded-md border border-border/50">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -154,6 +215,56 @@ export function FinanceSidebar() {
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Library Section - Collapsible like AdsPlanning Pro */}
+        <SidebarGroup className="mt-4">
+          <Collapsible open={libraryOpen} onOpenChange={setLibraryOpen}>
+            <CollapsibleTrigger className="w-full">
+              <SidebarGroupLabel className="text-sidebar-foreground/60 flex items-center justify-between cursor-pointer hover:text-sidebar-foreground transition-colors w-full pr-2">
+                <div className="flex items-center gap-2">
+                  <Library className="h-4 w-4" />
+                  <span>Biblioteca</span>
+                </div>
+                {libraryOpen ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent className="mt-1">
+                <SidebarMenu>
+                  {libraryItems.map((item) => (
+                    <SidebarMenuItem key={item.url}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive(item.url)}
+                            className={cn(
+                              "transition-colors",
+                              isActive(item.url) &&
+                                "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            )}
+                          >
+                            <Link to={item.url}>
+                              <item.icon className="h-4 w-4" />
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          {item.tooltip}
+                        </TooltipContent>
+                      </Tooltip>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
         </SidebarGroup>
 
         <SidebarGroup className="mt-4">
