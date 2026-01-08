@@ -343,7 +343,7 @@ export default function NewMediaPlanBudget() {
       // Clear draft on successful save
       clearDraft();
       toast.success('Plano salvo com sucesso!');
-      navigate(`/media-plans/${plan.id}`);
+      navigate(`/media-plans/${plan.slug || plan.id}`);
     } catch (error) {
       console.error('Error creating plan:', error);
       toast.error('Erro ao salvar plano');

@@ -699,7 +699,7 @@ export function AppSidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
                   {draftPlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                    <Link key={plan.id} to={`/media-plans/${plan.id}/resources`}>
+                    <Link key={plan.id} to={`/media-plans/${plan.slug || plan.id}/resources`}>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -729,7 +729,7 @@ export function AppSidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
                   {activePlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                    <Link key={plan.id} to={`/media-plans/${plan.id}/resources`}>
+                    <Link key={plan.id} to={`/media-plans/${plan.slug || plan.id}/resources`}>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -759,7 +759,7 @@ export function AppSidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
                   {finishedPlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                    <Link key={plan.id} to={`/media-plans/${plan.id}/resources`}>
+                    <Link key={plan.id} to={`/media-plans/${plan.slug || plan.id}/resources`}>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -814,7 +814,7 @@ export function AppSidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
                   {draftPlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                    <Link key={plan.id} to={`/media-plans/${plan.id}/taxonomy`}>
+                    <Link key={plan.id} to={`/media-plans/${plan.slug || plan.id}/taxonomy`}>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -844,7 +844,7 @@ export function AppSidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
                   {activePlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                    <Link key={plan.id} to={`/media-plans/${plan.id}/taxonomy`}>
+                    <Link key={plan.id} to={`/media-plans/${plan.slug || plan.id}/taxonomy`}>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -874,7 +874,7 @@ export function AppSidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
                   {finishedPlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                    <Link key={plan.id} to={`/media-plans/${plan.id}/taxonomy`}>
+                    <Link key={plan.id} to={`/media-plans/${plan.slug || plan.id}/taxonomy`}>
                       <Button
                         variant="ghost"
                         size="sm"

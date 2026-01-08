@@ -233,7 +233,7 @@ export default function Dashboard() {
                     transition={{ delay: index * 0.05 }}
                   >
                     <div className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                      <Link to={`/media-plans/${plan.id}`} className="flex items-center gap-4 flex-1">
+                      <Link to={`/media-plans/${plan.slug || plan.id}`} className="flex items-center gap-4 flex-1">
                         <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                           <FileText className="w-5 h-5 text-primary" />
                         </div>
@@ -282,10 +282,10 @@ export default function Dashboard() {
         open={duplicateDialogOpen}
         onOpenChange={setDuplicateDialogOpen}
         plan={planToDuplicate}
-        onSuccess={(newPlanId) => {
+        onSuccess={(result) => {
           toast.success('Plano duplicado com sucesso!');
           fetchData();
-          navigate(`/media-plans/${newPlanId}`);
+          navigate(`/media-plans/${result.slug || result.id}`);
         }}
       />
     </DashboardLayout>
