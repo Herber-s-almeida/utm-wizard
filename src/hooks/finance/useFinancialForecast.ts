@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { generateForecastFromPlan } from "@/utils/finance/forecastGenerator";
 
 export function useFinancialForecast(planId?: string) {
   const { user } = useAuth();
@@ -38,11 +39,27 @@ export function useFinancialForecast(planId?: string) {
 
   const generateMutation = useMutation({
     mutationFn: async ({ planId, granularity }: { planId: string; granularity: string }) => {
-      const plan = plans.find(p => p.id === planId);
-      if (!plan) throw new Error("Plano não encontrado");
-      toast.success("Forecast gerado com sucesso!");
+      if (!user) throw new Error("User not authenticated");
+      
+      const result = await generateForecastFromPlan(
+        planId, 
+        granularity as "day" | "week" | "month", 
+        user.id
+      );
+      
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      
+      return result;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["financial-forecasts"] }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["financial-forecasts"] });
+      toast.success(result.message);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Erro ao gerar forecast");
+    },
   });
 
   const lockMutation = useMutation({
@@ -52,10 +69,22 @@ export function useFinancialForecast(planId?: string) {
         .update({ is_locked: lock })
         .eq("id", forecastId);
       if (error) throw error;
+
+      // Audit log
+      if (user) {
+        await supabase.from("financial_audit_log").insert({
+          user_id: user.id,
+          entity_type: "forecast",
+          entity_id: forecastId,
+          action: lock ? "lock" : "unlock",
+          after_json: { is_locked: lock },
+          reason: lock ? "Forecast travado" : "Forecast destravado",
+        });
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["financial-forecasts"] });
-      toast.success("Status atualizado!");
+      toast.success(variables.lock ? "Forecast travado!" : "Forecast destravado!");
     },
   });
 
