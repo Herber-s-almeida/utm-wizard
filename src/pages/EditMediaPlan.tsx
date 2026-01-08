@@ -258,15 +258,30 @@ export default function EditMediaPlan() {
     }).format(value);
   };
 
+  const getPlanInfoMissingFields = () => {
+    const missing: string[] = [];
+
+    if (!state.planData.name.trim()) missing.push('Nome do Plano');
+    if (!state.planData.client_id) missing.push('Cliente');
+    if (!state.planData.start_date) missing.push('Data de Início');
+    if (!state.planData.end_date) missing.push('Data de Término');
+    if (state.planData.start_date && state.planData.end_date && state.planData.end_date <= state.planData.start_date) {
+      missing.push('Datas válidas (término após início)');
+    }
+    if (!(state.planData.total_budget > 0)) missing.push('Orçamento Total');
+
+    return missing;
+  };
+
   const canProceed = () => {
     switch (state.step) {
       case 1:
-        return state.planData.name.trim() && state.planData.client_id && state.planData.start_date && state.planData.end_date && state.planData.total_budget > 0;
+        return getPlanInfoMissingFields().length === 0;
       case 2:
         return state.subdivisions.length === 0 || wizard.validatePercentages(state.subdivisions);
       case 3: {
-        const keys = state.subdivisions.length > 0 
-          ? state.subdivisions.map(s => s.id) 
+        const keys = state.subdivisions.length > 0
+          ? state.subdivisions.map(s => s.id)
           : ['root'];
         return keys.every(key => {
           const items = state.moments[key] || [];
@@ -281,6 +296,11 @@ export default function EditMediaPlan() {
   };
 
   const handleNext = () => {
+    if (state.step === 1 && !canProceed()) {
+      toast.error(`Preencha os campos obrigatórios: ${getPlanInfoMissingFields().join(', ')}`);
+      return;
+    }
+
     if (state.step < 5) {
       setEditingSection(null);
       goToStep(state.step + 1);
@@ -294,9 +314,9 @@ export default function EditMediaPlan() {
     }
   };
 
-  // Check if we can save (editing mode allows saving at any time as long as plan is loaded)
+  // Check if we can save (must satisfy required fields)
   const canSave = () => {
-    return Boolean(planId) && state.planData.name.trim().length > 0;
+    return Boolean(planId) && getPlanInfoMissingFields().length === 0;
   };
 
   // Save and stay on current page
@@ -339,6 +359,14 @@ export default function EditMediaPlan() {
   };
 
   const handleSave = async (exitAfterSave: boolean = true) => {
+    // Validate required fields
+    const missing = getPlanInfoMissingFields();
+    if (missing.length > 0) {
+      toast.error(`Preencha os campos obrigatórios: ${missing.join(', ')}`);
+      goToStep(1);
+      return;
+    }
+
     // Check for orphan lines first
     const orphans = calculateOrphanLines();
     if (orphans.count > 0 && !showOrphanWarning) {
@@ -631,6 +659,12 @@ export default function EditMediaPlan() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    {getPlanInfoMissingFields().length > 0 && (
+                      <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
+                        Campos obrigatórios pendentes: {getPlanInfoMissingFields().join(', ')}
+                      </div>
+                    )}
+
                     <SlugInputField
                       name={state.planData.name}
                       slug={state.planData.utm_campaign_slug}
