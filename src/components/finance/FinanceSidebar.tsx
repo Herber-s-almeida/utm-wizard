@@ -1,18 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-} from "@/components/ui/sidebar";
-import {
   LayoutDashboard,
   TrendingUp,
   BarChart3,
@@ -38,6 +26,8 @@ import {
   ChevronDown,
   ChevronRight,
   Library,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -45,6 +35,8 @@ import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const menuItems = [
   { title: "Dashboard", url: "/finance", icon: LayoutDashboard },
@@ -146,6 +138,7 @@ export function FinanceSidebar() {
   const { user } = useAuth();
   const { isViewingOtherEnvironment, viewingUser } = useEnvironment();
   const { data: currentProfile } = useCurrentProfile();
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(
     location.pathname.includes("/finance/library")
   );
@@ -161,150 +154,244 @@ export function FinanceSidebar() {
     return location.pathname.startsWith(url);
   };
 
+  const toggleCollapse = () => setIsCollapsed(!isCollapsed);
+
   return (
-    <Sidebar className="border-r border-sidebar-border bg-sidebar">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
-            <Wallet className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-sidebar-foreground">
-              Finance Manager
-            </h1>
-            <p className="text-xs text-sidebar-foreground/60">
-              Controle Financeiro
-            </p>
-          </div>
+    <div className={cn(
+      "flex flex-col h-full border-r border-sidebar-border bg-sidebar overflow-x-hidden transition-all duration-300",
+      isCollapsed ? "w-16" : "w-80"
+    )}>
+      {/* Header - Same structure as AppSidebar */}
+      <div className={cn(
+        "shrink-0 border-b border-sidebar-border",
+        isCollapsed ? "p-2" : "p-3"
+      )}>
+        <div className={cn(
+          "flex items-center gap-2",
+          isCollapsed ? "justify-center" : "justify-between"
+        )}>
+          {!isCollapsed && (
+            <Link to="/finance" className="flex items-center gap-3 min-w-0">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white shrink-0">
+                <Wallet className="h-4 w-4" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="font-display font-bold text-sm text-emerald-600 dark:text-emerald-400 truncate">Finance</span>
+                <span className="text-[10px] font-semibold text-muted-foreground tracking-wider">MANAGER</span>
+              </div>
+            </Link>
+          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 shrink-0"
+                onClick={toggleCollapse}
+              >
+                {isCollapsed ? (
+                  <PanelLeftOpen className="h-4 w-4" />
+                ) : (
+                  <PanelLeftClose className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {isCollapsed ? "Expandir menu" : "Recolher menu"}
+            </TooltipContent>
+          </Tooltip>
         </div>
         
-        {environmentName && (
-          <div className="mt-3 px-2 py-1.5 bg-muted/50 rounded-md border border-border/50">
+        {/* Environment name display */}
+        {!isCollapsed && environmentName && (
+          <div className="mt-2 px-2 py-1.5 bg-muted/50 rounded-md border border-border/50">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Building2 className="h-3 w-3 shrink-0" />
               <span className="truncate font-medium">{environmentName}</span>
             </div>
           </div>
         )}
-      </SidebarHeader>
+      </div>
 
-      <SidebarContent className="px-2 py-4">
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/60">
-            Principal
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
+      {/* Collapsed state - show only icons */}
+      {isCollapsed ? (
+        <div className="flex-1 overflow-y-auto py-3 px-2 flex flex-col items-center gap-1 bg-background">
+          {menuItems.map((item) => (
+            <Tooltip key={item.url}>
+              <TooltipTrigger asChild>
+                <Link to={item.url}>
+                  <Button 
+                    variant={isActive(item.url) ? 'secondary' : 'ghost'} 
+                    size="icon"
                     className={cn(
-                      "transition-colors",
-                      isActive(item.url) &&
-                        "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      "h-9 w-9",
+                      isActive(item.url) && "bg-emerald-500/10 text-emerald-600"
                     )}
                   >
-                    <Link to={item.url}>
-                      <item.icon className="h-4 w-4" />
+                    <item.icon className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">{item.title}</TooltipContent>
+            </Tooltip>
+          ))}
+
+          <div className="w-8 h-px bg-border my-2" />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Library className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Biblioteca</TooltipContent>
+          </Tooltip>
+
+          <div className="w-8 h-px bg-border my-2" />
+
+          {settingsItems.map((item) => (
+            <Tooltip key={item.url}>
+              <TooltipTrigger asChild>
+                <Link to={item.url}>
+                  <Button 
+                    variant={isActive(item.url) ? 'secondary' : 'ghost'} 
+                    size="icon"
+                    className={cn(
+                      "h-9 w-9",
+                      isActive(item.url) && "bg-emerald-500/10 text-emerald-600"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">{item.title}</TooltipContent>
+            </Tooltip>
+          ))}
+
+          {/* Back to AdsPlanning */}
+          <div className="mt-auto pt-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link to="/media-plans">
+                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">Voltar ao AdsPlanning Pro</TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Expanded state */}
+          <ScrollArea className="flex-1">
+            <div className="p-3 space-y-4">
+              {/* Principal Section */}
+              <div>
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Principal
+                </div>
+                <div className="space-y-0.5 mt-1">
+                  {menuItems.map((item) => (
+                    <Link
+                      key={item.url}
+                      to={item.url}
+                      className={cn(
+                        "flex items-center gap-3 px-2 py-1.5 rounded-md text-sm transition-colors",
+                        isActive(item.url)
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
                       <span>{item.title}</span>
                     </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Library Section - Collapsible like AdsPlanning Pro */}
-        <SidebarGroup className="mt-4">
-          <Collapsible open={libraryOpen} onOpenChange={setLibraryOpen}>
-            <CollapsibleTrigger className="w-full">
-              <SidebarGroupLabel className="text-sidebar-foreground/60 flex items-center justify-between cursor-pointer hover:text-sidebar-foreground transition-colors w-full pr-2">
-                <div className="flex items-center gap-2">
-                  <Library className="h-4 w-4" />
-                  <span>Biblioteca</span>
+                  ))}
                 </div>
-                {libraryOpen ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-              </SidebarGroupLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent className="mt-1">
-                <SidebarMenu>
-                  {libraryItems.map((item) => (
-                    <SidebarMenuItem key={item.url}>
-                      <Tooltip>
+              </div>
+
+              {/* Library Section - Collapsible */}
+              <Collapsible open={libraryOpen} onOpenChange={setLibraryOpen}>
+                <CollapsibleTrigger className="w-full">
+                  <div className="flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors">
+                    <div className="flex items-center gap-2">
+                      <Library className="h-3.5 w-3.5" />
+                      <span>Biblioteca</span>
+                    </div>
+                    {libraryOpen ? (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    )}
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="space-y-0.5 mt-1">
+                    {libraryItems.map((item) => (
+                      <Tooltip key={item.url}>
                         <TooltipTrigger asChild>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={isActive(item.url)}
+                          <Link
+                            to={item.url}
                             className={cn(
-                              "transition-colors",
-                              isActive(item.url) &&
-                                "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              "flex items-center gap-3 px-2 py-1.5 rounded-md text-sm transition-colors",
+                              isActive(item.url)
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                             )}
                           >
-                            <Link to={item.url}>
-                              <item.icon className="h-4 w-4" />
-                              <span>{item.title}</span>
-                            </Link>
-                          </SidebarMenuButton>
+                            <item.icon className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{item.title}</span>
+                          </Link>
                         </TooltipTrigger>
                         <TooltipContent side="right" className="max-w-xs">
                           {item.tooltip}
                         </TooltipContent>
                       </Tooltip>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
 
-        <SidebarGroup className="mt-4">
-          <SidebarGroupLabel className="text-sidebar-foreground/60">
-            Sistema
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {settingsItems.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    className={cn(
-                      "transition-colors",
-                      isActive(item.url) &&
-                        "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                    )}
-                  >
-                    <Link to={item.url}>
-                      <item.icon className="h-4 w-4" />
+              {/* Sistema Section */}
+              <div>
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Sistema
+                </div>
+                <div className="space-y-0.5 mt-1">
+                  {settingsItems.map((item) => (
+                    <Link
+                      key={item.url}
+                      to={item.url}
+                      className={cn(
+                        "flex items-center gap-3 px-2 py-1.5 rounded-md text-sm transition-colors",
+                        isActive(item.url)
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
                       <span>{item.title}</span>
                     </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
 
-      <SidebarFooter className="border-t border-sidebar-border p-4">
-        <Link
-          to="/media-plans"
-          className="flex items-center gap-2 text-sm text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Voltar ao AdsPlanning Pro
-        </Link>
-      </SidebarFooter>
-    </Sidebar>
+          {/* Footer */}
+          <div className="shrink-0 border-t border-sidebar-border p-3">
+            <Link
+              to="/media-plans"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Voltar ao AdsPlanning Pro
+            </Link>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
