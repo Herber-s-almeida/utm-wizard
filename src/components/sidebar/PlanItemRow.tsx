@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Pencil, Trash2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,13 +35,24 @@ export function PlanItemRow({
   isTrash = false,
   className,
 }: PlanItemRowProps) {
+  const location = useLocation();
   const planUrl = `/media-plans/${slug || id}`;
   
+  // Check if current path starts with this plan's URL
+  const isActive = location.pathname.startsWith(planUrl);
+  
   return (
-    <div className={cn("group flex items-center gap-1 py-1 px-2 rounded-md hover:bg-sidebar-accent/50", className)}>
+    <div className={cn(
+      "group flex items-center gap-1 py-1 px-2 rounded-md hover:bg-sidebar-accent/50",
+      isActive && "bg-sidebar-accent",
+      className
+    )}>
       <Link 
         to={planUrl} 
-        className="flex-1 text-xs truncate hover:text-primary"
+        className={cn(
+          "flex-1 text-xs truncate hover:text-primary",
+          isActive && "font-semibold text-primary"
+        )}
       >
         {name}
       </Link>
