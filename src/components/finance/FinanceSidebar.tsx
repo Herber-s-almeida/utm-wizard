@@ -23,8 +23,12 @@ import {
   ArrowLeft,
   Wallet,
   Library,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
+import { useCurrentProfile } from "@/hooks/useCurrentProfile";
 
 const menuItems = [
   {
@@ -79,6 +83,14 @@ const settingsItems = [
 
 export function FinanceSidebar() {
   const location = useLocation();
+  const { user } = useAuth();
+  const { isViewingOtherEnvironment, viewingUser } = useEnvironment();
+  const { data: currentProfile } = useCurrentProfile();
+
+  // Get environment display name - show for all users
+  const environmentName = isViewingOtherEnvironment 
+    ? (viewingUser?.company || viewingUser?.full_name || viewingUser?.email)
+    : (currentProfile?.company || currentProfile?.full_name || user?.email);
 
   const isActive = (url: string) => {
     if (url === "/finance") {
@@ -103,6 +115,16 @@ export function FinanceSidebar() {
             </p>
           </div>
         </div>
+        
+        {/* Environment name display */}
+        {environmentName && (
+          <div className="mt-3 px-2 py-1.5 bg-muted/50 rounded-md border border-border/50">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Building2 className="h-3 w-3 shrink-0" />
+              <span className="truncate font-medium">{environmentName}</span>
+            </div>
+          </div>
+        )}
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4">
