@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Save, Loader2, Layers, Clock, Filter, Calendar, FileText, Sparkles, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, Loader2, Layers, Clock, Filter, Calendar, FileText, Sparkles, AlertTriangle, LogOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -294,6 +294,27 @@ export default function EditMediaPlan() {
     }
   };
 
+  // Check if minimum required data is present for saving
+  const canSave = () => {
+    return (
+      state.planData.name.trim() &&
+      state.planData.client_id &&
+      state.planData.start_date &&
+      state.planData.end_date &&
+      state.planData.total_budget > 0
+    );
+  };
+
+  // Save and stay on current page
+  const handleSaveOnly = async () => {
+    await handleSave(false);
+  };
+
+  // Save and navigate back to plan details
+  const handleSaveAndExit = async () => {
+    await handleSave(true);
+  };
+
   // Calculate orphan lines (lines that will be deleted) with details
   const calculateOrphanLines = (): { count: number; lines: { id: string; line_code: string; platform: string; reason: string }[] } => {
     const newSubIds = new Set(state.subdivisions.map(s => s.id));
@@ -323,7 +344,7 @@ export default function EditMediaPlan() {
     return { count: orphanLines.length, lines: orphanLines };
   };
 
-  const handleSave = async () => {
+  const handleSave = async (exitAfterSave: boolean = true) => {
     // Check for orphan lines first
     const orphans = calculateOrphanLines();
     if (orphans.count > 0 && !showOrphanWarning) {
@@ -489,8 +510,10 @@ export default function EditMediaPlan() {
         }
       }
 
-      toast.success('Plano atualizado com sucesso!');
-      navigate(planSlug ? `/media-plans/${planSlug}` : '/media-plans');
+      toast.success(exitAfterSave ? 'Plano atualizado com sucesso!' : 'Alterações salvas!');
+      if (exitAfterSave) {
+        navigate(planSlug ? `/media-plans/${planSlug}` : '/media-plans');
+      }
     } catch (error) {
       console.error('Error updating plan:', error);
       toast.error('Erro ao atualizar plano');
@@ -1062,6 +1085,7 @@ export default function EditMediaPlan() {
           steps={WIZARD_STEPS}
           currentStep={state.step}
           onStepClick={goToStep}
+          allowAllStepsClickable={true}
         />
 
         {/* Content */}
@@ -1079,19 +1103,12 @@ export default function EditMediaPlan() {
             Voltar
           </Button>
 
-          {state.step < 5 ? (
+          <div className="flex gap-2">
+            {/* Save buttons - always visible */}
             <Button
-              onClick={handleNext}
-              disabled={!canProceed()}
-              className="gap-2"
-            >
-              Próximo
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSave}
-              disabled={saving}
+              variant="outline"
+              onClick={handleSaveOnly}
+              disabled={saving || !canSave()}
               className="gap-2"
             >
               {saving ? (
@@ -1099,9 +1116,34 @@ export default function EditMediaPlan() {
               ) : (
                 <Save className="w-4 h-4" />
               )}
-              Salvar Alterações
+              Salvar
             </Button>
-          )}
+            <Button
+              variant="secondary"
+              onClick={handleSaveAndExit}
+              disabled={saving || !canSave()}
+              className="gap-2"
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <LogOut className="w-4 h-4" />
+              )}
+              Salvar e Sair
+            </Button>
+
+            {/* Next button - only on steps 1-4 */}
+            {state.step < 5 && (
+              <Button
+                onClick={handleNext}
+                disabled={!canProceed()}
+                className="gap-2"
+              >
+                Próximo
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1154,7 +1196,7 @@ export default function EditMediaPlan() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleSave}
+              onClick={() => handleSave(true)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir e Salvar
