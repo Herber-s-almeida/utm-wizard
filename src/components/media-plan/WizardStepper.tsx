@@ -21,6 +21,7 @@ interface WizardStepperProps {
   onStepClick?: (step: number) => void;
   completionPercentage?: number;
   showProgressBar?: boolean;
+  allowAllStepsClickable?: boolean;
 }
 
 export function WizardStepper({ 
@@ -29,6 +30,7 @@ export function WizardStepper({
   onStepClick,
   completionPercentage,
   showProgressBar = true,
+  allowAllStepsClickable = false,
 }: WizardStepperProps) {
   // Calculate step progress if completionPercentage not provided
   const stepProgress = completionPercentage ?? Math.round(((currentStep - 1) / (steps.length - 1)) * 100);
@@ -51,7 +53,7 @@ export function WizardStepper({
         {steps.map((step, index) => {
           const isCompleted = step.id < currentStep;
           const isCurrent = step.id === currentStep;
-          const isClickable = onStepClick && step.id <= currentStep;
+          const isClickable = onStepClick && (allowAllStepsClickable || step.id <= currentStep);
 
           return (
             <li key={step.id} className="relative flex-1">
