@@ -1,4 +1,4 @@
-import { useState, createContext, useContext } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -46,6 +46,7 @@ import { ConfigItemRow } from './ConfigItemRow';
 import { PlanItemRow } from './PlanItemRow';
 import { cn } from '@/lib/utils';
 import { useSidebarCollapse } from '@/hooks/useSidebarCollapse';
+import { useSidebarSections, useSidebarSubsections } from '@/hooks/useSidebarSections';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 
@@ -97,42 +98,18 @@ export function AppSidebar() {
     ? (viewingUser?.company || viewingUser?.full_name || viewingUser?.email)
     : (currentProfile?.company || currentProfile?.full_name || user?.email);
 
-  // Section open states
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    reports: true,
-    mediaPlans: true,
-    draftPlans: false,
-    activePlans: true,
-    finishedPlans: false,
-    mediaResources: false,
-    resourcesDraftPlans: false,
-    resourcesActivePlans: false,
-    resourcesFinishedPlans: false,
-    taxonomy: false,
-    taxonomyDraftPlans: false,
-    taxonomyActivePlans: false,
-    taxonomyFinishedPlans: false,
-    subdivisions: false,
-    moments: false,
-    funnelStages: false,
-    mediums: false,
-    vehicles: false,
-    targets: false,
-    segments: false,
-    targetsList: false,
-    creatives: false,
-    formatsList: false,
-    creativeTypesList: false,
-    statuses: false,
-    trash: false,
-  });
+  // Section open states - persisted in localStorage
+  const { openSections, toggleSection } = useSidebarSections();
 
-  // Vehicle subsections
-  const [openVehicles, setOpenVehicles] = useState<Record<string, boolean>>({});
-  // Subdivisions subsections
-  const [openSubdivisions, setOpenSubdivisions] = useState<Record<string, boolean>>({});
-  // Formats subsections
-  const [openFormats, setOpenFormats] = useState<Record<string, boolean>>({});
+  // Vehicle/Subdivision/Format subsections - persisted in localStorage
+  const { 
+    openVehicles, 
+    setOpenVehicles, 
+    openSubdivisions, 
+    setOpenSubdivisions, 
+    openFormats, 
+    setOpenFormats 
+  } = useSidebarSubsections();
 
   // Dialog states
   const [subdivisionDialogOpen, setSubdivisionDialogOpen] = useState(false);
@@ -160,9 +137,6 @@ export function AppSidebar() {
   // Track which vehicle is selected for creating a new channel
   const [selectedVehicleForChannel, setSelectedVehicleForChannel] = useState<{ id: string; name: string } | null>(null);
 
-  const toggleSection = (key: string) => {
-    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
-  };
 
   const handleSignOut = async () => {
     await signOut();
