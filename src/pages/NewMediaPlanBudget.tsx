@@ -28,6 +28,7 @@ import { CreateKpiDialog } from '@/components/media-plan/CreateKpiDialog';
 import { useCustomKpis } from '@/hooks/useCustomKpis';
 import { useWizardDraft, DraftData } from '@/hooks/useWizardDraft';
 import { DraftRecoveryDialog } from '@/components/media-plan/DraftRecoveryDialog';
+import { LibrarySelector } from '@/components/media-plan/LibrarySelector';
 
 const WIZARD_STEPS = [
   { id: 1, title: 'Plano', description: 'Dados básicos', helpText: 'Defina nome, datas, orçamento total e KPIs do plano. O nome será usado nos parâmetros UTM.' },
@@ -162,7 +163,7 @@ export default function NewMediaPlanBudget() {
     switch (state.step) {
       case 1:
         const validDates = state.planData.start_date && state.planData.end_date && state.planData.end_date > state.planData.start_date;
-        return state.planData.name.trim() && validDates && state.planData.total_budget > 0;
+        return state.planData.name.trim() && state.planData.client_id && validDates && state.planData.total_budget > 0;
       case 2:
         return state.subdivisions.length === 0 || wizard.validatePercentages(state.subdivisions);
       case 3: {
@@ -205,6 +206,7 @@ export default function NewMediaPlanBudget() {
           user_id: user?.id,
           name: state.planData.name,
           client: state.planData.client || null,
+          client_id: state.planData.client_id || null,
           campaign: state.planData.name, // Campaign equals plan name
           start_date: state.planData.start_date,
           end_date: state.planData.end_date,
@@ -479,15 +481,25 @@ export default function NewMediaPlanBudget() {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="client">Cliente</Label>
-                      <Input
-                        id="client"
-                        placeholder="Nome do cliente"
-                        value={state.planData.client}
-                        onChange={(e) => updatePlanData({ client: e.target.value })}
-                      />
-                    </div>
+                    <LibrarySelector
+                      label="Cliente"
+                      placeholder="Selecione um cliente..."
+                      items={libraryData.clients.map(c => ({ id: c.id, name: c.name }))}
+                      value={state.planData.client_id}
+                      onChange={(id) => {
+                        const selectedClient = libraryData.clients.find(c => c.id === id);
+                        updatePlanData({ 
+                          client_id: id, 
+                          client: selectedClient?.name || '' 
+                        });
+                      }}
+                      onCreate={async (name) => {
+                        const result = await libraryMutations.createClient.mutateAsync({ name });
+                        return { id: result.id, name: result.name };
+                      }}
+                      createLabel="Novo cliente"
+                      required
+                    />
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">

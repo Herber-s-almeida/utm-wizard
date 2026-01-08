@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
 import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates } from './useConfigData';
+import { useClients } from './useClients';
 
 export interface WizardPlanData {
   name: string;
   client: string;
+  client_id: string | null;
   campaign: string;
   start_date: string;
   end_date: string;
@@ -41,12 +43,14 @@ export function useMediaPlanWizard() {
   const channels = useChannels();
   const targets = useTargets();
   const creativeTemplates = useCreativeTemplates();
+  const clients = useClients();
 
   const [state, setState] = useState<WizardState>({
     step: 1,
     planData: {
       name: '',
       client: '',
+      client_id: null,
       campaign: '',
       start_date: '',
       end_date: '',
@@ -123,6 +127,7 @@ export function useMediaPlanWizard() {
       planData: {
         name: '',
         client: '',
+        client_id: null,
         campaign: '',
         start_date: '',
         end_date: '',
@@ -186,11 +191,13 @@ export function useMediaPlanWizard() {
       channels: channels.activeItems || [],
       targets: targets.activeItems || [],
       creativeTemplates: creativeTemplates.activeItems || [],
+      clients: clients.activeItems || [],
     },
     libraryMutations: {
       createSubdivision: subdivisions.create,
       createMoment: moments.create,
       createFunnelStage: funnelStages.create,
+      createClient: clients.create,
     },
   };
 }
