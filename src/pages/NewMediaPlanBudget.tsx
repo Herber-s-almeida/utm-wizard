@@ -19,6 +19,7 @@ import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization
 import { SortableFunnelList } from '@/components/media-plan/SortableFunnelList';
 import { FunnelStageSelector } from '@/components/media-plan/FunnelStageSelector';
 import { TemporalEqualizer, generateTemporalPeriods } from '@/components/media-plan/TemporalEqualizer';
+import { SlugInputField } from '@/components/media-plan/SlugInputField';
 import { useMediaPlanWizard, BudgetAllocation } from '@/hooks/useMediaPlanWizard';
 import { KPI_OPTIONS } from '@/types/media';
 import { Plus } from 'lucide-react';
@@ -208,6 +209,7 @@ export default function NewMediaPlanBudget() {
           client: state.planData.client || null,
           client_id: state.planData.client_id || null,
           campaign: state.planData.name, // Campaign equals plan name
+          utm_campaign_slug: state.planData.utm_campaign_slug || null,
           start_date: state.planData.start_date,
           end_date: state.planData.end_date,
           total_budget: state.planData.total_budget,
@@ -465,21 +467,12 @@ export default function NewMediaPlanBudget() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                      <LabelWithTooltip 
-                        htmlFor="name" 
-                        tooltip="O nome do plano será utilizado como identificador da campanha nos parâmetros UTM (utm_campaign)"
-                        required
-                      >
-                        Nome do Plano
-                      </LabelWithTooltip>
-                      <Input
-                        id="name"
-                        placeholder="Ex: Campanha de Verão 2025"
-                        value={state.planData.name}
-                        onChange={(e) => updatePlanData({ name: e.target.value })}
-                      />
-                    </div>
+                    <SlugInputField
+                      name={state.planData.name}
+                      slug={state.planData.utm_campaign_slug}
+                      onNameChange={(name) => updatePlanData({ name })}
+                      onSlugChange={(utm_campaign_slug) => updatePlanData({ utm_campaign_slug })}
+                    />
 
                     <LibrarySelector
                       label="Cliente"

@@ -6,6 +6,7 @@ export interface MediaPlan {
   client: string | null;
   client_id: string | null;
   campaign: string | null;
+  utm_campaign_slug: string | null;
   start_date: string | null;
   end_date: string | null;
   total_budget: number;

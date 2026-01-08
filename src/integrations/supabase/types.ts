@@ -1055,6 +1055,7 @@ export type Database = {
           total_budget: number | null
           updated_at: string | null
           user_id: string
+          utm_campaign_slug: string | null
         }
         Insert: {
           campaign?: string | null
@@ -1074,6 +1075,7 @@ export type Database = {
           total_budget?: number | null
           updated_at?: string | null
           user_id: string
+          utm_campaign_slug?: string | null
         }
         Update: {
           campaign?: string | null
@@ -1093,6 +1095,7 @@ export type Database = {
           total_budget?: number | null
           updated_at?: string | null
           user_id?: string
+          utm_campaign_slug?: string | null
         }
         Relationships: [
           {

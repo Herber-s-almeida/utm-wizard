@@ -6,7 +6,7 @@ export interface WizardPlanData {
   name: string;
   client: string;
   client_id: string | null;
-  campaign: string;
+  utm_campaign_slug: string | null;
   start_date: string;
   end_date: string;
   total_budget: number;
@@ -51,7 +51,7 @@ export function useMediaPlanWizard() {
       name: '',
       client: '',
       client_id: null,
-      campaign: '',
+      utm_campaign_slug: null,
       start_date: '',
       end_date: '',
       total_budget: 0,
@@ -128,7 +128,7 @@ export function useMediaPlanWizard() {
         name: '',
         client: '',
         client_id: null,
-        campaign: '',
+        utm_campaign_slug: null,
         start_date: '',
         end_date: '',
         total_budget: 0,

@@ -8,7 +8,7 @@ interface PlanSummaryCardProps {
   planData: {
     name: string;
     client: string;
-    campaign: string;
+    utm_campaign_slug?: string | null;
     start_date: string;
     end_date: string;
     total_budget: number;
