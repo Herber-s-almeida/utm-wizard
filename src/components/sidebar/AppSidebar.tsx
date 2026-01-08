@@ -525,7 +525,7 @@ export function AppSidebar() {
         {/* PLANOS DE MÍDIA */}
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Planos de Mídia
+            Gerenciar Planos de Mídia
           </h3>
 
           {/* Planos de Mídia - Expansível */}
@@ -554,18 +554,6 @@ export function AppSidebar() {
               </Tooltip>
             </div>
             <CollapsibleContent className="pl-4">
-              {/* Criar novo plano */}
-              <Link to="/media-plans/new">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
-                >
-                  <Plus className="h-3 w-3" />
-                  Novo plano
-                </Button>
-              </Link>
-
               {/* Rascunhos */}
               <Collapsible open={openSections.draftPlans} onOpenChange={() => toggleSection('draftPlans')}>
                 <CollapsibleTrigger asChild>
@@ -649,6 +637,18 @@ export function AppSidebar() {
                   )}
                 </CollapsibleContent>
               </Collapsible>
+
+              {/* Criar novo plano */}
+              <Link to="/media-plans/new">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                >
+                  <Plus className="h-3 w-3" />
+                  Novo plano
+                </Button>
+              </Link>
             </CollapsibleContent>
           </Collapsible>
         </div>
