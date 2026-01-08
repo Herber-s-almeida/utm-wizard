@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
 import { useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +25,7 @@ import { DuplicatePlanDialog } from '@/components/media-plan/DuplicatePlanDialog
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [plans, setPlans] = useState<MediaPlan[]>([]);
@@ -38,33 +40,37 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    if (user) {
+    if (effectiveUserId) {
       fetchData();
     }
-  }, [user]);
+  }, [effectiveUserId]);
 
   const fetchData = async () => {
+    if (!effectiveUserId) return;
+    
     try {
-      // Fetch media plans
+      // Fetch media plans for the effective user
       const { data: plansData, error: plansError } = await supabase
         .from('media_plans')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', effectiveUserId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(5);
 
       if (plansError) throw plansError;
 
-      // Fetch stats
+      // Fetch stats for the effective user
       const { data: allPlans } = await supabase
         .from('media_plans')
         .select('id, status, total_budget')
-        .eq('user_id', user?.id);
+        .eq('user_id', effectiveUserId)
+        .is('deleted_at', null);
 
       const { count: linesCount } = await supabase
         .from('media_lines')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user?.id);
+        .eq('user_id', effectiveUserId);
 
       const typedPlans = (plansData || []) as MediaPlan[];
       setPlans(typedPlans);
