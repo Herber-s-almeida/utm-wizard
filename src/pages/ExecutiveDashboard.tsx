@@ -65,7 +65,7 @@ function formatCompactCurrency(value: number): string {
 
 export default function ExecutiveDashboard() {
   const [statusFilter, setStatusFilter] = useState('active');
-  const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(subMonths(new Date(), 11)));
+  const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(subMonths(new Date(), 12)));
   const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
   
   const { data, isLoading, error } = useExecutiveDashboard({
