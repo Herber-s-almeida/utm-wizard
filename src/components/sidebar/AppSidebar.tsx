@@ -457,6 +457,17 @@ export function AppSidebar() {
 
           <Tooltip>
             <TooltipTrigger asChild>
+              <Link to="/config/detail-types">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Layers className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Tipos de Detalhamento</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
               <Link to="/trash">
                 <Button 
                   variant="ghost" 
@@ -1474,6 +1485,18 @@ export function AppSidebar() {
             >
               <TrendingUp className="h-3.5 w-3.5" />
               <span>KPIs Personalizados</span>
+            </Button>
+          </Link>
+
+          {/* Tipos de Detalhamento */}
+          <Link to="/config/detail-types">
+            <Button 
+              variant={location.pathname === '/config/detail-types' ? 'secondary' : 'ghost'} 
+              size="sm" 
+              className="w-full justify-start gap-2 h-8 text-xs"
+            >
+              <Layers className="h-3.5 w-3.5" />
+              <span>Tipos de Detalhamento</span>
             </Button>
           </Link>
         </div>

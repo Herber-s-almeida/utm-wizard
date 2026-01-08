@@ -37,7 +37,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminMenuVisibility from "./pages/admin/AdminMenuVisibility";
 import AccountPage from "./pages/AccountPage";
 import TrashPage from "./pages/TrashPage";
-
+import DetailTypesPage from "./pages/config/DetailTypesPage";
 function AppWithEnvironment() {
   const { user } = useAuth();
   
@@ -68,6 +68,7 @@ function AppWithEnvironment() {
           <Route path="/config/creative-types" element={<ProtectedRoute><CreativeTypesPage /></ProtectedRoute>} />
           <Route path="/config/statuses" element={<ProtectedRoute><StatusesPage /></ProtectedRoute>} />
           <Route path="/config/kpis" element={<ProtectedRoute><KpisPage /></ProtectedRoute>} />
+          <Route path="/config/detail-types" element={<ProtectedRoute><DetailTypesPage /></ProtectedRoute>} />
           <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
           <Route path="/trash" element={<ProtectedRoute><TrashPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
