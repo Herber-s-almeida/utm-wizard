@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { 
   BarChart3, 
   Plus, 
@@ -31,7 +32,15 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function ActualsPage() {
+  const { planId: routePlanId } = useParams();
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+
+  // Set plan from route param
+  useEffect(() => {
+    if (routePlanId) {
+      setSelectedPlanId(routePlanId);
+    }
+  }, [routePlanId]);
   
   const { 
     actuals, 

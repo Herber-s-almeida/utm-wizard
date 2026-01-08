@@ -46,6 +46,8 @@ import FinanceDashboard from "./pages/finance/FinanceDashboard";
 import ForecastPage from "./pages/finance/ForecastPage";
 import ActualsPage from "./pages/finance/ActualsPage";
 import DocumentsPage from "./pages/finance/DocumentsPage";
+import DocumentFormPage from "./pages/finance/DocumentFormPage";
+import DocumentDetailPage from "./pages/finance/DocumentDetailPage";
 import PaymentsPage from "./pages/finance/PaymentsPage";
 import RevenuePage from "./pages/finance/RevenuePage";
 import AuditPage from "./pages/finance/AuditPage";
@@ -92,8 +94,12 @@ function AppWithEnvironment() {
           <Route path="/finance" element={<ProtectedRoute><FinanceLayout /></ProtectedRoute>}>
             <Route index element={<FinanceDashboard />} />
             <Route path="forecast" element={<ForecastPage />} />
+            <Route path="forecast/:planId" element={<ForecastPage />} />
             <Route path="actuals" element={<ActualsPage />} />
+            <Route path="actuals/:planId" element={<ActualsPage />} />
             <Route path="documents" element={<DocumentsPage />} />
+            <Route path="documents/new" element={<DocumentFormPage />} />
+            <Route path="documents/:id" element={<DocumentDetailPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="revenue" element={<RevenuePage />} />
             <Route path="audit" element={<AuditPage />} />
