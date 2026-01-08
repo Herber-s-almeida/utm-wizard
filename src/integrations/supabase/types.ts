@@ -361,6 +361,419 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_actuals: {
+        Row: {
+          actual_amount: number
+          created_at: string | null
+          dimensions_json: Json | null
+          id: string
+          import_batch_id: string | null
+          media_plan_id: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          source: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          actual_amount?: number
+          created_at?: string | null
+          dimensions_json?: Json | null
+          id?: string
+          import_batch_id?: string | null
+          media_plan_id: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          source?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          actual_amount?: number
+          created_at?: string | null
+          dimensions_json?: Json | null
+          id?: string
+          import_batch_id?: string | null
+          media_plan_id?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          source?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_actuals_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "media_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_alert_configs: {
+        Row: {
+          alert_type: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          threshold_days: number | null
+          threshold_percentage: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          threshold_days?: number | null
+          threshold_percentage?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          threshold_days?: number | null
+          threshold_percentage?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      financial_audit_log: {
+        Row: {
+          action: string
+          after_json: Json | null
+          before_json: Json | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          after_json?: Json | null
+          before_json?: Json | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          after_json?: Json | null
+          before_json?: Json | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      financial_documents: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          attachment_urls: Json | null
+          created_at: string | null
+          currency: string | null
+          deleted_at: string | null
+          document_number: string | null
+          document_type: string
+          due_date: string
+          id: string
+          issue_date: string
+          media_plan_id: string
+          notes: string | null
+          related_dimensions_json: Json | null
+          status: string
+          updated_at: string | null
+          user_id: string
+          vendor_id: string | null
+          vendor_name: string | null
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          attachment_urls?: Json | null
+          created_at?: string | null
+          currency?: string | null
+          deleted_at?: string | null
+          document_number?: string | null
+          document_type?: string
+          due_date: string
+          id?: string
+          issue_date: string
+          media_plan_id: string
+          notes?: string | null
+          related_dimensions_json?: Json | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+          vendor_id?: string | null
+          vendor_name?: string | null
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          attachment_urls?: Json | null
+          created_at?: string | null
+          currency?: string | null
+          deleted_at?: string | null
+          document_number?: string | null
+          document_type?: string
+          due_date?: string
+          id?: string
+          issue_date?: string
+          media_plan_id?: string
+          notes?: string | null
+          related_dimensions_json?: Json | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+          vendor_id?: string | null
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_documents_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "media_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_documents_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "financial_vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_forecasts: {
+        Row: {
+          created_at: string | null
+          dimensions_json: Json | null
+          granularity: string
+          id: string
+          is_locked: boolean | null
+          media_plan_id: string
+          period_end: string
+          period_start: string
+          planned_amount: number
+          reason: string | null
+          source: string
+          updated_at: string | null
+          user_id: string
+          version: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          dimensions_json?: Json | null
+          granularity?: string
+          id?: string
+          is_locked?: boolean | null
+          media_plan_id: string
+          period_end: string
+          period_start: string
+          planned_amount?: number
+          reason?: string | null
+          source?: string
+          updated_at?: string | null
+          user_id: string
+          version?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          dimensions_json?: Json | null
+          granularity?: string
+          id?: string
+          is_locked?: boolean | null
+          media_plan_id?: string
+          period_end?: string
+          period_start?: string
+          planned_amount?: number
+          reason?: string | null
+          source?: string
+          updated_at?: string | null
+          user_id?: string
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_forecasts_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "media_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_payments: {
+        Row: {
+          actual_payment_date: string | null
+          created_at: string | null
+          deleted_at: string | null
+          financial_document_id: string
+          id: string
+          installment_number: number | null
+          notes: string | null
+          paid_amount: number | null
+          payment_method: string | null
+          planned_amount: number
+          planned_payment_date: string
+          proof_url: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          actual_payment_date?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          financial_document_id: string
+          id?: string
+          installment_number?: number | null
+          notes?: string | null
+          paid_amount?: number | null
+          payment_method?: string | null
+          planned_amount: number
+          planned_payment_date: string
+          proof_url?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          actual_payment_date?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          financial_document_id?: string
+          id?: string
+          installment_number?: number | null
+          notes?: string | null
+          paid_amount?: number | null
+          payment_method?: string | null
+          planned_amount?: number
+          planned_payment_date?: string
+          proof_url?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_payments_financial_document_id_fkey"
+            columns: ["financial_document_id"]
+            isOneToOne: false
+            referencedRelation: "financial_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_revenues: {
+        Row: {
+          created_at: string | null
+          id: string
+          media_plan_id: string | null
+          period_end: string
+          period_start: string
+          product_name: string | null
+          revenue_amount: number
+          source: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          media_plan_id?: string | null
+          period_end: string
+          period_start: string
+          product_name?: string | null
+          revenue_amount?: number
+          source?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          media_plan_id?: string | null
+          period_end?: string
+          period_start?: string
+          product_name?: string | null
+          revenue_amount?: number
+          source?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_revenues_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "media_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_vendors: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          deleted_at: string | null
+          document: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          payment_terms: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          document?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          payment_terms?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          document?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          payment_terms?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       format_creative_types: {
         Row: {
           created_at: string
