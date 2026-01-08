@@ -1,0 +1,19 @@
+-- Add new columns to financial_documents table for complete financial tracking
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS competency_month date;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS competency_month_erp text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS account_manager text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS campaign_project text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS product text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS cost_center_name text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS cost_center_code text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS team text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS financial_account text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS package text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS service_description text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS macro_classification text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS expense_classification text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS cms_sent_date date;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS contract_reference text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS request_type text;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS invoice_received_date date;
+ALTER TABLE financial_documents ADD COLUMN IF NOT EXISTS rir_task_number text;

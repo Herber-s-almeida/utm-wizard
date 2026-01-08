@@ -11,6 +11,11 @@ import {
   Eye,
   CreditCard,
   Plus,
+  Building2,
+  FolderTree,
+  CalendarDays,
+  FileSearch,
+  ClipboardList,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,7 +50,6 @@ import { AddPaymentDialog } from "@/components/finance/AddPaymentDialog";
 import { EditDocumentDialog } from "@/components/finance/EditDocumentDialog";
 import { RegisterPaymentDialog } from "@/components/finance/RegisterPaymentDialog";
 import { format, isBefore, addDays } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import type { DocumentStatus } from "@/types/finance";
 
 const statusConfig: Record<DocumentStatus, { label: string; color: string; icon: React.ReactNode }> = {
@@ -142,6 +146,13 @@ export default function DocumentDetailPage() {
   const isOverdue = isBefore(dueDate, today) && document.status !== 'paid' && document.status !== 'cancelled';
   const isDueSoon = !isOverdue && isBefore(dueDate, addDays(today, 7)) && document.status !== 'paid' && document.status !== 'cancelled';
 
+  const InfoItem = ({ label, value }: { label: string; value: string | null | undefined }) => (
+    <div>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="font-medium">{value || "-"}</p>
+    </div>
+  );
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -194,127 +205,205 @@ export default function DocumentDetailPage() {
         </div>
       </div>
 
+      {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Info */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Informações do Documento</CardTitle>
-              <Badge className={status.color}>
-                {status.icon}
-                <span className="ml-1">{status.label}</span>
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Tipo</p>
-                <p className="font-medium">{documentTypeLabels[document.document_type]}</p>
+        {/* Left Column - Document Info */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Identification Card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Identificação
+                </CardTitle>
+                <Badge className={status.color}>
+                  {status.icon}
+                  <span className="ml-1">{status.label}</span>
+                </Badge>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Número</p>
-                <p className="font-medium">{document.document_number || "-"}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Data de Emissão</p>
-                <p className="font-medium">
-                  {format(new Date(document.issue_date), "dd/MM/yyyy")}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Data de Vencimento</p>
-                <p className={`font-medium ${isOverdue ? "text-red-600" : isDueSoon ? "text-orange-600" : ""}`}>
-                  {format(dueDate, "dd/MM/yyyy")}
-                  {isOverdue && " (Atrasado)"}
-                  {isDueSoon && " (Vencendo)"}
-                </p>
-              </div>
-            </div>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <InfoItem label="Tipo" value={documentTypeLabels[document.document_type]} />
+              <InfoItem label="Número" value={document.document_number} />
+              <InfoItem label="Razão Social" value={document.vendor_name} />
+            </CardContent>
+          </Card>
 
-            <Separator />
+          {/* Classification Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FolderTree className="h-5 w-5" />
+                Classificação
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <InfoItem label="Atendimento" value={document.account_manager} />
+              <InfoItem label="Campanha/Projeto" value={document.campaign_project} />
+              <InfoItem label="Produto" value={document.product} />
+              <InfoItem label="Classificação Macro" value={document.macro_classification} />
+              <InfoItem label="Classificação da Despesa" value={document.expense_classification} />
+            </CardContent>
+          </Card>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Valor</p>
-                <p className="text-2xl font-bold text-emerald-600">
-                  {formatCurrency(Number(document.amount), document.currency || "BRL")}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Moeda</p>
-                <p className="font-medium">{document.currency || "BRL"}</p>
-              </div>
-            </div>
+          {/* Cost Center Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Centro de Custo
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <InfoItem label="Nome do CR" value={document.cost_center_name} />
+              <InfoItem label="Centro de Custo (CR)" value={document.cost_center_code} />
+              <InfoItem label="Equipe" value={document.team} />
+              <InfoItem label="Conta Financeira (CF)" value={document.financial_account} />
+              <InfoItem label="Pacote" value={document.package} />
+            </CardContent>
+          </Card>
 
-            {document.notes && (
-              <>
-                <Separator />
+          {/* Service Card */}
+          {(document.service_description || document.notes) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileSearch className="h-5 w-5" />
+                  Serviço
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {document.service_description && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Descrição do Serviço</p>
+                    <p className="text-sm">{document.service_description}</p>
+                  </div>
+                )}
+                {document.notes && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Observações</p>
+                    <p className="text-sm">{document.notes}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Dates & Values Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5" />
+                Datas e Valores
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <InfoItem label="Competência" value={document.competency_month ? format(new Date(document.competency_month), "MMM/yyyy") : document.competency_month_erp} />
+                <InfoItem label="Competência Benner" value={document.competency_month_erp} />
+                <InfoItem label="Recebimento NF" value={document.invoice_received_date ? format(new Date(document.invoice_received_date), "dd/MM/yyyy") : null} />
+                <InfoItem label="Data de Emissão" value={format(new Date(document.issue_date), "dd/MM/yyyy")} />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <InfoItem label="Envio CMS" value={document.cms_sent_date ? format(new Date(document.cms_sent_date), "dd/MM/yyyy") : null} />
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Observações</p>
-                  <p className="text-sm">{document.notes}</p>
+                  <p className="text-sm text-muted-foreground">Vencimento</p>
+                  <p className={`font-medium ${isOverdue ? "text-red-600" : isDueSoon ? "text-orange-600" : ""}`}>
+                    {format(dueDate, "dd/MM/yyyy")}
+                    {isOverdue && " (Atrasado)"}
+                    {isDueSoon && " (Vencendo)"}
+                  </p>
                 </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              </div>
+              <Separator />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Valor Realizado</p>
+                  <p className="text-2xl font-bold text-emerald-600">
+                    {formatCurrency(Number(document.amount), document.currency || "BRL")}
+                  </p>
+                </div>
+                <InfoItem label="Moeda" value={document.currency || "BRL"} />
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Status Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Ações</CardTitle>
-            <CardDescription>Atualizar status do documento</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {document.status === 'received' && (
-              <Button 
-                className="w-full" 
-                variant="outline"
-                onClick={() => handleStatusChange('verified')}
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Marcar como Conferido
-              </Button>
-            )}
-            {document.status === 'verified' && (
-              <Button 
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
-                onClick={() => handleStatusChange('approved')}
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Aprovar
-              </Button>
-            )}
-            {document.status === 'approved' && (
-              <Button 
-                className="w-full bg-purple-600 hover:bg-purple-700"
-                onClick={() => handleStatusChange('scheduled')}
-              >
-                <Clock className="w-4 h-4 mr-2" />
-                Agendar Pagamento
-              </Button>
-            )}
-            {document.status === 'scheduled' && (
-              <Button 
-                className="w-full bg-green-600 hover:bg-green-700"
-                onClick={() => handleStatusChange('paid')}
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Marcar como Pago
-              </Button>
-            )}
-            {document.status !== 'cancelled' && document.status !== 'paid' && (
-              <Button 
-                className="w-full" 
-                variant="outline"
-                onClick={() => handleStatusChange('cancelled')}
-              >
-                <AlertCircle className="w-4 h-4 mr-2" />
-                Cancelar
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+          {/* References Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardList className="h-5 w-5" />
+                Referências
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <InfoItem label="Nº A.P/P.I/O.C/Contrato" value={document.contract_reference} />
+              <InfoItem label="Tipo de Solicitação" value={document.request_type} />
+              <InfoItem label="Tarefa RIR" value={document.rir_task_number} />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column - Actions */}
+        <div className="space-y-6">
+          {/* Status Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ações</CardTitle>
+              <CardDescription>Atualizar status do documento</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {document.status === 'received' && (
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => handleStatusChange('verified')}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Marcar como Conferido
+                </Button>
+              )}
+              {document.status === 'verified' && (
+                <Button 
+                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                  onClick={() => handleStatusChange('approved')}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Aprovar
+                </Button>
+              )}
+              {document.status === 'approved' && (
+                <Button 
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                  onClick={() => handleStatusChange('scheduled')}
+                >
+                  <Clock className="w-4 h-4 mr-2" />
+                  Agendar Pagamento
+                </Button>
+              )}
+              {document.status === 'scheduled' && (
+                <Button 
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  onClick={() => handleStatusChange('paid')}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Marcar como Pago
+                </Button>
+              )}
+              {document.status !== 'cancelled' && document.status !== 'paid' && (
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => handleStatusChange('cancelled')}
+                >
+                  <AlertCircle className="w-4 h-4 mr-2" />
+                  Cancelar
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Payments */}
@@ -386,6 +475,7 @@ export default function DocumentDetailPage() {
           )}
         </CardContent>
       </Card>
+
       {/* Dialogs */}
       <AddPaymentDialog
         open={showAddPayment}

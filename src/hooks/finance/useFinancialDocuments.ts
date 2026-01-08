@@ -16,6 +16,25 @@ interface CreateDocumentData {
   currency: string;
   notes?: string | null;
   status: string;
+  // Extended fields
+  competency_month?: string | null;
+  competency_month_erp?: string | null;
+  account_manager?: string | null;
+  campaign_project?: string | null;
+  product?: string | null;
+  cost_center_name?: string | null;
+  cost_center_code?: string | null;
+  team?: string | null;
+  financial_account?: string | null;
+  package?: string | null;
+  service_description?: string | null;
+  macro_classification?: string | null;
+  expense_classification?: string | null;
+  cms_sent_date?: string | null;
+  contract_reference?: string | null;
+  request_type?: string | null;
+  invoice_received_date?: string | null;
+  rir_task_number?: string | null;
 }
 
 export function useFinancialDocuments() {
