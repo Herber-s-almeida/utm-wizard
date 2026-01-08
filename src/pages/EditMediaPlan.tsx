@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { WizardStepper } from '@/components/media-plan/WizardStepper';
 import { BudgetAllocationTable } from '@/components/media-plan/BudgetAllocationTable';
+import { LibrarySelector } from '@/components/media-plan/LibrarySelector';
 import { PlanSummaryCard } from '@/components/media-plan/PlanSummaryCard';
 import { SubdivisionsSummaryCard } from '@/components/media-plan/SubdivisionsSummaryCard';
 import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization';
@@ -144,6 +145,7 @@ export default function EditMediaPlan() {
       const planData: WizardPlanData = {
         name: plan.name,
         client: plan.client || '',
+        client_id: plan.client_id || null,
         campaign: plan.campaign || '',
         start_date: plan.start_date || '',
         end_date: plan.end_date || '',
@@ -258,7 +260,7 @@ export default function EditMediaPlan() {
   const canProceed = () => {
     switch (state.step) {
       case 1:
-        return state.planData.name.trim() && state.planData.start_date && state.planData.end_date && state.planData.total_budget > 0;
+        return state.planData.name.trim() && state.planData.client_id && state.planData.start_date && state.planData.end_date && state.planData.total_budget > 0;
       case 2:
         return state.subdivisions.length === 0 || wizard.validatePercentages(state.subdivisions);
       case 3: {
@@ -337,6 +339,7 @@ export default function EditMediaPlan() {
         .update({
           name: state.planData.name,
           client: state.planData.client || null,
+          client_id: state.planData.client_id || null,
           campaign: state.planData.name, // Campaign equals plan name
           start_date: state.planData.start_date,
           end_date: state.planData.end_date,
@@ -620,15 +623,25 @@ export default function EditMediaPlan() {
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="client">Cliente</Label>
-                        <Input
-                          id="client"
-                          placeholder="Nome do cliente"
-                          value={state.planData.client}
-                          onChange={(e) => updatePlanData({ client: e.target.value })}
-                        />
-                      </div>
+                      <LibrarySelector
+                        label="Cliente"
+                        placeholder="Selecione um cliente..."
+                        items={libraryData.clients.map(c => ({ id: c.id, name: c.name }))}
+                        value={state.planData.client_id}
+                        onChange={(id) => {
+                          const selectedClient = libraryData.clients.find(c => c.id === id);
+                          updatePlanData({ 
+                            client_id: id, 
+                            client: selectedClient?.name || '' 
+                          });
+                        }}
+                        onCreate={async (name) => {
+                          const result = await libraryMutations.createClient.mutateAsync({ name });
+                          return { id: result.id, name: result.name };
+                        }}
+                        createLabel="Novo cliente"
+                        required
+                      />
                       <div className="space-y-2">
                         <Label htmlFor="campaign">Campanha</Label>
                         <Input
