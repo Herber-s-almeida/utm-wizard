@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 
+type SectionContext = 'plans' | 'resources' | 'taxonomy' | 'reports';
+
 interface PlanItemRowProps {
   id: string;
   slug?: string | null;
@@ -23,6 +25,8 @@ interface PlanItemRowProps {
   onPermanentDelete?: () => void;
   isTrash?: boolean;
   className?: string;
+  /** Which section this row is in - determines active state and link target */
+  section?: SectionContext;
 }
 
 export function PlanItemRow({
@@ -34,12 +38,41 @@ export function PlanItemRow({
   onPermanentDelete,
   isTrash = false,
   className,
+  section = 'plans',
 }: PlanItemRowProps) {
   const location = useLocation();
-  const planUrl = `/media-plans/${slug || id}`;
+  const planIdentifier = slug || id;
   
-  // Check if current path starts with this plan's URL
-  const isActive = location.pathname.startsWith(planUrl);
+  // Build URL based on section context
+  const getSectionSuffix = () => {
+    switch (section) {
+      case 'resources': return '/resources';
+      case 'taxonomy': return '/taxonomy';
+      case 'reports': return '/reports';
+      default: return '';
+    }
+  };
+  
+  const planUrl = `/media-plans/${planIdentifier}${getSectionSuffix()}`;
+  
+  // Check if current path matches this specific section
+  const isActive = (() => {
+    const basePath = `/media-plans/${planIdentifier}`;
+    const currentPath = location.pathname;
+    
+    switch (section) {
+      case 'resources':
+        return currentPath === `${basePath}/resources` || currentPath.startsWith(`${basePath}/resources/`);
+      case 'taxonomy':
+        return currentPath === `${basePath}/taxonomy` || currentPath.startsWith(`${basePath}/taxonomy/`);
+      case 'reports':
+        return currentPath === `${basePath}/reports` || currentPath.startsWith(`${basePath}/reports/`);
+      case 'plans':
+      default:
+        // Only match the base plan page, not sub-pages
+        return currentPath === basePath || currentPath === `${basePath}/edit`;
+    }
+  })();
   
   return (
     <div className={cn(
