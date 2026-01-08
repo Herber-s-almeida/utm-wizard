@@ -1,22 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 
 export function useFinancialAlertConfigs() {
-  const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
   const { data: configs = [], isLoading } = useQuery({
-    queryKey: ["financial-alert-configs"],
+    queryKey: ["financial-alert-configs", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("financial_alert_configs")
         .select("*")
+        .eq("user_id", effectiveUserId!)
         .order("alert_type");
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const updateMutation = useMutation({

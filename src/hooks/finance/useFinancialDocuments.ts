@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { toast } from "sonner";
 import type { DocumentStatus } from "@/types/finance";
 
@@ -38,31 +38,32 @@ interface CreateDocumentData {
 }
 
 export function useFinancialDocuments() {
-  const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
   const { data: documents = [], isLoading } = useQuery({
-    queryKey: ["financial-documents"],
+    queryKey: ["financial-documents", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("financial_documents")
         .select("*")
+        .eq("user_id", effectiveUserId!)
         .is("deleted_at", null)
         .order("due_date");
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateDocumentData) => {
-      if (!user) throw new Error("User not authenticated");
+      if (!effectiveUserId) throw new Error("User not authenticated");
       const { error } = await supabase
         .from("financial_documents")
         .insert({
           ...data,
-          user_id: user.id,
+          user_id: effectiveUserId,
         });
       if (error) throw error;
     },
@@ -93,8 +94,8 @@ export function useFinancialDocuments() {
     mutationFn: async ({ id, status }: { id: string; status: DocumentStatus }) => {
       const updateData: Record<string, any> = { status };
       
-      if (status === 'approved' && user) {
-        updateData.approved_by = user.id;
+      if (status === 'approved' && effectiveUserId) {
+        updateData.approved_by = effectiveUserId;
         updateData.approved_at = new Date().toISOString();
       }
       
