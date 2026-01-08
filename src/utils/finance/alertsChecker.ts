@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { differenceInDays, parseISO, isBefore, startOfMonth, endOfMonth } from "date-fns";
+import { differenceInDays, parseISO, startOfMonth, endOfMonth } from "date-fns";
 
 export interface FinanceAlert {
   id: string;
@@ -39,9 +39,9 @@ export async function getActiveAlerts(userId: string): Promise<FinanceAlert[]> {
 
     // Run all checks in parallel
     const [overdueAlerts, pacingAlerts, dueSoonAlerts] = await Promise.all([
-      checkOverduePayments(alertConfigs),
-      checkPacingVariance(alertConfigs),
-      checkDueSoonPayments(alertConfigs),
+      checkOverduePayments(alertConfigs, userId),
+      checkPacingVariance(alertConfigs, userId),
+      checkDueSoonPayments(alertConfigs, userId),
     ]);
 
     alerts.push(...overdueAlerts, ...pacingAlerts, ...dueSoonAlerts);
@@ -59,7 +59,7 @@ export async function getActiveAlerts(userId: string): Promise<FinanceAlert[]> {
 /**
  * Check for overdue payments
  */
-async function checkOverduePayments(configs: AlertConfig[]): Promise<FinanceAlert[]> {
+async function checkOverduePayments(configs: AlertConfig[], userId: string): Promise<FinanceAlert[]> {
   const alerts: FinanceAlert[] = [];
   const today = new Date().toISOString().split('T')[0];
 
@@ -82,6 +82,7 @@ async function checkOverduePayments(configs: AlertConfig[]): Promise<FinanceAler
           document_number
         )
       `)
+      .eq("user_id", userId)
       .lt("planned_payment_date", today)
       .in("status", ["scheduled", "overdue"])
       .is("deleted_at", null);
@@ -119,7 +120,7 @@ async function checkOverduePayments(configs: AlertConfig[]): Promise<FinanceAler
 /**
  * Check for pacing variance (overspend/underspend)
  */
-async function checkPacingVariance(configs: AlertConfig[]): Promise<FinanceAlert[]> {
+async function checkPacingVariance(configs: AlertConfig[], userId: string): Promise<FinanceAlert[]> {
   const alerts: FinanceAlert[] = [];
 
   const overspendConfig = configs.find(c => c.alert_type === "overspend");
@@ -143,11 +144,13 @@ async function checkPacingVariance(configs: AlertConfig[]): Promise<FinanceAlert
       supabase
         .from("financial_forecasts")
         .select("media_plan_id, planned_amount")
+        .eq("user_id", userId)
         .gte("period_start", monthStart)
         .lte("period_end", monthEnd),
       supabase
         .from("financial_actuals")
         .select("media_plan_id, actual_amount")
+        .eq("user_id", userId)
         .gte("period_start", monthStart)
         .lte("period_end", monthEnd),
     ]);
@@ -222,7 +225,7 @@ async function checkPacingVariance(configs: AlertConfig[]): Promise<FinanceAlert
 /**
  * Check for payments due soon (next 7 days)
  */
-async function checkDueSoonPayments(configs: AlertConfig[]): Promise<FinanceAlert[]> {
+async function checkDueSoonPayments(configs: AlertConfig[], userId: string): Promise<FinanceAlert[]> {
   const alerts: FinanceAlert[] = [];
   
   const today = new Date();
@@ -245,6 +248,7 @@ async function checkDueSoonPayments(configs: AlertConfig[]): Promise<FinanceAler
           vendor_name
         )
       `)
+      .eq("user_id", userId)
       .gte("planned_payment_date", todayStr)
       .lte("planned_payment_date", in7DaysStr)
       .eq("status", "scheduled")

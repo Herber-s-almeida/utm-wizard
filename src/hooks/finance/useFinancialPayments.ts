@@ -1,37 +1,38 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { toast } from "sonner";
 import { registerPayment } from "@/utils/finance/documentWorkflow";
 
 export function useFinancialPayments() {
-  const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
   const { data: payments = [], isLoading } = useQuery({
-    queryKey: ["financial-payments"],
+    queryKey: ["financial-payments", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("financial_payments")
         .select("*, financial_documents(vendor_name, document_number, media_plan_id)")
+        .eq("user_id", effectiveUserId!)
         .is("deleted_at", null)
         .order("planned_payment_date");
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const markAsPaidMutation = useMutation({
     mutationFn: async (paymentId: string) => {
-      if (!user) throw new Error("User not authenticated");
+      if (!effectiveUserId) throw new Error("User not authenticated");
       
       const payment = payments.find(p => p.id === paymentId);
       if (!payment) throw new Error("Payment not found");
 
       const result = await registerPayment(
         paymentId,
-        user.id,
+        effectiveUserId,
         Number(payment.planned_amount),
         "other" // Default method
       );
@@ -65,11 +66,11 @@ export function useFinancialPayments() {
       paymentMethod: string;
       proofUrl?: string;
     }) => {
-      if (!user) throw new Error("User not authenticated");
+      if (!effectiveUserId) throw new Error("User not authenticated");
 
       const result = await registerPayment(
         paymentId,
-        user.id,
+        effectiveUserId,
         paidAmount,
         paymentMethod,
         proofUrl
