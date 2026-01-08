@@ -1888,7 +1888,7 @@ export function HierarchicalMediaTable({
                 <div key={subdivisionGroup.subdivision.distId || `no-sub-${subIdx}`} className="flex">
                   {/* Subdivision cell */}
                   {visibleColumns.subdivision && (
-                    <div className="w-[180px] p-2 border-r bg-background shrink-0">
+                    <div className="p-2 border-r bg-background shrink-0" style={{ width: getWidth('subdivision') }}>
                       <BudgetCard
                         label={subdivisionGroup.subdivision.name}
                         planned={subdivisionGroup.subdivision.planned}
@@ -1904,7 +1904,7 @@ export function HierarchicalMediaTable({
                     <div key={momentGroup.moment.distId || `no-mom-${momIdx}`} className="flex">
                       {/* Moment cell */}
                       {visibleColumns.moment && (
-                        <div className="w-[180px] p-2 border-r bg-background shrink-0">
+                        <div className="p-2 border-r bg-background shrink-0" style={{ width: getWidth('moment') }}>
                           <BudgetCard
                             label={momentGroup.moment.name}
                             planned={momentGroup.moment.planned}
@@ -1921,7 +1921,7 @@ export function HierarchicalMediaTable({
                         {momentGroup.funnelStages.map((funnelGroup, funIdx) => (
                           <div key={funnelGroup.funnelStage.distId || `no-fun-${funIdx}`} className="flex">
                             {visibleColumns.funnel_stage && (
-                              <div className="w-[200px] p-2 border-r bg-background shrink-0">
+                              <div className="p-2 border-r bg-background shrink-0" style={{ width: getWidth('funnel_stage') }}>
                                 <BudgetCard
                                   label={funnelGroup.funnelStage.name}
                                   planned={funnelGroup.funnelStage.planned}
