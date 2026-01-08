@@ -265,6 +265,21 @@ export function AppSidebar() {
             <TooltipContent side="right">Dashboard</TooltipContent>
           </Tooltip>
 
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/executive-dashboard">
+                <Button 
+                  variant={isActive('/executive-dashboard') ? 'secondary' : 'ghost'} 
+                  size="icon"
+                  className="h-9 w-9"
+                >
+                  <TrendingUp className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Dashboard Gerencial</TooltipContent>
+          </Tooltip>
+
           {!isMenuHidden('reports') && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -455,6 +470,26 @@ export function AppSidebar() {
         </div>
       ) : (
       <ScrollArea className="flex-1 py-3 px-2 overflow-x-hidden bg-background">
+        {/* DASHBOARD GERENCIAL */}
+        <div className="mb-4">
+          <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Visão Gerencial
+          </h3>
+
+          <div className="flex items-center">
+            <Link to="/executive-dashboard" className="flex-1">
+              <Button 
+                variant={isActive('/executive-dashboard') ? 'secondary' : 'ghost'} 
+                size="sm" 
+                className="w-full justify-start gap-2 h-8 text-xs"
+              >
+                <TrendingUp className="h-3.5 w-3.5" />
+                <span>Dashboard Gerencial</span>
+              </Button>
+            </Link>
+          </div>
+        </div>
+
         {/* RELATÓRIOS */}
         {!isMenuHidden('reports') && (
           <div className="mb-4">

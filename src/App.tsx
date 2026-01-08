@@ -11,6 +11,7 @@ import { AdminRoute } from "@/components/admin/AdminRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import MediaPlans from "./pages/MediaPlans";
 import NewMediaPlan from "./pages/NewMediaPlan";
 import NewMediaPlanBudget from "./pages/NewMediaPlanBudget";
@@ -46,6 +47,7 @@ function AppWithEnvironment() {
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/executive-dashboard" element={<ProtectedRoute><ExecutiveDashboard /></ProtectedRoute>} />
           <Route path="/media-plans" element={<ProtectedRoute><MediaPlans /></ProtectedRoute>} />
           <Route path="/media-plans/new" element={<ProtectedRoute><NewMediaPlanBudget /></ProtectedRoute>} />
           <Route path="/media-plans/:id" element={<ProtectedRoute><MediaPlanDetail /></ProtectedRoute>} />
