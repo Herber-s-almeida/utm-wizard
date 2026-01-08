@@ -19,6 +19,8 @@ interface SimpleConfigDialogProps {
   initialData?: { name: string; description: string };
   mode?: 'create' | 'edit';
   helpText?: string;
+  /** Max character length for name field. Defaults to 25 */
+  maxNameLength?: number;
 }
 
 export function SimpleConfigDialog({
@@ -31,7 +33,8 @@ export function SimpleConfigDialog({
   existingNames = [],
   initialData,
   mode = 'create',
-  helpText
+  helpText,
+  maxNameLength = 25
 }: SimpleConfigDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -51,8 +54,8 @@ export function SimpleConfigDialog({
       return;
     }
 
-    if (trimmedName.length > 25) {
-      toast.error('Nome deve ter no máximo 25 caracteres');
+    if (trimmedName.length > maxNameLength) {
+      toast.error(`Nome deve ter no máximo ${maxNameLength} caracteres`);
       return;
     }
 
@@ -106,11 +109,11 @@ export function SimpleConfigDialog({
             <Input
               id="name"
               value={name}
-              onChange={(e) => setName(e.target.value.slice(0, 25))}
+              onChange={(e) => setName(e.target.value.slice(0, maxNameLength))}
               placeholder={namePlaceholder}
-              maxLength={25}
+              maxLength={maxNameLength}
             />
-            <p className="text-xs text-muted-foreground">{name.length}/25 caracteres</p>
+            <p className="text-xs text-muted-foreground">{name.length}/{maxNameLength} caracteres</p>
           </div>
 
           <div className="space-y-2">

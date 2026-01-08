@@ -11,7 +11,7 @@ export interface SoftDeleteItem {
   is_active?: boolean;
 }
 
-type SoftDeleteTableName = 
+export type SoftDeleteTableName = 
   | 'plan_subdivisions'
   | 'moments'
   | 'funnel_stages'
@@ -27,7 +27,8 @@ type SoftDeleteTableName =
   | 'statuses'
   | 'behavioral_segmentations'
   | 'creative_templates'
-  | 'custom_kpis';
+  | 'custom_kpis'
+  | 'clients';
 
 // Tables that should check for usage before permanent delete
 const tablesWithUsageCheck: SoftDeleteTableName[] = [

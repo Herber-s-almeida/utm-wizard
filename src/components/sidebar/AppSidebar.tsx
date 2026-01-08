@@ -35,6 +35,7 @@ import { useSystemAdmin } from '@/hooks/useSystemAdmin';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { useCurrentProfile } from '@/hooks/useCurrentProfile';
 import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates, useBehavioralSegmentations } from '@/hooks/useConfigData';
+import { useClients } from '@/hooks/useClients';
 import { useFormatsHierarchy } from '@/hooks/useFormatsHierarchy';
 import { useCreativeTypes } from '@/hooks/useCreativeTypes';
 import { useMenuVisibility } from '@/hooks/useMenuVisibility';
@@ -90,6 +91,7 @@ export function AppSidebar() {
   const creativeTemplates = useCreativeTemplates();
   const behavioralSegmentations = useBehavioralSegmentations();
   const statuses = useStatuses();
+  const clients = useClients();
   const formatsHierarchy = useFormatsHierarchy();
   const creativeTypesGlobal = useCreativeTypes();
   const { isMenuHidden } = useMenuVisibility();
@@ -122,6 +124,7 @@ export function AppSidebar() {
   const [targetDialogOpen, setTargetDialogOpen] = useState(false);
   const [creativeDialogOpen, setCreativeDialogOpen] = useState(false);
   const [segmentDialogOpen, setSegmentDialogOpen] = useState(false);
+  const [clientDialogOpen, setClientDialogOpen] = useState(false);
 
   // Editing states - track which item is being edited
   const [editingSubdivision, setEditingSubdivision] = useState<any>(null);
@@ -134,6 +137,7 @@ export function AppSidebar() {
   const [editingCreative, setEditingCreative] = useState<any>(null);
   const [editingSegment, setEditingSegment] = useState<any>(null);
   const [editingStatus, setEditingStatus] = useState<any>(null);
+  const [editingClient, setEditingClient] = useState<any>(null);
 
   // Track which vehicle is selected for creating a new channel
   const [selectedVehicleForChannel, setSelectedVehicleForChannel] = useState<{ id: string; name: string } | null>(null);
@@ -167,6 +171,7 @@ export function AppSidebar() {
   const getCreativeNames = () => creativeTemplates.activeItems?.map(c => c.name) || [];
   const getSegmentNames = () => behavioralSegmentations.activeItems?.map(s => s.name) || [];
   const getStatusNames = () => statuses.activeItems?.map(s => s.name) || [];
+  const getClientNames = () => clients.activeItems?.map(c => c.name) || [];
 
   return (
     <div className={cn(
@@ -868,6 +873,53 @@ export function AppSidebar() {
             <Library className="h-3 w-3" />
             Biblioteca
           </h3>
+
+          {/* Clientes */}
+          <Collapsible open={openSections.clients} onOpenChange={() => toggleSection('clients')}>
+            <div className="group flex items-center min-w-0">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs min-w-0 overflow-hidden">
+                  {openSections.clients ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                  <Building2 className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Clientes</span>
+                </Button>
+              </CollapsibleTrigger>
+              <Link to="/config/clients" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </Link>
+            </div>
+            <CollapsibleContent className="pl-4">
+              {clients.activeItems?.slice(0, MAX_ITEMS).map(client => (
+                <ConfigItemRow
+                  key={client.id}
+                  name={client.name}
+                  onEdit={() => {
+                    setEditingClient(client);
+                    setClientDialogOpen(true);
+                  }}
+                  onDelete={() => clients.remove.mutate(client.id)}
+                />
+              ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                onClick={() => { setEditingClient(null); setClientDialogOpen(true); }}
+              >
+                <Plus className="h-3 w-3" />
+                Novo
+              </Button>
+              {(clients.activeItems?.length || 0) > MAX_ITEMS && (
+                <Link to="/config/clients">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                    ... ver todos ({clients.activeItems?.length})
+                  </Button>
+                </Link>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Subdivisões de Plano */}
           <Collapsible open={openSections.subdivisions} onOpenChange={() => toggleSection('subdivisions')}>
@@ -1806,6 +1858,31 @@ export function AppSidebar() {
         existingNames={getSegmentNames()}
         initialData={editingSegment || undefined}
         mode={editingSegment ? 'edit' : 'create'}
+      />
+
+      {/* Client Dialog - Create or Edit */}
+      <SimpleConfigDialog
+        open={clientDialogOpen || !!editingClient}
+        onOpenChange={(open) => {
+          if (!open) {
+            setClientDialogOpen(false);
+            setEditingClient(null);
+          }
+        }}
+        onSave={(data) => {
+          if (editingClient) {
+            clients.update.mutate({ id: editingClient.id, name: data.name, description: data.description });
+          } else {
+            clients.create.mutate({ name: data.name, description: data.description });
+          }
+        }}
+        title={editingClient ? 'Editar cliente' : 'Criar novo cliente'}
+        nameLabel="Nome do cliente"
+        namePlaceholder="Ex: ACME Corp"
+        existingNames={getClientNames().filter(n => n !== editingClient?.name)}
+        initialData={editingClient || undefined}
+        mode={editingClient ? 'edit' : 'create'}
+        maxNameLength={180}
       />
     </div>
   );

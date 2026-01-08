@@ -94,6 +94,42 @@ export type Database = {
           },
         ]
       }
+      clients: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          slug: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          slug?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          slug?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       creative_change_logs: {
         Row: {
           change_date: string
@@ -1004,6 +1040,7 @@ export type Database = {
         Row: {
           campaign: string | null
           client: string | null
+          client_id: string | null
           created_at: string | null
           default_url: string | null
           deleted_at: string | null
@@ -1022,6 +1059,7 @@ export type Database = {
         Insert: {
           campaign?: string | null
           client?: string | null
+          client_id?: string | null
           created_at?: string | null
           default_url?: string | null
           deleted_at?: string | null
@@ -1040,6 +1078,7 @@ export type Database = {
         Update: {
           campaign?: string | null
           client?: string | null
+          client_id?: string | null
           created_at?: string | null
           default_url?: string | null
           deleted_at?: string | null
@@ -1055,7 +1094,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "media_plans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mediums: {
         Row: {

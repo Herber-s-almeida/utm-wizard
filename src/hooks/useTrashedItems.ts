@@ -106,6 +106,7 @@ export function useTrashedLibraryItems() {
         specificationsRes,
         creativeTemplatesRes,
         kpisRes,
+        clientsRes,
       ] = await Promise.all([
         supabase.from('plan_subdivisions').select('id, name, deleted_at').eq('user_id', effectiveUserId!).not('deleted_at', 'is', null),
         supabase.from('moments').select('id, name, deleted_at').eq('user_id', effectiveUserId!).not('deleted_at', 'is', null),
@@ -121,6 +122,7 @@ export function useTrashedLibraryItems() {
         supabase.from('creative_type_specifications').select('id, name, deleted_at').eq('user_id', effectiveUserId!).not('deleted_at', 'is', null),
         supabase.from('creative_templates').select('id, name, deleted_at').eq('user_id', effectiveUserId!).not('deleted_at', 'is', null),
         supabase.from('custom_kpis').select('id, name, deleted_at').eq('user_id', effectiveUserId!).not('deleted_at', 'is', null),
+        supabase.from('clients').select('id, name, deleted_at').eq('user_id', effectiveUserId!).not('deleted_at', 'is', null),
       ]);
 
       // Map results to unified format
@@ -138,6 +140,7 @@ export function useTrashedLibraryItems() {
       specificationsRes.data?.forEach(item => items.push({ ...item, type: 'creative_type_specifications', typeLabel: 'Especificação', deleted_at: item.deleted_at! }));
       creativeTemplatesRes.data?.forEach(item => items.push({ ...item, type: 'creative_templates', typeLabel: 'Template', deleted_at: item.deleted_at! }));
       kpisRes.data?.forEach(item => items.push({ ...item, type: 'custom_kpis', typeLabel: 'KPI', deleted_at: item.deleted_at! }));
+      clientsRes.data?.forEach(item => items.push({ ...item, type: 'clients', typeLabel: 'Cliente', deleted_at: item.deleted_at! }));
 
       // Sort by deleted_at descending
       items.sort((a, b) => new Date(b.deleted_at).getTime() - new Date(a.deleted_at).getTime());
