@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 
-export type PlanElementKey = 'plan-summary' | 'moments-timeline' | 'budget-hierarchy' | 'temporal-distribution';
+export type PlanElementKey = 'plan-summary' | 'moments-timeline' | 'budget-hierarchy' | 'temporal-distribution' | 'line-details';
 
 export interface PlanElementVisibility {
   key: PlanElementKey;
@@ -15,6 +15,7 @@ const DEFAULT_ELEMENTS: PlanElementVisibility[] = [
   { key: 'moments-timeline', label: 'Timeline de Momentos', visible: true },
   { key: 'budget-hierarchy', label: 'Hierarquia do Orçamento', visible: true },
   { key: 'temporal-distribution', label: 'Distribuição Temporal', visible: true },
+  { key: 'line-details', label: 'Detalhamentos', visible: true },
 ];
 
 export function usePlanElementsVisibility(planId: string | undefined) {

@@ -81,6 +81,7 @@ import { AlertsSummaryCard } from '@/components/media-plan/AlertsSummaryCard';
 import { PlanDetailSummaryCard } from '@/components/media-plan/PlanDetailSummaryCard';
 import { ElementVisibilityMenu } from '@/components/media-plan/ElementVisibilityMenu';
 import { usePlanElementsVisibility } from '@/hooks/usePlanElementsVisibility';
+import { LineDetailsSummaryCard } from '@/components/media-plan/LineDetailsSummaryCard';
 
 
 interface BudgetDistribution {
@@ -1061,6 +1062,15 @@ export default function MediaPlanDetail() {
               </div>
             </AnimatedCollapsibleContent>
           </AnimatedCollapsible>
+        )}
+
+        {/* Line Details Summary Card */}
+        {isVisible('line-details') && (
+          <LineDetailsSummaryCard
+            planId={plan.id}
+            lines={lines}
+            onHide={() => hideElement('line-details')}
+          />
         )}
 
         {/* Hierarchical Media Table */}
