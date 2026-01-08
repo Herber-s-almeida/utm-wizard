@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Download } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingPage } from '@/components/ui/loading-dots';
 import { TaxonomyTable } from '@/components/taxonomy/TaxonomyTable';
 import { useTaxonomyData } from '@/hooks/useTaxonomyData';
 import { exportUtmsToXlsx } from '@/utils/exportUtmsToXlsx';
@@ -38,10 +38,7 @@ export default function TaxonomyPage() {
   if (planLoading || taxonomyLoading) {
     return (
       <DashboardLayout>
-        <div className="p-6 space-y-4">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-[400px] w-full" />
-        </div>
+        <LoadingPage message="Carregando taxonomia..." />
       </DashboardLayout>
     );
   }
