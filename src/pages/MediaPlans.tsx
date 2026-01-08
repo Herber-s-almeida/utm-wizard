@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +18,9 @@ import {
   Settings2,
   List,
   Users,
-  Copy
+  Copy,
+  Building2,
+  X
 } from 'lucide-react';
 import { LoadingPage } from '@/components/ui/loading-dots';
 import { MediaPlan } from '@/types/media';
@@ -44,14 +46,24 @@ import {
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { DuplicatePlanDialog } from '@/components/media-plan/DuplicatePlanDialog';
+import { useClients } from '@/hooks/useClients';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function MediaPlans() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { activeItems: clients } = useClients();
   const [plans, setPlans] = useState<MediaPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<MediaPlan | null>(null);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
@@ -138,11 +150,18 @@ export default function MediaPlans() {
     return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
   };
 
-  const filteredPlans = plans.filter(plan =>
-    plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    plan.client?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    plan.campaign?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPlans = useMemo(() => {
+    return plans.filter(plan => {
+      const matchesSearch = 
+        plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        plan.client?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        plan.campaign?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesClient = !selectedClientId || plan.client_id === selectedClientId;
+      
+      return matchesSearch && matchesClient;
+    });
+  }, [plans, searchQuery, selectedClientId]);
 
   if (loading) {
     return (
@@ -171,15 +190,48 @@ export default function MediaPlans() {
           </Link>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar planos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        {/* Search and Filter */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar planos..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Select
+              value={selectedClientId || "all"}
+              onValueChange={(value) => setSelectedClientId(value === "all" ? null : value)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <Building2 className="w-4 h-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Todos os clientes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os clientes</SelectItem>
+                {clients?.map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {selectedClientId && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedClientId(null)}
+                className="h-9 w-9"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Plans Grid */}
