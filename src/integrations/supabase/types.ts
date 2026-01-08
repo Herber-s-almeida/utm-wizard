@@ -2493,6 +2493,10 @@ export type Database = {
           to_status_id: string
         }[]
       }
+      has_finance_role: {
+        Args: { check_user_id: string; required_roles?: string[] }
+        Returns: boolean
+      }
       has_plan_role: {
         Args: {
           _plan_id: string
