@@ -28,7 +28,8 @@ import {
   Link2,
   Settings,
   BarChart3,
-  TrendingUp
+  TrendingUp,
+  Wallet
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSystemAdmin } from '@/hooks/useSystemAdmin';
@@ -278,6 +279,21 @@ export function AppSidebar() {
             </Tooltip>
           )}
 
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/finance">
+                <Button 
+                  variant={location.pathname.startsWith('/finance') ? 'secondary' : 'ghost'} 
+                  size="icon"
+                  className="h-9 w-9 text-emerald-600"
+                >
+                  <Wallet className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Finance Manager</TooltipContent>
+          </Tooltip>
+
           <div className="w-8 h-px bg-border my-2" />
 
           <Tooltip>
@@ -514,6 +530,26 @@ export function AppSidebar() {
             </div>
           </div>
         )}
+
+        {/* FINANCE MANAGER */}
+        <div className="mb-4">
+          <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Financeiro
+          </h3>
+
+          <div className="flex items-center">
+            <Link to="/finance" className="flex-1">
+              <Button 
+                variant={location.pathname.startsWith('/finance') ? 'secondary' : 'ghost'} 
+                size="sm" 
+                className="w-full justify-start gap-2 h-8 text-xs text-emerald-600 hover:text-emerald-700"
+              >
+                <Wallet className="h-3.5 w-3.5" />
+                <span>Finance Manager</span>
+              </Button>
+            </Link>
+          </div>
+        </div>
 
         {/* PLANOS DE MÍDIA */}
         <div className="mb-4">
