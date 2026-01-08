@@ -96,11 +96,12 @@ interface BudgetDistribution {
 }
 
 export default function MediaPlanDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { id: identifier } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [plan, setPlan] = useState<MediaPlan | null>(null);
+  const [planId, setPlanId] = useState<string | null>(null);
   const [lines, setLines] = useState<MediaLine[]>([]);
   const [creatives, setCreatives] = useState<Record<string, MediaCreative[]>>({});
   const [budgetDistributions, setBudgetDistributions] = useState<BudgetDistribution[]>([]);
@@ -131,17 +132,17 @@ export default function MediaPlanDetail() {
   const targets = useTargets();
   const statuses = useStatuses();
   
-  // Plan roles for permissions
-  const { canEdit, canManageTeam, userRole, isLoadingRole } = usePlanRoles(id);
+  // Plan roles for permissions (use planId once resolved)
+  const { canEdit, canManageTeam, userRole, isLoadingRole } = usePlanRoles(planId);
   
   // Element visibility
-  const { elements, toggleVisibility, hideElement, isVisible } = usePlanElementsVisibility(id);
+  const { elements, toggleVisibility, hideElement, isVisible } = usePlanElementsVisibility(planId);
 
   useEffect(() => {
-    if (user?.id && id) {
+    if (user?.id && identifier) {
       fetchData();
     }
-  }, [user?.id, id]);
+  }, [user?.id, identifier]);
 
   // Initialize filteredLines with lines when lines change
   useEffect(() => {
@@ -161,15 +162,20 @@ export default function MediaPlanDetail() {
   }, [searchParams, setSearchParams]);
 
   const fetchData = async () => {
-    if (!user?.id || !id) return;
+    if (!user?.id || !identifier) return;
     
     try {
-      // RLS handles permission check - just fetch by id
-      const { data: planData, error: planError } = await supabase
-        .from('media_plans')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
+      // Check if identifier is a UUID or a slug
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+      
+      let query = supabase.from('media_plans').select('*');
+      if (isUUID) {
+        query = query.eq('id', identifier);
+      } else {
+        query = query.eq('slug', identifier);
+      }
+      
+      const { data: planData, error: planError } = await query.maybeSingle();
 
       if (planError) throw planError;
       if (!planData) {
@@ -177,11 +183,15 @@ export default function MediaPlanDetail() {
         navigate('/media-plans');
         return;
       }
+      
+      // Store the actual plan ID for subsequent queries
+      const resolvedPlanId = planData.id;
+      setPlanId(resolvedPlanId);
 
       const { data: linesData, error: linesError } = await supabase
         .from('media_lines')
         .select('*')
-        .eq('media_plan_id', id)
+        .eq('media_plan_id', resolvedPlanId)
         .order('created_at', { ascending: true });
 
       if (linesError) throw linesError;
@@ -190,7 +200,7 @@ export default function MediaPlanDetail() {
       const { data: distributionsData, error: distError } = await supabase
         .from('plan_budget_distributions')
         .select('*')
-        .eq('media_plan_id', id);
+        .eq('media_plan_id', resolvedPlanId);
       
       if (!distError && distributionsData) {
         setBudgetDistributions(distributionsData);
@@ -684,7 +694,7 @@ export default function MediaPlanDetail() {
                   onStatusChange={handleStatusChange}
                   disabled={isLoadingRole || !canEdit}
                 />
-                <RoleBadge planId={id!} />
+                <RoleBadge planId={planId!} />
               </div>
               <p className="text-muted-foreground">
                 {plan.client || 'Sem cliente'} • {plan.campaign || 'Sem campanha'}
@@ -727,7 +737,7 @@ export default function MediaPlanDetail() {
                   <History className="w-4 h-4 mr-2" />
                   Histórico de Versões
                 </DropdownMenuItem>
-                <SaveVersionDropdownItem planId={id!} disabled={isLoadingRole || !canEdit} />
+                <SaveVersionDropdownItem planId={planId!} disabled={isLoadingRole || !canEdit} />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => exportMediaPlanToXlsx({
@@ -749,7 +759,7 @@ export default function MediaPlanDetail() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
-                  onClick={() => navigate(`/media-plans/${id}/edit`)}
+                  onClick={() => navigate(`/media-plans/${plan?.slug || planId}/edit`)}
                   disabled={isLoadingRole || !canEdit}
                 >
                   <Settings2 className="w-4 h-4 mr-2" />
@@ -763,7 +773,7 @@ export default function MediaPlanDetail() {
                   Gerenciar Equipe
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate(`/reports/${id}`)}>
+                <DropdownMenuItem onClick={() => navigate(`/reports/${planId}`)}>
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Relatórios
                 </DropdownMenuItem>
@@ -1159,14 +1169,14 @@ export default function MediaPlanDetail() {
 
       {/* Team Management Dialog */}
       <TeamManagementDialog
-        planId={id!}
+        planId={planId!}
         open={teamDialogOpen}
         onOpenChange={setTeamDialogOpen}
       />
 
       {/* Version History Dialog */}
       <VersionHistoryDialog
-        planId={id!}
+        planId={planId!}
         open={versionHistoryOpen}
         onOpenChange={setVersionHistoryOpen}
         onRestored={fetchData}

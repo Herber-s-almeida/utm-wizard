@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 
 interface PlanItemRowProps {
   id: string;
+  slug?: string | null;
   name: string;
   onDelete: () => void;
   onRestore?: () => void;
@@ -26,6 +27,7 @@ interface PlanItemRowProps {
 
 export function PlanItemRow({
   id,
+  slug,
   name,
   onDelete,
   onRestore,
@@ -33,10 +35,12 @@ export function PlanItemRow({
   isTrash = false,
   className,
 }: PlanItemRowProps) {
+  const planUrl = `/media-plans/${slug || id}`;
+  
   return (
     <div className={cn("group flex items-center gap-1 py-1 px-2 rounded-md hover:bg-sidebar-accent/50", className)}>
       <Link 
-        to={`/media-plans/${id}`} 
+        to={planUrl} 
         className="flex-1 text-xs truncate hover:text-primary"
       >
         {name}
@@ -86,7 +90,7 @@ export function PlanItemRow({
           </>
         ) : (
           <>
-            <Link to={`/media-plans/${id}`}>
+            <Link to={planUrl}>
               <Button size="icon" variant="ghost" className="h-5 w-5">
                 <Pencil className="h-3 w-3 text-muted-foreground" />
               </Button>

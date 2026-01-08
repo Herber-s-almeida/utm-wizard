@@ -335,10 +335,10 @@ export default function MediaPlans() {
         open={duplicateDialogOpen}
         onOpenChange={setDuplicateDialogOpen}
         plan={planToDuplicate}
-        onSuccess={(newPlanId) => {
+        onSuccess={(result) => {
           toast.success('Plano duplicado com sucesso!');
           fetchPlans();
-          navigate(`/media-plans/${newPlanId}`);
+          navigate(`/media-plans/${result.slug || result.id}`);
         }}
       />
     </DashboardLayout>

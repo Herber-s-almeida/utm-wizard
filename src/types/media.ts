@@ -2,6 +2,7 @@ export interface MediaPlan {
   id: string;
   user_id: string;
   name: string;
+  slug: string | null;
   client: string | null;
   campaign: string | null;
   start_date: string | null;

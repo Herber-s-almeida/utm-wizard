@@ -1012,6 +1012,7 @@ export type Database = {
           kpis: Json | null
           name: string
           objectives: string[] | null
+          slug: string | null
           start_date: string | null
           status: string | null
           total_budget: number | null
@@ -1029,6 +1030,7 @@ export type Database = {
           kpis?: Json | null
           name: string
           objectives?: string[] | null
+          slug?: string | null
           start_date?: string | null
           status?: string | null
           total_budget?: number | null
@@ -1046,6 +1048,7 @@ export type Database = {
           kpis?: Json | null
           name?: string
           objectives?: string[] | null
+          slug?: string | null
           start_date?: string | null
           status?: string | null
           total_budget?: number | null
@@ -1986,6 +1989,10 @@ export type Database = {
       }
       generate_creative_id: { Args: never; Returns: string }
       generate_slug: { Args: { input_text: string }; Returns: string }
+      generate_unique_plan_slug: {
+        Args: { p_current_id?: string; p_name: string; p_user_id: string }
+        Returns: string
+      }
       get_plan_role: {
         Args: { _plan_id: string; _user_id: string }
         Returns: string

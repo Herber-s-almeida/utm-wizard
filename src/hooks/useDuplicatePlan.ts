@@ -231,7 +231,7 @@ export function useDuplicatePlan() {
         }
       }
 
-      return newPlanId;
+      return { id: newPlanId, slug: newPlan.slug };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['media_plans'] });

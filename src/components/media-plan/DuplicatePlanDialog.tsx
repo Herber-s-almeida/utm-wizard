@@ -19,7 +19,7 @@ interface DuplicatePlanDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   plan: MediaPlan | null;
-  onSuccess: (newPlanId: string) => void;
+  onSuccess: (result: { id: string; slug: string | null }) => void;
 }
 
 export function DuplicatePlanDialog({
@@ -45,13 +45,13 @@ export function DuplicatePlanDialog({
     if (!plan || !newName.trim()) return;
 
     try {
-      const newPlanId = await duplicatePlan({
+      const result = await duplicatePlan({
         planId: plan.id,
         newName: newName.trim(),
         includeCreatives,
       });
       onOpenChange(false);
-      onSuccess(newPlanId);
+      onSuccess(result);
     } catch (error) {
       // Error is handled in the hook
     }
