@@ -44,6 +44,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ConfigItemRow } from './ConfigItemRow';
 import { PlanItemRow } from './PlanItemRow';
+import { SimplePlanLink } from './SimplePlanLink';
 import { cn } from '@/lib/utils';
 import { useSidebarCollapse } from '@/hooks/useSidebarCollapse';
 import { useSidebarSections, useSidebarSubsections } from '@/hooks/useSidebarSections';
@@ -676,16 +677,14 @@ export function AppSidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
                   {draftPlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                    <Link key={plan.id} to={`/media-plans/${plan.slug || plan.id}/resources`}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start h-7 text-xs font-normal truncate"
-                      >
-                        <Image className="h-3 w-3 mr-2 shrink-0" />
-                        <span className="truncate">{plan.name}</span>
-                      </Button>
-                    </Link>
+                    <SimplePlanLink
+                      key={plan.id}
+                      id={plan.id}
+                      slug={plan.slug}
+                      name={plan.name}
+                      section="resources"
+                      icon={Image}
+                    />
                   ))}
                   {(draftPlans.data?.length || 0) > MAX_ITEMS && (
                     <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
@@ -706,16 +705,14 @@ export function AppSidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
                   {activePlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                    <Link key={plan.id} to={`/media-plans/${plan.slug || plan.id}/resources`}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start h-7 text-xs font-normal truncate"
-                      >
-                        <Image className="h-3 w-3 mr-2 shrink-0" />
-                        <span className="truncate">{plan.name}</span>
-                      </Button>
-                    </Link>
+                    <SimplePlanLink
+                      key={plan.id}
+                      id={plan.id}
+                      slug={plan.slug}
+                      name={plan.name}
+                      section="resources"
+                      icon={Image}
+                    />
                   ))}
                   {(activePlans.data?.length || 0) > MAX_ITEMS && (
                     <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
@@ -736,16 +733,14 @@ export function AppSidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
                   {finishedPlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                    <Link key={plan.id} to={`/media-plans/${plan.slug || plan.id}/resources`}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start h-7 text-xs font-normal truncate"
-                      >
-                        <Image className="h-3 w-3 mr-2 shrink-0" />
-                        <span className="truncate">{plan.name}</span>
-                      </Button>
-                    </Link>
+                    <SimplePlanLink
+                      key={plan.id}
+                      id={plan.id}
+                      slug={plan.slug}
+                      name={plan.name}
+                      section="resources"
+                      icon={Image}
+                    />
                   ))}
                   {(finishedPlans.data?.length || 0) > MAX_ITEMS && (
                     <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
@@ -791,16 +786,14 @@ export function AppSidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
                   {draftPlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                    <Link key={plan.id} to={`/media-plans/${plan.slug || plan.id}/taxonomy`}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start h-7 text-xs font-normal truncate"
-                      >
-                        <Link2 className="h-3 w-3 mr-2 shrink-0" />
-                        <span className="truncate">{plan.name}</span>
-                      </Button>
-                    </Link>
+                    <SimplePlanLink
+                      key={plan.id}
+                      id={plan.id}
+                      slug={plan.slug}
+                      name={plan.name}
+                      section="taxonomy"
+                      icon={Link2}
+                    />
                   ))}
                   {(draftPlans.data?.length || 0) > MAX_ITEMS && (
                     <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
@@ -821,16 +814,14 @@ export function AppSidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
                   {activePlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                    <Link key={plan.id} to={`/media-plans/${plan.slug || plan.id}/taxonomy`}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start h-7 text-xs font-normal truncate"
-                      >
-                        <Link2 className="h-3 w-3 mr-2 shrink-0" />
-                        <span className="truncate">{plan.name}</span>
-                      </Button>
-                    </Link>
+                    <SimplePlanLink
+                      key={plan.id}
+                      id={plan.id}
+                      slug={plan.slug}
+                      name={plan.name}
+                      section="taxonomy"
+                      icon={Link2}
+                    />
                   ))}
                   {(activePlans.data?.length || 0) > MAX_ITEMS && (
                     <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
@@ -851,16 +842,14 @@ export function AppSidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4">
                   {finishedPlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                    <Link key={plan.id} to={`/media-plans/${plan.slug || plan.id}/taxonomy`}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full justify-start h-7 text-xs font-normal truncate"
-                      >
-                        <Link2 className="h-3 w-3 mr-2 shrink-0" />
-                        <span className="truncate">{plan.name}</span>
-                      </Button>
-                    </Link>
+                    <SimplePlanLink
+                      key={plan.id}
+                      id={plan.id}
+                      slug={plan.slug}
+                      name={plan.name}
+                      section="taxonomy"
+                      icon={Link2}
+                    />
                   ))}
                   {(finishedPlans.data?.length || 0) > MAX_ITEMS && (
                     <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
