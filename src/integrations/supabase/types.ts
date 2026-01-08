@@ -566,6 +566,7 @@ export type Database = {
           created_at: string | null
           creative_template_id: string | null
           ctr: number | null
+          deleted_at: string | null
           destination_url: string | null
           end_date: string | null
           format: string | null
@@ -609,6 +610,7 @@ export type Database = {
           created_at?: string | null
           creative_template_id?: string | null
           ctr?: number | null
+          deleted_at?: string | null
           destination_url?: string | null
           end_date?: string | null
           format?: string | null
@@ -652,6 +654,7 @@ export type Database = {
           created_at?: string | null
           creative_template_id?: string | null
           ctr?: number | null
+          deleted_at?: string | null
           destination_url?: string | null
           end_date?: string | null
           format?: string | null

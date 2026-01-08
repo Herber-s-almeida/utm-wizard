@@ -47,6 +47,7 @@ import { PlanItemRow } from './PlanItemRow';
 import { cn } from '@/lib/utils';
 import { useSidebarCollapse } from '@/hooks/useSidebarCollapse';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 
 // Dialogs
 import { SubdivisionDialog } from '@/components/config/SubdivisionDialog';
@@ -456,14 +457,15 @@ export function AppSidebar() {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-9 w-9"
-                onClick={() => toggleSection('trash')}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <Link to="/trash">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-9 w-9"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </Link>
             </TooltipTrigger>
             <TooltipContent side="right">Lixeira</TooltipContent>
           </Tooltip>
@@ -1478,37 +1480,23 @@ export function AppSidebar() {
 
         {/* LIXEIRA */}
         <div className="mb-4">
-          <Collapsible open={openSections.trash} onOpenChange={() => toggleSection('trash')}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs text-muted-foreground">
-                {openSections.trash ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          <div className="flex items-center">
+            <Link to="/trash" className="flex-1">
+              <Button 
+                variant={location.pathname === '/trash' ? 'secondary' : 'ghost'} 
+                size="sm" 
+                className="w-full justify-start gap-2 h-8 text-xs text-muted-foreground"
+              >
                 <Trash2 className="h-3.5 w-3.5" />
                 Lixeira
-                <span className="ml-auto text-[10px]">{trashedPlans.data?.length || 0}</span>
+                {(trashedPlans.data?.length || 0) > 0 && (
+                  <Badge variant="secondary" className="ml-auto h-5 px-1.5 text-[10px]">
+                    {trashedPlans.data?.length}
+                  </Badge>
+                )}
               </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pl-4">
-              {trashedPlans.data?.slice(0, MAX_ITEMS).map(plan => (
-                <PlanItemRow
-                  key={plan.id}
-                  id={plan.id}
-                  name={plan.name}
-                  onDelete={() => {}}
-                  onRestore={() => restore.mutate(plan.id)}
-                  onPermanentDelete={() => permanentDelete.mutate(plan.id)}
-                  isTrash
-                />
-              ))}
-              {(trashedPlans.data?.length || 0) > MAX_ITEMS && (
-                <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
-                  ... ver todos ({trashedPlans.data?.length})
-                </Button>
-              )}
-              {!trashedPlans.data?.length && (
-                <p className="text-[10px] text-muted-foreground px-3 py-2">Lixeira vazia</p>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
+            </Link>
+          </div>
         </div>
       </ScrollArea>
       )}
