@@ -287,92 +287,99 @@ export function FinanceSidebar() {
         <>
           {/* Expanded state */}
           <ScrollArea className="flex-1">
-            <div className="p-3 space-y-4">
+            <div className="py-3 px-2 bg-background">
               {/* Principal Section */}
-              <div>
-                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <div className="mb-4">
+                <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Principal
-                </div>
+                </h3>
                 <div className="space-y-0.5 mt-1">
                   {menuItems.map((item) => (
-                    <Link
-                      key={item.url}
-                      to={item.url}
-                      className={cn(
-                        "flex items-center gap-3 px-2 py-1.5 rounded-md text-sm transition-colors",
-                        isActive(item.url)
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                      )}
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.title}</span>
+                    <Link key={item.url} to={item.url}>
+                      <Button 
+                        variant={isActive(item.url) ? 'secondary' : 'ghost'} 
+                        size="sm" 
+                        className={cn(
+                          "w-full justify-start gap-2 h-8 text-xs",
+                          isActive(item.url) && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        )}
+                      >
+                        <item.icon className="h-3.5 w-3.5 shrink-0" />
+                        <span>{item.title}</span>
+                      </Button>
                     </Link>
                   ))}
                 </div>
               </div>
 
               {/* Library Section - Collapsible */}
-              <Collapsible open={libraryOpen} onOpenChange={setLibraryOpen}>
-                <CollapsibleTrigger className="w-full">
-                  <div className="flex items-center justify-between px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors">
-                    <div className="flex items-center gap-2">
-                      <Library className="h-3.5 w-3.5" />
-                      <span>Biblioteca</span>
+              <div className="mb-4">
+                <Collapsible open={libraryOpen} onOpenChange={setLibraryOpen}>
+                  <CollapsibleTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-between h-8 px-3 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Library className="h-3.5 w-3.5" />
+                        <span>Biblioteca</span>
+                      </div>
+                      {libraryOpen ? (
+                        <ChevronDown className="h-3 w-3" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="space-y-0.5 mt-1">
+                      {libraryItems.map((item) => (
+                        <Tooltip key={item.url}>
+                          <TooltipTrigger asChild>
+                            <Link to={item.url}>
+                              <Button 
+                                variant={isActive(item.url) ? 'secondary' : 'ghost'} 
+                                size="sm" 
+                                className={cn(
+                                  "w-full justify-start gap-2 h-8 text-xs",
+                                  isActive(item.url) && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                )}
+                              >
+                                <item.icon className="h-3.5 w-3.5 shrink-0" />
+                                <span className="truncate">{item.title}</span>
+                              </Button>
+                            </Link>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            {item.tooltip}
+                          </TooltipContent>
+                        </Tooltip>
+                      ))}
                     </div>
-                    {libraryOpen ? (
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    ) : (
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    )}
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="space-y-0.5 mt-1">
-                    {libraryItems.map((item) => (
-                      <Tooltip key={item.url}>
-                        <TooltipTrigger asChild>
-                          <Link
-                            to={item.url}
-                            className={cn(
-                              "flex items-center gap-3 px-2 py-1.5 rounded-md text-sm transition-colors",
-                              isActive(item.url)
-                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                            )}
-                          >
-                            <item.icon className="h-4 w-4 shrink-0" />
-                            <span className="truncate">{item.title}</span>
-                          </Link>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-xs">
-                          {item.tooltip}
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
 
               {/* Sistema Section */}
-              <div>
-                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <div className="mb-4">
+                <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
                   Sistema
-                </div>
+                </h3>
                 <div className="space-y-0.5 mt-1">
                   {settingsItems.map((item) => (
-                    <Link
-                      key={item.url}
-                      to={item.url}
-                      className={cn(
-                        "flex items-center gap-3 px-2 py-1.5 rounded-md text-sm transition-colors",
-                        isActive(item.url)
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                      )}
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.title}</span>
+                    <Link key={item.url} to={item.url}>
+                      <Button 
+                        variant={isActive(item.url) ? 'secondary' : 'ghost'} 
+                        size="sm" 
+                        className={cn(
+                          "w-full justify-start gap-2 h-8 text-xs",
+                          isActive(item.url) && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        )}
+                      >
+                        <item.icon className="h-3.5 w-3.5 shrink-0" />
+                        <span>{item.title}</span>
+                      </Button>
                     </Link>
                   ))}
                 </div>
@@ -384,9 +391,9 @@ export function FinanceSidebar() {
           <div className="shrink-0 border-t border-sidebar-border p-3">
             <Link
               to="/media-plans"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-3.5 w-3.5" />
               Voltar ao AdsPlanning Pro
             </Link>
           </div>
