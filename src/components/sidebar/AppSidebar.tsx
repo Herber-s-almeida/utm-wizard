@@ -581,6 +581,7 @@ export function AppSidebar() {
                     <PlanItemRow
                       key={plan.id}
                       id={plan.id}
+                      slug={plan.slug}
                       name={plan.name}
                       onDelete={() => softDelete.mutate(plan.id)}
                     />
@@ -609,6 +610,7 @@ export function AppSidebar() {
                     <PlanItemRow
                       key={plan.id}
                       id={plan.id}
+                      slug={plan.slug}
                       name={plan.name}
                       onDelete={() => softDelete.mutate(plan.id)}
                     />
@@ -637,6 +639,7 @@ export function AppSidebar() {
                     <PlanItemRow
                       key={plan.id}
                       id={plan.id}
+                      slug={plan.slug}
                       name={plan.name}
                       onDelete={() => softDelete.mutate(plan.id)}
                     />
