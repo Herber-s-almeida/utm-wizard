@@ -17,7 +17,8 @@ import {
   History,
   BarChart3,
   ChevronDown,
-  HelpCircle
+  HelpCircle,
+  X
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -78,6 +79,8 @@ import { VersionHistoryDialog } from '@/components/media-plan/VersionHistoryDial
 import { usePlanAlerts } from '@/hooks/usePlanAlerts';
 import { AlertsSummaryCard } from '@/components/media-plan/AlertsSummaryCard';
 import { PlanDetailSummaryCard } from '@/components/media-plan/PlanDetailSummaryCard';
+import { ElementVisibilityMenu } from '@/components/media-plan/ElementVisibilityMenu';
+import { usePlanElementsVisibility } from '@/hooks/usePlanElementsVisibility';
 
 
 interface BudgetDistribution {
@@ -129,6 +132,9 @@ export default function MediaPlanDetail() {
   
   // Plan roles for permissions
   const { canEdit, canManageTeam, userRole, isLoadingRole } = usePlanRoles(id);
+  
+  // Element visibility
+  const { elements, toggleVisibility, hideElement, isVisible } = usePlanElementsVisibility(id);
 
   useEffect(() => {
     if (user?.id && id) {
@@ -713,7 +719,9 @@ export default function MediaPlanDetail() {
                   <ChevronDown className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuContent align="end" className="w-56">
+                <ElementVisibilityMenu elements={elements} onToggle={toggleVisibility} />
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setVersionHistoryOpen(true)}>
                   <History className="w-4 h-4 mr-2" />
                   Histórico de Versões
@@ -774,19 +782,22 @@ export default function MediaPlanDetail() {
         />
 
         {/* Plan Summary Card */}
-        <PlanDetailSummaryCard
-          plan={plan}
-          totalLinesBudget={totalLinesBudget}
-          linesCount={lines.length}
-          creativesCount={Object.values(creatives).reduce((acc, c) => acc + c.length, 0)}
-        />
+        {isVisible('plan-summary') && (
+          <PlanDetailSummaryCard
+            plan={plan}
+            totalLinesBudget={totalLinesBudget}
+            linesCount={lines.length}
+            creativesCount={Object.values(creatives).reduce((acc, c) => acc + c.length, 0)}
+            onHide={() => hideElement('plan-summary')}
+          />
+        )}
 
         {/* Moments Timeline - Collapsible */}
-        {momentsForTimeline.length > 0 && plan.start_date && plan.end_date && (
+        {isVisible('moments-timeline') && momentsForTimeline.length > 0 && plan.start_date && plan.end_date && (
           <AnimatedCollapsible defaultOpen={false} storageKey="moments-timeline" className="border rounded-lg overflow-hidden bg-card">
-            <AnimatedCollapsibleTrigger asChild>
-              <button className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-colors text-left">
-                <div className="flex items-center gap-3">
+            <div className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-colors">
+              <AnimatedCollapsibleTrigger asChild>
+                <button className="flex-1 flex items-center gap-3 text-left">
                   <Calendar className="h-4 w-4 text-primary" />
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-sm">Timeline de Momentos</h3>
@@ -806,15 +817,41 @@ export default function MediaPlanDetail() {
                   <span className="text-xs text-muted-foreground">
                     {momentsForTimeline.length} momento(s) • Clique para expandir
                   </span>
-                </div>
-                <motion.div
-                  initial={false}
-                  className="[[data-state=open]_&]:rotate-180 transition-transform duration-200"
-                >
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                </motion.div>
-              </button>
-            </AnimatedCollapsibleTrigger>
+                </button>
+              </AnimatedCollapsibleTrigger>
+              
+              <div className="flex items-center gap-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hideElement('moments-timeline');
+                        }}
+                        className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      Ocultar esta seção
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <AnimatedCollapsibleTrigger asChild>
+                  <button className="p-1.5 rounded-md hover:bg-muted transition-colors">
+                    <motion.div
+                      initial={false}
+                      className="[[data-state=open]_&]:rotate-180 transition-transform duration-200"
+                    >
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </motion.div>
+                  </button>
+                </AnimatedCollapsibleTrigger>
+              </div>
+            </div>
             <AnimatedCollapsibleContent>
               <div className="p-4 border-t">
                 <MomentsTimeline
@@ -830,7 +867,7 @@ export default function MediaPlanDetail() {
         )}
 
         {/* Editable Hierarchy Card */}
-        {hierarchyData.length > 0 && (
+        {isVisible('budget-hierarchy') && hierarchyData.length > 0 && (
           <EditableHierarchyCard
             planId={plan.id}
             planName={plan.name}
@@ -838,6 +875,7 @@ export default function MediaPlanDetail() {
             budgetDistributions={budgetDistributions}
             hierarchyData={hierarchyData}
             onDistributionsUpdated={fetchData}
+            onHide={() => hideElement('budget-hierarchy')}
           />
         )}
 
@@ -889,11 +927,11 @@ export default function MediaPlanDetail() {
         })()}
 
         {/* Temporal Distribution Chart - Collapsible */}
-        {plan.start_date && plan.end_date && (
+        {isVisible('temporal-distribution') && plan.start_date && plan.end_date && (
           <AnimatedCollapsible defaultOpen={false} storageKey="temporal-distribution" className="border rounded-lg overflow-hidden bg-card">
-            <AnimatedCollapsibleTrigger asChild>
-              <button className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-colors text-left">
-                <div className="flex items-center gap-3">
+            <div className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-colors">
+              <AnimatedCollapsibleTrigger asChild>
+                <button className="flex-1 flex items-center gap-3 text-left">
                   <BarChart3 className="h-4 w-4 text-primary" />
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-sm">Distribuição Temporal</h3>
@@ -913,15 +951,41 @@ export default function MediaPlanDetail() {
                   <span className="text-xs text-muted-foreground">
                     Clique para expandir
                   </span>
-                </div>
-                <motion.div
-                  initial={false}
-                  className="[[data-state=open]_&]:rotate-180 transition-transform duration-200"
-                >
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                </motion.div>
-              </button>
-            </AnimatedCollapsibleTrigger>
+                </button>
+              </AnimatedCollapsibleTrigger>
+              
+              <div className="flex items-center gap-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          hideElement('temporal-distribution');
+                        }}
+                        className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      Ocultar esta seção
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <AnimatedCollapsibleTrigger asChild>
+                  <button className="p-1.5 rounded-md hover:bg-muted transition-colors">
+                    <motion.div
+                      initial={false}
+                      className="[[data-state=open]_&]:rotate-180 transition-transform duration-200"
+                    >
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </motion.div>
+                  </button>
+                </AnimatedCollapsibleTrigger>
+              </div>
+            </div>
             <AnimatedCollapsibleContent>
               <div className="p-4 border-t">
                 {(() => {

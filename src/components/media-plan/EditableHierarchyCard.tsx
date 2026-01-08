@@ -74,6 +74,7 @@ interface EditableHierarchyCardProps {
   budgetDistributions: BudgetDistribution[];
   hierarchyData: HierarchyRow[];
   onDistributionsUpdated: () => void;
+  onHide?: () => void;
 }
 
 type EditingCell = {
@@ -88,6 +89,7 @@ export function EditableHierarchyCard({
   budgetDistributions,
   hierarchyData,
   onDistributionsUpdated,
+  onHide,
 }: EditableHierarchyCardProps) {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(() => {
@@ -185,11 +187,9 @@ export function EditableHierarchyCard({
     <TooltipProvider>
       <AnimatedCollapsible open={isOpen} onOpenChange={setIsOpen} storageKey="budget-hierarchy" className="border rounded-lg overflow-hidden bg-card">
         {/* Collapsed Header / Trigger */}
-        <AnimatedCollapsibleTrigger asChild>
-          <button 
-            className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-colors text-left"
-          >
-            <div className="flex items-center gap-3">
+        <div className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-colors">
+          <AnimatedCollapsibleTrigger asChild>
+            <button className="flex-1 flex items-center gap-3 text-left">
               <Layers className="h-4 w-4 text-primary" />
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-sm">Hierarquia do Orçamento</h3>
@@ -209,15 +209,41 @@ export function EditableHierarchyCard({
                   {hierarchyData.length} subdivisão(ões) • Clique para expandir
                 </p>
               )}
-            </div>
-            <motion.div
-              animate={{ rotate: isOpen ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            </motion.div>
-          </button>
-        </AnimatedCollapsibleTrigger>
+            </button>
+          </AnimatedCollapsibleTrigger>
+          
+          <div className="flex items-center gap-1">
+            {onHide && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onHide();
+                    }}
+                    className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  Ocultar esta seção
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            <AnimatedCollapsibleTrigger asChild>
+              <button className="p-1.5 rounded-md hover:bg-muted transition-colors">
+                <motion.div
+                  animate={{ rotate: isOpen ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </motion.div>
+              </button>
+            </AnimatedCollapsibleTrigger>
+          </div>
+        </div>
 
         <AnimatedCollapsibleContent>
           {/* Description */}
