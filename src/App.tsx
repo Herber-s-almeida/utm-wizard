@@ -52,6 +52,7 @@ import PaymentsPage from "./pages/finance/PaymentsPage";
 import RevenuePage from "./pages/finance/RevenuePage";
 import AuditPage from "./pages/finance/AuditPage";
 import SettingsPage from "./pages/finance/SettingsPage";
+import LibraryPage from "./pages/finance/LibraryPage";
 
 function AppWithEnvironment() {
   const { user } = useAuth();
@@ -102,6 +103,7 @@ function AppWithEnvironment() {
             <Route path="documents/:id" element={<DocumentDetailPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="revenue" element={<RevenuePage />} />
+            <Route path="library" element={<LibraryPage />} />
             <Route path="audit" element={<AuditPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
