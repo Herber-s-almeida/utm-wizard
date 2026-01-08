@@ -88,6 +88,41 @@ export function useCreativeTypes() {
     },
   });
 
+  const duplicate = useMutation({
+    mutationFn: async (id: string) => {
+      // Get the source creative type
+      const { data: source, error: sourceError } = await supabase
+        .from('creative_types')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (sourceError) throw sourceError;
+      
+      // Create new with "(cópia)" suffix
+      const { data, error } = await supabase
+        .from('creative_types')
+        .insert({ name: `${source.name} (cópia)` })
+        .select()
+        .single();
+      
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('Este tipo de criativo já existe');
+        }
+        throw error;
+      }
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['creative_types'] });
+      toast.success('Tipo de criativo duplicado!');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Erro ao duplicar tipo de criativo');
+    },
+  });
+
   // Check if creative type is in use (linked to format_creative_types or creative_templates)
   const checkUsage = async (id: string): Promise<{ inUse: boolean; usageCount: number }> => {
     // Check format_creative_types - types linked to formats by name match
@@ -115,5 +150,5 @@ export function useCreativeTypes() {
     return { inUse: totalCount > 0, usageCount: totalCount };
   };
 
-  return { ...query, create, update, remove, checkUsage };
+  return { ...query, create, update, remove, duplicate, checkUsage };
 }

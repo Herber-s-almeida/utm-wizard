@@ -103,6 +103,7 @@ export function useFormats() {
         .from('formats')
         .select('*')
         .or(`user_id.eq.${effectiveUserId},is_system.eq.true`)
+        .is('deleted_at', null)
         .order('is_system', { ascending: false })
         .order('name', { ascending: true });
       if (error) throw error;
@@ -152,6 +153,146 @@ export function useFormats() {
     },
   });
 
+  // Duplicate format with all its creative types and specifications
+  const duplicate = useMutation({
+    mutationFn: async (formatId: string) => {
+      // Get the format to duplicate
+      const { data: sourceFormat, error: formatError } = await supabase
+        .from('formats')
+        .select('*')
+        .eq('id', formatId)
+        .single();
+      
+      if (formatError) throw formatError;
+      
+      // Create new format with "(cópia)" suffix
+      const { data: newFormat, error: createError } = await supabase
+        .from('formats')
+        .insert({ 
+          name: `${sourceFormat.name} (cópia)`, 
+          user_id: user!.id,
+          is_system: false
+        })
+        .select()
+        .single();
+      
+      if (createError) throw createError;
+
+      // Get creative types from source format
+      const { data: creativeTypes, error: ctError } = await supabase
+        .from('format_creative_types')
+        .select('*')
+        .eq('format_id', formatId)
+        .is('deleted_at', null);
+      
+      if (ctError) throw ctError;
+
+      // Duplicate each creative type
+      for (const ct of creativeTypes || []) {
+        const { data: newCT, error: newCTError } = await supabase
+          .from('format_creative_types')
+          .insert({
+            format_id: newFormat.id,
+            name: ct.name,
+            user_id: user!.id
+          })
+          .select()
+          .single();
+        
+        if (newCTError) throw newCTError;
+
+        // Get specifications for this creative type
+        const { data: specs, error: specsError } = await supabase
+          .from('creative_type_specifications')
+          .select('*')
+          .eq('creative_type_id', ct.id)
+          .is('deleted_at', null);
+        
+        if (specsError) throw specsError;
+
+        // Duplicate specifications
+        for (const spec of specs || []) {
+          const { data: newSpec, error: newSpecError } = await supabase
+            .from('creative_type_specifications')
+            .insert({
+              creative_type_id: newCT.id,
+              name: spec.name,
+              has_duration: spec.has_duration,
+              duration_value: spec.duration_value,
+              duration_unit: spec.duration_unit,
+              max_weight: spec.max_weight,
+              weight_unit: spec.weight_unit,
+              user_id: user!.id
+            })
+            .select()
+            .single();
+          
+          if (newSpecError) throw newSpecError;
+
+          // Duplicate copy fields
+          const { data: copyFields } = await supabase
+            .from('specification_copy_fields')
+            .select('*')
+            .eq('specification_id', spec.id)
+            .is('deleted_at', null);
+          
+          for (const cf of copyFields || []) {
+            await supabase.from('specification_copy_fields').insert({
+              specification_id: newSpec.id,
+              name: cf.name,
+              max_characters: cf.max_characters,
+              observation: cf.observation,
+              user_id: user!.id
+            });
+          }
+
+          // Duplicate dimensions
+          const { data: dimensions } = await supabase
+            .from('specification_dimensions')
+            .select('*')
+            .eq('specification_id', spec.id)
+            .is('deleted_at', null);
+          
+          for (const dim of dimensions || []) {
+            await supabase.from('specification_dimensions').insert({
+              specification_id: newSpec.id,
+              width: dim.width,
+              height: dim.height,
+              unit: dim.unit,
+              description: dim.description,
+              observation: dim.observation,
+              user_id: user!.id
+            });
+          }
+
+          // Duplicate extensions
+          const { data: extensions } = await supabase
+            .from('specification_extensions')
+            .select('*')
+            .eq('specification_id', spec.id);
+          
+          for (const ext of extensions || []) {
+            await supabase.from('specification_extensions').insert({
+              specification_id: newSpec.id,
+              extension_id: ext.extension_id,
+              user_id: user!.id
+            });
+          }
+        }
+      }
+
+      return newFormat;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['formats'] });
+      queryClient.invalidateQueries({ queryKey: ['formats_hierarchy'] });
+      toast.success('Formato duplicado com sucesso!');
+    },
+    onError: () => {
+      toast.error('Erro ao duplicar formato');
+    },
+  });
+
   const { active, archived } = filterSoftDeleteItems(query.data);
 
   return { 
@@ -161,6 +302,7 @@ export function useFormats() {
     create, 
     update, 
     remove,
+    duplicate,
     softDelete,
     restore,
     permanentDelete,
@@ -590,11 +732,12 @@ export function useFormatsHierarchy() {
   return useQuery({
     queryKey: ['formats_hierarchy', effectiveUserId],
     queryFn: async () => {
-      // Get all formats (user's own + system)
+      // Get all formats (user's own + system) - exclude soft-deleted
       const { data: formats, error: formatsError } = await supabase
         .from('formats')
         .select('*')
         .or(`user_id.eq.${effectiveUserId},is_system.eq.true`)
+        .is('deleted_at', null)
         .order('is_system', { ascending: false })
         .order('name', { ascending: true });
       
@@ -603,11 +746,12 @@ export function useFormatsHierarchy() {
       const formatIds = formats?.map(f => f.id) || [];
       if (formatIds.length === 0) return [];
 
-      // Get all creative types for these formats
+      // Get all creative types for these formats - exclude soft-deleted
       const { data: creativeTypes, error: ctError } = await supabase
         .from('format_creative_types')
         .select('*')
-        .in('format_id', formatIds);
+        .in('format_id', formatIds)
+        .is('deleted_at', null);
       
       if (ctError) throw ctError;
 
@@ -622,7 +766,8 @@ export function useFormatsHierarchy() {
         const { data: specs, error: specsError } = await supabase
           .from('creative_type_specifications')
           .select('*')
-          .in('creative_type_id', ctIds);
+          .in('creative_type_id', ctIds)
+          .is('deleted_at', null);
         
         if (specsError) throw specsError;
         specifications = specs || [];
@@ -630,20 +775,22 @@ export function useFormatsHierarchy() {
         const specIds = specifications.map(s => s.id);
         
         if (specIds.length > 0) {
-          // Get copy fields
+          // Get copy fields - exclude soft-deleted
           const { data: copyData, error: copyError } = await supabase
             .from('specification_copy_fields')
             .select('*')
-            .in('specification_id', specIds);
+            .in('specification_id', specIds)
+            .is('deleted_at', null);
           
           if (copyError) throw copyError;
           copyFields = copyData || [];
           
-          // Get dimensions
+          // Get dimensions - exclude soft-deleted
           const { data: dimData, error: dimError } = await supabase
             .from('specification_dimensions')
             .select('*')
-            .in('specification_id', specIds);
+            .in('specification_id', specIds)
+            .is('deleted_at', null);
           
           if (dimError) throw dimError;
           dimensions = dimData || [];

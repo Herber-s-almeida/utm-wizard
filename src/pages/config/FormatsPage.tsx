@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Layers, Type, ImageIcon, FileText, Pencil } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Layers, Type, ImageIcon, FileText, Pencil, Copy } from 'lucide-react';
 import { useFormatsHierarchy, useFormats, FormatWithHierarchy, FormatCreativeType, CreativeTypeSpecification } from '@/hooks/useFormatsHierarchy';
 import { FormatWizardDialog } from '@/components/config/FormatWizardDialog';
+import { FormatDialog } from '@/components/config/FormatDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,11 +22,14 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 
 export default function FormatsPage() {
   const { data: formatsHierarchy, isLoading } = useFormatsHierarchy();
-  const { remove: removeFormat } = useFormats();
+  const { remove: removeFormat, update: updateFormat, duplicate: duplicateFormat, activeItems } = useFormats();
   
-  // Wizard dialog state
+  // Wizard dialog state (for new formats)
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [editingFormat, setEditingFormat] = useState<FormatWithHierarchy | null>(null);
+  
+  // Edit dialog state (for editing format name)
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingFormat, setEditingFormat] = useState<{ id: string; name: string } | null>(null);
   
   // Delete states
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -58,13 +62,22 @@ export default function FormatsPage() {
   };
 
   const handleNewFormat = () => {
-    setEditingFormat(null);
     setWizardOpen(true);
   };
 
-  const handleEditFormat = (format: FormatWithHierarchy) => {
+  const handleEditFormat = (format: { id: string; name: string }) => {
     setEditingFormat(format);
-    setWizardOpen(true);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = (name: string) => {
+    if (!editingFormat) return;
+    updateFormat.mutate({ id: editingFormat.id, name });
+    setEditingFormat(null);
+  };
+
+  const handleDuplicate = (formatId: string) => {
+    duplicateFormat.mutate(formatId);
   };
 
   const handleDelete = () => {
@@ -72,6 +85,8 @@ export default function FormatsPage() {
     removeFormat.mutate(deleteTarget.id);
     setDeleteTarget(null);
   };
+
+  const existingNames = activeItems?.map(f => f.name) || [];
 
   return (
     <DashboardLayout>
@@ -115,7 +130,8 @@ export default function FormatsPage() {
                 format={format}
                 isOpen={openFormats[format.id]}
                 onToggle={() => toggleFormat(format.id)}
-                onEdit={() => handleEditFormat(format)}
+                onEdit={() => handleEditFormat({ id: format.id, name: format.name })}
+                onDuplicate={() => handleDuplicate(format.id)}
                 onDelete={() => setDeleteTarget({ id: format.id, name: format.name })}
                 openCreativeTypes={openCreativeTypes}
                 onToggleCreativeType={toggleCreativeType}
@@ -130,10 +146,23 @@ export default function FormatsPage() {
           </div>
         )}
 
-        {/* Format Wizard Dialog */}
+        {/* Format Wizard Dialog (for new formats) */}
         <FormatWizardDialog
           open={wizardOpen}
           onOpenChange={setWizardOpen}
+        />
+
+        {/* Edit Format Dialog */}
+        <FormatDialog
+          open={editDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) setEditingFormat(null);
+          }}
+          onSave={handleSaveEdit}
+          existingNames={existingNames}
+          initialData={editingFormat || undefined}
+          mode="edit"
         />
 
         {/* Delete Confirmation */}
@@ -167,6 +196,7 @@ interface FormatCardProps {
   isOpen: boolean;
   onToggle: () => void;
   onEdit: () => void;
+  onDuplicate: () => void;
   onDelete: () => void;
   openCreativeTypes: Record<string, boolean>;
   onToggleCreativeType: (id: string) => void;
@@ -183,6 +213,7 @@ function FormatCard({
   isOpen,
   onToggle,
   onEdit,
+  onDuplicate,
   onDelete,
   openCreativeTypes,
   onToggleCreativeType,
@@ -221,12 +252,21 @@ function FormatCard({
               </div>
             </div>
             <div className="flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={onDuplicate}
+                title="Duplicar formato"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
               {!format.is_system && (
                 <>
                   <Button 
                     variant="ghost" 
                     size="icon" 
                     onClick={onEdit}
+                    title="Editar nome"
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -235,6 +275,7 @@ function FormatCard({
                     size="icon" 
                     onClick={onDelete}
                     className="text-destructive"
+                    title="Excluir formato"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
