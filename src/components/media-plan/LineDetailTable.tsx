@@ -212,8 +212,8 @@ export function LineDetailTable({
 
   return (
     <div className="p-4">
-      <div className="rounded-lg border overflow-hidden">
-        <Table>
+      <div className="rounded-lg border overflow-x-auto">
+        <Table className="min-w-max">
           <TableHeader>
             <TableRow className="bg-muted/50">
               {hasInsertionGrid && (

@@ -351,8 +351,8 @@ export function LineDetailDialog({
                     </div>
                   )}
 
-                  {/* Table */}
-                  <ScrollArea className="flex-1">
+                  {/* Table with horizontal scroll */}
+                  <div className="flex-1 overflow-auto">
                     <LineDetailTable
                       detail={detail}
                       onCreateItem={(data) => createItem({ line_detail_id: detail.id, data })}
@@ -362,7 +362,7 @@ export function LineDetailDialog({
                       planStartDate={startDate}
                       planEndDate={endDate}
                     />
-                  </ScrollArea>
+                  </div>
                 </TabsContent>
               ))}
             </Tabs>
