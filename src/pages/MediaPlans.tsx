@@ -238,13 +238,13 @@ export default function MediaPlans() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => navigate(`/media-plans/${plan.id}/edit`)}
+                              onClick={() => navigate(`/media-plans/${plan.slug || plan.id}/edit`)}
                             >
                               <Settings2 className="w-4 h-4 mr-2" />
                               Editar Plano
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => navigate(`/media-plans/${plan.id}?openWizard=true`)}
+                              onClick={() => navigate(`/media-plans/${plan.slug || plan.id}?openWizard=true`)}
                             >
                               <List className="w-4 h-4 mr-2" />
                               Criar Linhas
@@ -274,7 +274,7 @@ export default function MediaPlans() {
                       </div>
                     </div>
 
-                    <Link to={`/media-plans/${plan.id}`}>
+                    <Link to={`/media-plans/${plan.slug || plan.id}`}>
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-display font-semibold text-lg group-hover:text-primary transition-colors">
                           {plan.name}
