@@ -184,6 +184,12 @@ export default function MediaPlanDetail() {
         return;
       }
       
+      // Redirect from ID to slug if accessed via ID
+      if (isUUID && planData.slug && identifier !== planData.slug) {
+        navigate(`/media-plans/${planData.slug}`, { replace: true });
+        return;
+      }
+      
       // Store the actual plan ID for subsequent queries
       const resolvedPlanId = planData.id;
       setPlanId(resolvedPlanId);

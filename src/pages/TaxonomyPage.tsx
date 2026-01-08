@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,28 +11,29 @@ import { TaxonomyTable } from '@/components/taxonomy/TaxonomyTable';
 import { useTaxonomyData } from '@/hooks/useTaxonomyData';
 import { exportUtmsToXlsx } from '@/utils/exportUtmsToXlsx';
 import { toast } from 'sonner';
+import { usePlanBySlug, getPlanUrl } from '@/hooks/usePlanBySlug';
+import { useEffect } from 'react';
 
 export default function TaxonomyPage() {
-  const { id: planId } = useParams();
+  const { id: identifier } = useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
-  // Fetch plan details
-  const { data: plan, isLoading: planLoading } = useQuery({
-    queryKey: ['media_plan', planId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('media_plans')
-        .select('*')
-        .eq('id', planId)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!planId,
-  });
+  // Fetch plan by slug or ID
+  const { data: plan, isLoading: planLoading } = usePlanBySlug(identifier);
 
-  // Fetch taxonomy data
-  const { data: taxonomyData, isLoading: taxonomyLoading, refetch } = useTaxonomyData(planId || '');
+  // Redirect from ID to slug
+  useEffect(() => {
+    if (plan && identifier) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+      if (isUUID && plan.slug && identifier !== plan.slug) {
+        navigate(`/media-plans/${plan.slug}/taxonomy`, { replace: true });
+      }
+    }
+  }, [plan, identifier, navigate]);
+
+  // Fetch taxonomy data using the actual plan ID
+  const { data: taxonomyData, isLoading: taxonomyLoading, refetch } = useTaxonomyData(plan?.id || '');
 
   if (planLoading || taxonomyLoading) {
     return (
@@ -54,6 +55,8 @@ export default function TaxonomyPage() {
       </DashboardLayout>
     );
   }
+  
+  const planUrl = getPlanUrl(plan);
 
   const validatedCount = taxonomyData?.filter(line => line.utm_validated).length || 0;
   const totalCount = taxonomyData?.length || 0;
@@ -79,7 +82,7 @@ export default function TaxonomyPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link to={`/media-plans/${planId}`}>
+            <Link to={planUrl}>
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Voltar
@@ -133,7 +136,7 @@ export default function TaxonomyPage() {
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
               <p>Nenhuma linha de mídia encontrada neste plano.</p>
-              <Link to={`/media-plans/${planId}`}>
+              <Link to={planUrl}>
                 <Button variant="outline" className="mt-4">
                   Ir para o plano
                 </Button>

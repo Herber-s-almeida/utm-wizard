@@ -17,6 +17,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { MediaPlan, STATUS_LABELS, STATUS_COLORS } from '@/types/media';
+import { getPlanUrl } from '@/hooks/usePlanBySlug';
 
 interface PlanWithReportStats extends MediaPlan {
   importCount?: number;
@@ -163,7 +164,7 @@ export default function ReportsPage() {
               >
                 <Card 
                   className="group hover:shadow-lg transition-all hover:border-primary/20 cursor-pointer"
-                  onClick={() => navigate(`/reports/${plan.id}`)}
+                  onClick={() => navigate(`${getPlanUrl(plan)}/reports`)}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">

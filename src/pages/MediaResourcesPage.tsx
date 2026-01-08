@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,11 +13,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { usePlanBySlug, getPlanUrl } from '@/hooks/usePlanBySlug';
 
 const PRODUCTION_STATUSES = [
   { value: 'solicitado', label: 'Solicitado', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
@@ -555,32 +556,35 @@ function PieceLinkCell({
 }
 
 export default function MediaResourcesPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id: identifier } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const refetch = () => {
-    queryClient.invalidateQueries({ queryKey: ['media-resources', id] });
-  };
+  // Fetch plan by slug or ID
+  const { data: mediaPlan, isLoading: loadingPlan } = usePlanBySlug(identifier);
+  
+  // Get actual plan ID
+  const planId = mediaPlan?.id;
+  const planUrl = mediaPlan ? getPlanUrl(mediaPlan) : '/media-plans';
 
-  // Fetch media plan details
-  const { data: mediaPlan, isLoading: loadingPlan } = useQuery({
-    queryKey: ['media-plan', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('media_plans')
-        .select('*')
-        .eq('id', id)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!id && !!user,
-  });
+  // Redirect from ID to slug
+  useEffect(() => {
+    if (mediaPlan && identifier) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+      if (isUUID && mediaPlan.slug && identifier !== mediaPlan.slug) {
+        navigate(`/media-plans/${mediaPlan.slug}/resources`, { replace: true });
+      }
+    }
+  }, [mediaPlan, identifier, navigate]);
+
+  const refetch = () => {
+    queryClient.invalidateQueries({ queryKey: ['media-resources', planId] });
+  };
 
   // Fetch all creatives for this plan's lines with full details
   const { data: creatives, isLoading: loadingCreatives } = useQuery({
-    queryKey: ['media-resources', id],
+    queryKey: ['media-resources', planId],
     queryFn: async () => {
       // First get all media lines for this plan
       const { data: lines, error: linesError } = await supabase
@@ -598,7 +602,7 @@ export default function MediaResourcesPage() {
           target:targets(name),
           funnel_stage_ref:funnel_stages(name)
         `)
-        .eq('media_plan_id', id!);
+        .eq('media_plan_id', planId!);
 
       if (linesError) throw linesError;
       if (!lines || lines.length === 0) return [];
@@ -730,7 +734,7 @@ export default function MediaResourcesPage() {
         change_logs: changeLogsMap[creative.id] || [],
       })) as MediaCreativeWithDetails[];
     },
-    enabled: !!id && !!user,
+    enabled: !!planId && !!user,
   });
 
   const isLoading = loadingPlan || loadingCreatives;
@@ -740,7 +744,7 @@ export default function MediaResourcesPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Link to={`/media-plans/${id}`}>
+          <Link to={planUrl}>
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -753,7 +757,7 @@ export default function MediaResourcesPage() {
               </p>
             )}
           </div>
-          <Link to={`/media-plans/${id}`}>
+          <Link to={planUrl}>
             <Button variant="outline" size="sm" className="gap-2">
               <ExternalLink className="h-3.5 w-3.5" />
               Ver Plano
