@@ -77,6 +77,7 @@ import { SaveVersionDropdownItem } from '@/components/media-plan/SaveVersionDrop
 import { VersionHistoryDialog } from '@/components/media-plan/VersionHistoryDialog';
 import { usePlanAlerts } from '@/hooks/usePlanAlerts';
 import { AlertsSummaryCard } from '@/components/media-plan/AlertsSummaryCard';
+import { PlanDetailSummaryCard } from '@/components/media-plan/PlanDetailSummaryCard';
 
 
 interface BudgetDistribution {
@@ -772,76 +773,13 @@ export default function MediaPlanDetail() {
           filterEnabled={filterByAlerts}
         />
 
-        {/* Stats */}
-        <div className="flex flex-wrap gap-4">
-          <Card className="flex-1 min-w-[160px]">
-            <CardContent className="pt-6">
-              <div className="text-sm text-muted-foreground whitespace-nowrap">Orçamento do Plano</div>
-              <div className="text-2xl font-bold font-display whitespace-nowrap">
-                {formatCurrency(Number(plan.total_budget))}
-              </div>
-            </CardContent>
-          </Card>
-          <TooltipProvider>
-            <Card className="flex-1 min-w-[160px]">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
-                  Orçamento Alocado
-                  {totalLinesBudget > Number(plan.total_budget) && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertTriangle className="w-4 h-4 text-destructive animate-pulse cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Orçamento alocado excede o planejado!</p>
-                        <p className="font-bold">Excedente: {formatCurrency(totalLinesBudget - Number(plan.total_budget))}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-                <div className="text-2xl font-bold font-display whitespace-nowrap">
-                  {formatCurrency(totalLinesBudget)}
-                </div>
-              </CardContent>
-            </Card>
-          </TooltipProvider>
-          <Card className="flex-1 min-w-[120px]">
-            <CardContent className="pt-6">
-              <div className="text-sm text-muted-foreground whitespace-nowrap">Linhas de Mídia</div>
-              <div className="text-2xl font-bold font-display">{lines.length}</div>
-            </CardContent>
-          </Card>
-          <Card className="flex-1 min-w-[120px]">
-            <CardContent className="pt-6">
-              <div className="text-sm text-muted-foreground whitespace-nowrap">Total de Criativos</div>
-              <div className="text-2xl font-bold font-display">
-                {Object.values(creatives).reduce((acc, c) => acc + c.length, 0)}
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="flex-1 min-w-[130px]">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
-                <Calendar className="w-3 h-3" />
-                Data de Início
-              </div>
-              <div className="text-xl font-bold font-display whitespace-nowrap">
-                {formatDate(plan.start_date)}
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="flex-1 min-w-[130px]">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
-                <Calendar className="w-3 h-3" />
-                Data de Término
-              </div>
-              <div className="text-xl font-bold font-display whitespace-nowrap">
-                {formatDate(plan.end_date)}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Plan Summary Card */}
+        <PlanDetailSummaryCard
+          plan={plan}
+          totalLinesBudget={totalLinesBudget}
+          linesCount={lines.length}
+          creativesCount={Object.values(creatives).reduce((acc, c) => acc + c.length, 0)}
+        />
 
         {/* Moments Timeline - Collapsible */}
         {momentsForTimeline.length > 0 && plan.start_date && plan.end_date && (
