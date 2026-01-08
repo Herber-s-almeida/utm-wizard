@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Tables } from '@/integrations/supabase/types';
+import { checkItemInUse } from './useItemInUse';
 
 export interface SoftDeleteItem {
   id: string;
@@ -26,6 +27,20 @@ type SoftDeleteTableName =
   | 'statuses'
   | 'behavioral_segmentations'
   | 'creative_templates';
+
+// Tables that should check for usage before permanent delete
+const tablesWithUsageCheck: SoftDeleteTableName[] = [
+  'plan_subdivisions',
+  'moments',
+  'funnel_stages',
+  'mediums',
+  'vehicles',
+  'channels',
+  'targets',
+  'formats',
+  'statuses',
+  'creative_templates',
+];
 
 export function useSoftDeleteMutations(tableName: SoftDeleteTableName, queryKey: string, itemLabel: string) {
   const queryClient = useQueryClient();
@@ -66,13 +81,27 @@ export function useSoftDeleteMutations(tableName: SoftDeleteTableName, queryKey:
 
   const permanentDelete = useMutation({
     mutationFn: async (id: string) => {
+      // Check if this table should verify usage before delete
+      if (tablesWithUsageCheck.includes(tableName)) {
+        const usage = await checkItemInUse(tableName as any, id);
+        if (usage.inUse) {
+          throw new Error(`Este item está em uso por ${usage.count} linha(s) de mídia e não pode ser excluído permanentemente. Mantenha-o arquivado ou remova as referências primeiro.`);
+        }
+      }
+      
       const { data, error } = await supabase
         .from(tableName)
         .delete()
         .eq('id', id)
         .select('id');
       
-      if (error) throw error;
+      if (error) {
+        // Handle foreign key constraint error
+        if (error.code === '23503') {
+          throw new Error('Este item está em uso e não pode ser excluído permanentemente.');
+        }
+        throw error;
+      }
       
       // Check if any rows were actually deleted
       if (!data || data.length === 0) {
