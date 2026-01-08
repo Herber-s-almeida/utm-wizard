@@ -22,6 +22,7 @@ import {
   Settings,
   ArrowLeft,
   Wallet,
+  Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +60,11 @@ const menuItems = [
 ];
 
 const settingsItems = [
+  {
+    title: "Biblioteca",
+    url: "/finance/library",
+    icon: Library,
+  },
   {
     title: "Auditoria",
     url: "/finance/audit",
