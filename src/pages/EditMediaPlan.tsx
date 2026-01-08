@@ -18,6 +18,7 @@ import { PlanSummaryCard } from '@/components/media-plan/PlanSummaryCard';
 import { SubdivisionsSummaryCard } from '@/components/media-plan/SubdivisionsSummaryCard';
 import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization';
 import { TemporalEqualizer, generateTemporalPeriods } from '@/components/media-plan/TemporalEqualizer';
+import { SlugInputField } from '@/components/media-plan/SlugInputField';
 import { useMediaPlanWizard, BudgetAllocation, WizardPlanData } from '@/hooks/useMediaPlanWizard';
 import { KPI_OPTIONS } from '@/types/media';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
@@ -146,7 +147,7 @@ export default function EditMediaPlan() {
         name: plan.name,
         client: plan.client || '',
         client_id: plan.client_id || null,
-        campaign: plan.campaign || '',
+        utm_campaign_slug: plan.utm_campaign_slug || null,
         start_date: plan.start_date || '',
         end_date: plan.end_date || '',
         total_budget: Number(plan.total_budget) || 0,
@@ -341,6 +342,7 @@ export default function EditMediaPlan() {
           client: state.planData.client || null,
           client_id: state.planData.client_id || null,
           campaign: state.planData.name, // Campaign equals plan name
+          utm_campaign_slug: state.planData.utm_campaign_slug || null,
           start_date: state.planData.start_date,
           end_date: state.planData.end_date,
           total_budget: state.planData.total_budget,
@@ -612,46 +614,32 @@ export default function EditMediaPlan() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Nome do Plano *</Label>
-                      <Input
-                        id="name"
-                        placeholder="Ex: Campanha de Verão 2025"
-                        value={state.planData.name}
-                        onChange={(e) => updatePlanData({ name: e.target.value })}
-                      />
-                    </div>
+                    <SlugInputField
+                      name={state.planData.name}
+                      slug={state.planData.utm_campaign_slug}
+                      onNameChange={(name) => updatePlanData({ name })}
+                      onSlugChange={(utm_campaign_slug) => updatePlanData({ utm_campaign_slug })}
+                    />
 
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <LibrarySelector
-                        label="Cliente"
-                        placeholder="Selecione um cliente..."
-                        items={libraryData.clients.map(c => ({ id: c.id, name: c.name }))}
-                        value={state.planData.client_id}
-                        onChange={(id) => {
-                          const selectedClient = libraryData.clients.find(c => c.id === id);
-                          updatePlanData({ 
-                            client_id: id, 
-                            client: selectedClient?.name || '' 
-                          });
-                        }}
-                        onCreate={async (name) => {
-                          const result = await libraryMutations.createClient.mutateAsync({ name });
-                          return { id: result.id, name: result.name };
-                        }}
-                        createLabel="Novo cliente"
-                        required
-                      />
-                      <div className="space-y-2">
-                        <Label htmlFor="campaign">Campanha</Label>
-                        <Input
-                          id="campaign"
-                          placeholder="Nome da campanha"
-                          value={state.planData.campaign}
-                          onChange={(e) => updatePlanData({ campaign: e.target.value })}
-                        />
-                      </div>
-                    </div>
+                    <LibrarySelector
+                      label="Cliente"
+                      placeholder="Selecione um cliente..."
+                      items={libraryData.clients.map(c => ({ id: c.id, name: c.name }))}
+                      value={state.planData.client_id}
+                      onChange={(id) => {
+                        const selectedClient = libraryData.clients.find(c => c.id === id);
+                        updatePlanData({ 
+                          client_id: id, 
+                          client: selectedClient?.name || '' 
+                        });
+                      }}
+                      onCreate={async (name) => {
+                        const result = await libraryMutations.createClient.mutateAsync({ name });
+                        return { id: result.id, name: result.name };
+                      }}
+                      createLabel="Novo cliente"
+                      required
+                    />
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
