@@ -19,6 +19,13 @@ import {
   ChevronDown,
   HelpCircle
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { 
@@ -66,7 +73,7 @@ import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization
 import { RoleBadge } from '@/components/media-plan/RoleBadge';
 import { usePlanRoles } from '@/hooks/usePlanRoles';
 import { TeamManagementDialog } from '@/components/media-plan/TeamManagementDialog';
-import { SaveVersionButton } from '@/components/media-plan/SaveVersionButton';
+import { SaveVersionDropdownItem } from '@/components/media-plan/SaveVersionDropdownItem';
 import { VersionHistoryDialog } from '@/components/media-plan/VersionHistoryDialog';
 import { usePlanAlerts } from '@/hooks/usePlanAlerts';
 import { AlertsSummaryCard } from '@/components/media-plan/AlertsSummaryCard';
@@ -676,68 +683,9 @@ export default function MediaPlanDetail() {
               </p>
             </div>
           </div>
-          <TooltipProvider>
-            <div className="flex gap-2 flex-wrap">
-              <Button 
-                variant="outline" 
-                onClick={() => setVersionHistoryOpen(true)}
-                className="gap-2"
-              >
-                <History className="w-4 h-4" />
-                Histórico
-              </Button>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex">
-                    <SaveVersionButton planId={id!} disabled={isLoadingRole || !canEdit} />
-                  </span>
-                </TooltipTrigger>
-                {!isLoadingRole && !canEdit && (
-                  <TooltipContent>
-                    <p>Apenas proprietários e editores podem salvar versões</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-              <Button 
-                variant="outline" 
-                onClick={() => exportMediaPlanToXlsx({
-                  plan,
-                  lines,
-                  creatives,
-                  subdivisions: subdivisions.data || [],
-                  moments: moments.data || [],
-                  funnelStages: funnelStages.data || [],
-                  mediums: mediums.data || [],
-                  vehicles: vehicles.data || [],
-                  channels: channels.data || [],
-                  targets: targets.data || [],
-                  statuses: statuses.data || [],
-                })} 
-                className="gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Exportar XLSX
-              </Button>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => navigate(`/media-plans/${id}/edit`)} 
-                      className="gap-2"
-                      disabled={isLoadingRole || !canEdit}
-                    >
-                      <Settings2 className="w-4 h-4" />
-                      Editar Plano
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                {!isLoadingRole && !canEdit && (
-                  <TooltipContent>
-                    <p>Apenas proprietários e editores podem editar o plano</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
+          <div className="flex gap-2 flex-wrap">
+            {/* Botão Nova Linha - Destaque */}
+            <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="inline-flex">
@@ -753,36 +701,65 @@ export default function MediaPlanDetail() {
                   </TooltipContent>
                 )}
               </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setTeamDialogOpen(true)} 
-                      className="gap-2"
-                      disabled={isLoadingRole || !canManageTeam}
-                    >
-                      <Users className="w-4 h-4" />
-                      Equipe
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                {!isLoadingRole && !canManageTeam && (
-                  <TooltipContent>
-                    <p>Apenas o proprietário pode gerenciar a equipe</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-              <Button 
-                variant="outline" 
-                onClick={() => navigate(`/reports/${id}`)} 
-                className="gap-2"
-              >
-                <BarChart3 className="w-4 h-4" />
-                Relatórios
-              </Button>
-            </div>
-          </TooltipProvider>
+            </TooltipProvider>
+
+            {/* Dropdown de Configurações */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Settings2 className="w-4 h-4" />
+                  Configurações
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => setVersionHistoryOpen(true)}>
+                  <History className="w-4 h-4 mr-2" />
+                  Histórico de Versões
+                </DropdownMenuItem>
+                <SaveVersionDropdownItem planId={id!} disabled={isLoadingRole || !canEdit} />
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => exportMediaPlanToXlsx({
+                    plan,
+                    lines,
+                    creatives,
+                    subdivisions: subdivisions.data || [],
+                    moments: moments.data || [],
+                    funnelStages: funnelStages.data || [],
+                    mediums: mediums.data || [],
+                    vehicles: vehicles.data || [],
+                    channels: channels.data || [],
+                    targets: targets.data || [],
+                    statuses: statuses.data || [],
+                  })}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar XLSX
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => navigate(`/media-plans/${id}/edit`)}
+                  disabled={isLoadingRole || !canEdit}
+                >
+                  <Settings2 className="w-4 h-4 mr-2" />
+                  Editar Plano
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setTeamDialogOpen(true)}
+                  disabled={isLoadingRole || !canManageTeam}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Gerenciar Equipe
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate(`/reports/${id}`)}>
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Relatórios
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         {/* Alerts Summary */}
