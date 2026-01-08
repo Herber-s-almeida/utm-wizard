@@ -296,13 +296,22 @@ export default function EditMediaPlan() {
 
   // Check if minimum required data is present for saving
   const canSave = () => {
-    return (
+    const result = (
       state.planData.name.trim() &&
       state.planData.client_id &&
       state.planData.start_date &&
       state.planData.end_date &&
       state.planData.total_budget > 0
     );
+    console.log('canSave check:', {
+      name: state.planData.name.trim(),
+      client_id: state.planData.client_id,
+      start_date: state.planData.start_date,
+      end_date: state.planData.end_date,
+      total_budget: state.planData.total_budget,
+      result: !!result
+    });
+    return result;
   };
 
   // Save and stay on current page
