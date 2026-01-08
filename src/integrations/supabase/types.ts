@@ -444,6 +444,199 @@ export type Database = {
         }
         Relationships: []
       }
+      line_detail_insertions: {
+        Row: {
+          created_at: string | null
+          id: string
+          insertion_date: string
+          line_detail_item_id: string
+          notes: string | null
+          quantity: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          insertion_date: string
+          line_detail_item_id: string
+          notes?: string | null
+          quantity?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          insertion_date?: string
+          line_detail_item_id?: string
+          notes?: string | null
+          quantity?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "line_detail_insertions_line_detail_item_id_fkey"
+            columns: ["line_detail_item_id"]
+            isOneToOne: false
+            referencedRelation: "line_detail_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      line_detail_items: {
+        Row: {
+          created_at: string | null
+          data: Json
+          id: string
+          is_active: boolean | null
+          line_detail_id: string
+          sort_order: number | null
+          total_gross: number | null
+          total_insertions: number | null
+          total_net: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json
+          id?: string
+          is_active?: boolean | null
+          line_detail_id: string
+          sort_order?: number | null
+          total_gross?: number | null
+          total_insertions?: number | null
+          total_net?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json
+          id?: string
+          is_active?: boolean | null
+          line_detail_id?: string
+          sort_order?: number | null
+          total_gross?: number | null
+          total_insertions?: number | null
+          total_net?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "line_detail_items_line_detail_id_fkey"
+            columns: ["line_detail_id"]
+            isOneToOne: false
+            referencedRelation: "line_details"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      line_detail_types: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          description: string | null
+          field_schema: Json
+          has_insertion_grid: boolean | null
+          icon: string | null
+          id: string
+          insertion_grid_type: string | null
+          is_active: boolean | null
+          is_system: boolean | null
+          metadata_schema: Json | null
+          name: string
+          slug: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          field_schema?: Json
+          has_insertion_grid?: boolean | null
+          icon?: string | null
+          id?: string
+          insertion_grid_type?: string | null
+          is_active?: boolean | null
+          is_system?: boolean | null
+          metadata_schema?: Json | null
+          name: string
+          slug?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          field_schema?: Json
+          has_insertion_grid?: boolean | null
+          icon?: string | null
+          id?: string
+          insertion_grid_type?: string | null
+          is_active?: boolean | null
+          is_system?: boolean | null
+          metadata_schema?: Json | null
+          name?: string
+          slug?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      line_details: {
+        Row: {
+          created_at: string | null
+          detail_type_id: string
+          id: string
+          media_line_id: string
+          metadata: Json | null
+          name: string | null
+          notes: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          detail_type_id: string
+          id?: string
+          media_line_id: string
+          metadata?: Json | null
+          name?: string | null
+          notes?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          detail_type_id?: string
+          id?: string
+          media_line_id?: string
+          metadata?: Json | null
+          name?: string | null
+          notes?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "line_details_detail_type_id_fkey"
+            columns: ["detail_type_id"]
+            isOneToOne: false
+            referencedRelation: "line_detail_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_details_media_line_id_fkey"
+            columns: ["media_line_id"]
+            isOneToOne: false
+            referencedRelation: "media_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_creatives: {
         Row: {
           approved_date: string | null
