@@ -8,6 +8,7 @@ import { useSoftDeleteMutations } from '@/hooks/useSoftDelete';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -98,7 +99,8 @@ export default function TrashPage() {
   const libraryCount = trashedLibrary.data?.length || 0;
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <DashboardLayout>
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Trash2 className="h-8 w-8 text-muted-foreground" />
@@ -394,6 +396,7 @@ export default function TrashPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
