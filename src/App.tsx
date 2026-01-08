@@ -39,6 +39,18 @@ import AccountPage from "./pages/AccountPage";
 import TrashPage from "./pages/TrashPage";
 import DetailTypesPage from "./pages/config/DetailTypesPage";
 import ClientsPage from "./pages/config/ClientsPage";
+
+// Finance Manager imports
+import { FinanceLayout } from "./components/layout/FinanceLayout";
+import FinanceDashboard from "./pages/finance/FinanceDashboard";
+import ForecastPage from "./pages/finance/ForecastPage";
+import ActualsPage from "./pages/finance/ActualsPage";
+import DocumentsPage from "./pages/finance/DocumentsPage";
+import PaymentsPage from "./pages/finance/PaymentsPage";
+import RevenuePage from "./pages/finance/RevenuePage";
+import AuditPage from "./pages/finance/AuditPage";
+import SettingsPage from "./pages/finance/SettingsPage";
+
 function AppWithEnvironment() {
   const { user } = useAuth();
   
@@ -75,7 +87,19 @@ function AppWithEnvironment() {
           <Route path="/trash" element={<ProtectedRoute><TrashPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="/admin/menu-visibility" element={<AdminRoute><AdminMenuVisibility /></AdminRoute>} />
-          <Route path="/admin/menu-visibility" element={<AdminRoute><AdminMenuVisibility /></AdminRoute>} />
+          
+          {/* Finance Manager Routes */}
+          <Route path="/finance" element={<ProtectedRoute><FinanceLayout /></ProtectedRoute>}>
+            <Route index element={<FinanceDashboard />} />
+            <Route path="forecast" element={<ForecastPage />} />
+            <Route path="actuals" element={<ActualsPage />} />
+            <Route path="documents" element={<DocumentsPage />} />
+            <Route path="payments" element={<PaymentsPage />} />
+            <Route path="revenue" element={<RevenuePage />} />
+            <Route path="audit" element={<AuditPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

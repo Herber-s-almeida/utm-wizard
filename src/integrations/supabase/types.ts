@@ -735,6 +735,30 @@ export type Database = {
           },
         ]
       }
+      financial_roles: {
+        Row: {
+          created_at: string | null
+          granted_by: string | null
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          granted_by?: string | null
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          granted_by?: string | null
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       financial_vendors: {
         Row: {
           category: string | null
