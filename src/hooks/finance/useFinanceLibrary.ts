@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
 import { toast } from "sonner";
 
 // Types
@@ -81,21 +82,22 @@ export interface FinanceRequestType {
 
 // Cost Centers
 export function useFinanceCostCenters() {
-  const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   
   return useQuery({
-    queryKey: ["finance_cost_centers", user?.id],
+    queryKey: ["finance_cost_centers", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_cost_centers")
         .select("*")
+        .eq("user_id", effectiveUserId!)
         .is("deleted_at", null)
         .order("code");
       
       if (error) throw error;
       return data as FinanceCostCenter[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 }
 
@@ -167,21 +169,22 @@ export function useDeleteCostCenter() {
 
 // Teams
 export function useFinanceTeams() {
-  const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   
   return useQuery({
-    queryKey: ["finance_teams", user?.id],
+    queryKey: ["finance_teams", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_teams")
         .select("*")
+        .eq("user_id", effectiveUserId!)
         .is("deleted_at", null)
         .order("name");
       
       if (error) throw error;
       return data as FinanceTeam[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 }
 
@@ -253,21 +256,22 @@ export function useDeleteTeam() {
 
 // Financial Accounts
 export function useFinanceAccounts() {
-  const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   
   return useQuery({
-    queryKey: ["finance_accounts", user?.id],
+    queryKey: ["finance_accounts", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_accounts")
         .select("*")
+        .eq("user_id", effectiveUserId!)
         .is("deleted_at", null)
         .order("name");
       
       if (error) throw error;
       return data as FinanceAccount[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 }
 
@@ -339,21 +343,22 @@ export function useDeleteAccount() {
 
 // Packages
 export function useFinancePackages() {
-  const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   
   return useQuery({
-    queryKey: ["finance_packages", user?.id],
+    queryKey: ["finance_packages", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_packages")
         .select("*")
+        .eq("user_id", effectiveUserId!)
         .is("deleted_at", null)
         .order("name");
       
       if (error) throw error;
       return data as FinancePackage[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 }
 
@@ -425,21 +430,22 @@ export function useDeletePackage() {
 
 // Macro Classifications
 export function useFinanceMacroClassifications() {
-  const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   
   return useQuery({
-    queryKey: ["finance_macro_classifications", user?.id],
+    queryKey: ["finance_macro_classifications", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_macro_classifications")
         .select("*")
+        .eq("user_id", effectiveUserId!)
         .is("deleted_at", null)
         .order("name");
       
       if (error) throw error;
       return data as FinanceMacroClassification[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 }
 
@@ -511,21 +517,22 @@ export function useDeleteMacroClassification() {
 
 // Expense Classifications
 export function useFinanceExpenseClassifications() {
-  const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   
   return useQuery({
-    queryKey: ["finance_expense_classifications", user?.id],
+    queryKey: ["finance_expense_classifications", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_expense_classifications")
         .select("*, macro_classification:finance_macro_classifications(*)")
+        .eq("user_id", effectiveUserId!)
         .is("deleted_at", null)
         .order("name");
       
       if (error) throw error;
       return data as FinanceExpenseClassification[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 }
 
@@ -597,21 +604,22 @@ export function useDeleteExpenseClassification() {
 
 // Request Types
 export function useFinanceRequestTypes() {
-  const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   
   return useQuery({
-    queryKey: ["finance_request_types", user?.id],
+    queryKey: ["finance_request_types", effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_request_types")
         .select("*")
+        .eq("user_id", effectiveUserId!)
         .is("deleted_at", null)
         .order("name");
       
       if (error) throw error;
       return data as FinanceRequestType[];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 }
 
