@@ -18,7 +18,8 @@ import {
   MoreVertical,
   Settings2,
   List,
-  Users
+  Users,
+  Copy
 } from 'lucide-react';
 import { MediaPlan } from '@/types/media';
 import { StatusSelector } from '@/components/media-plan/StatusSelector';
@@ -42,6 +43,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { DuplicatePlanDialog } from '@/components/media-plan/DuplicatePlanDialog';
 
 export default function MediaPlans() {
   const { user } = useAuth();
@@ -52,6 +54,8 @@ export default function MediaPlans() {
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<MediaPlan | null>(null);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [planToDuplicate, setPlanToDuplicate] = useState<MediaPlan | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -245,6 +249,15 @@ export default function MediaPlans() {
                               <List className="w-4 h-4 mr-2" />
                               Criar Linhas
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setPlanToDuplicate(plan);
+                                setDuplicateDialogOpen(true);
+                              }}
+                            >
+                              <Copy className="w-4 h-4 mr-2" />
+                              Duplicar Plano
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
@@ -316,6 +329,18 @@ export default function MediaPlans() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Duplicate Dialog */}
+      <DuplicatePlanDialog
+        open={duplicateDialogOpen}
+        onOpenChange={setDuplicateDialogOpen}
+        plan={planToDuplicate}
+        onSuccess={(newPlanId) => {
+          toast.success('Plano duplicado com sucesso!');
+          fetchPlans();
+          navigate(`/media-plans/${newPlanId}`);
+        }}
+      />
     </DashboardLayout>
   );
 }
