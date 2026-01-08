@@ -171,11 +171,18 @@ function calculateFunnelBreakdown(
     .sort((a, b) => a.order - b.order);
 }
 
-export function useExecutiveDashboard(statusFilter: string = 'active') {
+export interface DashboardFilters {
+  statusFilter?: string;
+  startDate?: Date | null;
+  endDate?: Date | null;
+}
+
+export function useExecutiveDashboard(filters: DashboardFilters = {}) {
+  const { statusFilter = 'active', startDate, endDate } = filters;
   const effectiveUserId = useEffectiveUserId();
 
   return useQuery({
-    queryKey: ['executive-dashboard', effectiveUserId, statusFilter],
+    queryKey: ['executive-dashboard', effectiveUserId, statusFilter, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async (): Promise<DashboardData> => {
       if (!effectiveUserId) {
         throw new Error('User not authenticated');
@@ -262,10 +269,20 @@ export function useExecutiveDashboard(statusFilter: string = 'active') {
       // Fetch monthly budgets from media_line_monthly_budgets
       let monthlyBudgets: MonthlyBudget[] = [];
       if (lineIds.length > 0) {
-        const { data: budgetsData, error: budgetsError } = await supabase
+        let budgetsQuery = supabase
           .from('media_line_monthly_budgets')
           .select('month_date, amount')
           .in('media_line_id', lineIds);
+        
+        // Filter by date range if provided
+        if (startDate) {
+          budgetsQuery = budgetsQuery.gte('month_date', format(startDate, 'yyyy-MM-dd'));
+        }
+        if (endDate) {
+          budgetsQuery = budgetsQuery.lte('month_date', format(endDate, 'yyyy-MM-dd'));
+        }
+
+        const { data: budgetsData, error: budgetsError } = await budgetsQuery;
         if (budgetsError) throw budgetsError;
         monthlyBudgets = budgetsData || [];
       }
