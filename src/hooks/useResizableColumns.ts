@@ -68,7 +68,9 @@ const FLAT_VIEW_WIDTHS: Partial<ColumnWidths> = {
 const MIN_WIDTH = 50;
 const STORAGE_KEY = 'media-plan-column-widths';
 
-export function useResizableColumns(viewMode: 'grouped' | 'flat' = 'grouped') {
+export type MinWidthOverrides = Partial<Record<ColumnKey, number>>;
+
+export function useResizableColumns(viewMode: 'grouped' | 'flat' = 'grouped', minWidthOverrides?: MinWidthOverrides) {
   const [columnWidths, setColumnWidths] = useState<ColumnWidths>(() => {
     // Try to load from localStorage
     try {
@@ -109,11 +111,12 @@ export function useResizableColumns(viewMode: 'grouped' | 'flat' = 'grouped') {
   }, [columnWidths, viewMode]);
 
   const handleResize = useCallback((column: ColumnKey, newWidth: number) => {
+    const effectiveMinWidth = minWidthOverrides?.[column] ?? MIN_WIDTH;
     setColumnWidths(prev => ({
       ...prev,
-      [column]: Math.max(MIN_WIDTH, newWidth),
+      [column]: Math.max(effectiveMinWidth, newWidth),
     }));
-  }, []);
+  }, [minWidthOverrides]);
 
   const resetWidths = useCallback(() => {
     setColumnWidths(DEFAULT_WIDTHS);

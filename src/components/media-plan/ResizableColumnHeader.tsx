@@ -5,6 +5,7 @@ import { ColumnKey } from '@/hooks/useResizableColumns';
 interface ResizableColumnHeaderProps {
   columnKey: ColumnKey;
   width: number;
+  minWidth?: number;
   onResize: (column: ColumnKey, newWidth: number) => void;
   children: React.ReactNode;
   className?: string;
@@ -14,6 +15,7 @@ interface ResizableColumnHeaderProps {
 export function ResizableColumnHeader({
   columnKey,
   width,
+  minWidth = 50,
   onResize,
   children,
   className,
@@ -21,6 +23,10 @@ export function ResizableColumnHeader({
 }: ResizableColumnHeaderProps) {
   const startXRef = useRef<number>(0);
   const startWidthRef = useRef<number>(0);
+  const minWidthRef = useRef<number>(minWidth);
+  
+  // Keep minWidth ref updated
+  minWidthRef.current = minWidth;
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -31,7 +37,7 @@ export function ResizableColumnHeader({
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startXRef.current;
-      const newWidth = startWidthRef.current + delta;
+      const newWidth = Math.max(minWidthRef.current, startWidthRef.current + delta);
       onResize(columnKey, newWidth);
     };
 

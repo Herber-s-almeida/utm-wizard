@@ -45,7 +45,7 @@ import { Badge } from '@/components/ui/badge';
 import { PlanAlert } from '@/hooks/usePlanAlerts';
 import { LineAlertIndicator } from '@/components/media-plan/LineAlertIndicator';
 import { UTMPreview } from '@/components/media-plan/UTMPreview';
-import { useResizableColumns, ColumnKey } from '@/hooks/useResizableColumns';
+import { useResizableColumns, ColumnKey, MinWidthOverrides } from '@/hooks/useResizableColumns';
 import { ResizableColumnHeader } from '@/components/media-plan/ResizableColumnHeader';
 
 // Columns that can be toggled (excludes: Código, Orçamento, Status, Início, Fim, Ações)
@@ -210,8 +210,53 @@ export function HierarchicalMediaTable({
   // View mode: 'grouped' (hierarchical) or 'flat' (one line per row)
   const [viewMode, setViewMode] = useState<'grouped' | 'flat'>('grouped');
 
-  // Resizable columns hook
-  const { getWidth, handleResize, resetWidths } = useResizableColumns(viewMode);
+  // Calculate dynamic minimum widths for grouped columns based on content
+  const dynamicMinWidths = useMemo((): MinWidthOverrides => {
+    if (viewMode !== 'grouped') return {};
+
+    const measureText = (text: string, fontSize: number, fontWeight: number = 500): number => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return 100;
+      ctx.font = `${fontWeight} ${fontSize}px Inter, system-ui, sans-serif`;
+      return Math.ceil(ctx.measureText(text).width);
+    };
+
+    const PADDING = 48; // p-2 container padding (16px) + card internal padding + margin
+    const DATE_WIDTH = measureText('99/99/9999 - 99/99/9999', 11, 400);
+    const CURRENCY_WIDTH = measureText('R$ 999.999,99', 16, 700);
+    const PERCENTAGE_WIDTH = measureText('100% de Subdivisão', 10, 400);
+
+    // Calculate max width needed for subdivision names
+    const maxSubdivisionName = Math.max(
+      measureText('Geral', 13, 500),
+      ...subdivisionsList.map(s => measureText(s.name, 13, 500))
+    );
+    const subdivisionMinWidth = Math.max(maxSubdivisionName, CURRENCY_WIDTH, PERCENTAGE_WIDTH) + PADDING;
+
+    // Calculate max width needed for moment names (includes date range)
+    const maxMomentName = Math.max(
+      measureText('Geral', 13, 500),
+      ...momentsList.map(m => measureText(m.name, 13, 500))
+    );
+    const momentMinWidth = Math.max(maxMomentName, CURRENCY_WIDTH, DATE_WIDTH, PERCENTAGE_WIDTH) + PADDING;
+
+    // Calculate max width needed for funnel stage names
+    const maxFunnelName = Math.max(
+      measureText('Geral', 13, 500),
+      ...funnelStagesList.map(f => measureText(f.name, 13, 500))
+    );
+    const funnelMinWidth = Math.max(maxFunnelName, CURRENCY_WIDTH, PERCENTAGE_WIDTH) + PADDING;
+
+    return {
+      subdivision: subdivisionMinWidth,
+      moment: momentMinWidth,
+      funnel_stage: funnelMinWidth,
+    };
+  }, [viewMode, subdivisionsList, momentsList, funnelStagesList]);
+
+  // Resizable columns hook with dynamic min widths
+  const { getWidth, handleResize, resetWidths } = useResizableColumns(viewMode, dynamicMinWidths);
 
   // Column visibility state
   const [visibleColumns, setVisibleColumns] = useState<Record<ToggleableColumn, boolean>>({
@@ -1550,17 +1595,17 @@ export function HierarchicalMediaTable({
           {/* Header */}
           <div className="flex bg-muted/50 text-xs font-medium text-muted-foreground border-b" style={{ minWidth: `${viewMode === 'flat' ? getMinWidth() - 100 : getMinWidth()}px` }}>
             {visibleColumns.subdivision && (
-              <ResizableColumnHeader columnKey="subdivision" width={getWidth('subdivision')} onResize={handleResize} className="p-3 border-r">
+              <ResizableColumnHeader columnKey="subdivision" width={getWidth('subdivision')} minWidth={dynamicMinWidths.subdivision} onResize={handleResize} className="p-3 border-r">
                 Subdivisão
               </ResizableColumnHeader>
             )}
             {visibleColumns.moment && (
-              <ResizableColumnHeader columnKey="moment" width={getWidth('moment')} onResize={handleResize} className="p-3 border-r">
+              <ResizableColumnHeader columnKey="moment" width={getWidth('moment')} minWidth={dynamicMinWidths.moment} onResize={handleResize} className="p-3 border-r">
                 Momento
               </ResizableColumnHeader>
             )}
             {visibleColumns.funnel_stage && (
-              <ResizableColumnHeader columnKey="funnel_stage" width={getWidth('funnel_stage')} onResize={handleResize} className="p-3 border-r">
+              <ResizableColumnHeader columnKey="funnel_stage" width={getWidth('funnel_stage')} minWidth={dynamicMinWidths.funnel_stage} onResize={handleResize} className="p-3 border-r">
                 Fase
               </ResizableColumnHeader>
             )}
@@ -1888,7 +1933,7 @@ export function HierarchicalMediaTable({
                 <div key={subdivisionGroup.subdivision.distId || `no-sub-${subIdx}`} className="flex">
                   {/* Subdivision cell */}
                   {visibleColumns.subdivision && (
-                    <div className="p-2 border-r bg-background shrink-0" style={{ width: getWidth('subdivision') }}>
+                    <div className="p-2 border-r bg-background shrink-0" style={{ width: getWidth('subdivision'), minWidth: dynamicMinWidths.subdivision }}>
                       <BudgetCard
                         label={subdivisionGroup.subdivision.name}
                         planned={subdivisionGroup.subdivision.planned}
@@ -1904,7 +1949,7 @@ export function HierarchicalMediaTable({
                     <div key={momentGroup.moment.distId || `no-mom-${momIdx}`} className="flex">
                       {/* Moment cell */}
                       {visibleColumns.moment && (
-                        <div className="p-2 border-r bg-background shrink-0" style={{ width: getWidth('moment') }}>
+                        <div className="p-2 border-r bg-background shrink-0" style={{ width: getWidth('moment'), minWidth: dynamicMinWidths.moment }}>
                           <BudgetCard
                             label={momentGroup.moment.name}
                             planned={momentGroup.moment.planned}
@@ -1921,7 +1966,7 @@ export function HierarchicalMediaTable({
                         {momentGroup.funnelStages.map((funnelGroup, funIdx) => (
                           <div key={funnelGroup.funnelStage.distId || `no-fun-${funIdx}`} className="flex">
                             {visibleColumns.funnel_stage && (
-                              <div className="p-2 border-r bg-background shrink-0" style={{ width: getWidth('funnel_stage') }}>
+                              <div className="p-2 border-r bg-background shrink-0" style={{ width: getWidth('funnel_stage'), minWidth: dynamicMinWidths.funnel_stage }}>
                                 <BudgetCard
                                   label={funnelGroup.funnelStage.name}
                                   planned={funnelGroup.funnelStage.planned}
