@@ -170,7 +170,7 @@ export function FinanceSidebar() {
 
   return (
     <div className={cn(
-      "flex flex-col h-full border-r border-sidebar-border bg-sidebar overflow-x-hidden transition-all duration-300",
+      "flex flex-col h-full border-r border-sidebar-border bg-sidebar overflow-hidden transition-all duration-300",
       isCollapsed ? "w-16" : "w-80"
     )}>
       {/* Header - Fixed at top */}
@@ -227,7 +227,7 @@ export function FinanceSidebar() {
 
       {/* Collapsed state - show only icons */}
       {isCollapsed ? (
-        <div className="flex-1 overflow-y-auto py-3 px-2 flex flex-col items-center gap-1 bg-background">
+        <div className="flex-1 min-h-0 overflow-y-auto py-3 px-2 flex flex-col items-center gap-1 bg-background">
           {menuItems.map((item) => (
             <Tooltip key={item.url}>
               <TooltipTrigger asChild>
@@ -298,8 +298,8 @@ export function FinanceSidebar() {
       ) : (
         <>
           {/* Expanded state - Scrollable content */}
-          <ScrollArea className="flex-1">
-            <div className="py-3 px-2 bg-background">
+          <ScrollArea className="flex-1 overflow-hidden">
+            <div className="py-3 px-2 bg-background min-h-0">
               {/* Principal Section */}
               <div className="mb-4">
                 <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
