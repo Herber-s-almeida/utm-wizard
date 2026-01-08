@@ -485,66 +485,120 @@ export type Database = {
       }
       financial_documents: {
         Row: {
+          account_manager: string | null
           amount: number
           approved_at: string | null
           approved_by: string | null
           attachment_urls: Json | null
+          campaign_project: string | null
+          cms_sent_date: string | null
+          competency_month: string | null
+          competency_month_erp: string | null
+          contract_reference: string | null
+          cost_center_code: string | null
+          cost_center_name: string | null
           created_at: string | null
           currency: string | null
           deleted_at: string | null
           document_number: string | null
           document_type: string
           due_date: string
+          expense_classification: string | null
+          financial_account: string | null
           id: string
+          invoice_received_date: string | null
           issue_date: string
+          macro_classification: string | null
           media_plan_id: string
           notes: string | null
+          package: string | null
+          product: string | null
           related_dimensions_json: Json | null
+          request_type: string | null
+          rir_task_number: string | null
+          service_description: string | null
           status: string
+          team: string | null
           updated_at: string | null
           user_id: string
           vendor_id: string | null
           vendor_name: string | null
         }
         Insert: {
+          account_manager?: string | null
           amount: number
           approved_at?: string | null
           approved_by?: string | null
           attachment_urls?: Json | null
+          campaign_project?: string | null
+          cms_sent_date?: string | null
+          competency_month?: string | null
+          competency_month_erp?: string | null
+          contract_reference?: string | null
+          cost_center_code?: string | null
+          cost_center_name?: string | null
           created_at?: string | null
           currency?: string | null
           deleted_at?: string | null
           document_number?: string | null
           document_type?: string
           due_date: string
+          expense_classification?: string | null
+          financial_account?: string | null
           id?: string
+          invoice_received_date?: string | null
           issue_date: string
+          macro_classification?: string | null
           media_plan_id: string
           notes?: string | null
+          package?: string | null
+          product?: string | null
           related_dimensions_json?: Json | null
+          request_type?: string | null
+          rir_task_number?: string | null
+          service_description?: string | null
           status?: string
+          team?: string | null
           updated_at?: string | null
           user_id: string
           vendor_id?: string | null
           vendor_name?: string | null
         }
         Update: {
+          account_manager?: string | null
           amount?: number
           approved_at?: string | null
           approved_by?: string | null
           attachment_urls?: Json | null
+          campaign_project?: string | null
+          cms_sent_date?: string | null
+          competency_month?: string | null
+          competency_month_erp?: string | null
+          contract_reference?: string | null
+          cost_center_code?: string | null
+          cost_center_name?: string | null
           created_at?: string | null
           currency?: string | null
           deleted_at?: string | null
           document_number?: string | null
           document_type?: string
           due_date?: string
+          expense_classification?: string | null
+          financial_account?: string | null
           id?: string
+          invoice_received_date?: string | null
           issue_date?: string
+          macro_classification?: string | null
           media_plan_id?: string
           notes?: string | null
+          package?: string | null
+          product?: string | null
           related_dimensions_json?: Json | null
+          request_type?: string | null
+          rir_task_number?: string | null
+          service_description?: string | null
           status?: string
+          team?: string | null
           updated_at?: string | null
           user_id?: string
           vendor_id?: string | null

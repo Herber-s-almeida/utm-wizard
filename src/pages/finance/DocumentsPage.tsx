@@ -11,6 +11,7 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
+  Download,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,10 +41,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useFinancialDocuments } from "@/hooks/finance/useFinancialDocuments";
-import { format, isAfter, isBefore, addDays } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { exportPayablesToXlsx } from "@/utils/finance/exportPayables";
+import { format, isBefore, addDays } from "date-fns";
 import { Link } from "react-router-dom";
-import type { DocumentStatus } from "@/types/finance";
+import type { DocumentStatus, FinancialDocument } from "@/types/finance";
 
 const statusConfig: Record<DocumentStatus, { label: string; color: string; icon: React.ReactNode }> = {
   received: { label: "Recebido", color: "bg-gray-100 text-gray-700", icon: <Clock className="w-3 h-3" /> },
@@ -64,6 +66,7 @@ const documentTypeLabels: Record<string, string> = {
 export default function DocumentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [classificationFilter, setClassificationFilter] = useState<string>("all");
   
   const { documents, isLoading, deleteDocument } = useFinancialDocuments();
 
@@ -91,15 +94,26 @@ export default function DocumentsPage() {
 
   const filteredDocuments = documents.filter(doc => {
     if (statusFilter !== "all" && doc.status !== statusFilter) return false;
+    if (classificationFilter !== "all" && doc.macro_classification !== classificationFilter) return false;
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
         doc.vendor_name?.toLowerCase().includes(query) ||
-        doc.document_number?.toLowerCase().includes(query)
+        doc.document_number?.toLowerCase().includes(query) ||
+        doc.account_manager?.toLowerCase().includes(query) ||
+        doc.campaign_project?.toLowerCase().includes(query) ||
+        doc.cost_center_code?.toLowerCase().includes(query)
       );
     }
     return true;
   });
+
+  // Get unique macro classifications for filter
+  const macroClassifications = [...new Set(documents.map(d => d.macro_classification).filter(Boolean))];
+
+  const handleExport = () => {
+    exportPayablesToXlsx(filteredDocuments as FinancialDocument[]);
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -114,12 +128,18 @@ export default function DocumentsPage() {
             Notas fiscais, boletos e faturas
           </p>
         </div>
-        <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
-          <Link to="/finance/documents/new">
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Documento
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" />
+            Exportar XLSX
+          </Button>
+          <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
+            <Link to="/finance/documents/new">
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Documento
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -129,7 +149,7 @@ export default function DocumentsPage() {
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por fornecedor ou número..."
+                placeholder="Buscar por fornecedor, número, atendimento..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -149,6 +169,20 @@ export default function DocumentsPage() {
                 <SelectItem value="scheduled">Agendado</SelectItem>
                 <SelectItem value="paid">Pago</SelectItem>
                 <SelectItem value="cancelled">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={classificationFilter} onValueChange={setClassificationFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Classificação" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Classificações</SelectItem>
+                {macroClassifications.map((c) => (
+                  <SelectItem key={c} value={c!}>
+                    {c}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -179,88 +213,103 @@ export default function DocumentsPage() {
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fornecedor</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Número</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDocuments.map((doc) => {
-                  const dueDateStatus = getDueDateStatus(doc.due_date, doc.status as DocumentStatus);
-                  const status = statusConfig[doc.status as DocumentStatus];
-                  
-                  return (
-                    <TableRow key={doc.id}>
-                      <TableCell className="font-medium">
-                        {doc.vendor_name || "Sem fornecedor"}
-                      </TableCell>
-                      <TableCell>
-                        {documentTypeLabels[doc.document_type] || doc.document_type}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {doc.document_number || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span>{format(new Date(doc.due_date), "dd/MM/yyyy")}</span>
-                          {dueDateStatus && (
-                            <span className={`text-xs ${dueDateStatus.color}`}>
-                              {dueDateStatus.label}
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(Number(doc.amount))}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={status.color}>
-                          {status.icon}
-                          <span className="ml-1">{status.label}</span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link to={`/finance/documents/${doc.id}`}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                Ver Detalhes
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link to={`/finance/documents/${doc.id}/edit`}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Editar
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-red-600"
-                              onClick={() => deleteDocument(doc.id)}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <ScrollArea className="w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[100px]">Competência</TableHead>
+                    <TableHead className="min-w-[150px]">Atendimento</TableHead>
+                    <TableHead className="min-w-[150px]">Campanha</TableHead>
+                    <TableHead className="min-w-[100px]">Classif. Macro</TableHead>
+                    <TableHead className="min-w-[180px]">Razão Social</TableHead>
+                    <TableHead className="min-w-[100px]">Nº Doc</TableHead>
+                    <TableHead className="min-w-[100px]">Vencimento</TableHead>
+                    <TableHead className="min-w-[120px] text-right">Valor</TableHead>
+                    <TableHead className="min-w-[100px]">Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredDocuments.map((doc) => {
+                    const dueDateStatus = getDueDateStatus(doc.due_date, doc.status as DocumentStatus);
+                    const status = statusConfig[doc.status as DocumentStatus];
+                    
+                    return (
+                      <TableRow key={doc.id}>
+                        <TableCell className="text-sm">
+                          {doc.competency_month_erp || "-"}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {doc.account_manager || "-"}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {doc.campaign_project || "-"}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {doc.macro_classification || "-"}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {doc.vendor_name || "Sem fornecedor"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {doc.document_number || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span>{format(new Date(doc.due_date), "dd/MM/yyyy")}</span>
+                            {dueDateStatus && (
+                              <span className={`text-xs ${dueDateStatus.color}`}>
+                                {dueDateStatus.label}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(Number(doc.amount))}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={status.color}>
+                            {status.icon}
+                            <span className="ml-1">{status.label}</span>
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem asChild>
+                                <Link to={`/finance/documents/${doc.id}`}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  Ver Detalhes
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to={`/finance/documents/${doc.id}/edit`}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Editar
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-red-600"
+                                onClick={() => deleteDocument(doc.id)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           )}
         </CardContent>
       </Card>

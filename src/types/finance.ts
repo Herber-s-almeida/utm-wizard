@@ -87,6 +87,25 @@ export interface FinancialDocument {
   deleted_at?: string | null;
   created_at: string;
   updated_at: string;
+  // Extended fields for complete financial tracking
+  competency_month?: string | null;           // Competência
+  competency_month_erp?: string | null;       // Competência Benner
+  account_manager?: string | null;            // Atendimento
+  campaign_project?: string | null;           // Campanha/Projeto
+  product?: string | null;                    // Produto
+  cost_center_name?: string | null;           // Nome do CR
+  cost_center_code?: string | null;           // Centro de Custo (CR)
+  team?: string | null;                       // Equipe
+  financial_account?: string | null;          // Conta Financeira (CF)
+  package?: string | null;                    // Pacote
+  service_description?: string | null;        // Descrição do Serviço
+  macro_classification?: string | null;       // Classificação Macro
+  expense_classification?: string | null;     // Classificação da despesa
+  cms_sent_date?: string | null;              // Data Envio CMS
+  contract_reference?: string | null;         // Nº A.P/P.I/O.C/Contrato
+  request_type?: string | null;               // Tipo solicitação
+  invoice_received_date?: string | null;      // Data de Recebimento da NF
+  rir_task_number?: string | null;            // Número da tarefa RIR
 }
 
 export interface FinancialPayment {
