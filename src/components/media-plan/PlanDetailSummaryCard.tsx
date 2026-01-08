@@ -1,8 +1,10 @@
-import { Calendar, DollarSign, Target, AlertTriangle, LayoutList, Palette } from 'lucide-react';
+import { Calendar, DollarSign, AlertTriangle, LayoutList, Palette, ChevronDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { KPI_OPTIONS } from '@/types/media';
+import { AnimatedCollapsible, AnimatedCollapsibleContent, AnimatedCollapsibleTrigger } from '@/components/ui/animated-collapsible';
+import { motion } from 'framer-motion';
 
 interface PlanDetailSummaryCardProps {
   plan: {
@@ -70,21 +72,43 @@ export function PlanDetailSummaryCard({
   const kpis = plan.kpis || {};
 
   return (
-    <Card className="border-2 border-primary/20 bg-gradient-to-br from-card to-card/50 shadow-lg">
-      <CardContent className="p-6">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-3 h-3 rounded-full bg-primary" />
-          <h3 className="font-display text-lg font-semibold text-foreground">Resumo do Plano</h3>
-          <div className="flex-1 h-[2px] bg-gradient-to-r from-primary/50 to-transparent rounded-full min-w-[100px]" />
-        </div>
+    <Card className="border-2 border-primary/20 bg-gradient-to-br from-card to-card/50 shadow-lg overflow-hidden">
+      <AnimatedCollapsible defaultOpen={true} storageKey="plan-summary-card">
+        <AnimatedCollapsibleTrigger asChild>
+          <button className="w-full flex items-center justify-between p-6 pb-4 hover:bg-muted/30 transition-colors text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-primary" />
+              <h3 className="font-display text-lg font-semibold text-foreground">Resumo do Plano</h3>
+              <div className="flex-1 h-[2px] bg-gradient-to-r from-primary/50 to-transparent rounded-full min-w-[100px]" />
+            </div>
+            <motion.div
+              initial={false}
+              className="[[data-state=open]_&]:rotate-180 transition-transform duration-200"
+            >
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            </motion.div>
+          </button>
+        </AnimatedCollapsibleTrigger>
+        <AnimatedCollapsibleContent>
+          <CardContent className="px-6 pb-6 pt-0">
 
         <div className="space-y-4">
           {/* Nome do Plano */}
           <div className="bg-muted/50 rounded-xl p-4 border border-border/50">
             <span className="text-xs text-muted-foreground uppercase tracking-wide">Nome do Plano</span>
             <p className="font-display text-xl font-semibold mt-1">{plan.name || '-'}</p>
-            <span className="text-xs text-muted-foreground">Utilizado como identificador da campanha (UTM)</span>
+            {objectives.length > 0 && (
+              <div className="mt-2">
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">Objetivos de Campanha</span>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {objectives.map((obj, index) => (
+                    <Badge key={index} variant="secondary" className="text-sm">
+                      {obj}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Grid: Cliente + Datas */}
@@ -107,23 +131,6 @@ export function PlanDetailSummaryCard({
               </div>
             </div>
           </div>
-
-          {/* Objetivos */}
-          {objectives.length > 0 && (
-            <div className="bg-muted/50 rounded-xl p-4 border border-border/50">
-              <div className="flex items-center gap-2 mb-2">
-                <Target className="h-4 w-4 text-primary" />
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">Objetivos de Campanha</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {objectives.map((obj, index) => (
-                  <Badge key={index} variant="secondary" className="text-sm">
-                    {obj}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Grid: Orçamento + Métricas */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -201,7 +208,9 @@ export function PlanDetailSummaryCard({
             </div>
           )}
         </div>
-      </CardContent>
+          </CardContent>
+        </AnimatedCollapsibleContent>
+      </AnimatedCollapsible>
     </Card>
   );
 }
