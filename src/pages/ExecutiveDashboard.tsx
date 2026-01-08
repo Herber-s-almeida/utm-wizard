@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   FileText, 
   DollarSign, 
   BarChart3,
-  ExternalLink
+  ExternalLink,
+  Calendar
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useExecutiveDashboard } from '@/hooks/useExecutiveDashboard';
 import { 
   BarChart, 
@@ -64,7 +65,14 @@ function formatCompactCurrency(value: number): string {
 
 export default function ExecutiveDashboard() {
   const [statusFilter, setStatusFilter] = useState('active');
-  const { data, isLoading, error } = useExecutiveDashboard(statusFilter);
+  const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth(subMonths(new Date(), 11)));
+  const [endDate, setEndDate] = useState<Date | undefined>(endOfMonth(new Date()));
+  
+  const { data, isLoading, error } = useExecutiveDashboard({
+    statusFilter,
+    startDate: startDate || null,
+    endDate: endDate || null,
+  });
 
   if (error) {
     return (
@@ -87,7 +95,46 @@ export default function ExecutiveDashboard() {
               Visão consolidada dos planos de mídia
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Date Range Filter */}
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, 'dd/MM/yyyy') : 'Início'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
+              <span className="text-muted-foreground">até</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, 'dd/MM/yyyy') : 'Fim'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Status" />
