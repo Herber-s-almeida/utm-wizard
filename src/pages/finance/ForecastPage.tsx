@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { 
   TrendingUp, 
   Plus, 
@@ -33,8 +34,16 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function ForecastPage() {
+  const { planId: routePlanId } = useParams();
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
   const [granularity, setGranularity] = useState<"day" | "week" | "month">("month");
+
+  // Set plan from route param
+  useEffect(() => {
+    if (routePlanId) {
+      setSelectedPlanId(routePlanId);
+    }
+  }, [routePlanId]);
   
   const { 
     forecasts, 
