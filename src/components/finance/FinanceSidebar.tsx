@@ -298,8 +298,8 @@ export function FinanceSidebar() {
       ) : (
         <>
           {/* Expanded state - Scrollable content */}
-          <ScrollArea className="flex-1 overflow-hidden">
-            <div className="py-3 px-2 bg-background min-h-0">
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="py-3 px-2 bg-background">
               {/* Principal Section */}
               <div className="mb-4">
                 <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">

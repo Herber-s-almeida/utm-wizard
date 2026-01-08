@@ -7,8 +7,10 @@ export function FinanceLayout() {
     <div className="finance-theme min-h-screen bg-background">
       <SidebarProvider defaultOpen={true}>
         <div className="min-h-screen flex w-full">
-          <FinanceSidebar />
-          <main className="flex-1 overflow-auto">
+          <aside className="hidden md:block h-screen sticky top-0">
+            <FinanceSidebar />
+          </aside>
+          <main className="flex-1 min-w-0 overflow-auto">
             <Outlet />
           </main>
         </div>
