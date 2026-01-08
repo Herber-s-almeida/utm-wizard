@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle, Link, LayoutGrid, List, Link2, RotateCcw } from 'lucide-react';
+import { LineDetailButton } from '@/components/media-plan/LineDetailButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -1826,10 +1827,11 @@ export function HierarchicalMediaTable({
                       width={getWidth('end_date')}
                     />
                     
-                    {/* Action buttons */}
-                    <div className="p-2 border-r flex items-center gap-1 shrink-0" style={{ width: getWidth('actions') }}>
-                      {lineAlerts && <LineAlertIndicator alerts={lineAlerts(line.id)} size="sm" />}
-                      <UTMPreview
+                      {/* Action buttons */}
+                      <div className="p-2 border-r flex items-center gap-1 shrink-0" style={{ width: getWidth('actions') }}>
+                        {lineAlerts && <LineAlertIndicator alerts={lineAlerts(line.id)} size="sm" />}
+                        <LineDetailButton mediaLineId={line.id} startDate={line.start_date} endDate={line.end_date} />
+                        <UTMPreview
                         destinationUrl={line.destination_url}
                         utmParams={{
                           utm_source: line.utm_source || undefined,
@@ -2114,6 +2116,7 @@ export function HierarchicalMediaTable({
                                     {/* Action buttons */}
                                     <div className="p-2 border-r flex items-center gap-1 shrink-0" style={{ width: getWidth('actions') }}>
                                       {lineAlerts && <LineAlertIndicator alerts={lineAlerts(line.id)} size="sm" />}
+                                      <LineDetailButton mediaLineId={line.id} startDate={line.start_date} endDate={line.end_date} />
                                       <UTMPreview
                                         destinationUrl={line.destination_url}
                                         utmParams={{

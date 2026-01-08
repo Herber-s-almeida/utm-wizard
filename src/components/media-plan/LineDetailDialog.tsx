@@ -32,7 +32,6 @@ import {
 import { useLineDetails, LineDetail } from '@/hooks/useLineDetails';
 import { useLineDetailTypes, LineDetailType } from '@/hooks/useLineDetailTypes';
 import { LineDetailTable } from './LineDetailTable';
-import { MediaLine } from '@/types/media';
 import { cn } from '@/lib/utils';
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -42,13 +41,27 @@ const ICON_MAP: Record<string, React.ElementType> = {
   'file-text': FileText,
 };
 
-interface LineDetailDialogProps {
+export interface LineDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  line: MediaLine | null;
+  mediaLineId: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  lineBudget?: number;
+  lineCode?: string;
+  platform?: string;
 }
 
-export function LineDetailDialog({ open, onOpenChange, line }: LineDetailDialogProps) {
+export function LineDetailDialog({ 
+  open, 
+  onOpenChange, 
+  mediaLineId,
+  startDate,
+  endDate,
+  lineBudget = 0,
+  lineCode,
+  platform,
+}: LineDetailDialogProps) {
   const { 
     details, 
     isLoading, 
@@ -59,7 +72,7 @@ export function LineDetailDialog({ open, onOpenChange, line }: LineDetailDialogP
     updateItem,
     deleteItem,
     upsertInsertions,
-  } = useLineDetails(line?.id);
+  } = useLineDetails(mediaLineId);
   
   const { types } = useLineDetailTypes();
   
@@ -76,7 +89,6 @@ export function LineDetailDialog({ open, onOpenChange, line }: LineDetailDialogP
     }
   }, [details, activeTab]);
 
-  const lineBudget = Number(line?.budget) || 0;
   const budgetDifference = lineBudget - totalNet;
   const hasBudgetMismatch = Math.abs(budgetDifference) > 0.01;
 
@@ -127,7 +139,7 @@ export function LineDetailDialog({ open, onOpenChange, line }: LineDetailDialogP
     return Icon;
   };
 
-  if (!line) return null;
+  if (!mediaLineId) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -138,11 +150,11 @@ export function LineDetailDialog({ open, onOpenChange, line }: LineDetailDialogP
               <DialogTitle className="flex items-center gap-2">
                 Detalhamento da Linha
                 <Badge variant="outline" className="font-mono">
-                  {line.line_code || 'Sem código'}
+                  {lineCode || 'Sem código'}
                 </Badge>
               </DialogTitle>
               <DialogDescription className="mt-1">
-                {line.platform} • Orçamento: {formatCurrency(lineBudget)}
+                {platform || 'Linha'} • Orçamento: {formatCurrency(lineBudget)}
               </DialogDescription>
             </div>
             
@@ -347,8 +359,8 @@ export function LineDetailDialog({ open, onOpenChange, line }: LineDetailDialogP
                       onUpdateItem={updateItem}
                       onDeleteItem={deleteItem}
                       onUpdateInsertions={upsertInsertions}
-                      planStartDate={line.start_date}
-                      planEndDate={line.end_date}
+                      planStartDate={startDate}
+                      planEndDate={endDate}
                     />
                   </ScrollArea>
                 </TabsContent>
