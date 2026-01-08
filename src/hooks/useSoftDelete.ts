@@ -26,7 +26,8 @@ type SoftDeleteTableName =
   | 'specification_dimensions'
   | 'statuses'
   | 'behavioral_segmentations'
-  | 'creative_templates';
+  | 'creative_templates'
+  | 'custom_kpis';
 
 // Tables that should check for usage before permanent delete
 const tablesWithUsageCheck: SoftDeleteTableName[] = [
