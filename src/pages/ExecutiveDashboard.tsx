@@ -5,9 +5,6 @@ import { ptBR } from 'date-fns/locale';
 import { 
   FileText, 
   DollarSign, 
-  TrendingUp, 
-  AlertTriangle, 
-  Layers,
   BarChart3,
   ExternalLink
 } from 'lucide-react';
@@ -106,8 +103,8 @@ export default function ExecutiveDashboard() {
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {[...Array(5)].map((_, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[...Array(2)].map((_, i) => (
               <Card key={i} className="animate-pulse">
                 <CardHeader className="pb-2">
                   <div className="h-4 bg-muted rounded w-24" />
@@ -121,7 +118,7 @@ export default function ExecutiveDashboard() {
         ) : data ? (
           <>
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -131,9 +128,6 @@ export default function ExecutiveDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{data.totalActivePlans}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {data.totalMediaLines} linhas de mídia
-                  </p>
                 </CardContent>
               </Card>
 
@@ -148,54 +142,6 @@ export default function ExecutiveDashboard() {
                   <div className="text-2xl font-bold">{formatCompactCurrency(data.totalPlannedBudget)}</div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Média: {formatCompactCurrency(data.avgBudgetPerPlan)}/plano
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Investimento Alocado
-                  </CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{formatCompactCurrency(data.totalAllocatedBudget)}</div>
-                  <Progress 
-                    value={data.totalPlannedBudget > 0 ? (data.totalAllocatedBudget / data.totalPlannedBudget) * 100 : 0} 
-                    className="h-1.5 mt-2"
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Gap de Alocação
-                  </CardTitle>
-                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className={`text-2xl font-bold ${data.allocationGap > 0 ? 'text-warning' : 'text-success'}`}>
-                    {formatCompactCurrency(Math.abs(data.allocationGap))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {data.allocationGap > 0 ? 'A alocar' : 'Excedente'}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Linhas de Mídia
-                  </CardTitle>
-                  <Layers className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{data.totalMediaLines}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    ~{data.totalActivePlans > 0 ? Math.round(data.totalMediaLines / data.totalActivePlans) : 0} por plano
                   </p>
                 </CardContent>
               </Card>
@@ -380,9 +326,6 @@ export default function ExecutiveDashboard() {
                         <TableHead>Cliente</TableHead>
                         <TableHead>Período</TableHead>
                         <TableHead className="text-right">Orçamento</TableHead>
-                        <TableHead className="text-right">Alocado</TableHead>
-                        <TableHead className="text-center">Alocação</TableHead>
-                        <TableHead className="text-center">Linhas</TableHead>
                         <TableHead className="w-10"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -401,18 +344,6 @@ export default function ExecutiveDashboard() {
                             ) : '-'}
                           </TableCell>
                           <TableCell className="text-right">{formatCurrency(plan.totalBudget)}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(plan.allocatedBudget)}</TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center gap-2 justify-center">
-                              <Progress value={plan.allocationPercentage} className="w-16 h-2" />
-                              <span className="text-xs text-muted-foreground w-10">
-                                {plan.allocationPercentage.toFixed(0)}%
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="secondary">{plan.lineCount}</Badge>
-                          </TableCell>
                           <TableCell>
                             <Button variant="ghost" size="icon" asChild>
                               <Link to={`/media-plans/${plan.id}`}>
