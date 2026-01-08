@@ -138,8 +138,19 @@ export default function MediaPlanDetail() {
   // Element visibility
   const { elements, toggleVisibility, hideElement, isVisible } = usePlanElementsVisibility(planId);
 
+  // Reset state and fetch data when identifier changes (navigating between plans)
   useEffect(() => {
     if (user?.id && identifier) {
+      // Reset state for new plan
+      setLoading(true);
+      setPlan(null);
+      setPlanId(null);
+      setLines([]);
+      setFilteredLines([]);
+      setCreatives({});
+      setBudgetDistributions([]);
+      setMonthlyBudgets({});
+      
       fetchData();
     }
   }, [user?.id, identifier]);
