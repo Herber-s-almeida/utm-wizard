@@ -15,7 +15,8 @@ import {
   ChevronDown, 
   ChevronRight,
   CheckCircle2,
-  Filter
+  Filter,
+  X
 } from 'lucide-react';
 import { PlanAlert, AlertLevel } from '@/hooks/usePlanAlerts';
 import { cn } from '@/lib/utils';
@@ -27,6 +28,8 @@ interface AlertsSummaryCardProps {
   infoCount: number;
   onFilterByAlerts?: (enabled: boolean) => void;
   filterEnabled?: boolean;
+  onClose?: () => void;
+  defaultExpanded?: boolean;
 }
 
 export function AlertsSummaryCard({
@@ -36,8 +39,10 @@ export function AlertsSummaryCard({
   infoCount,
   onFilterByAlerts,
   filterEnabled = false,
+  onClose,
+  defaultExpanded = false,
 }: AlertsSummaryCardProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultExpanded);
   const [selectedLevel, setSelectedLevel] = useState<AlertLevel | 'all'>('all');
 
   const totalAlerts = alerts.length;
@@ -134,6 +139,16 @@ export function AlertsSummaryCard({
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {onClose && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6" 
+                    onClick={(e) => { e.stopPropagation(); onClose(); }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
                 {isOpen ? (
                   <ChevronDown className="w-4 h-4 text-muted-foreground" />
                 ) : (

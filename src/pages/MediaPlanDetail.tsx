@@ -17,7 +17,8 @@ import {
   BarChart3,
   ChevronDown,
   HelpCircle,
-  X
+  X,
+  Bell
 } from 'lucide-react';
 import { LoadingPage } from '@/components/ui/loading-dots';
 import {
@@ -121,6 +122,7 @@ export default function MediaPlanDetail() {
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [filteredLines, setFilteredLines] = useState<MediaLine[]>([]);
   const [filterByAlerts, setFilterByAlerts] = useState(false);
+  const [alertsVisible, setAlertsVisible] = useState(false);
 
   // Library data for display
   const subdivisions = useSubdivisions();
@@ -717,6 +719,36 @@ export default function MediaPlanDetail() {
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
+            {/* Botão de Alertas */}
+            {planAlerts.alerts.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant={alertsVisible ? "default" : "outline"}
+                      size="icon"
+                      onClick={() => setAlertsVisible(!alertsVisible)}
+                      className="relative"
+                    >
+                      <Bell className="w-4 h-4" />
+                      <span className={`absolute -top-1 -right-1 text-xs rounded-full w-5 h-5 flex items-center justify-center ${
+                        planAlerts.errorAlerts.length > 0 
+                          ? "bg-destructive text-destructive-foreground" 
+                          : planAlerts.warningAlerts.length > 0 
+                            ? "bg-warning text-warning-foreground"
+                            : "bg-primary text-primary-foreground"
+                      }`}>
+                        {planAlerts.alerts.length}
+                      </span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{alertsVisible ? 'Ocultar alertas' : 'Ver alertas'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
             {/* Botão Nova Linha - Destaque */}
             <TooltipProvider>
               <Tooltip>
@@ -797,15 +829,19 @@ export default function MediaPlanDetail() {
           </div>
         </div>
 
-        {/* Alerts Summary */}
-        <AlertsSummaryCard
-          alerts={planAlerts.alerts}
-          errorCount={planAlerts.errorAlerts.length}
-          warningCount={planAlerts.warningAlerts.length}
-          infoCount={planAlerts.infoAlerts.length}
-          onFilterByAlerts={setFilterByAlerts}
-          filterEnabled={filterByAlerts}
-        />
+        {/* Alerts Summary - Only visible when toggled */}
+        {alertsVisible && planAlerts.alerts.length > 0 && (
+          <AlertsSummaryCard
+            alerts={planAlerts.alerts}
+            errorCount={planAlerts.errorAlerts.length}
+            warningCount={planAlerts.warningAlerts.length}
+            infoCount={planAlerts.infoAlerts.length}
+            onFilterByAlerts={setFilterByAlerts}
+            filterEnabled={filterByAlerts}
+            onClose={() => setAlertsVisible(false)}
+            defaultExpanded={true}
+          />
+        )}
 
         {/* Plan Summary Card */}
         {isVisible('plan-summary') && (
