@@ -52,7 +52,21 @@ import PaymentsPage from "./pages/finance/PaymentsPage";
 import RevenuePage from "./pages/finance/RevenuePage";
 import AuditPage from "./pages/finance/AuditPage";
 import SettingsPage from "./pages/finance/SettingsPage";
-import LibraryPage from "./pages/finance/LibraryPage";
+
+// Finance Library Pages
+import AccountManagersPage from "./pages/finance/library/AccountManagersPage";
+import ProductsPage from "./pages/finance/library/ProductsPage";
+import CampaignsPage from "./pages/finance/library/CampaignsPage";
+import CostCentersPage from "./pages/finance/library/CostCentersPage";
+import TeamsPage from "./pages/finance/library/TeamsPage";
+import AccountsPage from "./pages/finance/library/AccountsPage";
+import PackagesPage from "./pages/finance/library/PackagesPage";
+import MacroClassificationsPage from "./pages/finance/library/MacroClassificationsPage";
+import ExpenseClassificationsPage from "./pages/finance/library/ExpenseClassificationsPage";
+import VendorsPage from "./pages/finance/library/VendorsPage";
+import DocumentTypesPage from "./pages/finance/library/DocumentTypesPage";
+import FinanceStatusesPage from "./pages/finance/library/StatusesPage";
+import RequestTypesPage from "./pages/finance/library/RequestTypesPage";
 
 function AppWithEnvironment() {
   const { user } = useAuth();
@@ -103,7 +117,22 @@ function AppWithEnvironment() {
             <Route path="documents/:id" element={<DocumentDetailPage />} />
             <Route path="payments" element={<PaymentsPage />} />
             <Route path="revenue" element={<RevenuePage />} />
-            <Route path="library" element={<LibraryPage />} />
+            
+            {/* Finance Library Routes */}
+            <Route path="library/account-managers" element={<AccountManagersPage />} />
+            <Route path="library/products" element={<ProductsPage />} />
+            <Route path="library/campaigns" element={<CampaignsPage />} />
+            <Route path="library/cost-centers" element={<CostCentersPage />} />
+            <Route path="library/teams" element={<TeamsPage />} />
+            <Route path="library/accounts" element={<AccountsPage />} />
+            <Route path="library/packages" element={<PackagesPage />} />
+            <Route path="library/macro-classifications" element={<MacroClassificationsPage />} />
+            <Route path="library/expense-classifications" element={<ExpenseClassificationsPage />} />
+            <Route path="library/vendors" element={<VendorsPage />} />
+            <Route path="library/document-types" element={<DocumentTypesPage />} />
+            <Route path="library/statuses" element={<FinanceStatusesPage />} />
+            <Route path="library/request-types" element={<RequestTypesPage />} />
+            
             <Route path="audit" element={<AuditPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
