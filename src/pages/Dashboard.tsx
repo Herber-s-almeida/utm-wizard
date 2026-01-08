@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,17 +14,22 @@ import {
   DollarSign, 
   BarChart3,
   ArrowRight,
-  Loader2
+  Loader2,
+  Copy
 } from 'lucide-react';
 import { MediaPlan } from '@/types/media';
 import { StatusSelector } from '@/components/media-plan/StatusSelector';
 import { toast } from 'sonner';
+import { DuplicatePlanDialog } from '@/components/media-plan/DuplicatePlanDialog';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [plans, setPlans] = useState<MediaPlan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [planToDuplicate, setPlanToDuplicate] = useState<MediaPlan | null>(null);
   const [stats, setStats] = useState({
     totalPlans: 0,
     activePlans: 0,
@@ -221,31 +226,43 @@ export default function Dashboard() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <Link to={`/media-plans/${plan.id}`}>
-                      <div className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-primary" />
-                          </div>
-                          <div>
-                            <h4 className="font-medium">{plan.name}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {plan.client || 'Sem cliente'} • {plan.campaign || 'Sem campanha'}
-                            </p>
-                          </div>
+                    <div className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                      <Link to={`/media-plans/${plan.id}`} className="flex items-center gap-4 flex-1">
+                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-primary" />
                         </div>
-                        <div className="flex items-center gap-4">
-                          <StatusSelector
-                            status={plan.status}
-                            onStatusChange={(newStatus) => handleStatusChange(plan.id, newStatus)}
-                            size="sm"
-                          />
-                          <span className="text-sm font-medium">
-                            {formatCurrency(Number(plan.total_budget))}
-                          </span>
+                        <div>
+                          <h4 className="font-medium">{plan.name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {plan.client || 'Sem cliente'} • {plan.campaign || 'Sem campanha'}
+                          </p>
                         </div>
+                      </Link>
+                      <div className="flex items-center gap-3">
+                        <StatusSelector
+                          status={plan.status}
+                          onStatusChange={(newStatus) => handleStatusChange(plan.id, newStatus)}
+                          size="sm"
+                        />
+                        <span className="text-sm font-medium">
+                          {formatCurrency(Number(plan.total_budget))}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setPlanToDuplicate(plan);
+                            setDuplicateDialogOpen(true);
+                          }}
+                          title="Duplicar plano"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
                       </div>
-                    </Link>
+                    </div>
                   </motion.div>
                 ))}
               </div>
@@ -253,6 +270,18 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Duplicate Dialog */}
+      <DuplicatePlanDialog
+        open={duplicateDialogOpen}
+        onOpenChange={setDuplicateDialogOpen}
+        plan={planToDuplicate}
+        onSuccess={(newPlanId) => {
+          toast.success('Plano duplicado com sucesso!');
+          fetchData();
+          navigate(`/media-plans/${newPlanId}`);
+        }}
+      />
     </DashboardLayout>
   );
 }
