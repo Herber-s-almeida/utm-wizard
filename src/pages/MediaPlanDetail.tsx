@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { 
   ArrowLeft, 
   Plus, 
-  Loader2,
   Settings2,
   Download,
   Calendar,
@@ -20,6 +19,7 @@ import {
   HelpCircle,
   X
 } from 'lucide-react';
+import { LoadingPage } from '@/components/ui/loading-dots';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -670,9 +670,7 @@ export default function MediaPlanDetail() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+        <LoadingPage message="Carregando plano..." />
       </DashboardLayout>
     );
   }

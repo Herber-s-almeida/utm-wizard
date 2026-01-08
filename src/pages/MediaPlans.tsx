@@ -13,7 +13,6 @@ import {
   Search, 
   FileText,
   Calendar,
-  Loader2,
   Trash2,
   MoreVertical,
   Settings2,
@@ -21,6 +20,7 @@ import {
   Users,
   Copy
 } from 'lucide-react';
+import { LoadingPage } from '@/components/ui/loading-dots';
 import { MediaPlan } from '@/types/media';
 import { StatusSelector } from '@/components/media-plan/StatusSelector';
 import { RoleBadgeCompact } from '@/components/media-plan/RoleBadge';
@@ -147,9 +147,7 @@ export default function MediaPlans() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+        <LoadingPage message="Carregando planos..." />
       </DashboardLayout>
     );
   }
