@@ -4,6 +4,7 @@ export interface MediaPlan {
   name: string;
   slug: string | null;
   client: string | null;
+  client_id: string | null;
   campaign: string | null;
   start_date: string | null;
   end_date: string | null;
