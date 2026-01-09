@@ -35,6 +35,7 @@ import StatusesPage from "./pages/config/StatusesPage";
 import KpisPage from "./pages/config/KpisPage";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminMenuVisibility from "./pages/admin/AdminMenuVisibility";
+import EnvironmentMembersPage from "./pages/admin/EnvironmentMembersPage";
 import AccountPage from "./pages/AccountPage";
 import TrashPage from "./pages/TrashPage";
 import DetailTypesPage from "./pages/config/DetailTypesPage";
@@ -104,6 +105,7 @@ function AppWithEnvironment() {
           <Route path="/trash" element={<ProtectedRoute><TrashPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="/admin/menu-visibility" element={<AdminRoute><AdminMenuVisibility /></AdminRoute>} />
+          <Route path="/settings/team" element={<ProtectedRoute><EnvironmentMembersPage /></ProtectedRoute>} />
           
           {/* Finance Manager Routes */}
           <Route path="/finance" element={<ProtectedRoute><FinanceLayout /></ProtectedRoute>}>
