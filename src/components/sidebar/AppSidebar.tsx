@@ -1655,6 +1655,16 @@ export function AppSidebar() {
                 </Link>
               </div>
             )}
+            <Link to="/settings/team">
+              <Button
+                variant={location.pathname === '/settings/team' ? 'secondary' : 'ghost'}
+                size="sm"
+                className="w-full justify-start gap-2 h-8 text-xs mb-1"
+              >
+                <Users className="h-3.5 w-3.5" />
+                Membros do Ambiente
+              </Button>
+            </Link>
             <Link to="/account">
               <Button
                 variant="ghost"

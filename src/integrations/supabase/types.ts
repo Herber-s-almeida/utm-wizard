@@ -340,6 +340,102 @@ export type Database = {
         }
         Relationships: []
       }
+      environment_members: {
+        Row: {
+          accepted_at: string | null
+          created_at: string | null
+          environment_owner_id: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          member_user_id: string
+          perm_executive_dashboard:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_finance:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_library:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_plans:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_resources:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_reports:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_taxonomy:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          updated_at: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string | null
+          environment_owner_id: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          member_user_id: string
+          perm_executive_dashboard?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_finance?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_library?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_plans?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_resources?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_reports?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_taxonomy?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          updated_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string | null
+          environment_owner_id?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          member_user_id?: string
+          perm_executive_dashboard?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_finance?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_library?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_plans?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_resources?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_reports?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_taxonomy?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       file_extensions: {
         Row: {
           created_at: string
@@ -2874,6 +2970,10 @@ export type Database = {
         }
         Returns: string
       }
+      can_invite_environment_member: {
+        Args: { _environment_owner_id: string }
+        Returns: boolean
+      }
       can_transition_status: {
         Args: {
           _from_status: string
@@ -2884,6 +2984,10 @@ export type Database = {
         Returns: boolean
       }
       cleanup_old_auto_backups: { Args: never; Returns: number }
+      count_environment_members: {
+        Args: { _environment_owner_id: string }
+        Returns: number
+      }
       create_auto_backup_snapshot: {
         Args: {
           _change_description?: string
@@ -2902,6 +3006,14 @@ export type Database = {
         Args: { p_current_id?: string; p_name: string; p_user_id: string }
         Returns: string
       }
+      get_environment_permission: {
+        Args: {
+          _environment_owner_id: string
+          _section: string
+          _user_id: string
+        }
+        Returns: Database["public"]["Enums"]["environment_permission_level"]
+      }
       get_plan_role: {
         Args: { _plan_id: string; _user_id: string }
         Returns: string
@@ -2915,6 +3027,15 @@ export type Database = {
           to_status_id: string
         }[]
       }
+      has_environment_permission: {
+        Args: {
+          _environment_owner_id: string
+          _min_level: Database["public"]["Enums"]["environment_permission_level"]
+          _section: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_finance_role: {
         Args: { check_user_id: string; required_roles?: string[] }
         Returns: boolean
@@ -2927,10 +3048,27 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_environment_admin: {
+        Args: { _environment_owner_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_environment_member: {
+        Args: { _environment_owner_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_system_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "owner" | "editor" | "viewer" | "approver"
+      environment_permission_level: "none" | "view" | "edit" | "admin"
+      environment_section:
+        | "executive_dashboard"
+        | "reports"
+        | "finance"
+        | "media_plans"
+        | "media_resources"
+        | "taxonomy"
+        | "library"
       system_role: "system_admin" | "user"
     }
     CompositeTypes: {
@@ -3060,6 +3198,16 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "editor", "viewer", "approver"],
+      environment_permission_level: ["none", "view", "edit", "admin"],
+      environment_section: [
+        "executive_dashboard",
+        "reports",
+        "finance",
+        "media_plans",
+        "media_resources",
+        "taxonomy",
+        "library",
+      ],
       system_role: ["system_admin", "user"],
     },
   },
