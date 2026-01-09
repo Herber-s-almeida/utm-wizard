@@ -35,6 +35,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSystemAdmin } from '@/hooks/useSystemAdmin';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { useCurrentProfile } from '@/hooks/useCurrentProfile';
+import { useEnvironmentPermissions } from '@/hooks/useEnvironmentPermissions';
 import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates, useBehavioralSegmentations } from '@/hooks/useConfigData';
 import { useClients } from '@/hooks/useClients';
 import { useFormatsHierarchy } from '@/hooks/useFormatsHierarchy';
@@ -67,6 +68,7 @@ export function AppSidebar() {
   const { isAdmin } = useSystemAdmin();
   const { isViewingOtherEnvironment, viewingUser } = useEnvironment();
   const { data: currentProfile } = useCurrentProfile();
+  const { canView, isEnvironmentOwner } = useEnvironmentPermissions();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -247,22 +249,24 @@ export function AppSidebar() {
             <TooltipContent side="right">Dashboard</TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/executive-dashboard">
-                <Button 
-                  variant={isActive('/executive-dashboard') ? 'secondary' : 'ghost'} 
-                  size="icon"
-                  className="h-9 w-9"
-                >
-                  <TrendingUp className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Dashboard Gerencial</TooltipContent>
-          </Tooltip>
+          {canView('executive_dashboard') && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link to="/executive-dashboard">
+                  <Button 
+                    variant={isActive('/executive-dashboard') ? 'secondary' : 'ghost'} 
+                    size="icon"
+                    className="h-9 w-9"
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">Dashboard Gerencial</TooltipContent>
+            </Tooltip>
+          )}
 
-          {!isMenuHidden('reports') && (
+          {canView('reports') && !isMenuHidden('reports') && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link to="/reports">
@@ -279,56 +283,62 @@ export function AppSidebar() {
             </Tooltip>
           )}
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/finance">
-                <Button 
-                  variant={location.pathname.startsWith('/finance') ? 'secondary' : 'ghost'} 
-                  size="icon"
-                  className="h-9 w-9 text-emerald-600"
-                >
-                  <Wallet className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Finance Manager</TooltipContent>
-          </Tooltip>
+          {canView('finance') && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link to="/finance">
+                  <Button 
+                    variant={location.pathname.startsWith('/finance') ? 'secondary' : 'ghost'} 
+                    size="icon"
+                    className="h-9 w-9 text-emerald-600"
+                  >
+                    <Wallet className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">Finance Manager</TooltipContent>
+            </Tooltip>
+          )}
 
           <div className="w-8 h-px bg-border my-2" />
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/media-plans">
-                <Button 
-                  variant={isActive('/media-plans') ? 'secondary' : 'ghost'} 
-                  size="icon"
-                  className="h-9 w-9"
-                >
-                  <FileText className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Planos de mídia</TooltipContent>
-          </Tooltip>
+          {canView('media_plans') && (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/media-plans">
+                    <Button 
+                      variant={isActive('/media-plans') ? 'secondary' : 'ghost'} 
+                      size="icon"
+                      className="h-9 w-9"
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Planos de mídia</TooltipContent>
+              </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/media-plans/new">
-                <Button 
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 text-primary"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Novo plano</TooltipContent>
-          </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/media-plans/new">
+                    <Button 
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-primary"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Novo plano</TooltipContent>
+              </Tooltip>
+            </>
+          )}
 
           <div className="w-8 h-px bg-border my-2" />
 
-          {!isMenuHidden('media_resources') && (
+          {canView('media_resources') && !isMenuHidden('media_resources') && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-9 w-9">
@@ -339,7 +349,7 @@ export function AppSidebar() {
             </Tooltip>
           )}
 
-          {!isMenuHidden('taxonomy') && (
+          {canView('taxonomy') && !isMenuHidden('taxonomy') && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-9 w-9">
@@ -350,18 +360,20 @@ export function AppSidebar() {
             </Tooltip>
           )}
 
-          <div className="w-8 h-px bg-border my-2" />
+          {canView('library') && (
+            <>
+              <div className="w-8 h-px bg-border my-2" />
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/config/subdivisions">
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Layers className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Subdivisões de Plano</TooltipContent>
-          </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/config/subdivisions">
+                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                      <Layers className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Subdivisões de Plano</TooltipContent>
+              </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -476,10 +488,13 @@ export function AppSidebar() {
             </TooltipTrigger>
             <TooltipContent side="right">Lixeira</TooltipContent>
           </Tooltip>
+            </>
+          )}
         </div>
       ) : (
       <ScrollArea className="flex-1 py-3 px-2 overflow-x-hidden bg-background">
         {/* DASHBOARD GERENCIAL */}
+        {canView('executive_dashboard') && (
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
             Visão Gerencial
@@ -498,9 +513,10 @@ export function AppSidebar() {
             </Link>
           </div>
         </div>
+        )}
 
         {/* RELATÓRIOS */}
-        {!isMenuHidden('reports') && (
+        {canView('reports') && !isMenuHidden('reports') && (
           <div className="mb-4">
             <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               Relatórios
@@ -532,6 +548,7 @@ export function AppSidebar() {
         )}
 
         {/* FINANCE MANAGER */}
+        {canView('finance') && (
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
             Financeiro
@@ -550,8 +567,10 @@ export function AppSidebar() {
             </Link>
           </div>
         </div>
+        )}
 
         {/* PLANOS DE MÍDIA */}
+        {canView('media_plans') && (
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
             Gerenciar Planos de Mídia
@@ -684,9 +703,10 @@ export function AppSidebar() {
             </CollapsibleContent>
           </Collapsible>
         </div>
+        )}
 
         {/* RECURSOS DE MÍDIA */}
-        {!isMenuHidden('media_resources') && (
+        {canView('media_resources') && !isMenuHidden('media_resources') && (
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
             <Palette className="h-3 w-3" />
@@ -796,7 +816,7 @@ export function AppSidebar() {
         )}
 
         {/* TAXONOMIA */}
-        {!isMenuHidden('taxonomy') && (
+        {canView('taxonomy') && !isMenuHidden('taxonomy') && (
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
             <Link2 className="h-3 w-3" />
@@ -904,6 +924,7 @@ export function AppSidebar() {
         </div>
         )}
 
+        {canView('library') && (
         <div className="mb-4">
           <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
             <Library className="h-3 w-3" />
@@ -1554,6 +1575,7 @@ export function AppSidebar() {
             </Button>
           </Link>
         </div>
+        )}
 
         {/* LIXEIRA */}
         <div className="mb-4">

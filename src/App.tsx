@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { EnvironmentProvider } from "@/contexts/EnvironmentContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { SectionProtectedRoute } from "@/components/SectionProtectedRoute";
 import { AdminRoute } from "@/components/admin/AdminRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -79,16 +80,16 @@ function AppWithEnvironment() {
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/executive-dashboard" element={<ProtectedRoute><ExecutiveDashboard /></ProtectedRoute>} />
-          <Route path="/media-plans" element={<ProtectedRoute><MediaPlans /></ProtectedRoute>} />
-          <Route path="/media-plans/new" element={<ProtectedRoute><NewMediaPlanBudget /></ProtectedRoute>} />
-          <Route path="/media-plans/:id" element={<ProtectedRoute><MediaPlanDetail /></ProtectedRoute>} />
-          <Route path="/media-plans/:id/edit" element={<ProtectedRoute><EditMediaPlan /></ProtectedRoute>} />
-          <Route path="/media-plans/:id/resources" element={<ProtectedRoute><MediaResourcesPage /></ProtectedRoute>} />
-          <Route path="/media-plans/:id/taxonomy" element={<ProtectedRoute><TaxonomyPage /></ProtectedRoute>} />
-          <Route path="/media-plans/:id/reports" element={<ProtectedRoute><MediaPlanReports /></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-          <Route path="/reports/:id" element={<ProtectedRoute><MediaPlanReports /></ProtectedRoute>} />
+          <Route path="/executive-dashboard" element={<ProtectedRoute><SectionProtectedRoute section="executive_dashboard"><ExecutiveDashboard /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/media-plans" element={<ProtectedRoute><SectionProtectedRoute section="media_plans"><MediaPlans /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/media-plans/new" element={<ProtectedRoute><SectionProtectedRoute section="media_plans" minLevel="edit"><NewMediaPlanBudget /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/media-plans/:id" element={<ProtectedRoute><SectionProtectedRoute section="media_plans"><MediaPlanDetail /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/media-plans/:id/edit" element={<ProtectedRoute><SectionProtectedRoute section="media_plans" minLevel="edit"><EditMediaPlan /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/media-plans/:id/resources" element={<ProtectedRoute><SectionProtectedRoute section="media_resources"><MediaResourcesPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/media-plans/:id/taxonomy" element={<ProtectedRoute><SectionProtectedRoute section="taxonomy"><TaxonomyPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/media-plans/:id/reports" element={<ProtectedRoute><SectionProtectedRoute section="reports"><MediaPlanReports /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute><SectionProtectedRoute section="reports"><ReportsPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/reports/:id" element={<ProtectedRoute><SectionProtectedRoute section="reports"><MediaPlanReports /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/config/subdivisions" element={<ProtectedRoute><SubdivisionsPage /></ProtectedRoute>} />
           <Route path="/config/moments" element={<ProtectedRoute><MomentsPage /></ProtectedRoute>} />
           <Route path="/config/funnel-stages" element={<ProtectedRoute><FunnelStagesPage /></ProtectedRoute>} />
@@ -108,7 +109,7 @@ function AppWithEnvironment() {
           <Route path="/settings/team" element={<ProtectedRoute><EnvironmentMembersPage /></ProtectedRoute>} />
           
           {/* Finance Manager Routes */}
-          <Route path="/finance" element={<ProtectedRoute><FinanceLayout /></ProtectedRoute>}>
+          <Route path="/finance" element={<ProtectedRoute><SectionProtectedRoute section="finance"><FinanceLayout /></SectionProtectedRoute></ProtectedRoute>}>
             <Route index element={<FinanceDashboard />} />
             <Route path="forecast" element={<ForecastPage />} />
             <Route path="forecast/:planId" element={<ForecastPage />} />
