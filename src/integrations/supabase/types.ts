@@ -2970,6 +2970,10 @@ export type Database = {
         }
         Returns: string
       }
+      can_access_user_data: {
+        Args: { _owner_user_id: string }
+        Returns: boolean
+      }
       can_invite_environment_member: {
         Args: { _environment_owner_id: string }
         Returns: boolean
