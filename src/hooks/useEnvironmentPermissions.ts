@@ -1,18 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useEnvironment } from '@/contexts/EnvironmentContext';
+import { useEnvironment, PermissionLevel, EnvironmentSection } from '@/contexts/EnvironmentContext';
 
-export type PermissionLevel = 'none' | 'view' | 'edit' | 'admin';
-
-export type EnvironmentSection = 
-  | 'executive_dashboard' 
-  | 'reports' 
-  | 'finance' 
-  | 'media_plans' 
-  | 'media_resources' 
-  | 'taxonomy' 
-  | 'library';
+// Re-export types from context for backwards compatibility
+export type { PermissionLevel, EnvironmentSection } from '@/contexts/EnvironmentContext';
 
 export interface EnvironmentMember {
   id: string;
@@ -63,32 +55,20 @@ const SECTION_TO_COLUMN: Record<EnvironmentSection, string> = {
 
 export function useEnvironmentPermissions() {
   const { user } = useAuth();
-  const { effectiveUserId, viewingUser, isViewingOtherEnvironment } = useEnvironment();
   const queryClient = useQueryClient();
   
+  // Get permission-related values directly from context (no duplicate queries)
+  const {
+    getPermission,
+    canView,
+    canEdit,
+    isEnvironmentOwner,
+    isEnvironmentAdmin,
+    isSystemAdmin,
+    isLoadingPermissions,
+  } = useEnvironment();
+  
   const currentUserId = user?.id;
-  const environmentOwnerId = effectiveUserId;
-
-  // Fetch current user's membership in the viewed environment
-  const { data: myMembership } = useQuery({
-    queryKey: ['environment-membership', environmentOwnerId, currentUserId],
-    queryFn: async () => {
-      if (!environmentOwnerId || !currentUserId || environmentOwnerId === currentUserId) {
-        return null;
-      }
-      
-      const { data, error } = await supabase
-        .from('environment_members')
-        .select('*')
-        .eq('environment_owner_id', environmentOwnerId)
-        .eq('member_user_id', currentUserId)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data as EnvironmentMember | null;
-    },
-    enabled: !!environmentOwnerId && !!currentUserId && isViewingOtherEnvironment,
-  });
 
   // Fetch all members of the current user's environment (when they're the owner)
   const { data: environmentMembers = [], isLoading: isLoadingMembers, refetch: refetchMembers } = useQuery({
@@ -107,65 +87,6 @@ export function useEnvironmentPermissions() {
     },
     enabled: !!currentUserId,
   });
-
-  // Check if user is system admin
-  const { data: isSystemAdmin = false } = useQuery({
-    queryKey: ['is-system-admin', currentUserId],
-    queryFn: async () => {
-      if (!currentUserId) return false;
-      
-      const { data, error } = await supabase.rpc('is_system_admin', {
-        _user_id: currentUserId,
-      });
-      
-      if (error) return false;
-      return data as boolean;
-    },
-    enabled: !!currentUserId,
-  });
-
-  // Get permission for a specific section
-  const getPermission = (section: EnvironmentSection): PermissionLevel => {
-    // System admin has full access
-    if (isSystemAdmin) return 'admin';
-    
-    // If viewing own environment, has full access
-    if (!isViewingOtherEnvironment || environmentOwnerId === currentUserId) {
-      return 'admin';
-    }
-    
-    // Get permission from membership
-    if (myMembership) {
-      const columnName = SECTION_TO_COLUMN[section] as keyof EnvironmentMember;
-      return (myMembership[columnName] as PermissionLevel) || 'none';
-    }
-    
-    return 'none';
-  };
-
-  const canView = (section: EnvironmentSection): boolean => {
-    const level = getPermission(section);
-    return level !== 'none';
-  };
-
-  const canEdit = (section: EnvironmentSection): boolean => {
-    const level = getPermission(section);
-    return level === 'edit' || level === 'admin';
-  };
-
-  const isEnvironmentOwner = !isViewingOtherEnvironment || environmentOwnerId === currentUserId;
-  
-  const isEnvironmentAdmin = isSystemAdmin || isEnvironmentOwner || (
-    myMembership && (
-      myMembership.perm_executive_dashboard === 'admin' ||
-      myMembership.perm_reports === 'admin' ||
-      myMembership.perm_finance === 'admin' ||
-      myMembership.perm_media_plans === 'admin' ||
-      myMembership.perm_media_resources === 'admin' ||
-      myMembership.perm_taxonomy === 'admin' ||
-      myMembership.perm_library === 'admin'
-    )
-  );
 
   const memberCount = environmentMembers.length;
   const canInviteMore = memberCount < 30;
@@ -238,13 +159,14 @@ export function useEnvironmentPermissions() {
   });
 
   return {
-    // Permission checks
+    // Permission checks (from context)
     getPermission,
     canView,
     canEdit,
     isEnvironmentOwner,
     isEnvironmentAdmin,
     isSystemAdmin,
+    isLoadingPermissions,
     
     // Member management
     environmentMembers,

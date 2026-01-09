@@ -1,8 +1,11 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useEnvironmentPermissions, EnvironmentSection, PermissionLevel } from '@/hooks/useEnvironmentPermissions';
+import { useEnvironment, EnvironmentSection, PermissionLevel } from '@/contexts/EnvironmentContext';
 import { Loader2, ShieldX } from 'lucide-react';
+
+// Re-export types for convenience
+export type { EnvironmentSection, PermissionLevel } from '@/contexts/EnvironmentContext';
 
 interface SectionProtectedRouteProps {
   children: ReactNode;
@@ -25,10 +28,10 @@ export function SectionProtectedRoute({
   fallbackPath = '/dashboard'
 }: SectionProtectedRouteProps) {
   const { user, loading: authLoading } = useAuth();
-  const { getPermission, isEnvironmentOwner, isSystemAdmin } = useEnvironmentPermissions();
+  const { getPermission, isEnvironmentOwner, isSystemAdmin, isLoadingPermissions } = useEnvironment();
 
-  // Still loading auth
-  if (authLoading) {
+  // Still loading auth or permissions
+  if (authLoading || isLoadingPermissions) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
