@@ -857,9 +857,11 @@ export function AppSidebar() {
                     />
                   ))}
                   {(draftPlans.data?.length || 0) > MAX_ITEMS && (
-                    <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
-                      Ver todos ({draftPlans.data?.length})
-                    </Button>
+                    <Link to="/taxonomy?status=draft">
+                      <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
+                        Ver todos ({draftPlans.data?.length})
+                      </Button>
+                    </Link>
                   )}
                 </CollapsibleContent>
               </Collapsible>
@@ -885,9 +887,11 @@ export function AppSidebar() {
                     />
                   ))}
                   {(activePlans.data?.length || 0) > MAX_ITEMS && (
-                    <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
-                      Ver todos ({activePlans.data?.length})
-                    </Button>
+                    <Link to="/taxonomy?status=active">
+                      <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
+                        Ver todos ({activePlans.data?.length})
+                      </Button>
+                    </Link>
                   )}
                 </CollapsibleContent>
               </Collapsible>
@@ -913,9 +917,11 @@ export function AppSidebar() {
                     />
                   ))}
                   {(finishedPlans.data?.length || 0) > MAX_ITEMS && (
-                    <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
-                      Ver todos ({finishedPlans.data?.length})
-                    </Button>
+                    <Link to="/taxonomy?status=finished">
+                      <Button variant="link" size="sm" className="w-full justify-start h-6 px-0 text-[10px] text-muted-foreground hover:text-foreground">
+                        Ver todos ({finishedPlans.data?.length})
+                      </Button>
+                    </Link>
                   )}
                 </CollapsibleContent>
               </Collapsible>
