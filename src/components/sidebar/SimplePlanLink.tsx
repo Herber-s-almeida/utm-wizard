@@ -1,7 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { cn, truncateText } from '@/lib/utils';
 
 type SectionContext = 'plans' | 'resources' | 'taxonomy' | 'reports';
 
@@ -54,18 +59,25 @@ export function SimplePlanLink({
   })();
 
   return (
-    <Link to={planUrl}>
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "w-full justify-start h-7 text-xs font-normal truncate",
-          isActive && "bg-sidebar-accent font-semibold text-primary"
-        )}
-      >
-        <Icon className="h-3 w-3 mr-2 shrink-0" />
-        <span className="truncate">{name}</span>
-      </Button>
-    </Link>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link to={planUrl}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "w-full justify-start h-7 text-xs font-normal truncate",
+              isActive && "bg-sidebar-accent font-semibold text-primary"
+            )}
+          >
+            <Icon className="h-3 w-3 mr-2 shrink-0" />
+            <span className="truncate">{truncateText(name)}</span>
+          </Button>
+        </Link>
+      </TooltipTrigger>
+      {name.length > 25 && (
+        <TooltipContent side="right">{name}</TooltipContent>
+      )}
+    </Tooltip>
   );
 }

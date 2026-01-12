@@ -12,7 +12,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { cn, truncateText } from '@/lib/utils';
 
 type SectionContext = 'plans' | 'resources' | 'taxonomy' | 'reports';
 
@@ -80,15 +85,22 @@ export function PlanItemRow({
       isActive && "bg-sidebar-accent",
       className
     )}>
-      <Link 
-        to={planUrl} 
-        className={cn(
-          "flex-1 text-xs truncate hover:text-primary",
-          isActive && "font-semibold text-primary"
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link 
+            to={planUrl} 
+            className={cn(
+              "flex-1 text-xs truncate hover:text-primary",
+              isActive && "font-semibold text-primary"
+            )}
+          >
+            {truncateText(name)}
+          </Link>
+        </TooltipTrigger>
+        {name.length > 25 && (
+          <TooltipContent side="right">{name}</TooltipContent>
         )}
-      >
-        {name}
-      </Link>
+      </Tooltip>
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         {isTrash ? (
           <>
