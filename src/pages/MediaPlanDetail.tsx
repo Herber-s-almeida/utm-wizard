@@ -207,65 +207,71 @@ export default function MediaPlanDetail() {
       // Store the actual plan ID for subsequent queries
       const resolvedPlanId = planData.id;
       setPlanId(resolvedPlanId);
+      setPlan(planData as MediaPlan);
 
-      const { data: linesData, error: linesError } = await supabase
-        .from('media_lines')
-        .select('*')
-        .eq('media_plan_id', resolvedPlanId)
-        .order('created_at', { ascending: true });
+      // Fetch lines and distributions in parallel (most critical data)
+      const [linesResult, distributionsResult] = await Promise.all([
+        supabase
+          .from('media_lines')
+          .select('*')
+          .eq('media_plan_id', resolvedPlanId)
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('plan_budget_distributions')
+          .select('*')
+          .eq('media_plan_id', resolvedPlanId)
+      ]);
 
-      if (linesError) throw linesError;
+      if (linesResult.error) throw linesResult.error;
 
-      // Fetch budget distributions
-      const { data: distributionsData, error: distError } = await supabase
-        .from('plan_budget_distributions')
-        .select('*')
-        .eq('media_plan_id', resolvedPlanId);
+      const linesList = (linesResult.data || []) as MediaLine[];
+      setLines(linesList);
       
-      if (!distError && distributionsData) {
-        setBudgetDistributions(distributionsData);
+      if (!distributionsResult.error && distributionsResult.data) {
+        setBudgetDistributions(distributionsResult.data);
       }
 
-      const linesList = (linesData || []) as MediaLine[];
-      setPlan(planData as MediaPlan);
-      setLines(linesList);
+      // Stop loading here - main data is ready for display
+      setLoading(false);
 
-      // Fetch creatives for all lines
+      // Fetch creatives and monthly budgets in background (lazy loading)
       if (linesList.length > 0) {
-        const { data: creativesData, error: creativesError } = await supabase
-          .from('media_creatives')
-          .select('*')
-          .in('media_line_id', linesList.map(l => l.id));
+        const lineIds = linesList.map(l => l.id);
+        
+        // Fetch in parallel but don't block UI
+        Promise.all([
+          supabase
+            .from('media_creatives')
+            .select('*')
+            .in('media_line_id', lineIds),
+          supabase
+            .from('media_line_monthly_budgets')
+            .select('*')
+            .in('media_line_id', lineIds)
+            .order('month_date', { ascending: true })
+        ]).then(([creativesResult, monthlyResult]) => {
+          if (!creativesResult.error && creativesResult.data) {
+            const grouped: Record<string, MediaCreative[]> = {};
+            creativesResult.data.forEach((c: MediaCreative) => {
+              if (!grouped[c.media_line_id]) grouped[c.media_line_id] = [];
+              grouped[c.media_line_id].push(c);
+            });
+            setCreatives(grouped);
+          }
 
-        if (!creativesError && creativesData) {
-          const grouped: Record<string, MediaCreative[]> = {};
-          creativesData.forEach((c: MediaCreative) => {
-            if (!grouped[c.media_line_id]) grouped[c.media_line_id] = [];
-            grouped[c.media_line_id].push(c);
-          });
-          setCreatives(grouped);
-        }
-
-        // Fetch monthly budgets for all lines
-        const { data: monthlyData, error: monthlyError } = await supabase
-          .from('media_line_monthly_budgets')
-          .select('*')
-          .in('media_line_id', linesList.map(l => l.id))
-          .order('month_date', { ascending: true });
-
-        if (!monthlyError && monthlyData) {
-          const groupedMonthly: Record<string, MediaLineMonthlyBudget[]> = {};
-          monthlyData.forEach((m: MediaLineMonthlyBudget) => {
-            if (!groupedMonthly[m.media_line_id]) groupedMonthly[m.media_line_id] = [];
-            groupedMonthly[m.media_line_id].push(m);
-          });
-          setMonthlyBudgets(groupedMonthly);
-        }
+          if (!monthlyResult.error && monthlyResult.data) {
+            const groupedMonthly: Record<string, MediaLineMonthlyBudget[]> = {};
+            monthlyResult.data.forEach((m: MediaLineMonthlyBudget) => {
+              if (!groupedMonthly[m.media_line_id]) groupedMonthly[m.media_line_id] = [];
+              groupedMonthly[m.media_line_id].push(m);
+            });
+            setMonthlyBudgets(groupedMonthly);
+          }
+        });
       }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Erro ao carregar plano');
-    } finally {
       setLoading(false);
     }
   };
