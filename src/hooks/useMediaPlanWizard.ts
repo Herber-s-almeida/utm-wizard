@@ -60,7 +60,7 @@ const createDefaultState = (): WizardState => ({
     objectives: [],
     kpis: {},
   },
-  hierarchyOrder: [...DEFAULT_HIERARCHY_ORDER],
+  hierarchyOrder: [], // Start with empty (General budget) - user can add levels
   levelAllocations: {},
   // Legacy fields (for backward compatibility)
   subdivisions: [],
@@ -247,13 +247,14 @@ export function useMediaPlanWizard() {
     subdivisionAllocations: BudgetAllocation[],
     momentAllocations: Record<string, BudgetAllocation[]>,
     funnelAllocations: Record<string, BudgetAllocation[]>,
-    initialStep: number = 2,
+    initialStep: number = 0,
     hierarchyOrder?: HierarchyLevel[]
   ) => {
     setState({
       step: initialStep,
       planData,
-      hierarchyOrder: hierarchyOrder || DEFAULT_HIERARCHY_ORDER,
+      // Accept empty array as valid hierarchy (General budget)
+      hierarchyOrder: hierarchyOrder ?? [],
       levelAllocations: {},
       subdivisions: subdivisionAllocations,
       moments: momentAllocations,

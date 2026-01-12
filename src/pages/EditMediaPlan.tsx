@@ -190,9 +190,7 @@ export default function EditMediaPlan() {
       
       // Store hierarchy order (can now be changed)
       const loadedOrder = plan.hierarchy_order as string[] | null;
-      const hierarchyOrder = (loadedOrder && loadedOrder.length >= 0 
-        ? loadedOrder 
-        : []) as HierarchyLevel[];
+      const hierarchyOrder = (loadedOrder ?? []) as HierarchyLevel[];
       setPlanHierarchyOrder(hierarchyOrder);
       setOriginalHierarchyOrder(hierarchyOrder); // Store original for comparison
 
