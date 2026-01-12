@@ -83,6 +83,7 @@ import { PlanDetailSummaryCard } from '@/components/media-plan/PlanDetailSummary
 import { ElementVisibilityMenu } from '@/components/media-plan/ElementVisibilityMenu';
 import { usePlanElementsVisibility } from '@/hooks/usePlanElementsVisibility';
 import { LineDetailsSummaryCard } from '@/components/media-plan/LineDetailsSummaryCard';
+import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPlural } from '@/types/hierarchy';
 
 
 interface BudgetDistribution {
@@ -436,6 +437,14 @@ export default function MediaPlanDetail() {
   };
 
   const { planSubdivisions, planMoments, planFunnelStages } = getPlanHierarchyOptions();
+
+  // Get hierarchy order from plan (fallback to default if not set)
+  const hierarchyOrder: HierarchyLevel[] = useMemo(() => {
+    if (plan?.hierarchy_order && Array.isArray(plan.hierarchy_order) && plan.hierarchy_order.length > 0) {
+      return plan.hierarchy_order as HierarchyLevel[];
+    }
+    return DEFAULT_HIERARCHY_ORDER;
+  }, [plan?.hierarchy_order]);
 
   // Build hierarchy data for EditableHierarchyCard - Must be before early returns!
   const hierarchyData = useMemo(() => {
@@ -936,6 +945,7 @@ export default function MediaPlanDetail() {
             totalBudget={Number(plan.total_budget) || 0}
             budgetDistributions={budgetDistributions}
             hierarchyData={hierarchyData}
+            hierarchyOrder={hierarchyOrder}
             onDistributionsUpdated={fetchData}
             onHide={() => hideElement('budget-hierarchy')}
           />
@@ -1149,6 +1159,7 @@ export default function MediaPlanDetail() {
           moments={moments.data || []}
           funnelStages={funnelStages.data || []}
           statuses={statuses.activeItems || []}
+          hierarchyOrder={hierarchyOrder}
           lineAlerts={planAlerts.getLineAlerts}
           onEditLine={(line, initialStep) => {
             setEditingLine(line);

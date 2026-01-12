@@ -48,6 +48,7 @@ import { LineAlertIndicator } from '@/components/media-plan/LineAlertIndicator';
 import { UTMPreview } from '@/components/media-plan/UTMPreview';
 import { useResizableColumns, ColumnKey, MinWidthOverrides } from '@/hooks/useResizableColumns';
 import { ResizableColumnHeader } from '@/components/media-plan/ResizableColumnHeader';
+import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPlural } from '@/types/hierarchy';
 
 // Columns that can be toggled (excludes: Código, Orçamento, Status, Início, Fim, Ações)
 type ToggleableColumn = 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target' | 'creatives';
@@ -128,6 +129,7 @@ interface HierarchicalMediaTableProps {
   moments?: Moment[];
   funnelStages?: FunnelStage[];
   statuses?: Status[];
+  hierarchyOrder?: HierarchyLevel[];
   lineAlerts?: (lineId: string) => PlanAlert[];
   onEditLine: (line: MediaLine, initialStep?: string) => void;
   onDeleteLine: (line: MediaLine) => void;
@@ -194,6 +196,7 @@ export function HierarchicalMediaTable({
   moments: momentsList = [],
   funnelStages: funnelStagesList = [],
   statuses: statusesList = [],
+  hierarchyOrder = DEFAULT_HIERARCHY_ORDER,
   lineAlerts,
   onEditLine,
   onDeleteLine,

@@ -18,6 +18,7 @@ import {
   AnimatedCollapsibleTrigger,
 } from '@/components/ui/animated-collapsible';
 import { motion } from 'framer-motion';
+import { HierarchyLevel, getLevelLabel, getLevelLabelPlural, DEFAULT_HIERARCHY_ORDER } from '@/types/hierarchy';
 
 interface BudgetDistribution {
   id: string;
@@ -73,6 +74,7 @@ interface EditableHierarchyCardProps {
   totalBudget: number;
   budgetDistributions: BudgetDistribution[];
   hierarchyData: HierarchyRow[];
+  hierarchyOrder?: HierarchyLevel[];
   onDistributionsUpdated: () => void;
   onHide?: () => void;
 }
@@ -88,6 +90,7 @@ export function EditableHierarchyCard({
   totalBudget,
   budgetDistributions,
   hierarchyData,
+  hierarchyOrder = DEFAULT_HIERARCHY_ORDER,
   onDistributionsUpdated,
   onHide,
 }: EditableHierarchyCardProps) {
