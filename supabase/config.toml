@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.import-report-data]
 verify_jwt = false
+
+[functions.seed-test-plans]
+verify_jwt = false
