@@ -243,7 +243,7 @@ export default function NewMediaPlanBudget() {
       goToStep(state.step - 1);
     }
   };
-  };
+
 
   const handleSave = async () => {
     const missing = getPlanInfoMissingFields();
