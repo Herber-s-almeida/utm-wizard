@@ -1688,6 +1688,16 @@ export function AppSidebar() {
                     Visibilidade do Menu
                   </Button>
                 </Link>
+                <Link to="/admin/documentation">
+                  <Button
+                    variant={location.pathname === '/admin/documentation' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start gap-2 h-7 text-xs pl-6"
+                  >
+                    <Library className="h-3 w-3" />
+                    Documentação
+                  </Button>
+                </Link>
               </div>
             )}
             <Link to="/settings/team">

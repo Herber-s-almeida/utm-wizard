@@ -43,6 +43,7 @@ import AccountPage from "./pages/AccountPage";
 import TrashPage from "./pages/TrashPage";
 import DetailTypesPage from "./pages/config/DetailTypesPage";
 import ClientsPage from "./pages/config/ClientsPage";
+import SystemDocumentationPage from "./pages/admin/SystemDocumentationPage";
 
 // Finance Manager imports
 import { FinanceLayout } from "./components/layout/FinanceLayout";
@@ -110,6 +111,7 @@ function AppWithEnvironment() {
           <Route path="/trash" element={<ProtectedRoute><TrashPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="/admin/menu-visibility" element={<AdminRoute><AdminMenuVisibility /></AdminRoute>} />
+          <Route path="/admin/documentation" element={<AdminRoute><SystemDocumentationPage /></AdminRoute>} />
           <Route path="/settings/team" element={<ProtectedRoute><EnvironmentMembersPage /></ProtectedRoute>} />
           
           {/* Finance Manager Routes */}
