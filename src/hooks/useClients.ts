@@ -15,6 +15,7 @@ export interface Client {
   updated_at?: string;
   deleted_at?: string | null;
   is_active?: boolean;
+  visible_for_media_plans?: boolean | null;
 }
 
 export function useClients() {
@@ -38,10 +39,15 @@ export function useClients() {
   });
 
   const create = useMutation({
-    mutationFn: async ({ name, description }: { name: string; description?: string }) => {
+    mutationFn: async ({ name, description, visible_for_media_plans }: { name: string; description?: string; visible_for_media_plans?: boolean }) => {
       const { data, error } = await supabase
         .from('clients')
-        .insert({ name, description: description || null, user_id: user!.id })
+        .insert({ 
+          name, 
+          description: description || null, 
+          user_id: user!.id,
+          visible_for_media_plans: visible_for_media_plans ?? true
+        })
         .select()
         .single();
       if (error) throw error;
@@ -57,10 +63,14 @@ export function useClients() {
   });
 
   const update = useMutation({
-    mutationFn: async ({ id, name, description }: { id: string; name: string; description?: string }) => {
+    mutationFn: async ({ id, name, description, visible_for_media_plans }: { id: string; name: string; description?: string; visible_for_media_plans?: boolean }) => {
       const { error } = await supabase
         .from('clients')
-        .update({ name, description: description || null })
+        .update({ 
+          name, 
+          description: description || null,
+          visible_for_media_plans: visible_for_media_plans ?? true
+        })
         .eq('id', id);
       if (error) throw error;
     },
@@ -81,11 +91,15 @@ export function useClients() {
 
   const { active, archived } = filterSoftDeleteItems(query.data);
 
+  // Filter clients visible for media plans
+  const visibleForMediaPlans = active?.filter(c => c.visible_for_media_plans !== false) || [];
+
   return {
     ...query,
     data: query.data,
     activeItems: active,
     archivedItems: archived,
+    visibleForMediaPlans,
     create,
     update,
     remove,
