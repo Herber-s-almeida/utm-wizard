@@ -11,7 +11,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { cn, truncateText } from '@/lib/utils';
 
 interface ConfigItemRowProps {
   name: string;
@@ -34,9 +39,16 @@ export function ConfigItemRow({
 }: ConfigItemRowProps) {
   return (
     <div className={cn("group flex items-center justify-between py-1 pl-2 pr-1 rounded-md hover:bg-sidebar-accent/50 min-w-0", className)}>
-      <span className="text-xs leading-snug truncate flex-1 min-w-0">
-        {name}
-      </span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="text-xs leading-snug truncate flex-1 min-w-0">
+            {truncateText(name)}
+          </span>
+        </TooltipTrigger>
+        {name.length > 25 && (
+          <TooltipContent side="right">{name}</TooltipContent>
+        )}
+      </Tooltip>
       <div className="flex items-center gap-0 shrink-0 ml-1">
         <Button 
           size="icon" 
