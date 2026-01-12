@@ -1,26 +1,52 @@
 import * as XLSX from 'xlsx';
 import { TaxonomyLine } from '@/hooks/useTaxonomyData';
 import { toSlug, buildUrlWithUTM } from './utmGenerator';
+import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER } from '@/types/hierarchy';
 
 interface ExportUtmData {
   planName: string;
   campaignName: string;
   defaultUrl: string | null;
   lines: TaxonomyLine[];
+  hierarchyOrder?: HierarchyLevel[];
 }
 
 export function exportUtmsToXlsx(data: ExportUtmData) {
-  const { planName, campaignName, defaultUrl, lines } = data;
+  const { 
+    planName, 
+    campaignName, 
+    defaultUrl, 
+    lines,
+    hierarchyOrder = DEFAULT_HIERARCHY_ORDER 
+  } = data;
 
+  // Build utm_campaign respecting hierarchyOrder
   const buildUtmCampaign = (line: TaxonomyLine): string => {
     const parts = [
       line.line_code || '',
       toSlug(campaignName),
-      line.subdivision?.slug || '',
-      line.moment?.slug || '',
-      line.funnel_stage_ref?.slug || '',
-    ].filter(Boolean);
-    return parts.join('_');
+    ];
+    
+    // Add slugs in the order specified by hierarchyOrder
+    for (const level of hierarchyOrder) {
+      let slug = '';
+      switch (level) {
+        case 'subdivision':
+          slug = line.subdivision?.slug || '';
+          break;
+        case 'moment':
+          slug = line.moment?.slug || '';
+          break;
+        case 'funnel_stage':
+          slug = line.funnel_stage_ref?.slug || '';
+          break;
+      }
+      if (slug) {
+        parts.push(slug);
+      }
+    }
+    
+    return parts.filter(Boolean).join('_');
   };
 
   // Build rows for lines

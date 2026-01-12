@@ -1663,58 +1663,93 @@ export function HierarchicalMediaTable({
                     </div>
                   )}
                   
-                  {/* Subdivision filter */}
-                  {'subdivisão'.includes(lineFilterSearch.toLowerCase()) && (
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Subdivisão</Label>
-                      <Select value={lineFilters.subdivision} onValueChange={(v) => setLineFilters(prev => ({ ...prev, subdivision: v === 'all' ? '' : v }))}>
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder="Todas" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas</SelectItem>
-                          {subdivisionsList.map(s => (
-                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                  {/* Dynamic hierarchy filters - rendered in order of hierarchyOrder for grouped view */}
+                  {viewMode === 'grouped' && hierarchyOrder.map((level) => {
+                    const levelLabel = getLevelLabel(level);
+                    const items = getItemsForLevel(level);
+                    const filterKey = level === 'funnel_stage' ? 'funnel_stage' : level;
+                    const searchMatch = levelLabel.toLowerCase().includes(lineFilterSearch.toLowerCase());
+                    
+                    if (!searchMatch) return null;
+                    
+                    return (
+                      <div key={level} className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">{levelLabel}</Label>
+                        <Select 
+                          value={lineFilters[filterKey as keyof LineFilters]} 
+                          onValueChange={(v) => setLineFilters(prev => ({ ...prev, [filterKey]: v === 'all' ? '' : v }))}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder={`Todos`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos</SelectItem>
+                            {items.map(item => (
+                              <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
                   
-                  {/* Moment filter */}
-                  {'momento'.includes(lineFilterSearch.toLowerCase()) && (
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Momento</Label>
-                      <Select value={lineFilters.moment} onValueChange={(v) => setLineFilters(prev => ({ ...prev, moment: v === 'all' ? '' : v }))}>
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder="Todos" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos</SelectItem>
-                          {momentsList.map(m => (
-                            <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                  
-                  {/* Funnel Stage filter */}
-                  {'fase'.includes(lineFilterSearch.toLowerCase()) && (
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Fase</Label>
-                      <Select value={lineFilters.funnel_stage} onValueChange={(v) => setLineFilters(prev => ({ ...prev, funnel_stage: v === 'all' ? '' : v }))}>
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder="Todas" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todas</SelectItem>
-                          {funnelStagesList.map(f => (
-                            <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  {/* Fixed order hierarchy filters for flat view */}
+                  {viewMode === 'flat' && (
+                    <>
+                      {/* Subdivision filter */}
+                      {'subdivisão'.includes(lineFilterSearch.toLowerCase()) && (
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Subdivisão</Label>
+                          <Select value={lineFilters.subdivision} onValueChange={(v) => setLineFilters(prev => ({ ...prev, subdivision: v === 'all' ? '' : v }))}>
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Todas" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todas</SelectItem>
+                              {subdivisionsList.map(s => (
+                                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      
+                      {/* Moment filter */}
+                      {'momento'.includes(lineFilterSearch.toLowerCase()) && (
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Momento</Label>
+                          <Select value={lineFilters.moment} onValueChange={(v) => setLineFilters(prev => ({ ...prev, moment: v === 'all' ? '' : v }))}>
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Todos" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todos</SelectItem>
+                              {momentsList.map(m => (
+                                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      
+                      {/* Funnel Stage filter */}
+                      {'fase'.includes(lineFilterSearch.toLowerCase()) && (
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Fase</Label>
+                          <Select value={lineFilters.funnel_stage} onValueChange={(v) => setLineFilters(prev => ({ ...prev, funnel_stage: v === 'all' ? '' : v }))}>
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Todas" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todas</SelectItem>
+                              {funnelStagesList.map(f => (
+                                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </>
                   )}
                   
                   {/* Code filter */}
@@ -2243,7 +2278,7 @@ export function HierarchicalMediaTable({
           )}
 
           {/* Grouped View - Dynamic hierarchical with budget cards */}
-          {viewMode === 'grouped' && (
+          {viewMode === 'grouped' && hierarchyOrder.length > 0 && (
             <div className="divide-y" style={{ minWidth: `${getMinWidth()}px` }}>
               {/* Render hierarchy tree recursively */}
               <DynamicHierarchyRenderer
@@ -2293,6 +2328,29 @@ export function HierarchicalMediaTable({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Grouped View - No hierarchy levels (show lines directly) */}
+          {viewMode === 'grouped' && hierarchyOrder.length === 0 && (
+            <div className="divide-y" style={{ minWidth: `${getMinWidth()}px` }}>
+              {lines.filter(filterLine).map(line => renderLineRow(line))}
+              {lines.filter(filterLine).length === 0 && (
+                <div className="p-8 text-center text-muted-foreground">
+                  <p className="text-sm">Nenhuma linha encontrada.</p>
+                </div>
+              )}
+              <div className="p-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 text-xs border-dashed border-primary text-primary hover:bg-primary/10 justify-start gap-1 pl-3"
+                  onClick={() => onAddLine({})}
+                >
+                  <Plus className="w-3 h-3 shrink-0" />
+                  <span className="truncate">Criar nova Linha</span>
+                </Button>
+              </div>
             </div>
           )}
 
