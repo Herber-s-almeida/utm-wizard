@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Save, Loader2, Layers, Clock, Filter, Calendar, FileText, Sparkles, Edit2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, Loader2, Layers, Clock, Filter, Calendar, FileText, Sparkles, Edit2, Settings2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -20,8 +20,10 @@ import { SortableFunnelList } from '@/components/media-plan/SortableFunnelList';
 import { FunnelStageSelector } from '@/components/media-plan/FunnelStageSelector';
 import { TemporalEqualizer, generateTemporalPeriods } from '@/components/media-plan/TemporalEqualizer';
 import { SlugInputField } from '@/components/media-plan/SlugInputField';
+import { HierarchyOrderSelector } from '@/components/media-plan/HierarchyOrderSelector';
 import { useMediaPlanWizard, BudgetAllocation } from '@/hooks/useMediaPlanWizard';
 import { KPI_OPTIONS } from '@/types/media';
+import { HierarchyLevel, getLevelLabel, HIERARCHY_LEVEL_CONFIG } from '@/types/hierarchy';
 import { Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
@@ -30,14 +32,6 @@ import { useCustomKpis } from '@/hooks/useCustomKpis';
 import { useWizardDraft, DraftData } from '@/hooks/useWizardDraft';
 import { DraftRecoveryDialog } from '@/components/media-plan/DraftRecoveryDialog';
 import { LibrarySelector } from '@/components/media-plan/LibrarySelector';
-
-const WIZARD_STEPS = [
-  { id: 1, title: 'Plano', description: 'Dados básicos', helpText: 'Defina nome, datas, orçamento total e KPIs do plano. O nome será usado nos parâmetros UTM.' },
-  { id: 2, title: 'Subdivisão', description: 'Opcional', helpText: 'Divida o orçamento por região, produto ou objetivo. Pule se não precisar segmentar.' },
-  { id: 3, title: 'Momentos', description: 'Opcional', helpText: 'Divida por fases temporais: lançamento, sustentação, promoção. Defina datas para cada momento.' },
-  { id: 4, title: 'Funil', description: 'Fases', helpText: 'Distribua o orçamento entre as etapas do funil: conhecimento, consideração e conversão.' },
-  { id: 5, title: 'Revisão', description: 'Confirmar', helpText: 'Revise todas as configurações antes de salvar. Você pode voltar e ajustar qualquer etapa.' },
-];
 
 const MAX_SUBDIVISIONS = 12;
 const MAX_FUNNEL_STAGES = 7;
@@ -49,6 +43,7 @@ const createGeralAllocation = (budget: number): BudgetAllocation => ({
   percentage: 100,
   amount: budget,
 });
+
 
 export default function NewMediaPlanBudget() {
   const { user } = useAuth();
@@ -63,7 +58,26 @@ export default function NewMediaPlanBudget() {
   const [showDraftDialog, setShowDraftDialog] = useState(false);
   const [pendingDraft, setPendingDraft] = useState<DraftData | null>(null);
 
-  const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations, setFullState } = wizard;
+  const { 
+    state, 
+    totalSteps,
+    wizardSteps,
+    goToStep, 
+    updatePlanData, 
+    setHierarchyOrder,
+    setSubdivisions, 
+    setMoments, 
+    setFunnelStages, 
+    setTemporalGranularity, 
+    libraryData, 
+    libraryMutations, 
+    setFullState,
+    getLibraryForLevel,
+    getCreateMutationForLevel,
+  } = wizard;
+  
+  // Calculate review step number dynamically
+  const reviewStepNumber = totalSteps - 1;
   
   // Auto-save draft hook
   const { checkForDraft, clearDraft, loadDraft } = useWizardDraft(state, setFullState, false);
@@ -177,23 +191,37 @@ export default function NewMediaPlanBudget() {
 
   const canProceed = () => {
     switch (state.step) {
+      case 0:
+        // Must have at least one hierarchy level selected
+        return state.hierarchyOrder.length > 0;
       case 1:
         return getPlanInfoMissingFields().length === 0;
-      case 2:
-        return state.subdivisions.length === 0 || wizard.validatePercentages(state.subdivisions);
-      case 3: {
-        const keys = state.subdivisions.length > 0
-          ? state.subdivisions.map(s => s.id)
-          : ['root'];
-        return keys.every(key => {
-          const items = state.moments[key] || [];
-          return items.length === 0 || wizard.validatePercentages(items);
-        });
+      default: {
+        // For dynamic steps (level allocation steps)
+        const levelIndex = state.step - 2;
+        if (levelIndex >= 0 && levelIndex < state.hierarchyOrder.length) {
+          const level = state.hierarchyOrder[levelIndex];
+          
+          // Validate allocations for this level
+          if (levelIndex === 0) {
+            // First level: validate root allocations
+            if (level === 'subdivision') {
+              return state.subdivisions.length === 0 || wizard.validatePercentages(state.subdivisions);
+            } else if (level === 'moment') {
+              const items = state.moments['root'] || [];
+              return items.length === 0 || wizard.validatePercentages(items);
+            } else if (level === 'funnel_stage') {
+              const items = state.funnelStages['root'] || [];
+              return items.length === 0 || wizard.validatePercentages(items);
+            }
+          } else {
+            // Nested levels: validate all parent paths
+            // For now, allow proceeding (can be enhanced later)
+            return true;
+          }
+        }
+        return true;
       }
-      case 4:
-        return true;
-      default:
-        return true;
     }
   };
 
@@ -203,17 +231,18 @@ export default function NewMediaPlanBudget() {
       return;
     }
 
-    if (state.step < 5) {
+    if (state.step < reviewStepNumber) {
       setEditingSection(null);
       goToStep(state.step + 1);
     }
   };
 
   const handleBack = () => {
-    if (state.step > 1) {
+    if (state.step > 0) {
       setEditingSection(null);
       goToStep(state.step - 1);
     }
+  };
   };
 
   const handleSave = async () => {
@@ -467,6 +496,21 @@ export default function NewMediaPlanBudget() {
   const renderContent = () => {
     return (
       <div className="space-y-6">
+        {/* Step 0: Hierarchy Configuration */}
+        {state.step === 0 && (
+          <motion.div
+            key="hierarchy-config"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <HierarchyOrderSelector
+              selectedLevels={state.hierarchyOrder}
+              onOrderChange={setHierarchyOrder}
+            />
+          </motion.div>
+        )}
+
         {/* Step 1: Plan basics - always show summary if completed, or form if editing */}
         {state.step >= 1 && (
           <AnimatePresence mode="wait">
@@ -979,8 +1023,8 @@ export default function NewMediaPlanBudget() {
           </AnimatePresence>
         )}
 
-        {/* Step 5: Summary (was Step 6) */}
-        {state.step === 5 && (
+        {/* Review Step */}
+        {state.step === reviewStepNumber && (
           <motion.div
             key="lines-form"
             initial={{ opacity: 0, y: 20 }}
@@ -1112,7 +1156,7 @@ export default function NewMediaPlanBudget() {
 
         {/* Wizard Steps */}
         <WizardStepper
-          steps={WIZARD_STEPS}
+          steps={wizardSteps}
           currentStep={state.step}
           onStepClick={goToStep}
           completionPercentage={completionPercentage}
@@ -1126,14 +1170,14 @@ export default function NewMediaPlanBudget() {
           <Button
             variant="outline"
             onClick={handleBack}
-            disabled={state.step === 1}
+            disabled={state.step === 0}
             className="gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
             Voltar
           </Button>
 
-          {state.step < 5 ? (
+          {state.step < reviewStepNumber ? (
             <Button
               onClick={handleNext}
               disabled={!canProceed()}

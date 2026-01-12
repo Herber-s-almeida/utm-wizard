@@ -2000,6 +2000,7 @@ export type Database = {
           default_url: string | null
           deleted_at: string | null
           end_date: string | null
+          hierarchy_order: string[] | null
           id: string
           kpis: Json | null
           name: string
@@ -2020,6 +2021,7 @@ export type Database = {
           default_url?: string | null
           deleted_at?: string | null
           end_date?: string | null
+          hierarchy_order?: string[] | null
           id?: string
           kpis?: Json | null
           name: string
@@ -2040,6 +2042,7 @@ export type Database = {
           default_url?: string | null
           deleted_at?: string | null
           end_date?: string | null
+          hierarchy_order?: string[] | null
           id?: string
           kpis?: Json | null
           name?: string
