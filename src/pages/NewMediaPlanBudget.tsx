@@ -192,8 +192,8 @@ export default function NewMediaPlanBudget() {
     let filledFields = 0;
     let totalFields = 0;
     
-    // Step 0: Hierarchy config
-    if (state.hierarchyOrder.length > 0) filledFields += 1;
+    // Step 0: Hierarchy config - always counts as filled (0 levels = General budget is valid)
+    filledFields += 1;
     totalFields += 1;
     
     // Step 1 fields
@@ -235,8 +235,8 @@ export default function NewMediaPlanBudget() {
   const canProceed = () => {
     switch (state.step) {
       case 0:
-        // Must have at least one hierarchy level selected
-        return state.hierarchyOrder.length > 0;
+        // Hierarchy is always valid (0 levels = General budget)
+        return true;
       case 1:
         return getPlanInfoMissingFields().length === 0;
       default: {
@@ -1017,10 +1017,35 @@ export default function NewMediaPlanBudget() {
                   </Button>
                 </div>
                 <CardDescription className="text-sm mt-2">
-                  Ordem: {state.hierarchyOrder.map(l => getLevelLabel(l)).join(' → ')}
+                  {state.hierarchyOrder.length > 0 
+                    ? `Ordem: ${state.hierarchyOrder.map(l => getLevelLabel(l)).join(' → ')}`
+                    : 'Orçamento Geral (sem divisões)'
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* General budget - no hierarchy */}
+                {state.hierarchyOrder.length === 0 && (
+                  <Card className="bg-primary/5 border-primary/20">
+                    <CardHeader className="py-4 px-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Layers className="h-4 w-4 text-primary" />
+                          <CardTitle className="text-base">Orçamento Geral</CardTitle>
+                        </div>
+                        <span className="text-sm font-medium text-primary">
+                          100% - {formatCurrency(state.planData.total_budget)}
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <p className="text-sm text-muted-foreground">
+                        Plano simples sem divisões de orçamento. Todo o investimento será gerenciado como um único bloco.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Render first level allocations with nested children */}
                 {state.hierarchyOrder.length > 0 && (
                   <>
