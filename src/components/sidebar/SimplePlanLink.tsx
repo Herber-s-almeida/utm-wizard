@@ -15,7 +15,7 @@ interface SimplePlanLinkProps {
   slug?: string | null;
   name: string;
   section: SectionContext;
-  icon: LucideIcon;
+  icon?: LucideIcon;
 }
 
 export function SimplePlanLink({
@@ -70,7 +70,7 @@ export function SimplePlanLink({
               isActive && "bg-sidebar-accent font-semibold text-primary"
             )}
           >
-            <Icon className="h-3 w-3 mr-2 shrink-0" />
+            {Icon && <Icon className="h-3 w-3 mr-2 shrink-0" />}
             <span className="truncate">{truncateText(name)}</span>
           </Button>
         </Link>
