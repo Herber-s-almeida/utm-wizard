@@ -36,6 +36,15 @@ export default function TaxonomyPage() {
   // Fetch taxonomy data using the actual plan ID
   const { data: taxonomyData, isLoading: taxonomyLoading, refetch } = useTaxonomyData(plan?.id || '');
 
+  // Get hierarchy order from plan (fallback to default if not set)
+  // IMPORTANT: This hook must be before any early returns
+  const hierarchyOrder: HierarchyLevel[] = useMemo(() => {
+    if (plan?.hierarchy_order && Array.isArray(plan.hierarchy_order) && plan.hierarchy_order.length > 0) {
+      return plan.hierarchy_order as HierarchyLevel[];
+    }
+    return DEFAULT_HIERARCHY_ORDER;
+  }, [plan?.hierarchy_order]);
+
   if (planLoading || taxonomyLoading) {
     return (
       <DashboardLayout>
@@ -55,14 +64,6 @@ export default function TaxonomyPage() {
   }
   
   const planUrl = getPlanUrl(plan);
-
-  // Get hierarchy order from plan (fallback to default if not set)
-  const hierarchyOrder: HierarchyLevel[] = useMemo(() => {
-    if (plan?.hierarchy_order && Array.isArray(plan.hierarchy_order) && plan.hierarchy_order.length > 0) {
-      return plan.hierarchy_order as HierarchyLevel[];
-    }
-    return DEFAULT_HIERARCHY_ORDER;
-  }, [plan?.hierarchy_order]);
 
   const validatedCount = taxonomyData?.filter(line => line.utm_validated).length || 0;
   const totalCount = taxonomyData?.length || 0;
