@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates } from './useConfigData';
 import { useClients } from './useClients';
+import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPlural } from '@/types/hierarchy';
 
 export interface WizardPlanData {
   name: string;
@@ -24,15 +25,50 @@ export interface BudgetAllocation {
   end_date?: string;
 }
 
+// Generic allocation structure for dynamic hierarchy
+export interface LevelAllocations {
+  // Keyed by path: 'root', 'sub1', 'sub1_mom1', etc.
+  [path: string]: BudgetAllocation[];
+}
+
 export interface WizardState {
   step: number;
   planData: WizardPlanData;
+  // Dynamic hierarchy support
+  hierarchyOrder: HierarchyLevel[];
+  levelAllocations: LevelAllocations;
+  // Legacy support (computed from levelAllocations)
   subdivisions: BudgetAllocation[];
-  moments: Record<string, BudgetAllocation[]>; // keyed by subdivision id or 'root'
-  funnelStages: Record<string, BudgetAllocation[]>; // keyed by moment path
+  moments: Record<string, BudgetAllocation[]>;
+  funnelStages: Record<string, BudgetAllocation[]>;
+  // Temporal
   temporalGranularity: 'monthly' | 'quarterly';
   temporalDistribution: Record<string, BudgetAllocation[]>;
 }
+
+const createDefaultState = (): WizardState => ({
+  step: 0, // Start at step 0 for hierarchy configuration
+  planData: {
+    name: '',
+    client: '',
+    client_id: null,
+    utm_campaign_slug: null,
+    start_date: '',
+    end_date: '',
+    total_budget: 0,
+    default_url: '',
+    objectives: [],
+    kpis: {},
+  },
+  hierarchyOrder: [...DEFAULT_HIERARCHY_ORDER],
+  levelAllocations: {},
+  // Legacy fields (for backward compatibility)
+  subdivisions: [],
+  moments: {},
+  funnelStages: {},
+  temporalGranularity: 'monthly',
+  temporalDistribution: {},
+});
 
 export function useMediaPlanWizard() {
   const subdivisions = useSubdivisions();
@@ -45,26 +81,55 @@ export function useMediaPlanWizard() {
   const creativeTemplates = useCreativeTemplates();
   const clients = useClients();
 
-  const [state, setState] = useState<WizardState>({
-    step: 1,
-    planData: {
-      name: '',
-      client: '',
-      client_id: null,
-      utm_campaign_slug: null,
-      start_date: '',
-      end_date: '',
-      total_budget: 0,
-      default_url: '',
-      objectives: [],
-      kpis: {},
-    },
-    subdivisions: [],
-    moments: {},
-    funnelStages: {},
-    temporalGranularity: 'monthly',
-    temporalDistribution: {},
-  });
+  const [state, setState] = useState<WizardState>(createDefaultState());
+
+  // Get the number of wizard steps based on hierarchy order
+  const totalSteps = useMemo(() => {
+    // Step 0: Hierarchy config
+    // Step 1: Plan data
+    // Step 2 to N: One step per hierarchy level
+    // Last step: Review
+    return 2 + state.hierarchyOrder.length + 1;
+  }, [state.hierarchyOrder.length]);
+
+  // Get step configuration
+  const getStepConfig = useCallback((stepNumber: number) => {
+    if (stepNumber === 0) {
+      return { id: 0, title: 'Estrutura', description: 'Ordem das divisões', level: null };
+    }
+    if (stepNumber === 1) {
+      return { id: 1, title: 'Plano', description: 'Dados básicos', level: null };
+    }
+    
+    const levelIndex = stepNumber - 2;
+    if (levelIndex >= 0 && levelIndex < state.hierarchyOrder.length) {
+      const level = state.hierarchyOrder[levelIndex];
+      return {
+        id: stepNumber,
+        title: getLevelLabel(level),
+        description: levelIndex === 0 ? 'Nível 1' : `Nível ${levelIndex + 1}`,
+        level,
+        levelIndex,
+      };
+    }
+    
+    // Review step
+    return { id: stepNumber, title: 'Revisão', description: 'Confirmar', level: null };
+  }, [state.hierarchyOrder]);
+
+  // Generate wizard steps array
+  const wizardSteps = useMemo(() => {
+    const steps = [];
+    for (let i = 0; i <= totalSteps - 1; i++) {
+      const config = getStepConfig(i);
+      steps.push({
+        id: config.id,
+        title: config.title,
+        description: config.description,
+      });
+    }
+    return steps;
+  }, [totalSteps, getStepConfig]);
 
   const goToStep = useCallback((step: number) => {
     setState(prev => ({ ...prev, step }));
@@ -77,11 +142,65 @@ export function useMediaPlanWizard() {
     }));
   }, []);
 
-  const setSubdivisions = useCallback((allocations: BudgetAllocation[]) => {
+  // Set hierarchy order
+  const setHierarchyOrder = useCallback((order: HierarchyLevel[]) => {
     setState(prev => ({
       ...prev,
-      subdivisions: allocations,
+      hierarchyOrder: order,
+      // Reset allocations when order changes
+      levelAllocations: {},
+      subdivisions: [],
+      moments: {},
+      funnelStages: {},
     }));
+  }, []);
+
+  // Get allocations for a specific path
+  const getAllocationsForPath = useCallback((path: string): BudgetAllocation[] => {
+    return state.levelAllocations[path] || [];
+  }, [state.levelAllocations]);
+
+  // Set allocations for a specific path
+  const setAllocationsForPath = useCallback((path: string, allocations: BudgetAllocation[]) => {
+    setState(prev => {
+      const newLevelAllocations = { ...prev.levelAllocations, [path]: allocations };
+      
+      // Also update legacy fields for backward compatibility
+      const newState = { ...prev, levelAllocations: newLevelAllocations };
+      
+      // Sync to legacy fields based on level type
+      // This is determined by the depth in the hierarchy
+      const pathParts = path === 'root' ? [] : path.split('_');
+      const depth = pathParts.length;
+      
+      if (depth === 0) {
+        // Root level allocations - first level in hierarchy
+        const firstLevel = prev.hierarchyOrder[0];
+        if (firstLevel === 'subdivision') {
+          newState.subdivisions = allocations;
+        } else if (firstLevel === 'moment') {
+          newState.moments = { ...prev.moments, root: allocations };
+        } else if (firstLevel === 'funnel_stage') {
+          newState.funnelStages = { ...prev.funnelStages, root: allocations };
+        }
+      }
+      
+      return newState;
+    });
+  }, []);
+
+  // Legacy setters that work with new structure
+  const setSubdivisions = useCallback((allocations: BudgetAllocation[]) => {
+    setState(prev => {
+      const newState = { ...prev, subdivisions: allocations };
+      
+      // If subdivision is the first level, also set in levelAllocations
+      if (prev.hierarchyOrder[0] === 'subdivision') {
+        newState.levelAllocations = { ...prev.levelAllocations, root: allocations };
+      }
+      
+      return newState;
+    });
   }, []);
 
   const setMoments = useCallback((key: string, allocations: BudgetAllocation[]) => {
@@ -122,26 +241,7 @@ export function useMediaPlanWizard() {
   }, []);
 
   const reset = useCallback(() => {
-    setState({
-      step: 1,
-      planData: {
-        name: '',
-        client: '',
-        client_id: null,
-        utm_campaign_slug: null,
-        start_date: '',
-        end_date: '',
-        total_budget: 0,
-        default_url: '',
-        objectives: [],
-        kpis: {},
-      },
-      subdivisions: [],
-      moments: {},
-      funnelStages: {},
-      temporalGranularity: 'monthly',
-      temporalDistribution: {},
-    });
+    setState(createDefaultState());
   }, []);
 
   // Initialize state from existing plan data (for edit mode)
@@ -150,11 +250,14 @@ export function useMediaPlanWizard() {
     subdivisionAllocations: BudgetAllocation[],
     momentAllocations: Record<string, BudgetAllocation[]>,
     funnelAllocations: Record<string, BudgetAllocation[]>,
-    initialStep: number = 2
+    initialStep: number = 2,
+    hierarchyOrder?: HierarchyLevel[]
   ) => {
     setState({
       step: initialStep,
       planData,
+      hierarchyOrder: hierarchyOrder || DEFAULT_HIERARCHY_ORDER,
+      levelAllocations: {},
       subdivisions: subdivisionAllocations,
       moments: momentAllocations,
       funnelStages: funnelAllocations,
@@ -167,10 +270,45 @@ export function useMediaPlanWizard() {
     setState(newState);
   }, []);
 
+  // Get library data for a specific level
+  const getLibraryForLevel = useCallback((level: HierarchyLevel) => {
+    switch (level) {
+      case 'subdivision':
+        return subdivisions.activeItems || [];
+      case 'moment':
+        return moments.activeItems || [];
+      case 'funnel_stage':
+        return funnelStages.activeItems || [];
+      default:
+        return [];
+    }
+  }, [subdivisions.activeItems, moments.activeItems, funnelStages.activeItems]);
+
+  // Get create mutation for a specific level
+  const getCreateMutationForLevel = useCallback((level: HierarchyLevel) => {
+    switch (level) {
+      case 'subdivision':
+        return subdivisions.create;
+      case 'moment':
+        return moments.create;
+      case 'funnel_stage':
+        return funnelStages.create;
+      default:
+        return null;
+    }
+  }, [subdivisions.create, moments.create, funnelStages.create]);
+
   return {
     state,
+    totalSteps,
+    wizardSteps,
+    getStepConfig,
     goToStep,
     updatePlanData,
+    setHierarchyOrder,
+    getAllocationsForPath,
+    setAllocationsForPath,
+    // Legacy setters
     setSubdivisions,
     setMoments,
     setFunnelStages,
@@ -181,6 +319,9 @@ export function useMediaPlanWizard() {
     reset,
     initializeFromPlan,
     setFullState,
+    // Dynamic library access
+    getLibraryForLevel,
+    getCreateMutationForLevel,
     // Library data
     libraryData: {
       subdivisions: subdivisions.activeItems || [],
