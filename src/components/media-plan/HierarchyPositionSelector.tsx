@@ -2,25 +2,46 @@ import { useState, useMemo } from 'react';
 import { ChevronRight, Check, Layers, Clock, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { HierarchyLevel, getLevelLabel, HIERARCHY_LEVEL_CONFIG, DEFAULT_HIERARCHY_ORDER } from '@/types/hierarchy';
 
 interface HierarchyOption {
   id: string | null;
   name: string;
 }
 
-interface HierarchyPositionSelectorProps {
-  planSubdivisions: HierarchyOption[];
-  planMoments: HierarchyOption[];
-  planFunnelStages: HierarchyOption[];
-  selectedSubdivision: string | null;
-  selectedMoment: string | null;
-  selectedFunnelStage: string | null;
-  onSubdivisionChange: (id: string | null) => void;
-  onMomentChange: (id: string | null) => void;
-  onFunnelStageChange: (id: string | null) => void;
+interface HierarchyLevelConfig {
+  type: HierarchyLevel;
+  options: HierarchyOption[];
+  selectedId: string | null;
+  onChange: (id: string | null) => void;
 }
 
+interface HierarchyPositionSelectorProps {
+  // Dynamic levels configuration
+  levels?: HierarchyLevelConfig[];
+  hierarchyOrder?: HierarchyLevel[];
+  // Legacy props for backwards compatibility
+  planSubdivisions?: HierarchyOption[];
+  planMoments?: HierarchyOption[];
+  planFunnelStages?: HierarchyOption[];
+  selectedSubdivision?: string | null;
+  selectedMoment?: string | null;
+  selectedFunnelStage?: string | null;
+  onSubdivisionChange?: (id: string | null) => void;
+  onMomentChange?: (id: string | null) => void;
+  onFunnelStageChange?: (id: string | null) => void;
+}
+
+const LEVEL_ICONS: Record<HierarchyLevel, React.ReactNode> = {
+  subdivision: <Layers className="w-4 h-4 text-muted-foreground" />,
+  moment: <Clock className="w-4 h-4 text-muted-foreground" />,
+  funnel_stage: <Filter className="w-4 h-4 text-muted-foreground" />,
+};
+
 export function HierarchyPositionSelector({
+  levels: propLevels,
+  hierarchyOrder = DEFAULT_HIERARCHY_ORDER,
+  // Legacy props
   planSubdivisions,
   planMoments,
   planFunnelStages,
@@ -31,76 +52,99 @@ export function HierarchyPositionSelector({
   onMomentChange,
   onFunnelStageChange,
 }: HierarchyPositionSelectorProps) {
-  // Track which section is expanded
-  const [expandedSection, setExpandedSection] = useState<'subdivision' | 'moment' | 'funnel' | null>(
-    planSubdivisions.length > 1 ? 'subdivision' : planMoments.length > 1 ? 'moment' : planFunnelStages.length > 1 ? 'funnel' : null
-  );
-
-  const hasMultipleSubdivisions = planSubdivisions.length > 1;
-  const hasMultipleMoments = planMoments.length > 1;
-  const hasMultipleFunnelStages = planFunnelStages.length > 1;
-
-  // Get selected names for display
-  const selectedSubName = useMemo(() => {
-    if (!hasMultipleSubdivisions && planSubdivisions.length === 1) return planSubdivisions[0].name;
-    return planSubdivisions.find(s => s.id === selectedSubdivision)?.name || 'Selecione';
-  }, [selectedSubdivision, planSubdivisions, hasMultipleSubdivisions]);
-
-  const selectedMomName = useMemo(() => {
-    if (!hasMultipleMoments && planMoments.length === 1) return planMoments[0].name;
-    return planMoments.find(m => m.id === selectedMoment)?.name || 'Selecione';
-  }, [selectedMoment, planMoments, hasMultipleMoments]);
-
-  const selectedFunnelName = useMemo(() => {
-    if (!hasMultipleFunnelStages && planFunnelStages.length === 1) return planFunnelStages[0].name;
-    return planFunnelStages.find(f => f.id === selectedFunnelStage)?.name || 'Selecione';
-  }, [selectedFunnelStage, planFunnelStages, hasMultipleFunnelStages]);
-
-  // Check if selection is complete
-  const isSubdivisionSelected = selectedSubdivision !== undefined;
-  const isMomentSelected = selectedMoment !== undefined;
-  const isFunnelSelected = selectedFunnelStage !== undefined;
-
-  const handleSelect = (section: 'subdivision' | 'moment' | 'funnel', id: string | null) => {
-    if (section === 'subdivision') {
-      onSubdivisionChange(id);
-      // Auto-advance to next section if there are options
-      if (hasMultipleMoments) {
-        setExpandedSection('moment');
-      } else if (hasMultipleFunnelStages) {
-        setExpandedSection('funnel');
-      } else {
-        setExpandedSection(null);
+  // Build levels from either new or legacy props
+  const levels: HierarchyLevelConfig[] = useMemo(() => {
+    if (propLevels) return propLevels;
+    
+    // Build from legacy props based on hierarchyOrder
+    return hierarchyOrder.map(levelType => {
+      switch (levelType) {
+        case 'subdivision':
+          return {
+            type: 'subdivision' as HierarchyLevel,
+            options: planSubdivisions || [],
+            selectedId: selectedSubdivision ?? null,
+            onChange: onSubdivisionChange || (() => {}),
+          };
+        case 'moment':
+          return {
+            type: 'moment' as HierarchyLevel,
+            options: planMoments || [],
+            selectedId: selectedMoment ?? null,
+            onChange: onMomentChange || (() => {}),
+          };
+        case 'funnel_stage':
+          return {
+            type: 'funnel_stage' as HierarchyLevel,
+            options: planFunnelStages || [],
+            selectedId: selectedFunnelStage ?? null,
+            onChange: onFunnelStageChange || (() => {}),
+          };
+        default:
+          return null;
       }
-    } else if (section === 'moment') {
-      onMomentChange(id);
-      if (hasMultipleFunnelStages) {
-        setExpandedSection('funnel');
-      } else {
-        setExpandedSection(null);
-      }
-    } else {
-      onFunnelStageChange(id);
-      setExpandedSection(null);
+    }).filter(Boolean) as HierarchyLevelConfig[];
+  }, [
+    propLevels,
+    hierarchyOrder,
+    planSubdivisions,
+    planMoments,
+    planFunnelStages,
+    selectedSubdivision,
+    selectedMoment,
+    selectedFunnelStage,
+    onSubdivisionChange,
+    onMomentChange,
+    onFunnelStageChange,
+  ]);
+
+  // Find first level with multiple options to expand by default
+  const getInitialExpandedLevel = () => {
+    for (const level of levels) {
+      if (level.options.length > 1) return level.type;
     }
+    return null;
   };
 
-  const renderSection = (
-    section: 'subdivision' | 'moment' | 'funnel',
-    icon: React.ReactNode,
-    label: string,
-    options: HierarchyOption[],
-    selectedId: string | null,
-    selectedName: string,
-    isSelected: boolean,
-    hasMultiple: boolean
-  ) => {
-    const isExpanded = expandedSection === section;
-    const showSection = hasMultiple;
+  const [expandedSection, setExpandedSection] = useState<HierarchyLevel | null>(getInitialExpandedLevel);
 
-    if (!showSection) {
+  // Get selected name for a level
+  const getSelectedName = (level: HierarchyLevelConfig): string => {
+    const hasMultiple = level.options.length > 1;
+    if (!hasMultiple && level.options.length === 1) return level.options[0].name;
+    return level.options.find(o => o.id === level.selectedId)?.name || 'Selecione';
+  };
+
+  // Check if selection is complete
+  const isSelected = (level: HierarchyLevelConfig): boolean => {
+    return level.selectedId !== undefined;
+  };
+
+  const handleSelect = (levelIndex: number, id: string | null) => {
+    const level = levels[levelIndex];
+    level.onChange(id);
+    
+    // Auto-advance to next level with multiple options
+    for (let i = levelIndex + 1; i < levels.length; i++) {
+      if (levels[i].options.length > 1) {
+        setExpandedSection(levels[i].type);
+        return;
+      }
+    }
+    setExpandedSection(null);
+  };
+
+  const renderSection = (level: HierarchyLevelConfig, levelIndex: number) => {
+    const isExpanded = expandedSection === level.type;
+    const hasMultiple = level.options.length > 1;
+    const selectedName = getSelectedName(level);
+    const hasSelection = isSelected(level);
+    const label = getLevelLabel(level.type);
+    const icon = LEVEL_ICONS[level.type];
+
+    if (!hasMultiple) {
       return (
-        <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 rounded-lg">
+        <div key={level.type} className="flex items-center gap-2 px-3 py-2 bg-muted/30 rounded-lg">
           <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
             <Check className="w-4 h-4 text-success" />
           </div>
@@ -114,27 +158,27 @@ export function HierarchyPositionSelector({
     }
 
     return (
-      <div className="rounded-lg border overflow-hidden">
+      <div key={level.type} className="rounded-lg border overflow-hidden">
         <button
           type="button"
-          onClick={() => setExpandedSection(isExpanded ? null : section)}
+          onClick={() => setExpandedSection(isExpanded ? null : level.type)}
           className={cn(
             "w-full flex items-center gap-3 px-3 py-3 transition-colors text-left",
             isExpanded ? "bg-primary/5" : "hover:bg-muted/50",
-            isSelected && !isExpanded && "bg-success/5"
+            hasSelection && !isExpanded && "bg-success/5"
           )}
         >
           <div className={cn(
             "w-8 h-8 rounded-lg flex items-center justify-center",
-            isSelected ? "bg-success/10" : "bg-muted"
+            hasSelection ? "bg-success/10" : "bg-muted"
           )}>
-            {isSelected ? <Check className="w-4 h-4 text-success" /> : icon}
+            {hasSelection ? <Check className="w-4 h-4 text-success" /> : icon}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs text-muted-foreground">{label}</p>
             <p className={cn(
               "text-sm font-medium truncate",
-              !isSelected && "text-muted-foreground"
+              !hasSelection && "text-muted-foreground"
             )}>
               {selectedName}
             </p>
@@ -147,15 +191,15 @@ export function HierarchyPositionSelector({
 
         {isExpanded && (
           <div className="px-3 py-2 bg-muted/30 border-t grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {options.map((option) => {
+            {level.options.map((option) => {
               const optionId = option.id;
-              const isOptionSelected = selectedId === optionId;
+              const isOptionSelected = level.selectedId === optionId;
               
               return (
                 <button
                   key={optionId || 'null'}
                   type="button"
-                  onClick={() => handleSelect(section, optionId)}
+                  onClick={() => handleSelect(levelIndex, optionId)}
                   className={cn(
                     "px-3 py-2 rounded-lg text-sm font-medium transition-all text-left",
                     isOptionSelected 
@@ -173,6 +217,12 @@ export function HierarchyPositionSelector({
     );
   };
 
+  // Build breadcrumb from levels in order
+  const breadcrumbItems = levels.map(level => ({
+    name: getSelectedName(level),
+    isSelected: isSelected(level),
+  }));
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 mb-4">
@@ -182,54 +232,22 @@ export function HierarchyPositionSelector({
         </p>
       </div>
 
-      {/* Breadcrumb summary */}
+      {/* Breadcrumb summary - dynamic based on levels */}
       <div className="flex items-center gap-1 text-sm text-muted-foreground mb-4 overflow-x-auto pb-1">
-        <span className={cn(isSubdivisionSelected && "text-foreground font-medium")}>
-          {selectedSubName}
-        </span>
-        <ChevronRight className="w-3 h-3 flex-shrink-0" />
-        <span className={cn(isMomentSelected && "text-foreground font-medium")}>
-          {selectedMomName}
-        </span>
-        <ChevronRight className="w-3 h-3 flex-shrink-0" />
-        <span className={cn(isFunnelSelected && "text-foreground font-medium")}>
-          {selectedFunnelName}
-        </span>
+        {breadcrumbItems.map((item, idx) => (
+          <span key={idx} className="contents">
+            <span className={cn(item.isSelected && "text-foreground font-medium")}>
+              {item.name}
+            </span>
+            {idx < breadcrumbItems.length - 1 && (
+              <ChevronRight className="w-3 h-3 flex-shrink-0" />
+            )}
+          </span>
+        ))}
       </div>
 
       <div className="space-y-2">
-        {renderSection(
-          'subdivision',
-          <Layers className="w-4 h-4 text-muted-foreground" />,
-          'Subdivisão',
-          planSubdivisions,
-          selectedSubdivision,
-          selectedSubName,
-          isSubdivisionSelected,
-          hasMultipleSubdivisions
-        )}
-
-        {renderSection(
-          'moment',
-          <Clock className="w-4 h-4 text-muted-foreground" />,
-          'Momento',
-          planMoments,
-          selectedMoment,
-          selectedMomName,
-          isMomentSelected,
-          hasMultipleMoments
-        )}
-
-        {renderSection(
-          'funnel',
-          <Filter className="w-4 h-4 text-muted-foreground" />,
-          'Fase do Funil',
-          planFunnelStages,
-          selectedFunnelStage,
-          selectedFunnelName,
-          isFunnelSelected,
-          hasMultipleFunnelStages
-        )}
+        {levels.map((level, idx) => renderSection(level, idx))}
       </div>
     </div>
   );

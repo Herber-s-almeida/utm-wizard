@@ -67,7 +67,7 @@ export function useDuplicatePlan() {
         creatives = creativesData || [];
       }
 
-      // 6. Create new plan
+      // 6. Create new plan (preserve hierarchy_order)
       const { data: newPlan, error: newPlanError } = await supabase
         .from('media_plans')
         .insert({
@@ -81,6 +81,7 @@ export function useDuplicatePlan() {
           objectives: originalPlan.objectives,
           kpis: originalPlan.kpis,
           default_url: originalPlan.default_url,
+          hierarchy_order: originalPlan.hierarchy_order, // Preserve hierarchy order
           status: 'draft',
         })
         .select()

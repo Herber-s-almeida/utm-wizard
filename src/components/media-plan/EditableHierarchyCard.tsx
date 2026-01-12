@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/animated-collapsible';
 import { motion } from 'framer-motion';
 import { HierarchyLevel, getLevelLabel, getLevelLabelPlural, DEFAULT_HIERARCHY_ORDER } from '@/types/hierarchy';
+import { HierarchyTreeNode, flattenHierarchyTree, countDescendantRows, getHierarchyColumnHeaders } from '@/utils/hierarchyDataBuilder';
 
 interface BudgetDistribution {
   id: string;
@@ -29,6 +30,7 @@ interface BudgetDistribution {
   parent_distribution_id: string | null;
 }
 
+// Legacy interface for backwards compatibility
 interface SubdivisionData {
   id: string | null;
   distId: string;
@@ -73,14 +75,15 @@ interface EditableHierarchyCardProps {
   planName: string;
   totalBudget: number;
   budgetDistributions: BudgetDistribution[];
-  hierarchyData: HierarchyRow[];
+  hierarchyData: HierarchyRow[]; // Legacy - kept for backwards compatibility
+  hierarchyTree?: HierarchyTreeNode[]; // New dynamic tree
   hierarchyOrder?: HierarchyLevel[];
   onDistributionsUpdated: () => void;
   onHide?: () => void;
 }
 
 type EditingCell = {
-  type: 'subdivision' | 'moment' | 'funnel_stage';
+  type: HierarchyLevel;
   distId: string;
 } | null;
 
@@ -90,6 +93,7 @@ export function EditableHierarchyCard({
   totalBudget,
   budgetDistributions,
   hierarchyData,
+  hierarchyTree,
   hierarchyOrder = DEFAULT_HIERARCHY_ORDER,
   onDistributionsUpdated,
   onHide,
@@ -110,27 +114,46 @@ export function EditableHierarchyCard({
     }).format(value);
   };
 
-  // Calculate totals by type for validation
-  const totals = useMemo(() => {
-    const subdivisionTotal = hierarchyData.reduce((acc, row) => acc + row.subdivision.planned, 0);
-    
-    return { subdivisionTotal };
-  }, [hierarchyData]);
+  // Flatten the dynamic tree for rendering
+  const flatRows = useMemo(() => {
+    if (!hierarchyTree || hierarchyTree.length === 0) return null;
+    return flattenHierarchyTree(hierarchyTree, hierarchyOrder);
+  }, [hierarchyTree, hierarchyOrder]);
 
-  // Check if subdivision sum exceeds plan budget
-  const isSubdivisionOverBudget = totals.subdivisionTotal > totalBudget;
+  // Get column headers based on order
+  const columnHeaders = useMemo(() => {
+    return getHierarchyColumnHeaders(hierarchyOrder);
+  }, [hierarchyOrder]);
 
-  // Check if moment sum exceeds subdivision budget for a specific subdivision
-  const getMomentsSumForSubdivision = (subRow: HierarchyRow) => {
-    return subRow.moments.reduce((acc, m) => acc + m.moment.planned, 0);
+  // Calculate totals by level for validation
+  const levelTotals = useMemo(() => {
+    if (!flatRows) return {};
+    const totals: Record<number, number> = {};
+    for (let i = 0; i < hierarchyOrder.length; i++) {
+      const uniqueDistIds = new Set<string>();
+      let total = 0;
+      for (const row of flatRows) {
+        const level = row.levels[i];
+        if (level && !uniqueDistIds.has(level.distId)) {
+          uniqueDistIds.add(level.distId);
+          total += level.planned;
+        }
+      }
+      totals[i] = total;
+    }
+    return totals;
+  }, [flatRows, hierarchyOrder]);
+
+  // Check if level sum exceeds parent
+  const isLevelOverBudget = (levelIndex: number): boolean => {
+    if (levelIndex === 0) {
+      return (levelTotals[0] || 0) > totalBudget;
+    }
+    // For deeper levels, would need to check per-parent, handled in cell rendering
+    return false;
   };
 
-  // Check if funnel stage sum exceeds moment budget
-  const getFunnelStagesSumForMoment = (momentData: HierarchyRow['moments'][0]) => {
-    return momentData.funnelStages.reduce((acc, f) => acc + f.funnelStage.planned, 0);
-  };
-
-  const startEditing = (type: 'subdivision' | 'moment' | 'funnel_stage', distId: string, currentValue: number) => {
+  const startEditing = (type: HierarchyLevel, distId: string, currentValue: number) => {
     setEditingCell({ type, distId });
     setEditValue(currentValue.toString());
   };
@@ -178,13 +201,119 @@ export function EditableHierarchyCard({
     if (e.key === 'Escape') cancelEditing();
   };
 
-  // If no real distributions (only Geral), don't show the card
+  // If no real distributions, don't show the card
   const hasRealDistributions = budgetDistributions.length > 0 && 
     hierarchyData.some(row => row.subdivision.distId !== 'root' && row.subdivision.distId !== 'none');
 
   if (!hasRealDistributions) {
     return null;
   }
+
+  // Render dynamic table using flatRows
+  const renderDynamicTable = () => {
+    if (!flatRows || flatRows.length === 0) return null;
+
+    // Track which cells have already been rendered (for rowspan)
+    const renderedCells: Record<string, boolean> = {};
+
+    // Calculate rowspans for each cell
+    const getRowSpan = (rowIndex: number, levelIndex: number): number => {
+      const currentDistId = flatRows[rowIndex].levels[levelIndex]?.distId;
+      if (!currentDistId || renderedCells[`${levelIndex}-${currentDistId}`]) return 0;
+      
+      let count = 0;
+      for (let i = rowIndex; i < flatRows.length; i++) {
+        if (flatRows[i].levels[levelIndex]?.distId === currentDistId) {
+          count++;
+        } else {
+          break;
+        }
+      }
+      return count;
+    };
+
+    return (
+      <table className="w-full text-sm">
+        <thead className="bg-muted/30">
+          <tr>
+            {columnHeaders.map((header, idx) => (
+              <th 
+                key={idx} 
+                className={cn(
+                  "text-left px-4 py-2 font-medium",
+                  idx < columnHeaders.length - 1 && "border-r"
+                )}
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {flatRows.map((row, rowIdx) => (
+            <tr key={rowIdx} className="border-t">
+              {row.levels.map((levelData, levelIdx) => {
+                const rowSpan = getRowSpan(rowIdx, levelIdx);
+                
+                // Skip if already rendered
+                if (rowSpan === 0) return null;
+                
+                // Mark as rendered
+                renderedCells[`${levelIdx}-${levelData.distId}`] = true;
+
+                // Calculate if this level's children exceed parent
+                const parentPlanned = levelIdx > 0 ? row.levels[levelIdx - 1]?.planned || 0 : totalBudget;
+                const isOverBudget = levelData.planned > parentPlanned;
+                const canEdit = levelData.distId !== 'root' && levelData.distId !== 'none';
+                const parentName = levelIdx > 0 
+                  ? row.levels[levelIdx - 1]?.name || planName 
+                  : planName;
+
+                // Background color based on level
+                const bgClass = levelIdx === 0 
+                  ? "bg-primary/5" 
+                  : levelIdx === 1 
+                    ? "bg-secondary/5" 
+                    : "";
+
+                return (
+                  <td 
+                    key={levelIdx}
+                    rowSpan={rowSpan}
+                    className={cn(
+                      "px-4 py-3 align-top",
+                      levelIdx < columnHeaders.length - 1 && "border-r",
+                      bgClass
+                    )}
+                  >
+                    <EditableCell
+                      name={levelData.name}
+                      planned={levelData.planned}
+                      allocated={levelData.allocated}
+                      percentage={levelData.percentage}
+                      percentageOf={parentName}
+                      isEditing={editingCell?.distId === levelData.distId}
+                      editValue={editValue}
+                      onEditValueChange={setEditValue}
+                      onStartEdit={() => startEditing(levelData.level, levelData.distId, levelData.planned)}
+                      onSave={saveEdit}
+                      onCancel={cancelEditing}
+                      onKeyDown={handleKeyDown}
+                      saving={saving}
+                      isOverBudget={isOverBudget}
+                      overBudgetMessage={`O valor excede o nível anterior "${parentName}"`}
+                      canEdit={canEdit}
+                      formatCurrency={formatCurrency}
+                    />
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  };
 
   return (
     <TooltipProvider>
@@ -203,13 +332,13 @@ export function EditableHierarchyCard({
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs text-sm">
-                    Visualize e edite a distribuição do orçamento entre subdivisões, momentos e fases do funil. Clique nos valores para editar diretamente.
+                    Visualize e edite a distribuição do orçamento. Clique nos valores para editar diretamente.
                   </TooltipContent>
                 </Tooltip>
               </div>
               {!isOpen && (
                 <p className="text-xs text-muted-foreground">
-                  {hierarchyData.length} subdivisão(ões) • Clique para expandir
+                  {hierarchyOrder.map(l => getLevelLabelPlural(l)).join(' → ')} • Clique para expandir
                 </p>
               )}
             </button>
@@ -256,118 +385,9 @@ export function EditableHierarchyCard({
             </p>
           </div>
 
-          {/* Table */}
+          {/* Dynamic Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/30">
-                <tr>
-                  <th className="text-left px-4 py-2 font-medium border-r">Subdivisão do plano</th>
-                  <th className="text-left px-4 py-2 font-medium border-r">Momentos de Campanha</th>
-                  <th className="text-left px-4 py-2 font-medium">Fase</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hierarchyData.map((subRow, subIdx) => {
-                  // Count total rows for this subdivision
-                  const totalMomentRows = subRow.moments.reduce((acc, m) => acc + m.funnelStages.length, 0);
-                  const momentsSumOverBudget = getMomentsSumForSubdivision(subRow) > subRow.subdivision.planned;
-                  
-                  return subRow.moments.map((momentRow, momIdx) => {
-                    // Rows for this moment
-                    const funnelRows = momentRow.funnelStages.length;
-                    const funnelSumOverBudget = getFunnelStagesSumForMoment(momentRow) > momentRow.moment.planned;
-                    
-                    return momentRow.funnelStages.map((funnelRow, funIdx) => {
-                      const isFirstMoment = momIdx === 0 && funIdx === 0;
-                      const isFirstFunnel = funIdx === 0;
-
-                      return (
-                        <tr key={`${subIdx}-${momIdx}-${funIdx}`} className="border-t">
-                          {/* Subdivision Cell */}
-                          {isFirstMoment && (
-                            <td 
-                              rowSpan={totalMomentRows} 
-                              className="px-4 py-3 border-r align-top bg-primary/5"
-                            >
-                              <EditableCell
-                                name={subRow.subdivision.name}
-                                planned={subRow.subdivision.planned}
-                                allocated={subRow.subdivisionAllocated}
-                                percentage={subRow.subdivision.percentage}
-                                percentageOf={planName}
-                                isEditing={editingCell?.distId === subRow.subdivision.distId}
-                                editValue={editValue}
-                                onEditValueChange={setEditValue}
-                                onStartEdit={() => startEditing('subdivision', subRow.subdivision.distId, subRow.subdivision.planned)}
-                                onSave={saveEdit}
-                                onCancel={cancelEditing}
-                                onKeyDown={handleKeyDown}
-                                saving={saving}
-                                isOverBudget={isSubdivisionOverBudget}
-                                overBudgetMessage={`A soma das subdivisões é maior do que o valor do plano "${planName}"`}
-                                canEdit={subRow.subdivision.distId !== 'root' && subRow.subdivision.distId !== 'none'}
-                                formatCurrency={formatCurrency}
-                              />
-                            </td>
-                          )}
-
-                          {/* Moment Cell */}
-                          {isFirstFunnel && (
-                            <td 
-                              rowSpan={funnelRows} 
-                              className="px-4 py-3 border-r align-top bg-secondary/5"
-                            >
-                              <EditableCell
-                                name={momentRow.moment.name}
-                                planned={momentRow.moment.planned}
-                                allocated={momentRow.momentAllocated}
-                                percentage={momentRow.moment.percentage}
-                                percentageOf={subRow.subdivision.name}
-                                isEditing={editingCell?.distId === momentRow.moment.distId}
-                                editValue={editValue}
-                                onEditValueChange={setEditValue}
-                                onStartEdit={() => startEditing('moment', momentRow.moment.distId, momentRow.moment.planned)}
-                                onSave={saveEdit}
-                                onCancel={cancelEditing}
-                                onKeyDown={handleKeyDown}
-                                saving={saving}
-                                isOverBudget={momentsSumOverBudget}
-                                overBudgetMessage={`A soma dos momentos é maior do que a subdivisão "${subRow.subdivision.name}"`}
-                                canEdit={momentRow.moment.distId !== 'root' && momentRow.moment.distId !== 'none'}
-                                formatCurrency={formatCurrency}
-                              />
-                            </td>
-                          )}
-
-                          {/* Funnel Stage Cell */}
-                          <td className="px-4 py-3 align-top">
-                            <EditableCell
-                              name={funnelRow.funnelStage.name}
-                              planned={funnelRow.funnelStage.planned}
-                              allocated={funnelRow.funnelStageAllocated}
-                              percentage={funnelRow.funnelStage.percentage}
-                              percentageOf={momentRow.moment.name}
-                              isEditing={editingCell?.distId === funnelRow.funnelStage.distId}
-                              editValue={editValue}
-                              onEditValueChange={setEditValue}
-                              onStartEdit={() => startEditing('funnel_stage', funnelRow.funnelStage.distId, funnelRow.funnelStage.planned)}
-                              onSave={saveEdit}
-                              onCancel={cancelEditing}
-                              onKeyDown={handleKeyDown}
-                              saving={saving}
-                              isOverBudget={funnelSumOverBudget}
-                              overBudgetMessage={`A soma das fases é maior do que o momento "${momentRow.moment.name}"`}
-                              canEdit={funnelRow.funnelStage.distId !== 'root' && funnelRow.funnelStage.distId !== 'none'}
-                              formatCurrency={formatCurrency}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    });
-                  });
-                })}
-              </tbody>
-            </table>
+            {renderDynamicTable()}
           </div>
         </AnimatedCollapsibleContent>
       </AnimatedCollapsible>
