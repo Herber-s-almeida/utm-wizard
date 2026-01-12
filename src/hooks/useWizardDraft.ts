@@ -30,7 +30,8 @@ export function useWizardDraft(
         const timestamp = parseInt(savedTimestamp, 10);
         
         // Only return draft if it has meaningful data
-        if (state.planData.name || state.planData.total_budget > 0 || state.subdivisions.length > 0) {
+        const hasSubdivisions = Object.values(state.subdivisions || {}).some(arr => arr.length > 0);
+        if (state.planData.name || state.planData.total_budget > 0 || hasSubdivisions) {
           return { state, timestamp };
         }
       }
@@ -81,7 +82,8 @@ export function useWizardDraft(
     
     const timeoutId = setTimeout(() => {
       // Only save if there's meaningful data
-      if (state.planData.name || state.planData.total_budget > 0 || state.subdivisions.length > 0) {
+      const hasSubdivisions = Object.values(state.subdivisions || {}).some(arr => arr.length > 0);
+      if (state.planData.name || state.planData.total_budget > 0 || hasSubdivisions) {
         saveDraft(state);
       }
     }, 1000); // Debounce 1 second
