@@ -37,8 +37,9 @@ export interface WizardState {
   // Dynamic hierarchy support
   hierarchyOrder: HierarchyLevel[];
   levelAllocations: LevelAllocations;
-  // Legacy support (computed from levelAllocations)
-  subdivisions: BudgetAllocation[];
+  // All levels now use Record<string, BudgetAllocation[]> for uniform access
+  // The key is the parent's reference_id, or 'root' for the first level
+  subdivisions: Record<string, BudgetAllocation[]>;
   moments: Record<string, BudgetAllocation[]>;
   funnelStages: Record<string, BudgetAllocation[]>;
   // Temporal
@@ -62,8 +63,8 @@ const createDefaultState = (): WizardState => ({
   },
   hierarchyOrder: [], // Start with empty (General budget) - user can add levels
   levelAllocations: {},
-  // Legacy fields (for backward compatibility)
-  subdivisions: [],
+  // All levels use Record for uniform dynamic access
+  subdivisions: {},
   moments: {},
   funnelStages: {},
   temporalGranularity: 'monthly',
@@ -172,7 +173,7 @@ export function useMediaPlanWizard() {
         // Root level allocations - first level in hierarchy
         const firstLevel = prev.hierarchyOrder[0];
         if (firstLevel === 'subdivision') {
-          newState.subdivisions = allocations;
+          newState.subdivisions = { ...prev.subdivisions, root: allocations };
         } else if (firstLevel === 'moment') {
           newState.moments = { ...prev.moments, root: allocations };
         } else if (firstLevel === 'funnel_stage') {
@@ -184,18 +185,12 @@ export function useMediaPlanWizard() {
     });
   }, []);
 
-  // Legacy setters that work with new structure
-  const setSubdivisions = useCallback((allocations: BudgetAllocation[]) => {
-    setState(prev => {
-      const newState = { ...prev, subdivisions: allocations };
-      
-      // If subdivision is the first level, also set in levelAllocations
-      if (prev.hierarchyOrder[0] === 'subdivision') {
-        newState.levelAllocations = { ...prev.levelAllocations, root: allocations };
-      }
-      
-      return newState;
-    });
+  // Set subdivisions for a specific path (supports full hierarchical paths)
+  const setSubdivisions = useCallback((path: string, allocations: BudgetAllocation[]) => {
+    setState(prev => ({
+      ...prev,
+      subdivisions: { ...prev.subdivisions, [path]: allocations },
+    }));
   }, []);
 
   // Set moments for a specific path (supports full hierarchical paths like 'curitiba_lancamento')
@@ -242,9 +237,10 @@ export function useMediaPlanWizard() {
   }, []);
 
   // Initialize state from existing plan data (for edit mode)
+  // Now all allocations are Record<string, BudgetAllocation[]> for uniform handling
   const initializeFromPlan = useCallback((
     planData: WizardPlanData,
-    subdivisionAllocations: BudgetAllocation[],
+    subdivisionAllocations: Record<string, BudgetAllocation[]>,
     momentAllocations: Record<string, BudgetAllocation[]>,
     funnelAllocations: Record<string, BudgetAllocation[]>,
     initialStep: number = 0,

@@ -226,74 +226,87 @@ export default function EditMediaPlan() {
         kpis: (plan.kpis as Record<string, number>) || {},
       };
 
-      // Build subdivision allocations
-      const subdivisionDists = (distributions || []).filter(d => d.distribution_type === 'subdivision');
-      const subdivisionAllocations: BudgetAllocation[] = [];
-      
-      for (const dist of subdivisionDists) {
-        if (dist.reference_id) {
-          // Find the subdivision name from library
-          const subData = libraryData.subdivisions.find(s => s.id === dist.reference_id);
-          subdivisionAllocations.push({
-            id: dist.reference_id,
-            name: subData?.name || 'Subdivisão',
-            percentage: Number(dist.percentage),
-            amount: Number(dist.amount),
-          });
-        }
-        // Skip "Geral" entries (reference_id is null)
-      }
-
-      // Build moment allocations
-      const momentDists = (distributions || []).filter(d => d.distribution_type === 'moment');
+      // Build allocations dynamically based on hierarchy_order
+      // All levels now use Record<string, BudgetAllocation[]> for uniform handling
+      const subdivisionAllocations: Record<string, BudgetAllocation[]> = {};
       const momentAllocations: Record<string, BudgetAllocation[]> = {};
-
-      for (const momDist of momentDists) {
-        if (!momDist.reference_id) continue; // Skip "Geral"
-        
-        // Find parent subdivision
-        const parentDist = subdivisionDists.find(s => s.id === momDist.parent_distribution_id);
-        const key = parentDist?.reference_id || 'root';
-        
-        const momData = libraryData.moments.find(m => m.id === momDist.reference_id);
-        if (!momentAllocations[key]) momentAllocations[key] = [];
-        momentAllocations[key].push({
-          id: momDist.reference_id,
-          name: momData?.name || 'Momento',
-          percentage: Number(momDist.percentage),
-          amount: Number(momDist.amount),
-          start_date: momDist.start_date || undefined,
-          end_date: momDist.end_date || undefined,
-        });
-      }
-
-      // Build funnel allocations
-      const funnelDists = (distributions || []).filter(d => d.distribution_type === 'funnel_stage');
       const funnelAllocations: Record<string, BudgetAllocation[]> = {};
 
-      for (const funnelDist of funnelDists) {
-        if (!funnelDist.reference_id) continue; // Skip "Geral"
+      // Helper to get library item name
+      const getLibraryName = (level: HierarchyLevel, referenceId: string): string => {
+        switch (level) {
+          case 'subdivision':
+            return libraryData.subdivisions.find(s => s.id === referenceId)?.name || 'Subdivisão';
+          case 'moment':
+            return libraryData.moments.find(m => m.id === referenceId)?.name || 'Momento';
+          case 'funnel_stage':
+            return libraryData.funnelStages.find(f => f.id === referenceId)?.name || 'Fase';
+          default:
+            return '';
+        }
+      };
 
-        // Find parent moment
-        const parentMomDist = momentDists.find(m => m.id === funnelDist.parent_distribution_id);
-        // Find parent subdivision of that moment
-        const parentSubDist = parentMomDist 
-          ? subdivisionDists.find(s => s.id === parentMomDist.parent_distribution_id)
-          : null;
-        
-        const key = parentSubDist?.reference_id || 'root';
-        
-        const funnelData = libraryData.funnelStages.find(f => f.id === funnelDist.reference_id);
-        if (!funnelAllocations[key]) funnelAllocations[key] = [];
-        
-        // Avoid duplicates
-        if (!funnelAllocations[key].some(f => f.id === funnelDist.reference_id)) {
-          funnelAllocations[key].push({
-            id: funnelDist.reference_id,
-            name: funnelData?.name || 'Fase',
-            percentage: Number(funnelDist.percentage),
-            amount: Number(funnelDist.amount),
-          });
+      // Helper to get the allocation record for a level
+      const getAllocRecord = (level: HierarchyLevel): Record<string, BudgetAllocation[]> => {
+        switch (level) {
+          case 'subdivision': return subdivisionAllocations;
+          case 'moment': return momentAllocations;
+          case 'funnel_stage': return funnelAllocations;
+          default: return {};
+        }
+      };
+
+      // Build a map of distribution id -> reference_id for parent lookups
+      const distIdToRefId: Record<string, string> = {};
+      for (const dist of (distributions || [])) {
+        if (dist.reference_id) {
+          distIdToRefId[dist.id] = dist.reference_id;
+        }
+      }
+
+      // Process each level in hierarchy order
+      // For each level, find its distributions and determine the parent key dynamically
+      for (let levelIndex = 0; levelIndex < hierarchyOrder.length; levelIndex++) {
+        const level = hierarchyOrder[levelIndex];
+        const levelDists = (distributions || []).filter(d => d.distribution_type === level);
+        const allocRecord = getAllocRecord(level);
+
+        for (const dist of levelDists) {
+          if (!dist.reference_id) continue; // Skip "Geral" entries
+
+          // Determine parent key: find the reference_id of the immediate parent
+          let parentKey = 'root';
+          if (levelIndex > 0 && dist.parent_distribution_id) {
+            // Walk up the parent chain to get the immediate parent's reference_id
+            const parentRefId = distIdToRefId[dist.parent_distribution_id];
+            if (parentRefId) {
+              parentKey = parentRefId;
+            }
+          }
+
+          // Initialize array if needed
+          if (!allocRecord[parentKey]) {
+            allocRecord[parentKey] = [];
+          }
+
+          // Build the allocation object
+          const allocation: BudgetAllocation = {
+            id: dist.reference_id,
+            name: getLibraryName(level, dist.reference_id),
+            percentage: Number(dist.percentage),
+            amount: Number(dist.amount),
+          };
+
+          // Add dates for moments
+          if (level === 'moment') {
+            allocation.start_date = dist.start_date || undefined;
+            allocation.end_date = dist.end_date || undefined;
+          }
+
+          // Avoid duplicates
+          if (!allocRecord[parentKey].some(a => a.id === dist.reference_id)) {
+            allocRecord[parentKey].push(allocation);
+          }
         }
       }
 
@@ -389,7 +402,9 @@ export default function EditMediaPlan() {
     // Clear allocations for removed levels
     const removedLevels = originalHierarchyOrder.filter(level => !newOrder.includes(level));
     if (removedLevels.includes('subdivision')) {
-      setSubdivisions([]);
+      setSubdivisions('root', []);
+      // Clear all subdivision allocations
+      Object.keys(state.subdivisions).forEach(key => setSubdivisions(key, []));
     }
     if (removedLevels.includes('moment')) {
       setMoments('root', []);
@@ -417,7 +432,7 @@ export default function EditMediaPlan() {
   const getAllocationsForLevelAtPath = (level: HierarchyLevel, parentPath: string = 'root'): BudgetAllocation[] => {
     switch (level) {
       case 'subdivision':
-        return state.subdivisions;
+        return state.subdivisions[parentPath] || [];
       case 'moment':
         return state.moments[parentPath] || [];
       case 'funnel_stage':
@@ -523,7 +538,8 @@ export default function EditMediaPlan() {
   const handleLevelAdd = (level: HierarchyLevel, parentPath: string, item: BudgetAllocation) => {
     switch (level) {
       case 'subdivision':
-        setSubdivisions([...state.subdivisions, item]);
+        const currentSubs = state.subdivisions[parentPath] || [];
+        setSubdivisions(parentPath, [...currentSubs, item]);
         break;
       case 'moment':
         const currentMoments = state.moments[parentPath] || [];
@@ -547,7 +563,8 @@ export default function EditMediaPlan() {
   const handleLevelUpdate = (level: HierarchyLevel, parentPath: string, id: string, percentage: number, dates?: { start_date?: string; end_date?: string }) => {
     switch (level) {
       case 'subdivision':
-        setSubdivisions(state.subdivisions.map(s => 
+        const currentSubs = state.subdivisions[parentPath] || [];
+        setSubdivisions(parentPath, currentSubs.map(s => 
           s.id === id ? { ...s, percentage, amount: wizard.calculateAmount(state.planData.total_budget, percentage) } : s
         ));
         break;
@@ -569,7 +586,8 @@ export default function EditMediaPlan() {
   const handleLevelRemove = (level: HierarchyLevel, parentPath: string, id: string) => {
     switch (level) {
       case 'subdivision':
-        setSubdivisions(state.subdivisions.filter(s => s.id !== id));
+        const currentSubs = state.subdivisions[parentPath] || [];
+        setSubdivisions(parentPath, currentSubs.filter(s => s.id !== id));
         break;
       case 'moment':
         const currentMoments = state.moments[parentPath] || [];
@@ -601,7 +619,7 @@ export default function EditMediaPlan() {
   const getAllocationsForLevel = (level: HierarchyLevel): BudgetAllocation[] => {
     switch (level) {
       case 'subdivision':
-        return state.subdivisions;
+        return Object.values(state.subdivisions).flat();
       case 'moment':
         return Object.values(state.moments).flat();
       case 'funnel_stage':
@@ -647,7 +665,7 @@ export default function EditMediaPlan() {
 
   // Calculate orphan lines (lines that will be deleted) with details
   const calculateOrphanLines = (): { count: number; lines: { id: string; line_code: string; platform: string; reason: string }[] } => {
-    const newSubIds = new Set(state.subdivisions.map(s => s.id));
+    const newSubIds = new Set(Object.values(state.subdivisions).flat().map(s => s.id));
     const newMomIds = new Set(Object.values(state.moments).flat().map(m => m.id));
     const newFunnelIds = new Set(Object.values(state.funnelStages).flat().map(f => f.id));
 
@@ -749,7 +767,7 @@ export default function EditMediaPlan() {
       if (planError) throw planError;
 
       // 2. Delete orphan lines
-      const newSubIds = new Set(state.subdivisions.map(s => s.id));
+      const newSubIds = new Set(Object.values(state.subdivisions).flat().map(s => s.id));
       const newMomIds = new Set(Object.values(state.moments).flat().map(m => m.id));
       const newFunnelIds = new Set(Object.values(state.funnelStages).flat().map(f => f.id));
 
@@ -854,17 +872,20 @@ export default function EditMediaPlan() {
   };
 
   const handleSubdivisionAdd = (item: BudgetAllocation) => {
-    setSubdivisions([...state.subdivisions, item]);
+    const current = state.subdivisions['root'] || [];
+    setSubdivisions('root', [...current, item]);
   };
 
   const handleSubdivisionUpdate = (itemId: string, percentage: number) => {
-    setSubdivisions(state.subdivisions.map(s => 
+    const current = state.subdivisions['root'] || [];
+    setSubdivisions('root', current.map(s => 
       s.id === itemId ? { ...s, percentage, amount: wizard.calculateAmount(state.planData.total_budget, percentage) } : s
     ));
   };
 
   const handleSubdivisionRemove = (itemId: string) => {
-    setSubdivisions(state.subdivisions.filter(s => s.id !== itemId));
+    const current = state.subdivisions['root'] || [];
+    setSubdivisions('root', current.filter(s => s.id !== itemId));
   };
 
   const handleCreateSubdivision = async (name: string) => {
@@ -924,8 +945,9 @@ export default function EditMediaPlan() {
     return result;
   };
 
-  const subdivisionsForContext = state.subdivisions.length > 0 
-    ? state.subdivisions 
+  const rootSubdivisions = state.subdivisions['root'] || [];
+  const subdivisionsForContext = rootSubdivisions.length > 0 
+    ? rootSubdivisions 
     : [{ id: 'root', name: 'Plano Completo', percentage: 100, amount: state.planData.total_budget }];
 
   if (loading) {

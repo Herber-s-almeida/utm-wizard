@@ -162,7 +162,7 @@ export default function NewMediaPlanBudget() {
   const getAllocationsForLevel = useCallback((level: HierarchyLevel, parentPath: string = 'root'): BudgetAllocation[] => {
     switch (level) {
       case 'subdivision':
-        return state.subdivisions;
+        return state.subdivisions[parentPath] || [];
       case 'moment':
         return state.moments[parentPath] || [];
       case 'funnel_stage':
@@ -176,7 +176,7 @@ export default function NewMediaPlanBudget() {
   const setAllocationsForLevel = useCallback((level: HierarchyLevel, parentKey: string, allocations: BudgetAllocation[]) => {
     switch (level) {
       case 'subdivision':
-        setSubdivisions(allocations);
+        setSubdivisions(parentKey, allocations);
         break;
       case 'moment':
         setMoments(parentKey, allocations);
