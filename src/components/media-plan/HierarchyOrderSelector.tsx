@@ -284,18 +284,26 @@ export function HierarchyOrderSelector({
           </div>
         )}
 
-        {/* Empty state */}
+        {/* Empty state - General Budget */}
         {selectedLevels.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            <Layers className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">Nenhum nível selecionado</p>
-            <p className="text-sm">Clique nos níveis acima para adicioná-los</p>
+          <div className="p-4 bg-primary/5 rounded-xl border-2 border-primary/20 text-center">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
+              <Layers className="h-6 w-6 text-primary" />
+            </div>
+            <p className="font-medium text-foreground">Orçamento Geral</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              O plano terá um único orçamento sem divisões. Você pode adicionar níveis clicando acima.
+            </p>
+            <Badge variant="outline" className="mt-3 gap-1 border-primary/30 text-primary">
+              <Check className="h-3 w-3" />
+              Configuração válida
+            </Badge>
           </div>
         )}
 
         {/* Hint */}
         <p className="text-xs text-muted-foreground text-center">
-          💡 Você pode usar de 1 a 3 níveis. Planos mais simples podem ter apenas 1 nível de divisão.
+          💡 Você pode usar de 0 a 3 níveis. Planos simples podem não ter nenhuma divisão (orçamento geral).
         </p>
       </CardContent>
     </Card>
