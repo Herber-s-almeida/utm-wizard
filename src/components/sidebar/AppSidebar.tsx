@@ -745,7 +745,6 @@ export function AppSidebar() {
                       slug={plan.slug}
                       name={plan.name}
                       section="resources"
-                      icon={Image}
                     />
                   ))}
                   {(draftPlans.data?.length || 0) > MAX_ITEMS && (
@@ -775,7 +774,6 @@ export function AppSidebar() {
                       slug={plan.slug}
                       name={plan.name}
                       section="resources"
-                      icon={Image}
                     />
                   ))}
                   {(activePlans.data?.length || 0) > MAX_ITEMS && (
@@ -805,7 +803,6 @@ export function AppSidebar() {
                       slug={plan.slug}
                       name={plan.name}
                       section="resources"
-                      icon={Image}
                     />
                   ))}
                   {(finishedPlans.data?.length || 0) > MAX_ITEMS && (
@@ -860,7 +857,6 @@ export function AppSidebar() {
                       slug={plan.slug}
                       name={plan.name}
                       section="taxonomy"
-                      icon={Link2}
                     />
                   ))}
                   {(draftPlans.data?.length || 0) > MAX_ITEMS && (
@@ -890,7 +886,6 @@ export function AppSidebar() {
                       slug={plan.slug}
                       name={plan.name}
                       section="taxonomy"
-                      icon={Link2}
                     />
                   ))}
                   {(activePlans.data?.length || 0) > MAX_ITEMS && (
@@ -920,7 +915,6 @@ export function AppSidebar() {
                       slug={plan.slug}
                       name={plan.name}
                       section="taxonomy"
-                      icon={Link2}
                     />
                   ))}
                   {(finishedPlans.data?.length || 0) > MAX_ITEMS && (
