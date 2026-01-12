@@ -96,7 +96,7 @@ export default function DetailTypesPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Tipos de Detalhamento</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Configurar Linhas de Mídia</h1>
             <p className="text-muted-foreground">
               Configure os tipos de detalhamento disponíveis para as linhas de mídia
             </p>
@@ -106,6 +106,19 @@ export default function DetailTypesPage() {
             Novo Tipo
           </Button>
         </div>
+
+        {/* Explanatory Card */}
+        <Card className="bg-muted/30 border-dashed">
+          <CardContent className="py-4">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Algumas entregas de mídia precisam de detalhamento diferente, como entregas semanais, 
+              diárias ou ações pontuais que precisam ser destacadas no plano. Para isso, utiliza-se 
+              o <strong>detalhamento</strong>, que permite fazer um aprofundamento de uma das linhas 
+              do plano em suas entregas pormenores, organizando melhor a execução e o acompanhamento 
+              das ações de mídia.
+            </p>
+          </CardContent>
+        </Card>
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
