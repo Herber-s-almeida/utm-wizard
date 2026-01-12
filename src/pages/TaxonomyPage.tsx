@@ -12,7 +12,8 @@ import { useTaxonomyData } from '@/hooks/useTaxonomyData';
 import { exportUtmsToXlsx } from '@/utils/exportUtmsToXlsx';
 import { toast } from 'sonner';
 import { usePlanBySlug, getPlanUrl } from '@/hooks/usePlanBySlug';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER } from '@/types/hierarchy';
 
 export default function TaxonomyPage() {
   const { id: identifier } = useParams();
@@ -55,6 +56,14 @@ export default function TaxonomyPage() {
   
   const planUrl = getPlanUrl(plan);
 
+  // Get hierarchy order from plan (fallback to default if not set)
+  const hierarchyOrder: HierarchyLevel[] = useMemo(() => {
+    if (plan?.hierarchy_order && Array.isArray(plan.hierarchy_order) && plan.hierarchy_order.length > 0) {
+      return plan.hierarchy_order as HierarchyLevel[];
+    }
+    return DEFAULT_HIERARCHY_ORDER;
+  }, [plan?.hierarchy_order]);
+
   const validatedCount = taxonomyData?.filter(line => line.utm_validated).length || 0;
   const totalCount = taxonomyData?.length || 0;
 
@@ -69,6 +78,7 @@ export default function TaxonomyPage() {
       campaignName: plan.campaign || plan.name,
       defaultUrl: plan.default_url,
       lines: taxonomyData,
+      hierarchyOrder,
     });
     toast.success('Arquivo XLSX exportado!');
   };

@@ -711,6 +711,7 @@ export default function MediaPlanDetail() {
                     channels: channels.data || [],
                     targets: targets.data || [],
                     statuses: statuses.data || [],
+                    hierarchyOrder,
                   })}
                 >
                   <Download className="w-4 h-4 mr-2" />
