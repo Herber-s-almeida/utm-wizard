@@ -1642,6 +1642,7 @@ export type Database = {
           format_id: string | null
           id: string
           media_line_id: string
+          message_slug: string | null
           name: string
           notes: string | null
           opening_date: string | null
@@ -1661,6 +1662,7 @@ export type Database = {
           format_id?: string | null
           id?: string
           media_line_id: string
+          message_slug?: string | null
           name: string
           notes?: string | null
           opening_date?: string | null
@@ -1680,6 +1682,7 @@ export type Database = {
           format_id?: string | null
           id?: string
           media_line_id?: string
+          message_slug?: string | null
           name?: string
           notes?: string | null
           opening_date?: string | null
