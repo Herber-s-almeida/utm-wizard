@@ -1,3 +1,5 @@
+import { HierarchyLevel } from './hierarchy';
+
 export interface MediaPlan {
   id: string;
   user_id: string;
@@ -14,6 +16,7 @@ export interface MediaPlan {
   objectives: string[] | null;
   kpis: Record<string, number> | null;
   default_url: string | null;
+  hierarchy_order: HierarchyLevel[] | null;
   created_at: string;
   updated_at: string;
 }
