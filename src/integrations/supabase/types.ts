@@ -105,6 +105,7 @@ export type Database = {
           slug: string | null
           updated_at: string | null
           user_id: string
+          visible_for_media_plans: boolean | null
         }
         Insert: {
           created_at?: string | null
@@ -116,6 +117,7 @@ export type Database = {
           slug?: string | null
           updated_at?: string | null
           user_id: string
+          visible_for_media_plans?: boolean | null
         }
         Update: {
           created_at?: string | null
@@ -127,6 +129,7 @@ export type Database = {
           slug?: string | null
           updated_at?: string | null
           user_id?: string
+          visible_for_media_plans?: boolean | null
         }
         Relationships: []
       }

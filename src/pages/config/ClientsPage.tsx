@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, ArrowLeft } from 'lucide-react';
-import { useClients } from '@/hooks/useClients';
-import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
+import { Plus, Pencil, Trash2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { useClients, Client } from '@/hooks/useClients';
+import { ClientDialog } from '@/components/config/ClientDialog';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,18 +21,18 @@ import {
 export default function ClientsPage() {
   const { activeItems: clients, create, update, remove } = useClients();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<Client | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const existingNames = clients?.map(c => c.name) || [];
 
-  const handleCreate = (data: { name: string; description: string }) => {
-    create.mutate({ name: data.name, description: data.description });
+  const handleCreate = (data: { name: string; description: string; visible_for_media_plans: boolean }) => {
+    create.mutate(data);
   };
 
-  const handleUpdate = (data: { name: string; description: string }) => {
+  const handleUpdate = (data: { name: string; description: string; visible_for_media_plans: boolean }) => {
     if (!editingItem) return;
-    update.mutate({ id: editingItem.id, name: data.name, description: data.description });
+    update.mutate({ id: editingItem.id, ...data });
     setEditingItem(null);
   };
 
@@ -69,11 +70,26 @@ export default function ClientsPage() {
               <Card key={client.id}>
                 <CardHeader className="py-3">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-base">{client.name}</CardTitle>
-                      {client.description && (
-                        <p className="text-sm text-muted-foreground">{client.description}</p>
-                      )}
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-base">{client.name}</CardTitle>
+                          {client.visible_for_media_plans !== false ? (
+                            <Badge variant="outline" className="text-xs gap-1">
+                              <Eye className="h-3 w-3" />
+                              Planos
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs gap-1 opacity-60">
+                              <EyeOff className="h-3 w-3" />
+                              Oculto
+                            </Badge>
+                          )}
+                        </div>
+                        {client.description && (
+                          <p className="text-sm text-muted-foreground">{client.description}</p>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" onClick={() => { setEditingItem(client); setDialogOpen(true); }}>
@@ -90,17 +106,13 @@ export default function ClientsPage() {
           )}
         </div>
 
-        <SimpleConfigDialog
+        <ClientDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           onSave={editingItem ? handleUpdate : handleCreate}
-          title={editingItem ? 'Editar cliente' : 'Criar novo cliente'}
-          nameLabel="Nome do cliente"
-          namePlaceholder="Ex: ACME Corp"
           existingNames={existingNames}
-          initialData={editingItem}
+          initialData={editingItem || undefined}
           mode={editingItem ? 'edit' : 'create'}
-          maxNameLength={180}
         />
 
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
