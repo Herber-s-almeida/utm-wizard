@@ -203,17 +203,19 @@ export function useMediaPlanWizard() {
     });
   }, []);
 
-  const setMoments = useCallback((key: string, allocations: BudgetAllocation[]) => {
+  // Set moments for a specific path (supports full hierarchical paths like 'curitiba_lancamento')
+  const setMoments = useCallback((path: string, allocations: BudgetAllocation[]) => {
     setState(prev => ({
       ...prev,
-      moments: { ...prev.moments, [key]: allocations },
+      moments: { ...prev.moments, [path]: allocations },
     }));
   }, []);
 
-  const setFunnelStages = useCallback((key: string, allocations: BudgetAllocation[]) => {
+  // Set funnel stages for a specific path (supports full hierarchical paths)
+  const setFunnelStages = useCallback((path: string, allocations: BudgetAllocation[]) => {
     setState(prev => ({
       ...prev,
-      funnelStages: { ...prev.funnelStages, [key]: allocations },
+      funnelStages: { ...prev.funnelStages, [path]: allocations },
     }));
   }, []);
 

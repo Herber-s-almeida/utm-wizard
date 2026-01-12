@@ -158,15 +158,15 @@ export default function NewMediaPlanBudget() {
     }).format(value);
   };
 
-  // Get allocations for a level at a specific path
-  const getAllocationsForLevel = useCallback((level: HierarchyLevel, parentKey: string = 'root'): BudgetAllocation[] => {
+  // Get allocations for a level at a specific path (supports full hierarchical paths)
+  const getAllocationsForLevel = useCallback((level: HierarchyLevel, parentPath: string = 'root'): BudgetAllocation[] => {
     switch (level) {
       case 'subdivision':
         return state.subdivisions;
       case 'moment':
-        return state.moments[parentKey] || [];
+        return state.moments[parentPath] || [];
       case 'funnel_stage':
-        return state.funnelStages[parentKey] || [];
+        return state.funnelStages[parentPath] || [];
       default:
         return [];
     }
@@ -355,9 +355,10 @@ export default function NewMediaPlanBudget() {
 
         const level = state.hierarchyOrder[levelIndex];
         
-        // Get allocations for this level at this parent
-        const parentKey = parentPath === '' ? 'root' : parentPath.split('_').pop() || 'root';
-        let allocations = getAllocationsForLevel(level, parentKey);
+        // Get allocations for this level using the full parent path
+        // For first level, use 'root', otherwise use the full hierarchical path
+        const allocKey = parentPath === '' ? 'root' : parentPath;
+        let allocations = getAllocationsForLevel(level, allocKey);
         
         // If no allocations, use "Geral"
         if (allocations.length === 0) {
@@ -372,7 +373,7 @@ export default function NewMediaPlanBudget() {
           const distId = await insertDistribution(level, { ...alloc, amount: allocAmount }, parentDistId, allocPath);
           
           if (distId) {
-            // Process next level
+            // Process next level with the full path
             await processLevel(levelIndex + 1, allocPath, distId, allocAmount);
           }
         }
@@ -438,27 +439,106 @@ export default function NewMediaPlanBudget() {
     return result;
   };
 
-  // Get parent items for nested levels
-  const getParentItemsForLevel = (levelIndex: number): { id: string; name: string; percentage: number; amount: number }[] => {
+  // Interface for parent items with full path support
+  interface ParentItem {
+    id: string;
+    name: string;
+    path: string;
+    breadcrumb: string;
+    percentage: number;
+    amount: number;
+  }
+
+  // Get parent items for nested levels - recursively builds all path combinations
+  const getParentItemsForLevel = (levelIndex: number): ParentItem[] => {
     if (levelIndex === 0) {
       // First level - parent is the plan itself
-      return [{ id: 'root', name: 'Plano Completo', percentage: 100, amount: state.planData.total_budget }];
+      return [{ 
+        id: 'root', 
+        name: 'Plano Completo', 
+        path: 'root',
+        breadcrumb: 'Plano Completo',
+        percentage: 100, 
+        amount: state.planData.total_budget 
+      }];
     }
 
-    // Get allocations from previous level
-    const prevLevel = state.hierarchyOrder[levelIndex - 1];
-    const prevAllocations = getAllocationsForLevel(prevLevel, 'root');
+    // Recursively build all path combinations from previous levels
+    const buildHierarchicalPaths = (
+      currentLevelIndex: number,
+      parentPath: string,
+      parentBreadcrumb: string,
+      parentAmount: number
+    ): ParentItem[] => {
+      if (currentLevelIndex >= levelIndex) {
+        return [];
+      }
+
+      const level = state.hierarchyOrder[currentLevelIndex];
+      const allocations = getAllocationsForLevel(level, parentPath);
+
+      // If no allocations at this level, treat as "Geral" and continue
+      if (allocations.length === 0) {
+        const geralPath = parentPath === 'root' ? 'geral' : `${parentPath}_geral`;
+        const geralBreadcrumb = parentPath === 'root' ? 'Geral' : `${parentBreadcrumb} › Geral`;
+        
+        if (currentLevelIndex === levelIndex - 1) {
+          // This is the immediate parent level - return Geral
+          return [{ 
+            id: 'geral', 
+            name: 'Geral', 
+            path: geralPath,
+            breadcrumb: geralBreadcrumb,
+            percentage: 100, 
+            amount: parentAmount 
+          }];
+        }
+        // Continue to next level with Geral
+        return buildHierarchicalPaths(currentLevelIndex + 1, geralPath, geralBreadcrumb, parentAmount);
+      }
+
+      if (currentLevelIndex === levelIndex - 1) {
+        // This is the immediate parent level - return all allocations with full paths
+        return allocations.map(alloc => {
+          const allocPath = parentPath === 'root' ? alloc.id : `${parentPath}_${alloc.id}`;
+          const allocBreadcrumb = parentPath === 'root' ? alloc.name : `${parentBreadcrumb} › ${alloc.name}`;
+          const allocAmount = wizard.calculateAmount(parentAmount, alloc.percentage);
+          
+          return {
+            id: alloc.id,
+            name: alloc.name,
+            path: allocPath,
+            breadcrumb: allocBreadcrumb,
+            percentage: alloc.percentage,
+            amount: allocAmount,
+          };
+        });
+      }
+
+      // Not at the parent level yet - continue recursively for each allocation
+      return allocations.flatMap(alloc => {
+        const allocPath = parentPath === 'root' ? alloc.id : `${parentPath}_${alloc.id}`;
+        const allocBreadcrumb = parentPath === 'root' ? alloc.name : `${parentBreadcrumb} › ${alloc.name}`;
+        const allocAmount = wizard.calculateAmount(parentAmount, alloc.percentage);
+        return buildHierarchicalPaths(currentLevelIndex + 1, allocPath, allocBreadcrumb, allocAmount);
+      });
+    };
+
+    const paths = buildHierarchicalPaths(0, 'root', '', state.planData.total_budget);
     
-    if (prevAllocations.length === 0) {
-      return [{ id: 'root', name: 'Geral', percentage: 100, amount: state.planData.total_budget }];
+    // If no paths found (all previous levels empty), return Geral
+    if (paths.length === 0) {
+      return [{ 
+        id: 'root', 
+        name: 'Geral', 
+        path: 'root',
+        breadcrumb: 'Geral',
+        percentage: 100, 
+        amount: state.planData.total_budget 
+      }];
     }
     
-    return prevAllocations.map(alloc => ({
-      id: alloc.id,
-      name: alloc.name,
-      percentage: alloc.percentage,
-      amount: wizard.calculateAmount(state.planData.total_budget, alloc.percentage),
-    }));
+    return paths;
   };
 
   // Render a dynamic level step
@@ -500,12 +580,19 @@ export default function NewMediaPlanBudget() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {parentItems.map(parent => {
-                  const allocations = getAllocationsForLevel(level, parent.id === 'root' ? 'root' : parent.id);
+                  // Use the full path for nested allocations
+                  const allocations = getAllocationsForLevel(level, parent.path);
                   
                   return (
-                    <div key={parent.id} className="border rounded-xl p-4 space-y-4 bg-muted/20">
+                    <div key={parent.path} className="border rounded-xl p-4 space-y-4 bg-muted/20">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold">{parent.name}</h4>
+                        <div className="flex flex-col">
+                          {/* Show breadcrumb for nested levels */}
+                          {levelIndex > 0 && parent.breadcrumb !== parent.name && (
+                            <span className="text-xs text-muted-foreground mb-1">{parent.breadcrumb}</span>
+                          )}
+                          <h4 className="font-semibold">{parent.name}</h4>
+                        </div>
                         <span className="text-sm text-primary font-medium bg-primary/10 px-3 py-1 rounded-full">
                           {formatCurrency(parent.amount)}
                         </span>
@@ -518,7 +605,7 @@ export default function NewMediaPlanBudget() {
                             <FunnelStageSelector
                               existingItems={libraryItems}
                               selectedItems={allocations}
-                              onAdd={(item) => handleLevelAdd(level, parent.id, item)}
+                              onAdd={(item) => handleLevelAdd(level, parent.path, item)}
                               onCreate={(name) => handleCreateItem(level, name)}
                               maxItems={maxItems}
                             />
@@ -530,9 +617,9 @@ export default function NewMediaPlanBudget() {
                               <SortableFunnelList
                                 items={allocations}
                                 totalBudget={parent.amount}
-                                onUpdate={(id, percentage) => handleLevelUpdate(level, parent.id, id, percentage)}
-                                onRemove={(id) => handleLevelRemove(level, parent.id, id)}
-                                onReorder={(items) => handleLevelReorder(level, parent.id, items)}
+                                onUpdate={(id, percentage) => handleLevelUpdate(level, parent.path, id, percentage)}
+                                onRemove={(id) => handleLevelRemove(level, parent.path, id)}
+                                onReorder={(items) => handleLevelReorder(level, parent.path, items)}
                               />
                             </div>
                           )}
@@ -554,9 +641,9 @@ export default function NewMediaPlanBudget() {
                           items={allocations}
                           existingItems={libraryItems}
                           totalBudget={parent.amount}
-                          onAdd={(item) => handleLevelAdd(level, parent.id, item)}
-                          onUpdate={(id, percentage, dates) => handleLevelUpdate(level, parent.id, id, percentage, dates)}
-                          onRemove={(id) => handleLevelRemove(level, parent.id, id)}
+                          onAdd={(item) => handleLevelAdd(level, parent.path, item)}
+                          onUpdate={(id, percentage, dates) => handleLevelUpdate(level, parent.path, id, percentage, dates)}
+                          onRemove={(id) => handleLevelRemove(level, parent.path, id)}
                           onCreate={(name) => handleCreateItem(level, name)}
                           label={getLevelLabel(level)}
                           createLabel={`Criar ${getLevelLabel(level).toLowerCase()}`}

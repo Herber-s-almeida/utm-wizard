@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Save, Loader2, Layers, Clock, Filter, Calendar, FileText, Sparkles, AlertTriangle, LogOut, Info } from 'lucide-react';
@@ -87,6 +87,16 @@ const createGeralAllocation = (budget: number): BudgetAllocation => ({
   percentage: 100,
   amount: budget,
 });
+
+// Interface for parent items with full path support
+interface ParentItem {
+  id: string;
+  name: string;
+  path: string;
+  breadcrumb: string;
+  percentage: number;
+  amount: number;
+}
 
 export default function EditMediaPlan() {
   const { id: identifier } = useParams<{ id: string }>();
@@ -341,13 +351,196 @@ export default function EditMediaPlan() {
     }
   };
 
-  // Helper to get allocations for a level
+  // Helper to get allocations for a level at a specific path (supports full hierarchical paths)
+  const getAllocationsForLevelAtPath = (level: HierarchyLevel, parentPath: string = 'root'): BudgetAllocation[] => {
+    switch (level) {
+      case 'subdivision':
+        return state.subdivisions;
+      case 'moment':
+        return state.moments[parentPath] || [];
+      case 'funnel_stage':
+        return state.funnelStages[parentPath] || [];
+      default:
+        return [];
+    }
+  };
+
+  // Get parent items for nested levels - recursively builds all path combinations
+  const getParentItemsForLevel = (levelIndex: number): ParentItem[] => {
+    if (levelIndex === 0) {
+      // First level - parent is the plan itself
+      return [{ 
+        id: 'root', 
+        name: 'Plano Completo', 
+        path: 'root',
+        breadcrumb: 'Plano Completo',
+        percentage: 100, 
+        amount: state.planData.total_budget 
+      }];
+    }
+
+    // Recursively build all path combinations from previous levels
+    const buildHierarchicalPaths = (
+      currentLevelIndex: number,
+      parentPath: string,
+      parentBreadcrumb: string,
+      parentAmount: number
+    ): ParentItem[] => {
+      if (currentLevelIndex >= levelIndex) {
+        return [];
+      }
+
+      const level = planHierarchyOrder[currentLevelIndex];
+      const allocations = getAllocationsForLevelAtPath(level, parentPath);
+
+      // If no allocations at this level, treat as "Geral" and continue
+      if (allocations.length === 0) {
+        const geralPath = parentPath === 'root' ? 'geral' : `${parentPath}_geral`;
+        const geralBreadcrumb = parentPath === 'root' ? 'Geral' : `${parentBreadcrumb} › Geral`;
+        
+        if (currentLevelIndex === levelIndex - 1) {
+          // This is the immediate parent level - return Geral
+          return [{ 
+            id: 'geral', 
+            name: 'Geral', 
+            path: geralPath,
+            breadcrumb: geralBreadcrumb,
+            percentage: 100, 
+            amount: parentAmount 
+          }];
+        }
+        // Continue to next level with Geral
+        return buildHierarchicalPaths(currentLevelIndex + 1, geralPath, geralBreadcrumb, parentAmount);
+      }
+
+      if (currentLevelIndex === levelIndex - 1) {
+        // This is the immediate parent level - return all allocations with full paths
+        return allocations.map(alloc => {
+          const allocPath = parentPath === 'root' ? alloc.id : `${parentPath}_${alloc.id}`;
+          const allocBreadcrumb = parentPath === 'root' ? alloc.name : `${parentBreadcrumb} › ${alloc.name}`;
+          const allocAmount = wizard.calculateAmount(parentAmount, alloc.percentage);
+          
+          return {
+            id: alloc.id,
+            name: alloc.name,
+            path: allocPath,
+            breadcrumb: allocBreadcrumb,
+            percentage: alloc.percentage,
+            amount: allocAmount,
+          };
+        });
+      }
+
+      // Not at the parent level yet - continue recursively for each allocation
+      return allocations.flatMap(alloc => {
+        const allocPath = parentPath === 'root' ? alloc.id : `${parentPath}_${alloc.id}`;
+        const allocBreadcrumb = parentPath === 'root' ? alloc.name : `${parentBreadcrumb} › ${alloc.name}`;
+        const allocAmount = wizard.calculateAmount(parentAmount, alloc.percentage);
+        return buildHierarchicalPaths(currentLevelIndex + 1, allocPath, allocBreadcrumb, allocAmount);
+      });
+    };
+
+    const paths = buildHierarchicalPaths(0, 'root', '', state.planData.total_budget);
+    
+    // If no paths found (all previous levels empty), return Geral
+    if (paths.length === 0) {
+      return [{ 
+        id: 'root', 
+        name: 'Geral', 
+        path: 'root',
+        breadcrumb: 'Geral',
+        percentage: 100, 
+        amount: state.planData.total_budget 
+      }];
+    }
+    
+    return paths;
+  };
+
+  // Generic handler for level allocations
+  const handleLevelAdd = (level: HierarchyLevel, parentPath: string, item: BudgetAllocation) => {
+    switch (level) {
+      case 'subdivision':
+        setSubdivisions([...state.subdivisions, item]);
+        break;
+      case 'moment':
+        const currentMoments = state.moments[parentPath] || [];
+        setMoments(parentPath, [...currentMoments, {
+          ...item,
+          start_date: state.planData.start_date,
+          end_date: state.planData.end_date,
+        }]);
+        break;
+      case 'funnel_stage':
+        const currentFunnels = state.funnelStages[parentPath] || [];
+        if (currentFunnels.length >= MAX_ITEMS_PER_LEVEL.funnel_stage) {
+          toast.error(`Máximo de ${MAX_ITEMS_PER_LEVEL.funnel_stage} fases do funil`);
+          return;
+        }
+        setFunnelStages(parentPath, [...currentFunnels, item]);
+        break;
+    }
+  };
+
+  const handleLevelUpdate = (level: HierarchyLevel, parentPath: string, id: string, percentage: number, dates?: { start_date?: string; end_date?: string }) => {
+    switch (level) {
+      case 'subdivision':
+        setSubdivisions(state.subdivisions.map(s => 
+          s.id === id ? { ...s, percentage, amount: wizard.calculateAmount(state.planData.total_budget, percentage) } : s
+        ));
+        break;
+      case 'moment':
+        const currentMoments = state.moments[parentPath] || [];
+        setMoments(parentPath, currentMoments.map(m => 
+          m.id === id ? { ...m, percentage, ...(dates && { start_date: dates.start_date, end_date: dates.end_date }) } : m
+        ));
+        break;
+      case 'funnel_stage':
+        const currentFunnels = state.funnelStages[parentPath] || [];
+        setFunnelStages(parentPath, currentFunnels.map(f => 
+          f.id === id ? { ...f, percentage } : f
+        ));
+        break;
+    }
+  };
+
+  const handleLevelRemove = (level: HierarchyLevel, parentPath: string, id: string) => {
+    switch (level) {
+      case 'subdivision':
+        setSubdivisions(state.subdivisions.filter(s => s.id !== id));
+        break;
+      case 'moment':
+        const currentMoments = state.moments[parentPath] || [];
+        setMoments(parentPath, currentMoments.filter(m => m.id !== id));
+        break;
+      case 'funnel_stage':
+        const currentFunnels = state.funnelStages[parentPath] || [];
+        setFunnelStages(parentPath, currentFunnels.filter(f => f.id !== id));
+        break;
+    }
+  };
+
+  const handleLevelReorder = (level: HierarchyLevel, parentPath: string, items: BudgetAllocation[]) => {
+    switch (level) {
+      case 'funnel_stage':
+        setFunnelStages(parentPath, items);
+        break;
+    }
+  };
+
+  const handleCreateItem = async (level: HierarchyLevel, name: string) => {
+    const mutation = getCreateMutationForLevel(level);
+    if (!mutation) return null;
+    const result = await mutation.mutateAsync({ name });
+    return result;
+  };
+
+  // Helper to get allocations for a level (for validation - all values flattened)
   const getAllocationsForLevel = (level: HierarchyLevel): BudgetAllocation[] => {
     switch (level) {
       case 'subdivision':
         return state.subdivisions;
       case 'moment':
-        // For simplicity, check the root key
         return Object.values(state.moments).flat();
       case 'funnel_stage':
         return Object.values(state.funnelStages).flat();
@@ -480,119 +673,76 @@ export default function EditMediaPlan() {
         .delete()
         .eq('media_plan_id', planId);
 
-      // 4. Save new budget distributions (same logic as create)
-      const subdivisionDistIds: Record<string, string> = {};
-      const momentDistIds: Record<string, string> = {};
+      // 4. Save new budget distributions dynamically based on planHierarchyOrder
+      const distIds: Record<string, string> = {}; // path -> distribution ID
 
-      const effectiveSubdivisions = state.subdivisions.length > 0 
-        ? state.subdivisions 
-        : [createGeralAllocation(state.planData.total_budget)];
-
-      // Phase 1: Insert subdivision distributions
-      for (const sub of effectiveSubdivisions) {
-        const subAmount = wizard.calculateAmount(state.planData.total_budget, sub.percentage);
-        const { data: subDist, error: subError } = await supabase
+      // Helper to insert distribution and store its ID
+      const insertDistribution = async (
+        level: HierarchyLevel,
+        allocation: BudgetAllocation,
+        parentDistId: string | null,
+        path: string
+      ) => {
+        const { data: dist, error } = await supabase
           .from('plan_budget_distributions')
           .insert({
             user_id: user?.id,
             media_plan_id: planId,
-            distribution_type: 'subdivision',
-            reference_id: sub.id === 'geral' ? null : sub.id,
-            percentage: sub.percentage,
-            amount: subAmount,
-            parent_distribution_id: null,
+            distribution_type: level,
+            reference_id: allocation.id === 'geral' ? null : allocation.id,
+            percentage: allocation.percentage,
+            amount: allocation.amount,
+            parent_distribution_id: parentDistId,
+            start_date: allocation.start_date || null,
+            end_date: allocation.end_date || null,
           })
           .select('id')
           .single();
 
-        if (subError) {
-          console.error('Error saving subdivision distribution:', subError);
-          continue;
+        if (error) {
+          console.error(`Error saving ${level} distribution:`, error);
+          return null;
         }
-        subdivisionDistIds[sub.id] = subDist.id;
-      }
+        distIds[path] = dist.id;
+        return dist.id;
+      };
 
-      // Phase 2: Insert moment distributions
-      for (const sub of effectiveSubdivisions) {
-        const subDistId = subdivisionDistIds[sub.id];
-        if (!subDistId) continue;
+      // Process each hierarchy level in order
+      const processLevel = async (
+        levelIndex: number,
+        parentPath: string,
+        parentDistId: string | null,
+        parentBudget: number
+      ) => {
+        if (levelIndex >= planHierarchyOrder.length) return;
 
-        const subAmount = wizard.calculateAmount(state.planData.total_budget, sub.percentage);
-        const subKey = sub.id === 'geral' ? 'root' : sub.id;
+        const level = planHierarchyOrder[levelIndex];
         
-        const subMoments = state.moments[subKey] || [];
-        const effectiveMoments = subMoments.length > 0 
-          ? subMoments 
-          : [createGeralAllocation(subAmount)];
-
-        for (const mom of effectiveMoments) {
-          const momAmount = wizard.calculateAmount(subAmount, mom.percentage);
-          const { data: momDist, error: momError } = await supabase
-            .from('plan_budget_distributions')
-            .insert({
-              user_id: user?.id,
-              media_plan_id: planId,
-              distribution_type: 'moment',
-              reference_id: mom.id === 'geral' ? null : mom.id,
-              percentage: mom.percentage,
-              amount: momAmount,
-              parent_distribution_id: subDistId,
-              start_date: mom.start_date || null,
-              end_date: mom.end_date || null,
-            })
-            .select('id')
-            .single();
-
-          if (momError) {
-            console.error('Error saving moment distribution:', momError);
-            continue;
-          }
-          momentDistIds[`${sub.id}_${mom.id}`] = momDist.id;
+        // Get allocations for this level using the full parent path
+        const allocKey = parentPath === '' ? 'root' : parentPath;
+        let allocations = getAllocationsForLevelAtPath(level, allocKey);
+        
+        // If no allocations, use "Geral"
+        if (allocations.length === 0) {
+          allocations = [createGeralAllocation(parentBudget)];
         }
-      }
 
-      // Phase 3: Insert funnel stage distributions
-      for (const sub of effectiveSubdivisions) {
-        const subAmount = wizard.calculateAmount(state.planData.total_budget, sub.percentage);
-        const subKey = sub.id === 'geral' ? 'root' : sub.id;
-        
-        const subMoments = state.moments[subKey] || [];
-        const effectiveMoments = subMoments.length > 0 
-          ? subMoments 
-          : [createGeralAllocation(subAmount)];
-
-        for (const mom of effectiveMoments) {
-          const momDistId = momentDistIds[`${sub.id}_${mom.id}`];
-          if (!momDistId) continue;
-
-          const momAmount = wizard.calculateAmount(subAmount, mom.percentage);
+        // Insert each allocation and recursively process children
+        for (const alloc of allocations) {
+          const allocAmount = wizard.calculateAmount(parentBudget, alloc.percentage);
+          const allocPath = parentPath === '' ? alloc.id : `${parentPath}_${alloc.id}`;
           
-          const funnelKey = sub.id === 'geral' ? 'root' : sub.id;
-          const subFunnelStages = state.funnelStages[funnelKey] || [];
-          const effectiveFunnelStages = subFunnelStages.length > 0 
-            ? subFunnelStages 
-            : [createGeralAllocation(momAmount)];
-
-          for (const funnel of effectiveFunnelStages) {
-            const funnelAmount = wizard.calculateAmount(momAmount, funnel.percentage);
-            const { error: funnelError } = await supabase
-              .from('plan_budget_distributions')
-              .insert({
-                user_id: user?.id,
-                media_plan_id: planId,
-                distribution_type: 'funnel_stage',
-                reference_id: funnel.id === 'geral' ? null : funnel.id,
-                percentage: funnel.percentage,
-                amount: funnelAmount,
-                parent_distribution_id: momDistId,
-              });
-
-            if (funnelError) {
-              console.error('Error saving funnel distribution:', funnelError);
-            }
+          const distId = await insertDistribution(level, { ...alloc, amount: allocAmount }, parentDistId, allocPath);
+          
+          if (distId) {
+            // Process next level with the full path
+            await processLevel(levelIndex + 1, allocPath, distId, allocAmount);
           }
         }
-      }
+      };
+
+      // Start processing from level 0
+      await processLevel(0, '', null, state.planData.total_budget);
 
       toast.success(exitAfterSave ? 'Plano atualizado com sucesso!' : 'Alterações salvas!');
       if (exitAfterSave) {
@@ -893,237 +1043,152 @@ export default function EditMediaPlan() {
           </AnimatePresence>
         )}
 
-        {/* Step 2: Subdivisions */}
-        {state.step >= 2 && (
-          <AnimatePresence mode="wait">
-            {state.step === 2 || editingSection === 'subdivisions' ? (
-              <motion.div
-                key="subdivisions-form"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Layers className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle>Subdivisão do Plano</CardTitle>
-                        <CardDescription>
-                          Divida o orçamento por cidade, produto ou outra subdivisão. Esta etapa é opcional.
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="p-4 bg-primary/5 rounded-xl border border-primary/20">
-                      <p className="text-sm text-muted-foreground">
-                        Orçamento total: <strong className="text-foreground text-lg">{formatCurrency(state.planData.total_budget)}</strong>
-                      </p>
-                    </div>
+        {/* Dynamic hierarchy level steps */}
+        {planHierarchyOrder.map((level, levelIndex) => {
+          const stepNumber = levelIndex + 2; // Steps 2+ are hierarchy levels
+          const Icon = LEVEL_ICONS[level];
+          const config = LEVEL_DESCRIPTIONS[level];
+          const maxItems = MAX_ITEMS_PER_LEVEL[level];
+          const libraryItems = getLibraryForLevel(level);
+          const showDates = level === 'moment';
+          const parentItems = getParentItemsForLevel(levelIndex);
 
-                    <BudgetAllocationTable
-                      items={state.subdivisions}
-                      existingItems={libraryData.subdivisions}
-                      totalBudget={state.planData.total_budget}
-                      onAdd={handleSubdivisionAdd}
-                      onUpdate={handleSubdivisionUpdate}
-                      onRemove={handleSubdivisionRemove}
-                      onCreate={handleCreateSubdivision}
-                      label="Subdivisão"
-                      createLabel="Criar nova subdivisão"
-                      maxItems={MAX_ITEMS_PER_LEVEL.subdivision}
-                    />
-
-                    {state.subdivisions.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4 bg-muted/30 rounded-lg">
-                        Nenhuma subdivisão adicionada. O plano será tratado como "Geral".
-                      </p>
-                    )}
-
-                    {editingSection === 'subdivisions' && (
-                      <div className="flex justify-end pt-4 border-t">
-                        <Button onClick={() => setEditingSection(null)}>
-                          Salvar alterações
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ) : state.step > 2 && state.subdivisions.length > 0 && (
-              <motion.div
-                key="subdivisions-summary"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                <SubdivisionsSummaryCard
-                  subdivisions={state.subdivisions}
-                  totalBudget={state.planData.total_budget}
-                  onEdit={() => setEditingSection('subdivisions')}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
-
-        {/* Step 3: Moments */}
-        {state.step >= 3 && (
-          <AnimatePresence mode="wait">
-            {state.step === 3 || editingSection === 'moments' ? (
-              <motion.div
-                key="moments-form"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Clock className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle>Momentos de Campanha</CardTitle>
-                        <CardDescription>
-                          Distribua o orçamento por momentos (lançamento, sustentação, etc.).
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {subdivisionsForContext.map(subdivision => {
-                      const budgetForSubdivision = subdivision.id === 'root' 
-                        ? state.planData.total_budget 
-                        : wizard.calculateAmount(state.planData.total_budget, subdivision.percentage);
-                      
-                      return (
-                        <div key={subdivision.id} className="border rounded-xl p-4 space-y-4 bg-muted/20">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-semibold">{subdivision.name}</h4>
-                            <span className="text-sm text-primary font-medium bg-primary/10 px-3 py-1 rounded-full">
-                              {formatCurrency(budgetForSubdivision)}
-                            </span>
+          return (
+            <React.Fragment key={level}>
+              {state.step >= stepNumber && (
+                <AnimatePresence mode="wait">
+                  {state.step === stepNumber || editingSection === level ? (
+                    <motion.div
+                      key={`${level}-form`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Card>
+                        <CardHeader>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                              <Icon className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <CardTitle>{config.title}</CardTitle>
+                              <CardDescription>{config.description}</CardDescription>
+                            </div>
                           </div>
-                          <BudgetAllocationTable
-                            items={state.moments[subdivision.id] || []}
-                            existingItems={libraryData.moments}
-                            totalBudget={budgetForSubdivision}
-                            onAdd={(item) => handleMomentAdd(subdivision.id, item)}
-                            onUpdate={(id, percentage, dates) => handleMomentUpdate(subdivision.id, id, percentage, dates)}
-                            onRemove={(itemId) => handleMomentRemove(subdivision.id, itemId)}
-                            onCreate={handleCreateMoment}
-                            label="Momento"
-                            createLabel="Criar novo momento"
-                            showDates={true}
-                            planStartDate={state.planData.start_date}
-                            planEndDate={state.planData.end_date}
-                          />
-                        </div>
-                      );
-                    })}
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          {parentItems.map(parent => {
+                            const allocations = getAllocationsForLevelAtPath(level, parent.path);
+                            
+                            return (
+                              <div key={parent.path} className="border rounded-xl p-4 space-y-4 bg-muted/20">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex flex-col">
+                                    {levelIndex > 0 && parent.breadcrumb !== parent.name && (
+                                      <span className="text-xs text-muted-foreground mb-1">{parent.breadcrumb}</span>
+                                    )}
+                                    <h4 className="font-semibold">{parent.name}</h4>
+                                  </div>
+                                  <span className="text-sm text-primary font-medium bg-primary/10 px-3 py-1 rounded-full">
+                                    {formatCurrency(parent.amount)}
+                                  </span>
+                                </div>
 
-                    {editingSection === 'moments' && (
-                      <div className="flex justify-end pt-4 border-t">
-                        <Button onClick={() => setEditingSection(null)}>
-                          Salvar alterações
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        )}
+                                {level === 'funnel_stage' ? (
+                                  <>
+                                    {allocations.length < maxItems && (
+                                      <FunnelStageSelector
+                                        existingItems={libraryItems}
+                                        selectedItems={allocations}
+                                        onAdd={(item) => handleLevelAdd(level, parent.path, item)}
+                                        onCreate={(name) => handleCreateItem(level, name)}
+                                        maxItems={maxItems}
+                                      />
+                                    )}
+                                    
+                                    {allocations.length > 0 && (
+                                      <div className="mt-4">
+                                        <p className="text-sm text-muted-foreground mb-3">Arraste para reordenar as fases:</p>
+                                        <SortableFunnelList
+                                          items={allocations}
+                                          totalBudget={parent.amount}
+                                          onUpdate={(id, percentage) => handleLevelUpdate(level, parent.path, id, percentage)}
+                                          onRemove={(id) => handleLevelRemove(level, parent.path, id)}
+                                          onReorder={(items) => handleLevelReorder(level, parent.path, items)}
+                                        />
+                                      </div>
+                                    )}
 
-        {/* Step 4: Funnel Stages */}
-        {state.step >= 4 && (
-          <AnimatePresence mode="wait">
-            {state.step === 4 || editingSection === 'funnel' ? (
-              <motion.div
-                key="funnel-form"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Filter className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle>Fases do Funil</CardTitle>
-                        <CardDescription>
-                          Distribua o orçamento por fase do funil.
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {subdivisionsForContext.map(subdivision => {
-                      const budgetForSubdivision = subdivision.id === 'root' 
-                        ? state.planData.total_budget 
-                        : wizard.calculateAmount(state.planData.total_budget, subdivision.percentage);
-                      const currentStages = state.funnelStages[subdivision.id] || [];
-                      
-                      return (
-                        <div key={subdivision.id} className="border rounded-xl p-4 space-y-4 bg-muted/20">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-semibold">{subdivision.name}</h4>
-                            <span className="text-sm text-primary font-medium bg-primary/10 px-3 py-1 rounded-full">
-                              {formatCurrency(budgetForSubdivision)}
-                            </span>
-                          </div>
-                          
-                          <BudgetAllocationTable
-                            items={currentStages}
-                            existingItems={libraryData.funnelStages}
-                            totalBudget={budgetForSubdivision}
-                            onAdd={(item) => handleFunnelAdd(subdivision.id, item)}
-                            onUpdate={(itemId, percentage) => handleFunnelUpdate(subdivision.id, itemId, percentage)}
-                            onRemove={(itemId) => handleFunnelRemove(subdivision.id, itemId)}
-                            onCreate={handleCreateFunnelStage}
-                            label="Fase do Funil"
-                            createLabel="Criar nova fase"
-                            maxItems={MAX_ITEMS_PER_LEVEL.funnel_stage}
-                          />
+                                    {allocations.length > 0 && (
+                                      <div className="pt-4 border-t">
+                                        <p className="text-sm text-muted-foreground mb-4">Visualização do Funil:</p>
+                                        <FunnelVisualization
+                                          funnelStages={allocations}
+                                          parentBudget={parent.amount}
+                                          parentName={parent.name}
+                                          onEdit={() => {}}
+                                        />
+                                      </div>
+                                    )}
+                                  </>
+                                ) : (
+                                  <BudgetAllocationTable
+                                    items={allocations}
+                                    existingItems={libraryItems}
+                                    totalBudget={parent.amount}
+                                    onAdd={(item) => handleLevelAdd(level, parent.path, item)}
+                                    onUpdate={(id, percentage, dates) => handleLevelUpdate(level, parent.path, id, percentage, dates)}
+                                    onRemove={(id) => handleLevelRemove(level, parent.path, id)}
+                                    onCreate={(name) => handleCreateItem(level, name)}
+                                    label={getLevelLabel(level)}
+                                    createLabel={`Criar ${getLevelLabel(level).toLowerCase()}`}
+                                    maxItems={maxItems}
+                                    showDates={showDates}
+                                    planStartDate={state.planData.start_date}
+                                    planEndDate={state.planData.end_date}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })}
 
-                          {currentStages.length > 0 && (
-                            <div className="pt-4 border-t">
-                              <p className="text-sm text-muted-foreground mb-4">Prévia do Funil:</p>
-                              <FunnelVisualization
-                                funnelStages={currentStages}
-                                parentBudget={budgetForSubdivision}
-                                parentName={subdivision.name}
-                                onEdit={() => {}}
-                              />
+                          {levelIndex === 0 && getAllocationsForLevelAtPath(level, 'root').length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4 bg-muted/30 rounded-lg">
+                              Nenhuma {getLevelLabel(level).toLowerCase()} adicionada. O plano será tratado como "Geral".
+                            </p>
+                          )}
+
+                          {editingSection === level && (
+                            <div className="flex justify-end pt-4 border-t">
+                              <Button onClick={() => setEditingSection(null)}>
+                                Salvar alterações
+                              </Button>
                             </div>
                           )}
-                        </div>
-                      );
-                    })}
-
-                    {editingSection === 'funnel' && (
-                      <div className="flex justify-end pt-4 border-t">
-                        <Button onClick={() => setEditingSection(null)}>
-                          Salvar alterações
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        )}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ) : state.step > stepNumber && levelIndex === 0 && getAllocationsForLevelAtPath(level, 'root').length > 0 ? (
+                    <motion.div
+                      key={`${level}-summary`}
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <SubdivisionsSummaryCard
+                        subdivisions={getAllocationsForLevelAtPath(level, 'root')}
+                        totalBudget={state.planData.total_budget}
+                        onEdit={() => setEditingSection(level)}
+                        title={getLevelLabelPlural(level)}
+                      />
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              )}
+            </React.Fragment>
+          );
+        })}
 
         {/* Confirm Step (last step) */}
         {state.step === lastStep && (
