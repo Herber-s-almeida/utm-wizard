@@ -4,21 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
-
-interface Detail {
-  name: string;
-  description: string;
-}
 
 interface SubdivisionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: { name: string; description: string; details: Detail[] }) => void;
+  onSave: (data: { name: string; description: string }) => void;
   existingNames?: string[];
-  initialData?: { name: string; description: string; details: Detail[] };
+  initialData?: { name: string; description: string };
   mode?: 'create' | 'edit';
 }
 
@@ -32,33 +26,13 @@ export function SubdivisionDialog({
 }: SubdivisionDialogProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [details, setDetails] = useState<Detail[]>([]);
 
   useEffect(() => {
     if (open) {
       setName(initialData?.name || '');
       setDescription(initialData?.description || '');
-      setDetails(initialData?.details || []);
     }
   }, [open, initialData]);
-
-  const handleAddDetail = () => {
-    if (details.length >= 100) {
-      toast.error('Limite máximo de 100 detalhamentos atingido');
-      return;
-    }
-    setDetails([...details, { name: '', description: '' }]);
-  };
-
-  const handleRemoveDetail = (index: number) => {
-    setDetails(details.filter((_, i) => i !== index));
-  };
-
-  const handleDetailChange = (index: number, field: 'name' | 'description', value: string) => {
-    const newDetails = [...details];
-    newDetails[index][field] = value;
-    setDetails(newDetails);
-  };
 
   const handleSave = () => {
     const trimmedName = name.trim();
@@ -83,33 +57,19 @@ export function SubdivisionDialog({
       return;
     }
 
-    // Validate details
-    for (const detail of details) {
-      if (detail.name.trim() && detail.name.trim().length > 25) {
-        toast.error('Nome do detalhamento deve ter no máximo 25 caracteres');
-        return;
-      }
-      if (detail.description.length > 180) {
-        toast.error('Descrição do detalhamento deve ter no máximo 180 caracteres');
-        return;
-      }
-    }
-
     onSave({
       name: trimmedName,
-      description: description.slice(0, 180),
-      details: details.filter(d => d.name.trim())
+      description: description.slice(0, 180)
     });
 
     setName('');
     setDescription('');
-    setDetails([]);
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
           <DialogTitle>
             {mode === 'create' ? 'Criar nova subdivisão de plano' : 'Editar subdivisão de plano'}
@@ -141,52 +101,6 @@ export function SubdivisionDialog({
               rows={2}
             />
             <p className="text-xs text-muted-foreground">{description.length}/180 caracteres</p>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <LabelWithTooltip tooltip="Subdivisões podem ter subdivisões filhas para estruturas mais complexas (ex: Região > Estado > Cidade).">
-                Detalhamentos (opcional)
-              </LabelWithTooltip>
-              <Button type="button" variant="outline" size="sm" onClick={handleAddDetail}>
-                <Plus className="h-3 w-3 mr-1" />
-                Adicionar
-              </Button>
-            </div>
-
-            {details.map((detail, index) => (
-              <div key={index} className="p-3 border rounded-lg space-y-2 bg-muted/30">
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={detail.name}
-                    onChange={(e) => handleDetailChange(index, 'name', e.target.value.slice(0, 25))}
-                    placeholder="Nome do detalhamento"
-                    maxLength={25}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveDetail(index)}
-                    className="h-8 w-8 text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <Textarea
-                  value={detail.description}
-                  onChange={(e) => handleDetailChange(index, 'description', e.target.value.slice(0, 180))}
-                  placeholder="Descrição do detalhamento..."
-                  rows={2}
-                />
-                <p className="text-xs text-muted-foreground">{detail.description.length}/180 caracteres</p>
-              </div>
-            ))}
-
-            {details.length > 0 && (
-              <p className="text-xs text-muted-foreground">{details.length}/100 detalhamentos</p>
-            )}
           </div>
         </div>
 

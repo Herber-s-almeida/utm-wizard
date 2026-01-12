@@ -1728,13 +1728,7 @@ export function AppSidebar() {
         open={subdivisionDialogOpen}
         onOpenChange={setSubdivisionDialogOpen}
         onSave={(data) => {
-          subdivisions.create.mutate({ name: data.name, description: data.description }, {
-            onSuccess: (newSub: any) => {
-              data.details.forEach(detail => {
-                subdivisions.create.mutate({ name: detail.name, description: detail.description, parent_id: newSub.id });
-              });
-            }
-          });
+          subdivisions.create.mutate({ name: data.name, description: data.description });
         }}
         existingNames={getSubdivisionNames()}
         mode="create"
