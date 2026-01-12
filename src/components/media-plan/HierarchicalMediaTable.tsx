@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle, Link, LayoutGrid, List, Link2, RotateCcw } from 'lucide-react';
 import { LineDetailButton } from '@/components/media-plan/LineDetailButton';
@@ -49,6 +49,14 @@ import { UTMPreview } from '@/components/media-plan/UTMPreview';
 import { useResizableColumns, ColumnKey, MinWidthOverrides } from '@/hooks/useResizableColumns';
 import { ResizableColumnHeader } from '@/components/media-plan/ResizableColumnHeader';
 import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPlural } from '@/types/hierarchy';
+import { 
+  buildHierarchyTree, 
+  HierarchyTreeNode, 
+  HierarchyNodeData,
+  NameResolver,
+  MediaLineRef,
+  BudgetDistribution as BuilderBudgetDistribution
+} from '@/utils/hierarchyDataBuilder';
 
 // Columns that can be toggled (excludes: Código, Orçamento, Status, Início, Fim, Ações)
 type ToggleableColumn = 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target' | 'creatives';
@@ -216,6 +224,27 @@ export function HierarchicalMediaTable({
   // View mode: 'grouped' (hierarchical) or 'flat' (one line per row)
   const [viewMode, setViewMode] = useState<'grouped' | 'flat'>('grouped');
 
+  // Get name resolver for hierarchy levels
+  const getNameForLevel = useCallback<NameResolver>((level: HierarchyLevel, refId: string | null): string => {
+    if (!refId) return 'Geral';
+    switch (level) {
+      case 'subdivision': return subdivisionsList.find(s => s.id === refId)?.name || 'Geral';
+      case 'moment': return momentsList.find(m => m.id === refId)?.name || 'Geral';
+      case 'funnel_stage': return funnelStagesList.find(f => f.id === refId)?.name || 'Geral';
+      default: return 'Geral';
+    }
+  }, [subdivisionsList, momentsList, funnelStagesList]);
+
+  // Get the list of items for a given level
+  const getItemsForLevel = useCallback((level: HierarchyLevel) => {
+    switch (level) {
+      case 'subdivision': return subdivisionsList;
+      case 'moment': return momentsList;
+      case 'funnel_stage': return funnelStagesList;
+      default: return [];
+    }
+  }, [subdivisionsList, momentsList, funnelStagesList]);
+
   // Calculate dynamic minimum widths for grouped columns based on content
   const dynamicMinWidths = useMemo((): MinWidthOverrides => {
     if (viewMode !== 'grouped') return {};
@@ -233,33 +262,26 @@ export function HierarchicalMediaTable({
     const CURRENCY_WIDTH = measureText('R$ 999.999,99', 16, 700);
     const PERCENTAGE_WIDTH = measureText('100% de Subdivisão', 10, 400);
 
-    // Calculate max width needed for subdivision names
-    const maxSubdivisionName = Math.max(
-      measureText('Geral', 13, 500),
-      ...subdivisionsList.map(s => measureText(s.name, 13, 500))
-    );
-    const subdivisionMinWidth = Math.max(maxSubdivisionName, CURRENCY_WIDTH, PERCENTAGE_WIDTH) + PADDING;
+    // Calculate dynamic widths based on hierarchyOrder
+    const widths: MinWidthOverrides = {};
+    
+    for (const level of hierarchyOrder) {
+      const items = getItemsForLevel(level);
+      const maxNameWidth = Math.max(
+        measureText('Geral', 13, 500),
+        ...items.map(item => measureText(item.name, 13, 500))
+      );
+      
+      // Moments have date range, need extra width
+      const levelWidth = level === 'moment'
+        ? Math.max(maxNameWidth, CURRENCY_WIDTH, DATE_WIDTH, PERCENTAGE_WIDTH) + PADDING
+        : Math.max(maxNameWidth, CURRENCY_WIDTH, PERCENTAGE_WIDTH) + PADDING;
+      
+      widths[level] = levelWidth;
+    }
 
-    // Calculate max width needed for moment names (includes date range)
-    const maxMomentName = Math.max(
-      measureText('Geral', 13, 500),
-      ...momentsList.map(m => measureText(m.name, 13, 500))
-    );
-    const momentMinWidth = Math.max(maxMomentName, CURRENCY_WIDTH, DATE_WIDTH, PERCENTAGE_WIDTH) + PADDING;
-
-    // Calculate max width needed for funnel stage names
-    const maxFunnelName = Math.max(
-      measureText('Geral', 13, 500),
-      ...funnelStagesList.map(f => measureText(f.name, 13, 500))
-    );
-    const funnelMinWidth = Math.max(maxFunnelName, CURRENCY_WIDTH, PERCENTAGE_WIDTH) + PADDING;
-
-    return {
-      subdivision: subdivisionMinWidth,
-      moment: momentMinWidth,
-      funnel_stage: funnelMinWidth,
-    };
-  }, [viewMode, subdivisionsList, momentsList, funnelStagesList]);
+    return widths;
+  }, [viewMode, hierarchyOrder, getItemsForLevel]);
 
   // Resizable columns hook with dynamic min widths
   const { getWidth, handleResize, resetWidths } = useResizableColumns(viewMode, dynamicMinWidths);
@@ -409,235 +431,159 @@ export function HierarchicalMediaTable({
     return found?.name || 'Geral';
   };
 
-  // Build hierarchical structure based on saved budget distributions
-  // Using the actual parent_distribution_id FK relationships
-  const groupedData = useMemo(() => {
-    const nodes: HierarchyNode[] = [];
-
-    // Get distributions by type
-    const subdivisionDists = budgetDistributions.filter(d => d.distribution_type === 'subdivision');
-    const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
-    const funnelDists = budgetDistributions.filter(d => d.distribution_type === 'funnel_stage');
-
-    // If no distributions at all, create a single "Geral" node
-    if (subdivisionDists.length === 0) {
-      const totalBudget = Number(plan.total_budget) || 0;
-      const allAllocated = lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-      
-      nodes.push({
-        subdivision: { id: null, distId: 'root', name: 'Geral', planned: totalBudget, percentage: 100 },
-        subdivisionAllocated: allAllocated,
-        moments: [{
-          moment: { id: null, distId: 'root', name: 'Geral', planned: totalBudget, percentage: 100 },
-          momentAllocated: allAllocated,
-          funnelStages: [{
-            funnelStage: { id: null, distId: 'root', name: 'Geral', planned: totalBudget, percentage: 100 },
-            funnelStageAllocated: allAllocated,
-            lines: lines,
-          }],
-        }],
-      });
-
-      return nodes;
-    }
-
-    // Get IDs from distributions
-    const subdivisionRefIds = subdivisionDists.map(d => d.reference_id);
-    
-    // Process each subdivision distribution
-    for (const subDist of subdivisionDists) {
-      const subRefId = subDist.reference_id;
-      const subName = getSubdivisionName(subRefId);
-      
-      // Get lines for this subdivision
-      const subLines = lines.filter(l => 
-        (subRefId === null && !l.subdivision_id) || l.subdivision_id === subRefId
-      );
-      const subAllocated = subLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-
-      // Get moments for this subdivision (where parent_distribution_id = subDist.id)
-      const subMomentDists = momentDists.filter(m => m.parent_distribution_id === subDist.id);
-      const momentNodes: HierarchyNode['moments'] = [];
-
-      if (subMomentDists.length === 0) {
-        // No moments for this subdivision - create single "Geral" moment
-        const funnelNodes: HierarchyNode['moments'][0]['funnelStages'] = [];
-        
-        // Get funnel stages directly under subdivision
-        const subFunnelDists = funnelDists.filter(f => f.parent_distribution_id === subDist.id);
-        
-        if (subFunnelDists.length === 0) {
-          // No funnel stages - single "Geral" funnel
-          funnelNodes.push({
-            funnelStage: { id: null, distId: 'none', name: 'Geral', planned: subDist.amount, percentage: 100 },
-            funnelStageAllocated: subAllocated,
-            lines: subLines,
-          });
-        } else {
-          for (const funDist of subFunnelDists) {
-            const funRefId = funDist.reference_id;
-            const funName = getFunnelStageName(funRefId);
-            const funLines = subLines.filter(l => 
-              (funRefId === null && !l.funnel_stage_id) || l.funnel_stage_id === funRefId
-            );
-            const funAllocated = funLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-            
-            funnelNodes.push({
-              funnelStage: { id: funRefId, distId: funDist.id, name: funName, planned: funDist.amount, percentage: funDist.percentage },
-              funnelStageAllocated: funAllocated,
-              lines: funLines,
-            });
-          }
-        }
-
-        momentNodes.push({
-          moment: { id: null, distId: 'none', name: 'Geral', planned: subDist.amount, percentage: 100 },
-          momentAllocated: subAllocated,
-          funnelStages: funnelNodes,
-        });
-      } else {
-        // Process each moment
-        for (const momDist of subMomentDists) {
-          const momRefId = momDist.reference_id;
-          const momName = getMomentName(momRefId);
-          
-          // Get lines for this moment
-          const momLines = subLines.filter(l => 
-            (momRefId === null && !l.moment_id) || l.moment_id === momRefId
-          );
-          const momAllocated = momLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-
-          // Get funnel stages for this moment (where parent_distribution_id = momDist.id)
-          const momFunnelDists = funnelDists.filter(f => f.parent_distribution_id === momDist.id);
-          const funnelNodes: HierarchyNode['moments'][0]['funnelStages'] = [];
-
-          if (momFunnelDists.length === 0) {
-            // No funnel stages - single "Geral" funnel
-            funnelNodes.push({
-              funnelStage: { id: null, distId: 'none', name: 'Geral', planned: momDist.amount, percentage: 100 },
-              funnelStageAllocated: momAllocated,
-              lines: momLines,
-            });
-          } else {
-            for (const funDist of momFunnelDists) {
-              const funRefId = funDist.reference_id;
-              const funName = getFunnelStageName(funRefId);
-              const funLines = momLines.filter(l => 
-                (funRefId === null && !l.funnel_stage_id) || l.funnel_stage_id === funRefId
-              );
-              const funAllocated = funLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-              
-              funnelNodes.push({
-                funnelStage: { id: funRefId, distId: funDist.id, name: funName, planned: funDist.amount, percentage: funDist.percentage },
-                funnelStageAllocated: funAllocated,
-                lines: funLines,
-              });
-            }
-          }
-
-          momentNodes.push({
-            moment: { 
-              id: momRefId, 
-              distId: momDist.id, 
-              name: momName, 
-              planned: momDist.amount, 
-              percentage: momDist.percentage,
-              start_date: momDist.start_date,
-              end_date: momDist.end_date,
-            },
-            momentAllocated: momAllocated,
-            funnelStages: funnelNodes,
-          });
-        }
-      }
-
-      nodes.push({
-        subdivision: { id: subRefId, distId: subDist.id, name: subName, planned: subDist.amount, percentage: subDist.percentage },
-        subdivisionAllocated: subAllocated,
-        moments: momentNodes,
-      });
-    }
-
-    // Find "orphan" lines that don't belong to any subdivision in the distributions
-    const orphanLines = lines.filter(l => {
-      // If line has no subdivision_id, check if there's a distribution with reference_id = null
-      if (!l.subdivision_id) {
-        return !subdivisionRefIds.includes(null);
-      }
-      // If line has a subdivision_id, check if it's in the distributions
-      return !subdivisionRefIds.includes(l.subdivision_id);
-    });
-
-    // Add orphan lines under a "Sem Classificação" node if any exist
-    if (orphanLines.length > 0) {
-      const orphanAllocated = orphanLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-      
-      nodes.push({
-        subdivision: { id: 'orphan', distId: 'orphan', name: 'Sem Classificação', planned: 0, percentage: 0 },
-        subdivisionAllocated: orphanAllocated,
-        moments: [{
-          moment: { id: null, distId: 'orphan', name: 'Geral', planned: 0, percentage: 100 },
-          momentAllocated: orphanAllocated,
-          funnelStages: [{
-            funnelStage: { id: null, distId: 'orphan', name: 'Geral', planned: 0, percentage: 100 },
-            funnelStageAllocated: orphanAllocated,
-            lines: orphanLines,
-          }],
-        }],
-      });
-    }
-
-    return nodes;
-  }, [lines, budgetDistributions, plan.total_budget, subdivisionsList, momentsList, funnelStagesList]);
-
-  // Apply line filters to the grouped data
-  // Create filtered grouped data
-  const filteredGroupedData = useMemo(() => {
-    const hasAnyFilter = activeFiltersCount > 0 || isTextFilterActive;
-    if (!hasAnyFilter) return groupedData;
-    
-    const filterLine = (line: MediaLine): boolean => {
-      // Standard filters
-      if (lineFilters.status && line.status_id !== lineFilters.status) return false;
-      if (lineFilters.subdivision && line.subdivision_id !== lineFilters.subdivision) return false;
-      if (lineFilters.moment && line.moment_id !== lineFilters.moment) return false;
-      if (lineFilters.funnel_stage && line.funnel_stage_id !== lineFilters.funnel_stage) return false;
-      if (lineFilters.code && !(line.line_code || '').toLowerCase().includes(lineFilters.code.toLowerCase())) return false;
-      if (lineFilters.medium && line.medium_id !== lineFilters.medium) return false;
-      if (lineFilters.vehicle && line.vehicle_id !== lineFilters.vehicle) return false;
-      if (lineFilters.channel && line.channel_id !== lineFilters.channel) return false;
-      if (lineFilters.target && line.target_id !== lineFilters.target) return false;
-      
-      // Text filter
-      if (!matchesTextFilter(line)) return false;
-      
-      return true;
-    };
-    
-    return groupedData.map(subGroup => ({
-      ...subGroup,
-      moments: subGroup.moments.map(momGroup => ({
-        ...momGroup,
-        funnelStages: momGroup.funnelStages.map(funGroup => ({
-          ...funGroup,
-          lines: funGroup.lines.filter(filterLine),
-        })),
-      })),
+  // Build dynamic hierarchical tree based on hierarchyOrder
+  const dynamicHierarchyTree = useMemo(() => {
+    // Create MediaLineRef array for the builder
+    const lineRefs: MediaLineRef[] = lines.map(l => ({
+      id: l.id,
+      budget: Number(l.budget) || 0,
+      subdivision_id: l.subdivision_id,
+      moment_id: l.moment_id,
+      funnel_stage_id: l.funnel_stage_id,
     }));
-  }, [groupedData, lineFilters, activeFiltersCount, isTextFilterActive, textFilter]);
+
+    // If no distributions, create a fallback root node
+    if (budgetDistributions.length === 0) {
+      const totalBudget = Number(plan.total_budget) || 0;
+      const allocated = lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+      
+      const rootNode: HierarchyTreeNode = {
+        data: {
+          id: null,
+          distId: 'root',
+          name: 'Geral',
+          planned: totalBudget,
+          allocated,
+          percentage: 100,
+          level: hierarchyOrder[0] || 'subdivision',
+          parentDistId: null,
+        },
+        children: [],
+      };
+      return [rootNode];
+    }
+
+    return buildHierarchyTree(
+      budgetDistributions as BuilderBudgetDistribution[],
+      lineRefs,
+      hierarchyOrder,
+      getNameForLevel
+    );
+  }, [lines, budgetDistributions, plan.total_budget, hierarchyOrder, getNameForLevel]);
+
+  // Helper to get line ref ID for a specific level
+  const getLineRefIdForLevel = useCallback((line: MediaLine, level: HierarchyLevel): string | null => {
+    switch (level) {
+      case 'subdivision': return line.subdivision_id;
+      case 'moment': return line.moment_id;
+      case 'funnel_stage': return line.funnel_stage_id;
+      default: return null;
+    }
+  }, []);
+
+  // Get lines for a specific path in the hierarchy
+  const getLinesForPath = useCallback((pathMap: Map<HierarchyLevel, string | null>): MediaLine[] => {
+    return lines.filter(line => {
+      for (const [level, expectedId] of pathMap) {
+        const lineId = getLineRefIdForLevel(line, level);
+        const matches = (expectedId === null && !lineId) || lineId === expectedId;
+        if (!matches) return false;
+      }
+      return true;
+    });
+  }, [lines, getLineRefIdForLevel]);
+
+  // Apply line filters to dynamic hierarchy tree
+  const filterLine = useCallback((line: MediaLine): boolean => {
+    // Standard filters
+    if (lineFilters.status && line.status_id !== lineFilters.status) return false;
+    if (lineFilters.subdivision && line.subdivision_id !== lineFilters.subdivision) return false;
+    if (lineFilters.moment && line.moment_id !== lineFilters.moment) return false;
+    if (lineFilters.funnel_stage && line.funnel_stage_id !== lineFilters.funnel_stage) return false;
+    if (lineFilters.code && !(line.line_code || '').toLowerCase().includes(lineFilters.code.toLowerCase())) return false;
+    if (lineFilters.medium && line.medium_id !== lineFilters.medium) return false;
+    if (lineFilters.vehicle && line.vehicle_id !== lineFilters.vehicle) return false;
+    if (lineFilters.channel && line.channel_id !== lineFilters.channel) return false;
+    if (lineFilters.target && line.target_id !== lineFilters.target) return false;
+    
+    // Text filter
+    if (!matchesTextFilter(line)) return false;
+    
+    return true;
+  }, [lineFilters, matchesTextFilter]);
+
+  // Get filtered lines for a specific path
+  const getFilteredLinesForPath = useCallback((pathMap: Map<HierarchyLevel, string | null>): MediaLine[] => {
+    const hasAnyFilter = activeFiltersCount > 0 || isTextFilterActive;
+    const pathLines = getLinesForPath(pathMap);
+    if (!hasAnyFilter) return pathLines;
+    return pathLines.filter(filterLine);
+  }, [getLinesForPath, activeFiltersCount, isTextFilterActive, filterLine]);
+
+  // Build prefill object from hierarchy path
+  const buildPrefillFromPath = useCallback((pathMap: Map<HierarchyLevel, string | null>): { subdivisionId?: string; momentId?: string; funnelStageId?: string } => {
+    const prefill: { subdivisionId?: string; momentId?: string; funnelStageId?: string } = {};
+    
+    for (const [level, id] of pathMap) {
+      if (id) {
+        if (level === 'subdivision') prefill.subdivisionId = id;
+        else if (level === 'moment') prefill.momentId = id;
+        else if (level === 'funnel_stage') prefill.funnelStageId = id;
+      }
+    }
+    
+    return prefill;
+  }, []);
+
+  // Find orphan lines that don't match any distribution path
+  const orphanLines = useMemo(() => {
+    if (budgetDistributions.length === 0) return [];
+    
+    const firstLevel = hierarchyOrder[0];
+    const firstLevelDists = budgetDistributions.filter(d => d.distribution_type === firstLevel);
+    const firstLevelRefIds = firstLevelDists.map(d => d.reference_id);
+    
+    return lines.filter(l => {
+      const lineRefId = getLineRefIdForLevel(l, firstLevel);
+      if (!lineRefId) {
+        return !firstLevelRefIds.includes(null);
+      }
+      return !firstLevelRefIds.includes(lineRefId);
+    });
+  }, [lines, budgetDistributions, hierarchyOrder, getLineRefIdForLevel]);
+
+  // Collect all lines from dynamic hierarchy tree (for flat array operations)
+  const collectLinesFromTree = useCallback((nodes: HierarchyTreeNode[], pathMap: Map<HierarchyLevel, string | null>): MediaLine[] => {
+    const allLines: MediaLine[] = [];
+    
+    for (const node of nodes) {
+      const currentPath = new Map(pathMap);
+      currentPath.set(node.data.level, node.data.id);
+      
+      if (node.children.length === 0) {
+        // Leaf node - collect lines for this path
+        const pathLines = getFilteredLinesForPath(currentPath);
+        allLines.push(...pathLines);
+      } else {
+        // Recurse into children
+        allLines.push(...collectLinesFromTree(node.children, currentPath));
+      }
+    }
+    
+    // Also add orphan lines if at root level
+    if (pathMap.size === 0) {
+      const hasAnyFilter = activeFiltersCount > 0 || isTextFilterActive;
+      const filteredOrphans = hasAnyFilter ? orphanLines.filter(filterLine) : orphanLines;
+      allLines.push(...filteredOrphans);
+    }
+    
+    return allLines;
+  }, [getFilteredLinesForPath, orphanLines, activeFiltersCount, isTextFilterActive, filterLine]);
 
   // Get all filtered lines as a flat array
   const filteredLines = useMemo(() => {
-    const allLines: MediaLine[] = [];
-    filteredGroupedData.forEach(subGroup => {
-      subGroup.moments.forEach(momGroup => {
-        momGroup.funnelStages.forEach(funGroup => {
-          allLines.push(...funGroup.lines);
-        });
-      });
-    });
-    return allLines;
-  }, [filteredGroupedData]);
+    return collectLinesFromTree(dynamicHierarchyTree, new Map());
+  }, [dynamicHierarchyTree, collectLinesFromTree]);
 
   // Notify parent of filtered lines changes
   useMemo(() => {
@@ -1218,6 +1164,349 @@ export function HierarchicalMediaTable({
     </Button>
   );
 
+  const handleStatusChange = async (lineId: string, statusId: string) => {
+    await onUpdateLine(lineId, { status_id: statusId === 'none' ? null : statusId });
+  };
+
+  // Render a single line row (used in both grouped and flat views)
+  const renderLineRow = useCallback((line: MediaLine) => {
+    const info = getLineDisplayInfo(line);
+    
+    return (
+      <motion.div
+        key={line.id}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex hover:bg-muted/30 transition-colors text-sm"
+      >
+        {/* Editable Line Code */}
+        <EditableCell
+          line={line}
+          field="line_code"
+          displayValue={line.line_code || generateLineCode(line, existingLineCodes)}
+          inputType="text"
+          width={getWidth('line_code')}
+          duplicateMoments={getOtherMoments(line)}
+        />
+        
+        {visibleColumns.medium && (
+          <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('medium') }} title={info.medium}>
+            {info.medium}
+          </div>
+        )}
+        {visibleColumns.vehicle && (
+          <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('vehicle') }} title={info.vehicle}>
+            {info.vehicle}
+          </div>
+        )}
+        {visibleColumns.channel && (
+          <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('channel') }} title={info.channel}>
+            {info.channel}
+          </div>
+        )}
+        {visibleColumns.target && (
+          <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('target') }} title={info.target}>
+            ({info.target})
+          </div>
+        )}
+        
+        {/* Editable Budget */}
+        <EditableCell
+          line={line}
+          field="budget"
+          displayValue={formatCurrency(Number(line.budget))}
+          inputType="number"
+          width={getWidth('budget')}
+        />
+        
+        {/* Creatives with counter and quick add button */}
+        {visibleColumns.creatives && (
+          <div className="p-2 border-r flex items-center justify-between group shrink-0" style={{ width: getWidth('creatives') }}>
+            <div className="flex items-center gap-1.5">
+              <ImageIcon className="w-3 h-3 text-muted-foreground" />
+              <span className={cn(
+                "text-xs font-medium",
+                info.creativesCount > 0 ? "text-foreground" : "text-muted-foreground"
+              )}>
+                {info.creativesCount}
+              </span>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-primary"
+                    onClick={() => onEditLine(line, 'creatives')}
+                  >
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Adicionar criativo</TooltipContent>
+              </Tooltip>
+              {info.creativesCount > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => onEditLine(line, 'creatives')}
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Editar criativos</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Status select */}
+        <div className="p-2 border-r shrink-0" style={{ width: getWidth('status') }}>
+          <Select
+            value={line.status_id || 'none'}
+            onValueChange={(value) => handleStatusChange(line.id, value)}
+          >
+            <SelectTrigger className="h-6 text-xs">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">-</SelectItem>
+              {statusesList.map(status => (
+                <SelectItem key={status.id} value={status.id}>
+                  {status.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* Editable Start Date */}
+        <EditableCell
+          line={line}
+          field="start_date"
+          displayValue={formatDate(line.start_date)}
+          inputType="date"
+          width={getWidth('start_date')}
+        />
+        
+        {/* Editable End Date */}
+        <EditableCell
+          line={line}
+          field="end_date"
+          displayValue={formatDate(line.end_date)}
+          inputType="date"
+          width={getWidth('end_date')}
+        />
+        
+        {/* Action buttons */}
+        <div className="p-2 border-r flex items-center gap-1 shrink-0" style={{ width: getWidth('actions') }}>
+          {lineAlerts && <LineAlertIndicator alerts={lineAlerts(line.id)} size="sm" />}
+          <LineDetailButton mediaLineId={line.id} startDate={line.start_date} endDate={line.end_date} />
+          <UTMPreview
+            destinationUrl={line.destination_url}
+            utmParams={{
+              utm_source: line.utm_source || undefined,
+              utm_medium: line.utm_medium || undefined,
+              utm_campaign: line.utm_campaign || undefined,
+              utm_term: line.utm_term || undefined,
+            }}
+            isValidated={(line as any).utm_validated || false}
+            compact
+            validating={validatingLineId === line.id}
+            onValidate={onValidateUTM ? async () => {
+              setValidatingLineId(line.id);
+              try {
+                await onValidateUTM(line.id, true);
+              } finally {
+                setValidatingLineId(null);
+              }
+            } : undefined}
+            onInvalidate={onValidateUTM ? async () => {
+              setValidatingLineId(line.id);
+              try {
+                await onValidateUTM(line.id, false);
+              } finally {
+                setValidatingLineId(null);
+              }
+            } : undefined}
+          />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => onEditLine(line)}
+              >
+                <Settings2 className="w-3 h-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Editar linha completa</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-destructive hover:text-destructive"
+                onClick={() => onDeleteLine(line)}
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Excluir linha</TooltipContent>
+          </Tooltip>
+        </div>
+        
+        {/* Campaign Days - fixed column */}
+        <div className="p-2 border-r shrink-0 bg-primary/5 text-center text-xs" style={{ width: getWidth('days') }}>
+          {getLineCampaignDays(line)}
+        </div>
+        
+        {/* Allocated Budget - fixed column */}
+        <div className="p-2 border-r shrink-0 bg-primary/5 text-xs font-medium" style={{ width: getWidth('allocated') }}>
+          {formatCurrency(getLineAllocatedBudget(line.id))}
+        </div>
+        
+        {/* Month columns - fixed columns */}
+        {planMonths.map((month, idx) => (
+          <MonthBudgetCell
+            key={idx}
+            lineId={line.id}
+            line={line}
+            month={month}
+            value={getMonthBudget(line.id, month)}
+            onUpdate={onUpdateMonthlyBudgets}
+            isEditable={isMonthEditableForLine(line, month)}
+          />
+        ))}
+      </motion.div>
+    );
+  }, [
+    getLineDisplayInfo, existingLineCodes, getWidth, getOtherMoments, visibleColumns,
+    handleStatusChange, statusesList, lineAlerts, validatingLineId, onValidateUTM,
+    onEditLine, onDeleteLine, getLineCampaignDays, getLineAllocatedBudget, planMonths,
+    getMonthBudget, onUpdateMonthlyBudgets, isMonthEditableForLine, formatCurrency,
+    formatDate, generateLineCode
+  ]);
+
+  // Dynamic Hierarchy Renderer - renders hierarchy tree recursively based on hierarchyOrder
+  interface DynamicHierarchyRendererProps {
+    nodes: HierarchyTreeNode[];
+    hierarchyOrder: HierarchyLevel[];
+    pathMap: Map<HierarchyLevel, string | null>;
+    levelIndex: number;
+    parentName: string;
+    visibleColumns: Record<ToggleableColumn, boolean>;
+    dynamicMinWidths: MinWidthOverrides;
+    getWidth: (key: ColumnKey) => number;
+    getFilteredLinesForPath: (pathMap: Map<HierarchyLevel, string | null>) => MediaLine[];
+    buildPrefillFromPath: (pathMap: Map<HierarchyLevel, string | null>) => { subdivisionId?: string; momentId?: string; funnelStageId?: string };
+    onAddLine: (prefill?: { subdivisionId?: string; momentId?: string; funnelStageId?: string }) => void;
+    renderLineRow: (line: MediaLine) => React.ReactNode;
+  }
+
+  const DynamicHierarchyRenderer = ({
+    nodes,
+    hierarchyOrder,
+    pathMap,
+    levelIndex,
+    parentName,
+    visibleColumns,
+    dynamicMinWidths,
+    getWidth,
+    getFilteredLinesForPath,
+    buildPrefillFromPath,
+    onAddLine,
+    renderLineRow,
+  }: DynamicHierarchyRendererProps) => {
+    const currentLevel = hierarchyOrder[levelIndex];
+    const isLastLevel = levelIndex === hierarchyOrder.length - 1;
+    
+    return (
+      <>
+        {nodes.map((node, nodeIdx) => {
+          const currentPath = new Map(pathMap);
+          currentPath.set(currentLevel, node.data.id);
+          
+          // Get lines for this node path
+          const nodeLines = isLastLevel ? getFilteredLinesForPath(currentPath) : [];
+          const prefill = buildPrefillFromPath(currentPath);
+          
+          return (
+            <div key={node.data.distId || `node-${nodeIdx}`} className="flex">
+              {/* Budget Card Cell for this level */}
+              {visibleColumns[currentLevel] && (
+                <div 
+                  className="p-2 border-r bg-background shrink-0" 
+                  style={{ width: getWidth(currentLevel), minWidth: dynamicMinWidths[currentLevel] }}
+                >
+                  <BudgetCard
+                    label={node.data.name}
+                    planned={node.data.planned}
+                    allocated={node.data.allocated}
+                    percentageLabel={`${node.data.percentage.toFixed(0)}% de ${parentName}`}
+                  />
+                </div>
+              )}
+              
+              {/* Content area - either children or lines */}
+              <div className="flex-1 divide-y">
+                {isLastLevel ? (
+                  // Leaf level - render lines
+                  <>
+                    {nodeLines.map(line => renderLineRow(line))}
+                    <div className="p-2">
+                      <AddLineButton
+                        subdivisionId={prefill.subdivisionId}
+                        momentId={prefill.momentId}
+                        funnelStageId={prefill.funnelStageId}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  // Non-leaf level - recurse into children
+                  node.children.length > 0 ? (
+                    <DynamicHierarchyRenderer
+                      nodes={node.children}
+                      hierarchyOrder={hierarchyOrder}
+                      pathMap={currentPath}
+                      levelIndex={levelIndex + 1}
+                      parentName={node.data.name}
+                      visibleColumns={visibleColumns}
+                      dynamicMinWidths={dynamicMinWidths}
+                      getWidth={getWidth}
+                      getFilteredLinesForPath={getFilteredLinesForPath}
+                      buildPrefillFromPath={buildPrefillFromPath}
+                      onAddLine={onAddLine}
+                      renderLineRow={renderLineRow}
+                    />
+                  ) : (
+                    // No children but not last level - render lines directly
+                    <>
+                      {getFilteredLinesForPath(currentPath).map(line => renderLineRow(line))}
+                      <div className="p-2">
+                        <AddLineButton
+                          subdivisionId={prefill.subdivisionId}
+                          momentId={prefill.momentId}
+                          funnelStageId={prefill.funnelStageId}
+                        />
+                      </div>
+                    </>
+                  )
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </>
+    );
+  };
+
   // Calculate dynamic column widths based on visible columns
   const getMinWidth = () => {
     let width = getWidth('line_code') + getWidth('budget') + getWidth('status') + 
@@ -1225,9 +1514,12 @@ export function HierarchicalMediaTable({
     // New fixed columns: Dias, Orçamento Alocado, Months
     width += getWidth('days') + getWidth('allocated');
     width += planMonths.length * getWidth('month');
-    if (visibleColumns.subdivision) width += getWidth('subdivision');
-    if (visibleColumns.moment) width += getWidth('moment');
-    if (visibleColumns.funnel_stage) width += getWidth('funnel_stage');
+    // Add widths for hierarchy columns based on hierarchyOrder
+    for (const level of hierarchyOrder) {
+      if (visibleColumns[level]) {
+        width += getWidth(level);
+      }
+    }
     if (visibleColumns.medium) width += getWidth('medium');
     if (visibleColumns.vehicle) width += getWidth('vehicle');
     if (visibleColumns.channel) width += getWidth('channel');
@@ -1246,9 +1538,6 @@ export function HierarchicalMediaTable({
     return found?.name || null;
   };
 
-  const handleStatusChange = async (lineId: string, statusId: string) => {
-    await onUpdateLine(lineId, { status_id: statusId === 'none' ? null : statusId });
-  };
 
   return (
     <TooltipProvider>
@@ -1933,302 +2222,82 @@ export function HierarchicalMediaTable({
             </div>
           )}
 
-          {/* Grouped View - hierarchical with budget cards */}
+          {/* Grouped View - Dynamic hierarchical with budget cards */}
           {viewMode === 'grouped' && (
             <div className="divide-y" style={{ minWidth: `${getMinWidth()}px` }}>
-              {filteredGroupedData.map((subdivisionGroup, subIdx) => (
-                <div key={subdivisionGroup.subdivision.distId || `no-sub-${subIdx}`} className="flex">
-                  {/* Subdivision cell */}
-                  {visibleColumns.subdivision && (
-                    <div className="p-2 border-r bg-background shrink-0" style={{ width: getWidth('subdivision'), minWidth: dynamicMinWidths.subdivision }}>
-                      <BudgetCard
-                        label={subdivisionGroup.subdivision.name}
-                        planned={subdivisionGroup.subdivision.planned}
-                        allocated={subdivisionGroup.subdivisionAllocated}
-                        percentageLabel={`${subdivisionGroup.subdivision.percentage.toFixed(0)}% do plano`}
-                      />
-                    </div>
-                  )}
-
-                {/* Moments column */}
-                <div className="flex-1 divide-y">
-                  {subdivisionGroup.moments.map((momentGroup, momIdx) => (
-                    <div key={momentGroup.moment.distId || `no-mom-${momIdx}`} className="flex">
-                      {/* Moment cell */}
-                      {visibleColumns.moment && (
-                        <div className="p-2 border-r bg-background shrink-0" style={{ width: getWidth('moment'), minWidth: dynamicMinWidths.moment }}>
+              {/* Render hierarchy tree recursively */}
+              <DynamicHierarchyRenderer
+                nodes={dynamicHierarchyTree}
+                hierarchyOrder={hierarchyOrder}
+                pathMap={new Map()}
+                levelIndex={0}
+                parentName="plano"
+                visibleColumns={visibleColumns}
+                dynamicMinWidths={dynamicMinWidths}
+                getWidth={getWidth}
+                getFilteredLinesForPath={getFilteredLinesForPath}
+                buildPrefillFromPath={buildPrefillFromPath}
+                onAddLine={onAddLine}
+                renderLineRow={renderLineRow}
+              />
+              
+              {/* Orphan lines section */}
+              {orphanLines.length > 0 && (
+                <div className="flex">
+                  {/* Show empty cards for each hierarchy level */}
+                  {hierarchyOrder.map((level, idx) => 
+                    visibleColumns[level] && (
+                      <div 
+                        key={level} 
+                        className="p-2 border-r bg-muted/50 shrink-0" 
+                        style={{ width: getWidth(level), minWidth: dynamicMinWidths[level] }}
+                      >
+                        {idx === 0 && (
                           <BudgetCard
-                            label={momentGroup.moment.name}
-                            planned={momentGroup.moment.planned}
-                            allocated={momentGroup.momentAllocated}
-                            percentageLabel={`${momentGroup.moment.percentage.toFixed(0)}% de ${subdivisionGroup.subdivision.name}`}
-                            startDate={momentGroup.moment.start_date}
-                            endDate={momentGroup.moment.end_date}
+                            label="Sem Classificação"
+                            planned={0}
+                            allocated={orphanLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0)}
+                            percentageLabel="Linhas órfãs"
                           />
-                        </div>
-                      )}
-
-                      {/* Funnel stages column */}
-                      <div className="flex-1 divide-y">
-                        {momentGroup.funnelStages.map((funnelGroup, funIdx) => (
-                          <div key={funnelGroup.funnelStage.distId || `no-fun-${funIdx}`} className="flex">
-                            {visibleColumns.funnel_stage && (
-                              <div className="p-2 border-r bg-background shrink-0" style={{ width: getWidth('funnel_stage'), minWidth: dynamicMinWidths.funnel_stage }}>
-                                <BudgetCard
-                                  label={funnelGroup.funnelStage.name}
-                                  planned={funnelGroup.funnelStage.planned}
-                                  allocated={funnelGroup.funnelStageAllocated}
-                                  percentageLabel={`${funnelGroup.funnelStage.percentage.toFixed(0)}% de ${momentGroup.moment.name}`}
-                                />
-                              </div>
-                            )}
-
-                            {/* Lines and Add button */}
-                            <div className="flex-1 divide-y">
-                              {funnelGroup.lines.map((line) => {
-                                const info = getLineDisplayInfo(line);
-
-                                return (
-                                  <motion.div
-                                    key={line.id}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className="flex hover:bg-muted/30 transition-colors text-sm"
-                                  >
-                                    {/* Editable Line Code */}
-                                    <EditableCell
-                                      line={line}
-                                      field="line_code"
-                                      displayValue={line.line_code || generateLineCode(line, existingLineCodes)}
-                                      inputType="text"
-                                      width={getWidth('line_code')}
-                                      duplicateMoments={getOtherMoments(line)}
-                                    />
-                                    
-                                    {visibleColumns.medium && (
-                                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('medium') }} title={info.medium}>
-                                        {info.medium}
-                                      </div>
-                                    )}
-                                    {visibleColumns.vehicle && (
-                                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('vehicle') }} title={info.vehicle}>
-                                        {info.vehicle}
-                                      </div>
-                                    )}
-                                    {visibleColumns.channel && (
-                                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('channel') }} title={info.channel}>
-                                        {info.channel}
-                                      </div>
-                                    )}
-                                    {visibleColumns.target && (
-                                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('target') }} title={info.target}>
-                                        ({info.target})
-                                      </div>
-                                    )}
-                                    
-                                    {/* Editable Budget */}
-                                    <EditableCell
-                                      line={line}
-                                      field="budget"
-                                      displayValue={formatCurrency(Number(line.budget))}
-                                      inputType="number"
-                                      width={getWidth('budget')}
-                                    />
-                                    
-                                    {/* Creatives with counter and quick add button */}
-                                    {visibleColumns.creatives && (
-                                      <div className="p-2 border-r flex items-center justify-between group shrink-0" style={{ width: getWidth('creatives') }}>
-                                        <div className="flex items-center gap-1.5">
-                                          <ImageIcon className="w-3 h-3 text-muted-foreground" />
-                                          <span className={cn(
-                                            "text-xs font-medium",
-                                            info.creativesCount > 0 ? "text-foreground" : "text-muted-foreground"
-                                          )}>
-                                            {info.creativesCount}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center gap-0.5">
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-primary"
-                                                onClick={() => onEditLine(line, 'creatives')}
-                                              >
-                                                <Plus className="w-3 h-3" />
-                                              </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>Adicionar criativo</TooltipContent>
-                                          </Tooltip>
-                                          {info.creativesCount > 0 && (
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                  onClick={() => onEditLine(line, 'creatives')}
-                                                >
-                                                  <Pencil className="w-3 h-3" />
-                                                </Button>
-                                              </TooltipTrigger>
-                                              <TooltipContent>Editar criativos</TooltipContent>
-                                            </Tooltip>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
-                                    
-                                    {/* Status select */}
-                                    <div className="p-2 border-r shrink-0" style={{ width: getWidth('status') }}>
-                                      <Select
-                                        value={line.status_id || 'none'}
-                                        onValueChange={(value) => handleStatusChange(line.id, value)}
-                                      >
-                                        <SelectTrigger className="h-6 text-xs">
-                                          <SelectValue placeholder="Status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="none">-</SelectItem>
-                                          {statusesList.map(status => (
-                                            <SelectItem key={status.id} value={status.id}>
-                                              {status.name}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    
-                                    {/* Editable Start Date */}
-                                    <EditableCell
-                                      line={line}
-                                      field="start_date"
-                                      displayValue={formatDate(line.start_date)}
-                                      inputType="date"
-                                      width={getWidth('start_date')}
-                                    />
-                                    
-                                    {/* Editable End Date */}
-                                    <EditableCell
-                                      line={line}
-                                      field="end_date"
-                                      displayValue={formatDate(line.end_date)}
-                                      inputType="date"
-                                      width={getWidth('end_date')}
-                                    />
-                                    
-                                    {/* Action buttons */}
-                                    <div className="p-2 border-r flex items-center gap-1 shrink-0" style={{ width: getWidth('actions') }}>
-                                      {lineAlerts && <LineAlertIndicator alerts={lineAlerts(line.id)} size="sm" />}
-                                      <LineDetailButton mediaLineId={line.id} startDate={line.start_date} endDate={line.end_date} />
-                                      <UTMPreview
-                                        destinationUrl={line.destination_url}
-                                        utmParams={{
-                                          utm_source: line.utm_source || undefined,
-                                          utm_medium: line.utm_medium || undefined,
-                                          utm_campaign: line.utm_campaign || undefined,
-                                          utm_term: line.utm_term || undefined,
-                                        }}
-                                        isValidated={(line as any).utm_validated || false}
-                                        compact
-                                        validating={validatingLineId === line.id}
-                                        onValidate={onValidateUTM ? async () => {
-                                          setValidatingLineId(line.id);
-                                          try {
-                                            await onValidateUTM(line.id, true);
-                                          } finally {
-                                            setValidatingLineId(null);
-                                          }
-                                        } : undefined}
-                                        onInvalidate={onValidateUTM ? async () => {
-                                          setValidatingLineId(line.id);
-                                          try {
-                                            await onValidateUTM(line.id, false);
-                                          } finally {
-                                            setValidatingLineId(null);
-                                          }
-                                        } : undefined}
-                                      />
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6"
-                                            onClick={() => onEditLine(line)}
-                                          >
-                                            <Settings2 className="w-3 h-3" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Editar linha completa</TooltipContent>
-                                      </Tooltip>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-destructive hover:text-destructive"
-                                            onClick={() => onDeleteLine(line)}
-                                          >
-                                            <Trash2 className="w-3 h-3" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Excluir linha</TooltipContent>
-                                      </Tooltip>
-                                    </div>
-                                    
-                                    {/* Campaign Days - fixed column */}
-                                    <div className="p-2 border-r shrink-0 bg-primary/5 text-center text-xs" style={{ width: getWidth('days') }}>
-                                      {getLineCampaignDays(line)}
-                                    </div>
-                                    
-                                    {/* Allocated Budget - fixed column */}
-                                    <div className="p-2 border-r shrink-0 bg-primary/5 text-xs font-medium" style={{ width: getWidth('allocated') }}>
-                                      {formatCurrency(getLineAllocatedBudget(line.id))}
-                                    </div>
-                                    
-                                    {/* Month columns - fixed columns */}
-                                    {planMonths.map((month, idx) => (
-                                      <MonthBudgetCell
-                                        key={idx}
-                                        lineId={line.id}
-                                        line={line}
-                                        month={month}
-                                        value={getMonthBudget(line.id, month)}
-                                        onUpdate={onUpdateMonthlyBudgets}
-                                        isEditable={isMonthEditableForLine(line, month)}
-                                      />
-                                    ))}
-                                  </motion.div>
-                                );
-                              })}
-                              
-                              {/* Add Line Button - always visible for each combination */}
-                              <div className="p-2">
-                                <AddLineButton
-                                  subdivisionId={subdivisionGroup.subdivision.id || undefined}
-                                  momentId={momentGroup.moment.id || undefined}
-                                  funnelStageId={funnelGroup.funnelStage.id || undefined}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                        )}
                       </div>
+                    )
+                  )}
+                  
+                  {/* Orphan lines */}
+                  <div className="flex-1 divide-y">
+                    {orphanLines.filter(filterLine).map(line => renderLineRow(line))}
+                    <div className="p-2">
+                      <AddLineButton subdivisionId={undefined} momentId={undefined} funnelStageId={undefined} />
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
+            </div>
           )}
 
-          {/* Footer - Subtotal */}
+          {/* Footer - Subtotal - Dynamic based on hierarchyOrder */}
           <div className="flex bg-muted border-t" style={{ minWidth: `${viewMode === 'flat' ? getMinWidth() - 100 : getMinWidth()}px` }}>
-            {visibleColumns.subdivision && <div className="p-3 font-bold shrink-0" style={{ width: getWidth('subdivision') }}>Subtotal:</div>}
-            {visibleColumns.moment && <div className="p-3 shrink-0" style={{ width: getWidth('moment') }}></div>}
-            {visibleColumns.funnel_stage && <div className="p-3 shrink-0" style={{ width: getWidth('funnel_stage') }}></div>}
+            {/* Render footer cells for each hierarchy level in order */}
+            {viewMode === 'grouped' && hierarchyOrder.map((level, idx) => 
+              visibleColumns[level] && (
+                <div 
+                  key={level} 
+                  className={cn("p-3 shrink-0", idx === 0 && "font-bold")} 
+                  style={{ width: getWidth(level) }}
+                >
+                  {idx === 0 ? 'Subtotal:' : ''}
+                </div>
+              )
+            )}
+            {/* Flat view hierarchy columns */}
+            {viewMode === 'flat' && (
+              <>
+                {visibleColumns.subdivision && <div className="p-3 font-bold shrink-0" style={{ width: getWidth('subdivision') }}>Subtotal:</div>}
+                {visibleColumns.moment && <div className="p-3 shrink-0" style={{ width: getWidth('moment') }}></div>}
+                {visibleColumns.funnel_stage && <div className="p-3 shrink-0" style={{ width: getWidth('funnel_stage') }}></div>}
+              </>
+            )}
             <div className="p-3 shrink-0" style={{ width: getWidth('line_code') }}></div>
             {visibleColumns.medium && <div className="p-3 shrink-0" style={{ width: getWidth('medium') }}></div>}
             {visibleColumns.vehicle && <div className="p-3 shrink-0" style={{ width: getWidth('vehicle') }}></div>}
@@ -2240,7 +2309,7 @@ export function HierarchicalMediaTable({
             <div className="p-3 shrink-0" style={{ width: getWidth('start_date') }}></div>
             <div className="p-3 shrink-0" style={{ width: getWidth('end_date') }}></div>
             <div className="p-3 shrink-0" style={{ width: getWidth('actions') }}></div>
-            {/* New columns totals */}
+            {/* Fixed columns totals */}
             <div className="p-3 shrink-0 bg-primary/5" style={{ width: getWidth('days') }}></div>
             <div className="p-3 shrink-0 bg-primary/5 font-bold text-xs" style={{ width: getWidth('allocated') }}>
               {formatCurrency(lines.reduce((sum, l) => sum + getLineAllocatedBudget(l.id), 0))}
