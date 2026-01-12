@@ -9,10 +9,25 @@ interface CreativeUTMRowProps {
   creative: TaxonomyCreative;
   parentLine: TaxonomyLine;
   planName: string;
+  defaultUrl?: string | null;
   onCopy: (url: string) => void;
 }
 
-export function CreativeUTMRow({ creative, parentLine, planName, onCopy }: CreativeUTMRowProps) {
+// Helper to build utm_content from format, message_slug and creative_id
+function buildUtmContent(
+  formatSlug: string | null | undefined,
+  messageSlug: string | null | undefined,
+  creativeId: string | null | undefined
+): string {
+  const parts = [
+    formatSlug || '',
+    messageSlug || '',
+    creativeId || ''
+  ].filter(Boolean);
+  return parts.join('-');
+}
+
+export function CreativeUTMRow({ creative, parentLine, planName, defaultUrl, onCopy }: CreativeUTMRowProps) {
   const buildUtmCampaign = (): string => {
     const parts = [
       parentLine.line_code || '',
@@ -32,10 +47,16 @@ export function CreativeUTMRow({ creative, parentLine, planName, onCopy }: Creat
     return parentLine.channel?.slug || parentLine.utm_medium || '';
   };
 
-  const utmContent = creative.creative_id || creative.id.slice(0, 6);
+  const utmContent = buildUtmContent(
+    creative.format?.slug,
+    creative.message_slug,
+    creative.creative_id
+  );
+
+  const destinationUrl = parentLine.destination_url || defaultUrl;
 
   const handleCopy = () => {
-    if (!parentLine.destination_url) return;
+    if (!destinationUrl) return;
 
     const utmParams = {
       utm_source: getUtmSource(),
@@ -45,7 +66,7 @@ export function CreativeUTMRow({ creative, parentLine, planName, onCopy }: Creat
       utm_content: utmContent,
     };
 
-    const fullUrl = buildUrlWithUTM(parentLine.destination_url, utmParams);
+    const fullUrl = buildUrlWithUTM(destinationUrl, utmParams);
     onCopy(fullUrl);
   };
 
@@ -55,19 +76,53 @@ export function CreativeUTMRow({ creative, parentLine, planName, onCopy }: Creat
         <Image className="h-3.5 w-3.5 text-muted-foreground" />
       </TableCell>
       <TableCell className="font-mono text-xs text-muted-foreground">
-        {creative.creative_id || '—'}
+        —
       </TableCell>
-      <TableCell colSpan={4}>
+      <TableCell>
         <span className="text-sm text-muted-foreground">{creative.name}</span>
       </TableCell>
-      <TableCell colSpan={2}>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">utm_content:</span>
+      <TableCell>
+        {creative.format?.name ? (
+          <span className="text-xs truncate block max-w-[100px]" title={creative.format.name}>
+            {creative.format.name}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell>
+        {creative.copy_text ? (
+          <span className="text-xs truncate block max-w-[120px]" title={creative.copy_text}>
+            {creative.copy_text}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell>
+        {creative.creative_id ? (
           <code className="text-xs px-1.5 py-0.5 bg-muted rounded">
+            {creative.creative_id}
+          </code>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      {/* Empty cells for utm_source, utm_medium, utm_campaign, utm_term */}
+      <TableCell></TableCell>
+      <TableCell></TableCell>
+      <TableCell></TableCell>
+      <TableCell></TableCell>
+      <TableCell>
+        {utmContent ? (
+          <code className="text-xs px-1.5 py-0.5 bg-primary/10 text-primary rounded truncate block max-w-[130px]" title={utmContent}>
             {utmContent}
           </code>
-        </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
       </TableCell>
+      <TableCell></TableCell>
       <TableCell className="text-center">
         <Badge variant="outline" className="text-xs">
           Criativo
@@ -79,7 +134,7 @@ export function CreativeUTMRow({ creative, parentLine, planName, onCopy }: Creat
           size="icon"
           className="h-6 w-6"
           onClick={handleCopy}
-          disabled={!parentLine.destination_url}
+          disabled={!destinationUrl}
           title="Copiar URL completa do criativo"
         >
           <Copy className="h-3 w-3" />

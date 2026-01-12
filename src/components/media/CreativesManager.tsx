@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useFormats } from '@/hooks/useFormatsHierarchy';
 import { FormatWizardDialog } from '@/components/config/FormatWizardDialog';
+import { toSlug } from '@/utils/utmGenerator';
 
 interface CreativesManagerProps {
   mediaLineId: string;
@@ -64,6 +65,9 @@ export function CreativesManager({ mediaLineId, userId, creatives, onUpdate }: C
       const selectedFormat = formats.data?.find(f => f.id === form.format_id);
       const creativeName = selectedFormat?.name || 'Criativo';
 
+      // Generate message_slug from copy_text
+      const messageSlug = form.message ? toSlug(form.message) : null;
+
       if (editingId) {
         const { error } = await supabase
           .from('media_creatives')
@@ -71,6 +75,7 @@ export function CreativesManager({ mediaLineId, userId, creatives, onUpdate }: C
             format_id: form.format_id,
             name: creativeName,
             copy_text: form.message || null,
+            message_slug: messageSlug,
             notes: form.notes || null,
           })
           .eq('id', editingId);
@@ -86,6 +91,7 @@ export function CreativesManager({ mediaLineId, userId, creatives, onUpdate }: C
             format_id: form.format_id,
             name: creativeName,
             copy_text: form.message || null,
+            message_slug: messageSlug,
             notes: form.notes || null,
           });
 

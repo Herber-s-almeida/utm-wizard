@@ -5,7 +5,13 @@ export interface TaxonomyCreative {
   id: string;
   name: string;
   creative_id: string | null;
-  utm_content: string;
+  copy_text: string | null;
+  message_slug: string | null;
+  format: {
+    id: string;
+    name: string;
+    slug: string | null;
+  } | null;
 }
 
 export interface TaxonomyLine {
@@ -43,6 +49,11 @@ export interface TaxonomyLine {
     name: string;
     slug: string | null;
   } | null;
+  format: {
+    id: string;
+    name: string;
+    slug: string | null;
+  } | null;
   creatives: TaxonomyCreative[];
 }
 
@@ -57,6 +68,7 @@ export function useTaxonomyData(planId: string) {
           id,
           line_code,
           platform,
+          format,
           destination_url,
           utm_source,
           utm_medium,
@@ -77,14 +89,22 @@ export function useTaxonomyData(planId: string) {
 
       if (linesError) throw linesError;
 
-      // Fetch creatives for these lines
+      // Fetch creatives for these lines with format info
       const lineIds = lines?.map(l => l.id) || [];
       
       let creatives: any[] = [];
       if (lineIds.length > 0) {
         const { data: creativesData, error: creativesError } = await supabase
           .from('media_creatives')
-          .select('id, name, creative_id, media_line_id')
+          .select(`
+            id, 
+            name, 
+            creative_id, 
+            media_line_id,
+            copy_text,
+            message_slug,
+            format:formats!format_id(id, name, slug)
+          `)
           .in('media_line_id', lineIds);
         
         if (creativesError) throw creativesError;
@@ -99,13 +119,16 @@ export function useTaxonomyData(planId: string) {
         subdivision: line.subdivision as TaxonomyLine['subdivision'],
         moment: line.moment as TaxonomyLine['moment'],
         funnel_stage_ref: line.funnel_stage_ref as TaxonomyLine['funnel_stage_ref'],
+        format: null, // Line format is stored as string, not relation
         creatives: creatives
           .filter(c => c.media_line_id === line.id)
           .map(c => ({
             id: c.id,
             name: c.name,
             creative_id: c.creative_id,
-            utm_content: c.creative_id || '',
+            copy_text: c.copy_text,
+            message_slug: c.message_slug,
+            format: c.format as TaxonomyCreative['format'],
           })),
       }));
 
