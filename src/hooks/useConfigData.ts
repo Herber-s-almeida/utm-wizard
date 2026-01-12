@@ -628,51 +628,56 @@ export function useCreativeTemplates() {
   };
 }
 
-// Hook for Media Plans with soft delete
+// Hook for Media Plans with soft delete - OPTIMIZED: single query + client-side filtering
 export function useMediaPlans() {
   const { user } = useAuth();
   const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
-  const draftPlans = useQuery({
-    queryKey: ['media_plans', 'draft', effectiveUserId],
+  // Single query fetching only necessary fields for sidebar display
+  const allPlans = useQuery({
+    queryKey: ['media_plans', 'all', effectiveUserId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('media_plans').select('*').eq('user_id', effectiveUserId!).is('deleted_at', null).eq('status', 'draft').order('updated_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('media_plans')
+        .select('id, name, slug, status, updated_at, deleted_at, client')
+        .eq('user_id', effectiveUserId!)
+        .order('updated_at', { ascending: false });
       if (error) throw error;
       return data;
     },
     enabled: !!effectiveUserId,
+    staleTime: 30000, // Cache for 30 seconds
   });
 
-  const activePlans = useQuery({
-    queryKey: ['media_plans', 'active', effectiveUserId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('media_plans').select('*').eq('user_id', effectiveUserId!).is('deleted_at', null).eq('status', 'active').order('updated_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!effectiveUserId,
-  });
+  // Derive filtered lists from single query result
+  const draftPlans = {
+    data: allPlans.data?.filter(p => !p.deleted_at && p.status === 'draft'),
+    isLoading: allPlans.isLoading,
+    error: allPlans.error,
+    refetch: allPlans.refetch,
+  };
 
-  const finishedPlans = useQuery({
-    queryKey: ['media_plans', 'finished', effectiveUserId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('media_plans').select('*').eq('user_id', effectiveUserId!).is('deleted_at', null).eq('status', 'completed').order('updated_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!effectiveUserId,
-  });
+  const activePlans = {
+    data: allPlans.data?.filter(p => !p.deleted_at && p.status === 'active'),
+    isLoading: allPlans.isLoading,
+    error: allPlans.error,
+    refetch: allPlans.refetch,
+  };
 
-  const trashedPlans = useQuery({
-    queryKey: ['media_plans', 'trashed', effectiveUserId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('media_plans').select('*').eq('user_id', effectiveUserId!).not('deleted_at', 'is', null).order('deleted_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!effectiveUserId,
-  });
+  const finishedPlans = {
+    data: allPlans.data?.filter(p => !p.deleted_at && p.status === 'completed'),
+    isLoading: allPlans.isLoading,
+    error: allPlans.error,
+    refetch: allPlans.refetch,
+  };
+
+  const trashedPlans = {
+    data: allPlans.data?.filter(p => p.deleted_at !== null),
+    isLoading: allPlans.isLoading,
+    error: allPlans.error,
+    refetch: allPlans.refetch,
+  };
 
   const softDelete = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from('media_plans').update({ deleted_at: new Date().toISOString() }).eq('id', id); if (error) throw error; },
