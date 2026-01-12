@@ -446,142 +446,11 @@ export default function MediaPlanDetail() {
     return DEFAULT_HIERARCHY_ORDER;
   }, [plan?.hierarchy_order]);
 
-  // Build hierarchy data for EditableHierarchyCard - Must be before early returns!
-  const hierarchyData = useMemo(() => {
-    const getSubdivisionName = (refId: string | null): string => {
-      if (!refId) return 'Geral';
-      const found = (subdivisions.data || []).find(s => s.id === refId);
-      return found?.name || 'Geral';
-    };
-
-    const getMomentName = (refId: string | null): string => {
-      if (!refId) return 'Geral';
-      const found = (moments.data || []).find(m => m.id === refId);
-      return found?.name || 'Geral';
-    };
-
-    const getFunnelStageName = (refId: string | null): string => {
-      if (!refId) return 'Geral';
-      const found = (funnelStages.data || []).find(f => f.id === refId);
-      return found?.name || 'Geral';
-    };
-
-    const subdivisionDists = budgetDistributions.filter(d => d.distribution_type === 'subdivision');
-    const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
-    const funnelDists = budgetDistributions.filter(d => d.distribution_type === 'funnel_stage');
-
-    if (subdivisionDists.length === 0) {
-      return [];
-    }
-
-    return subdivisionDists.map(subDist => {
-      const subRefId = subDist.reference_id;
-      const subName = getSubdivisionName(subRefId);
-      
-      // Get lines for this subdivision
-      const subLines = lines.filter(l => 
-        (subRefId === null && !l.subdivision_id) || l.subdivision_id === subRefId
-      );
-      const subAllocated = subLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-
-      // Get moments for this subdivision
-      const subMomentDists = momentDists.filter(m => m.parent_distribution_id === subDist.id);
-
-      const momentNodes = subMomentDists.length === 0
-        ? [{
-            moment: { 
-              id: null as string | null, 
-              distId: 'none', 
-              name: 'Geral', 
-              planned: subDist.amount, 
-              percentage: 100,
-              parentDistId: subDist.id
-            },
-            momentAllocated: subAllocated,
-            funnelStages: [{
-              funnelStage: { 
-                id: null as string | null, 
-                distId: 'none', 
-                name: 'Geral', 
-                planned: subDist.amount, 
-                percentage: 100,
-                parentDistId: 'none'
-              },
-              funnelStageAllocated: subAllocated,
-            }],
-          }]
-        : subMomentDists.map(momDist => {
-            const momRefId = momDist.reference_id;
-            const momName = getMomentName(momRefId);
-            
-            const momLines = subLines.filter(l => 
-              (momRefId === null && !l.moment_id) || l.moment_id === momRefId
-            );
-            const momAllocated = momLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-
-            const momFunnelDists = funnelDists.filter(f => f.parent_distribution_id === momDist.id);
-
-            const funnelNodes = momFunnelDists.length === 0
-              ? [{
-                  funnelStage: { 
-                    id: null as string | null, 
-                    distId: 'none', 
-                    name: 'Geral', 
-                    planned: momDist.amount, 
-                    percentage: 100,
-                    parentDistId: momDist.id
-                  },
-                  funnelStageAllocated: momAllocated,
-                }]
-              : momFunnelDists.map(funDist => {
-                  const funRefId = funDist.reference_id;
-                  const funName = getFunnelStageName(funRefId);
-                  const funLines = momLines.filter(l => 
-                    (funRefId === null && !l.funnel_stage_id) || l.funnel_stage_id === funRefId
-                  );
-                  const funAllocated = funLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
-                  
-                  return {
-                    funnelStage: { 
-                      id: funRefId, 
-                      distId: funDist.id, 
-                      name: funName, 
-                      planned: funDist.amount, 
-                      percentage: funDist.percentage,
-                      parentDistId: momDist.id
-                    },
-                    funnelStageAllocated: funAllocated,
-                  };
-                });
-
-            return {
-              moment: { 
-                id: momRefId, 
-                distId: momDist.id, 
-                name: momName, 
-                planned: momDist.amount, 
-                percentage: momDist.percentage,
-                parentDistId: subDist.id
-              },
-              momentAllocated: momAllocated,
-              funnelStages: funnelNodes,
-            };
-          });
-
-      return {
-        subdivision: { 
-          id: subRefId, 
-          distId: subDist.id, 
-          name: subName, 
-          planned: subDist.amount, 
-          percentage: subDist.percentage 
-        },
-        subdivisionAllocated: subAllocated,
-        moments: momentNodes,
-      };
-    });
-  }, [lines, budgetDistributions, subdivisions.data, moments.data, funnelStages.data]);
-
+  // Check if there are real distributions for showing hierarchy card
+  const hasRealDistributions = useMemo(() => {
+    return budgetDistributions.length > 0 && 
+      budgetDistributions.some(d => d.distribution_type === 'subdivision' || d.distribution_type === 'moment' || d.distribution_type === 'funnel_stage');
+  }, [budgetDistributions]);
   // Build dynamic hierarchy tree (supports any order)
   const dynamicHierarchyTree = useMemo(() => {
     const getNameForLevel = (level: HierarchyLevel, refId: string | null): string => {
@@ -973,13 +842,12 @@ export default function MediaPlanDetail() {
         )}
 
         {/* Editable Hierarchy Card */}
-        {isVisible('budget-hierarchy') && hierarchyData.length > 0 && (
+        {isVisible('budget-hierarchy') && hasRealDistributions && (
           <EditableHierarchyCard
             planId={plan.id}
             planName={plan.name}
             totalBudget={Number(plan.total_budget) || 0}
             budgetDistributions={budgetDistributions}
-            hierarchyData={hierarchyData}
             hierarchyTree={dynamicHierarchyTree}
             hierarchyOrder={hierarchyOrder}
             onDistributionsUpdated={fetchData}

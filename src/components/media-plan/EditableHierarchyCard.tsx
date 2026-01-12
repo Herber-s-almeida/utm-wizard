@@ -30,53 +30,12 @@ interface BudgetDistribution {
   parent_distribution_id: string | null;
 }
 
-// Legacy interface for backwards compatibility
-interface SubdivisionData {
-  id: string | null;
-  distId: string;
-  name: string;
-  planned: number;
-  percentage: number;
-}
-
-interface MomentData {
-  id: string | null;
-  distId: string;
-  name: string;
-  planned: number;
-  percentage: number;
-  parentDistId: string;
-}
-
-interface FunnelStageData {
-  id: string | null;
-  distId: string;
-  name: string;
-  planned: number;
-  percentage: number;
-  parentDistId: string;
-}
-
-interface HierarchyRow {
-  subdivision: SubdivisionData;
-  subdivisionAllocated: number;
-  moments: {
-    moment: MomentData;
-    momentAllocated: number;
-    funnelStages: {
-      funnelStage: FunnelStageData;
-      funnelStageAllocated: number;
-    }[];
-  }[];
-}
-
 interface EditableHierarchyCardProps {
   planId: string;
   planName: string;
   totalBudget: number;
   budgetDistributions: BudgetDistribution[];
-  hierarchyData: HierarchyRow[]; // Legacy - kept for backwards compatibility
-  hierarchyTree?: HierarchyTreeNode[]; // New dynamic tree
+  hierarchyTree: HierarchyTreeNode[];
   hierarchyOrder?: HierarchyLevel[];
   onDistributionsUpdated: () => void;
   onHide?: () => void;
@@ -92,7 +51,6 @@ export function EditableHierarchyCard({
   planName,
   totalBudget,
   budgetDistributions,
-  hierarchyData,
   hierarchyTree,
   hierarchyOrder = DEFAULT_HIERARCHY_ORDER,
   onDistributionsUpdated,
@@ -201,11 +159,8 @@ export function EditableHierarchyCard({
     if (e.key === 'Escape') cancelEditing();
   };
 
-  // If no real distributions, don't show the card
-  const hasRealDistributions = budgetDistributions.length > 0 && 
-    hierarchyData.some(row => row.subdivision.distId !== 'root' && row.subdivision.distId !== 'none');
-
-  if (!hasRealDistributions) {
+  // If no tree or empty, don't show the card
+  if (!hierarchyTree || hierarchyTree.length === 0) {
     return null;
   }
 

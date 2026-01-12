@@ -53,10 +53,11 @@ import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPl
 // Columns that can be toggled (excludes: Código, Orçamento, Status, Início, Fim, Ações)
 type ToggleableColumn = 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target' | 'creatives';
 
-const TOGGLEABLE_COLUMNS: { key: ToggleableColumn; label: string }[] = [
-  { key: 'subdivision', label: 'Subdivisão' },
-  { key: 'moment', label: 'Momentos' },
-  { key: 'funnel_stage', label: 'Fase' },
+// Build toggleable columns with dynamic labels from hierarchy config
+const getToggleableColumns = (): { key: ToggleableColumn; label: string }[] => [
+  { key: 'subdivision', label: getLevelLabel('subdivision') },
+  { key: 'moment', label: getLevelLabelPlural('moment') },
+  { key: 'funnel_stage', label: getLevelLabel('funnel_stage') },
   { key: 'medium', label: 'Meio' },
   { key: 'vehicle', label: 'Veículo' },
   { key: 'channel', label: 'Canal' },
@@ -85,12 +86,13 @@ interface TextFilter {
   value: string;
 }
 
-const TEXT_FILTER_COLUMNS: { key: TextFilterColumn; label: string }[] = [
+// Build text filter columns with dynamic labels
+const getTextFilterColumns = (): { key: TextFilterColumn; label: string }[] => [
   { key: 'code', label: 'Código' },
   { key: 'status', label: 'Status' },
-  { key: 'subdivision', label: 'Subdivisão' },
-  { key: 'moment', label: 'Momento' },
-  { key: 'funnel_stage', label: 'Fase' },
+  { key: 'subdivision', label: getLevelLabel('subdivision') },
+  { key: 'moment', label: getLevelLabel('moment') },
+  { key: 'funnel_stage', label: getLevelLabel('funnel_stage') },
   { key: 'medium', label: 'Meio' },
   { key: 'vehicle', label: 'Veículo' },
   { key: 'channel', label: 'Canal' },
@@ -1234,7 +1236,7 @@ export function HierarchicalMediaTable({
     return width;
   };
 
-  const filteredColumnsList = TOGGLEABLE_COLUMNS.filter(col => 
+  const filteredColumnsList = getToggleableColumns().filter(col => 
     col.label.toLowerCase().includes(columnFilterSearch.toLowerCase())
   );
 
@@ -1527,7 +1529,7 @@ export function HierarchicalMediaTable({
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                {TEXT_FILTER_COLUMNS.map(col => (
+                {getTextFilterColumns().map(col => (
                   <SelectItem key={col.key} value={col.key}>{col.label}</SelectItem>
                 ))}
               </SelectContent>
@@ -1587,7 +1589,7 @@ export function HierarchicalMediaTable({
               )}
               {isTextFilterActive && (
                 <Badge variant="secondary" className="gap-1">
-                  {TEXT_FILTER_COLUMNS.find(c => c.key === textFilter.column)?.label} {TEXT_FILTER_OPERATORS.find(o => o.key === textFilter.operator)?.label.toLowerCase()} "{textFilter.value}"
+                  {getTextFilterColumns().find(c => c.key === textFilter.column)?.label} {TEXT_FILTER_OPERATORS.find(o => o.key === textFilter.operator)?.label.toLowerCase()} "{textFilter.value}"
                   <X className="w-3 h-3 cursor-pointer" onClick={clearTextFilter} />
                 </Badge>
               )}
