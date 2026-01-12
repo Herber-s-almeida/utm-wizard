@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Save, Loader2, Layers, Clock, Filter, Calendar, FileText, Sparkles, AlertTriangle, LogOut, Info } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, Loader2, Layers, Clock, Filter, Calendar, FileText, Sparkles, AlertTriangle, LogOut, Info, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { WizardStepper } from '@/components/media-plan/WizardStepper';
 import { BudgetAllocationTable } from '@/components/media-plan/BudgetAllocationTable';
@@ -22,6 +23,7 @@ import { SortableFunnelList } from '@/components/media-plan/SortableFunnelList';
 import { FunnelStageSelector } from '@/components/media-plan/FunnelStageSelector';
 import { TemporalEqualizer, generateTemporalPeriods } from '@/components/media-plan/TemporalEqualizer';
 import { SlugInputField } from '@/components/media-plan/SlugInputField';
+import { HierarchyOrderSelector } from '@/components/media-plan/HierarchyOrderSelector';
 import { useMediaPlanWizard, BudgetAllocation, WizardPlanData } from '@/hooks/useMediaPlanWizard';
 import { KPI_OPTIONS } from '@/types/media';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
@@ -113,14 +115,21 @@ export default function EditMediaPlan() {
   const [existingLines, setExistingLines] = useState<any[]>([]);
   const [planId, setPlanId] = useState<string | null>(null);
   const [planSlug, setPlanSlug] = useState<string | null>(null);
-  const [planHierarchyOrder, setPlanHierarchyOrder] = useState<HierarchyLevel[]>(DEFAULT_HIERARCHY_ORDER);
+  const [planHierarchyOrder, setPlanHierarchyOrder] = useState<HierarchyLevel[]>([]);
+  const [originalHierarchyOrder, setOriginalHierarchyOrder] = useState<HierarchyLevel[]>([]);
+  const [hierarchyChanged, setHierarchyChanged] = useState(false);
+  const [showHierarchyWarning, setShowHierarchyWarning] = useState(false);
+  const [pendingHierarchyChange, setPendingHierarchyChange] = useState<HierarchyLevel[] | null>(null);
   const { customKpis } = useCustomKpis();
 
-  const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations, initializeFromPlan, getLibraryForLevel, getCreateMutationForLevel } = wizard;
+  const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations, initializeFromPlan, getLibraryForLevel, getCreateMutationForLevel, setHierarchyOrder: setWizardHierarchyOrder, reset: resetWizard } = wizard;
 
-  // Generate wizard steps dynamically based on planHierarchyOrder
+  // Generate wizard steps dynamically based on planHierarchyOrder (includes step 0 for structure)
   const wizardSteps = useMemo(() => {
-    const steps = [{ id: 1, title: 'Plano', description: 'Dados básicos' }];
+    const steps = [
+      { id: 0, title: 'Estrutura', description: 'Hierarquia' },
+      { id: 1, title: 'Plano', description: 'Dados básicos' },
+    ];
     
     planHierarchyOrder.forEach((level, idx) => {
       steps.push({
@@ -179,11 +188,13 @@ export default function EditMediaPlan() {
       setPlanId(resolvedPlanId);
       setPlanSlug(plan.slug);
       
-      // Store hierarchy order (cannot be changed if lines exist)
+      // Store hierarchy order (can now be changed)
       const loadedOrder = plan.hierarchy_order as string[] | null;
-      setPlanHierarchyOrder((loadedOrder && loadedOrder.length > 0 
+      const hierarchyOrder = (loadedOrder && loadedOrder.length >= 0 
         ? loadedOrder 
-        : DEFAULT_HIERARCHY_ORDER) as HierarchyLevel[]);
+        : []) as HierarchyLevel[];
+      setPlanHierarchyOrder(hierarchyOrder);
+      setOriginalHierarchyOrder(hierarchyOrder); // Store original for comparison
 
       // Fetch existing distributions
       const { data: distributions, error: distError } = await supabase
@@ -288,8 +299,8 @@ export default function EditMediaPlan() {
         }
       }
 
-      // Initialize wizard with loaded data, starting at step 2
-      initializeFromPlan(planData, subdivisionAllocations, momentAllocations, funnelAllocations, 2);
+      // Initialize wizard with loaded data, starting at step 0 (Structure)
+      initializeFromPlan(planData, subdivisionAllocations, momentAllocations, funnelAllocations, 0, hierarchyOrder);
     } catch (error) {
       console.error('Error loading plan:', error);
       toast.error('Erro ao carregar plano');
@@ -336,6 +347,9 @@ export default function EditMediaPlan() {
 
   const canProceed = () => {
     switch (state.step) {
+      case 0:
+        // Structure step - always valid (0 levels = General budget)
+        return true;
       case 1:
         return getPlanInfoMissingFields().length === 0;
       default: {
@@ -348,6 +362,56 @@ export default function EditMediaPlan() {
         }
         return true;
       }
+    }
+  };
+
+  // Handle hierarchy change with warning dialog
+  const handleHierarchyChange = (newOrder: HierarchyLevel[]) => {
+    // Check if there are impacts to warn about
+    const removedLevels = originalHierarchyOrder.filter(level => !newOrder.includes(level));
+    const hasImpact = existingLines.length > 0 && (removedLevels.length > 0 || originalHierarchyOrder.length !== newOrder.length);
+    
+    if (hasImpact) {
+      setPendingHierarchyChange(newOrder);
+      setShowHierarchyWarning(true);
+    } else {
+      applyHierarchyChange(newOrder);
+    }
+  };
+
+  // Apply hierarchy change after confirmation
+  const applyHierarchyChange = (newOrder: HierarchyLevel[]) => {
+    setPlanHierarchyOrder(newOrder);
+    setWizardHierarchyOrder(newOrder);
+    
+    // Check if hierarchy actually changed from original
+    const isChanged = JSON.stringify(newOrder) !== JSON.stringify(originalHierarchyOrder);
+    setHierarchyChanged(isChanged);
+    
+    // Clear allocations for removed levels
+    const removedLevels = originalHierarchyOrder.filter(level => !newOrder.includes(level));
+    if (removedLevels.includes('subdivision')) {
+      setSubdivisions([]);
+    }
+    if (removedLevels.includes('moment')) {
+      setMoments('root', []);
+      // Clear all moment allocations
+      Object.keys(state.moments).forEach(key => setMoments(key, []));
+    }
+    if (removedLevels.includes('funnel_stage')) {
+      setFunnelStages('root', []);
+      // Clear all funnel allocations
+      Object.keys(state.funnelStages).forEach(key => setFunnelStages(key, []));
+    }
+    
+    setPendingHierarchyChange(null);
+    setShowHierarchyWarning(false);
+  };
+
+  // Confirm hierarchy change
+  const handleConfirmHierarchyChange = () => {
+    if (pendingHierarchyChange) {
+      applyHierarchyChange(pendingHierarchyChange);
     }
   };
 
@@ -562,7 +626,7 @@ export default function EditMediaPlan() {
   };
 
   const handleBack = () => {
-    if (state.step > 1) {
+    if (state.step > 0) {
       setEditingSection(null);
       goToStep(state.step - 1);
     }
@@ -631,7 +695,41 @@ export default function EditMediaPlan() {
 
     setSaving(true);
     try {
-      // 1. Update the media plan (preserve hierarchy_order)
+      // 1. If hierarchy changed, clean up affected data
+      if (hierarchyChanged) {
+        // Delete monthly budgets for all existing lines
+        const lineIds = existingLines.map(l => l.id);
+        if (lineIds.length > 0) {
+          await supabase
+            .from('media_line_monthly_budgets')
+            .delete()
+            .in('media_line_id', lineIds);
+        }
+        
+        // Nullify hierarchy fields on lines for removed levels
+        const removedLevels = originalHierarchyOrder.filter(level => !planHierarchyOrder.includes(level));
+        
+        if (removedLevels.includes('subdivision') && existingLines.length > 0) {
+          await supabase
+            .from('media_lines')
+            .update({ subdivision_id: null })
+            .eq('media_plan_id', planId);
+        }
+        if (removedLevels.includes('moment') && existingLines.length > 0) {
+          await supabase
+            .from('media_lines')
+            .update({ moment_id: null })
+            .eq('media_plan_id', planId);
+        }
+        if (removedLevels.includes('funnel_stage') && existingLines.length > 0) {
+          await supabase
+            .from('media_lines')
+            .update({ funnel_stage_id: null })
+            .eq('media_plan_id', planId);
+        }
+      }
+
+      // 2. Update the media plan (now including hierarchy_order)
       const { error: planError } = await supabase
         .from('media_plans')
         .update({
@@ -646,7 +744,7 @@ export default function EditMediaPlan() {
           default_url: state.planData.default_url || null,
           objectives: state.planData.objectives.length > 0 ? state.planData.objectives : null,
           kpis: Object.keys(state.planData.kpis).length > 0 ? state.planData.kpis : null,
-          // Note: hierarchy_order is preserved (not modified during edit)
+          hierarchy_order: planHierarchyOrder, // Now we save the updated hierarchy
         })
         .eq('id', planId);
 
@@ -845,6 +943,45 @@ export default function EditMediaPlan() {
   const renderContent = () => {
     return (
       <div className="space-y-6">
+        {/* Step 0: Structure (Hierarchy) */}
+        {state.step === 0 && (
+          <motion.div
+            key="structure-form"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            {existingLines.length > 0 && hierarchyChanged && (
+              <Alert className="border-amber-500/30 bg-amber-500/5 mb-4">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <AlertDescription className="text-sm">
+                  Alterar a estrutura afetará as {existingLines.length} linha(s) de mídia existentes. 
+                  Os orçamentos mensais serão apagados e os vínculos de níveis removidos serão limpos.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <HierarchyOrderSelector
+              selectedLevels={planHierarchyOrder}
+              onOrderChange={handleHierarchyChange}
+              disabled={false}
+            />
+            
+            {hierarchyChanged && (
+              <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-primary">Estrutura alterada</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  A nova estrutura será aplicada ao salvar o plano.
+                </p>
+              </div>
+            )}
+          </motion.div>
+        )}
+
         {/* Step 1: Plan basics */}
         {state.step >= 1 && (
           <AnimatePresence mode="wait">
@@ -871,14 +1008,22 @@ export default function EditMediaPlan() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    {/* Alert: Hierarchy order is locked */}
-                    {existingLines.length > 0 && (
-                      <Alert className="border-blue-500/30 bg-blue-500/5">
-                        <Info className="h-4 w-4 text-blue-500" />
-                        <AlertDescription className="text-sm">
-                          A ordem de hierarquia ({planHierarchyOrder.map(l => getLevelLabel(l)).join(' → ')}) não pode ser alterada porque existem {existingLines.length} linha(s) de mídia cadastradas.
-                        </AlertDescription>
-                      </Alert>
+                    {/* Info about current hierarchy */}
+                    {planHierarchyOrder.length > 0 && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-sm text-muted-foreground">
+                          Estrutura atual: <span className="font-medium text-foreground">{planHierarchyOrder.map(l => getLevelLabel(l)).join(' → ')}</span>
+                          {hierarchyChanged && <Badge variant="outline" className="ml-2 text-xs">Alterada</Badge>}
+                        </p>
+                      </div>
+                    )}
+                    {planHierarchyOrder.length === 0 && (
+                      <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                        <p className="text-sm text-primary font-medium">
+                          Orçamento Geral (sem divisões)
+                          {hierarchyChanged && <Badge variant="outline" className="ml-2 text-xs">Alterado</Badge>}
+                        </p>
+                      </div>
                     )}
 
                     {getPlanInfoMissingFields().length > 0 && (
@@ -1261,7 +1406,7 @@ export default function EditMediaPlan() {
           <Button
             variant="outline"
             onClick={handleBack}
-            disabled={state.step === 1}
+            disabled={state.step === 0}
             className="gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -1365,6 +1510,39 @@ export default function EditMediaPlan() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir e Salvar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Hierarchy Change Warning Dialog */}
+      <AlertDialog open={showHierarchyWarning} onOpenChange={setShowHierarchyWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Alterar Estrutura do Plano?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>Alterar a estrutura hierárquica terá os seguintes impactos:</p>
+                <ul className="list-disc list-inside text-sm space-y-1 mt-2">
+                  <li>Distribuições de orçamento serão recalculadas</li>
+                  <li>Orçamentos mensais por linha serão apagados</li>
+                  {existingLines.length > 0 && (
+                    <li>As {existingLines.length} linha(s) de mídia serão mantidas, mas os vínculos com níveis removidos serão limpos</li>
+                  )}
+                </ul>
+                <p className="font-medium mt-3">Deseja continuar?</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingHierarchyChange(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmHierarchyChange}>
+              Confirmar Alteração
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

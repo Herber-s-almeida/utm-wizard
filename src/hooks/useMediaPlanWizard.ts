@@ -142,16 +142,11 @@ export function useMediaPlanWizard() {
     }));
   }, []);
 
-  // Set hierarchy order
+  // Set hierarchy order (does not reset allocations - caller controls that)
   const setHierarchyOrder = useCallback((order: HierarchyLevel[]) => {
     setState(prev => ({
       ...prev,
       hierarchyOrder: order,
-      // Reset allocations when order changes
-      levelAllocations: {},
-      subdivisions: [],
-      moments: {},
-      funnelStages: {},
     }));
   }, []);
 
