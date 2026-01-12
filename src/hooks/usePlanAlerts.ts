@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { MediaLine, MediaCreative } from '@/types/media';
+import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPlural } from '@/types/hierarchy';
 
 export type AlertLevel = 'error' | 'warning' | 'info';
 
@@ -28,6 +29,35 @@ interface UsePlanAlertsParams {
   planStartDate: string | null;
   planEndDate: string | null;
   moments?: Array<{ id: string; name: string }>;
+  hierarchyOrder?: HierarchyLevel[];
+}
+
+// Helper to get line's reference ID for a given level
+function getLineReferenceId(line: MediaLine, level: HierarchyLevel): string | null {
+  switch (level) {
+    case 'subdivision':
+      return line.subdivision_id || null;
+    case 'moment':
+      return line.moment_id || null;
+    case 'funnel_stage':
+      return line.funnel_stage_id || null;
+    default:
+      return null;
+  }
+}
+
+// Helper to map distribution_type to HierarchyLevel
+function distributionTypeToLevel(type: string): HierarchyLevel | null {
+  switch (type) {
+    case 'subdivision':
+      return 'subdivision';
+    case 'moment':
+      return 'moment';
+    case 'funnel_stage':
+      return 'funnel_stage';
+    default:
+      return null;
+  }
 }
 
 export function usePlanAlerts({
@@ -38,6 +68,7 @@ export function usePlanAlerts({
   planStartDate,
   planEndDate,
   moments = [],
+  hierarchyOrder = DEFAULT_HIERARCHY_ORDER,
 }: UsePlanAlertsParams) {
   const alerts = useMemo(() => {
     const result: PlanAlert[] = [];
@@ -58,67 +89,50 @@ export function usePlanAlerts({
       });
     }
 
-    // 2. Check budget allocation by subdivision
-    const subdivisionDists = budgetDistributions.filter(d => d.distribution_type === 'subdivision');
-    subdivisionDists.forEach(dist => {
-      const subLines = lines.filter(l => 
-        (dist.reference_id === null && !l.subdivision_id) || l.subdivision_id === dist.reference_id
-      );
-      const subAllocated = subLines.reduce((acc, l) => acc + Number(l.budget || 0), 0);
+    // 2. Dynamic budget check for each hierarchy level
+    hierarchyOrder.forEach(level => {
+      const levelDists = budgetDistributions.filter(d => d.distribution_type === level);
+      const levelLabel = getLevelLabel(level);
       
-      if (subAllocated > dist.amount && dist.amount > 0) {
-        result.push({
-          id: `budget-exceeded-sub-${dist.id}`,
-          level: 'warning',
-          title: 'Subdivisão excede orçamento',
-          description: `Uma subdivisão tem R$ ${(subAllocated - dist.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} alocados além do planejado`,
-          action: 'Redistribua o orçamento entre as linhas',
-          category: 'budget',
+      levelDists.forEach(dist => {
+        // Filter lines that match this distribution
+        const matchingLines = lines.filter(l => {
+          const lineRefId = getLineReferenceId(l, level);
+          return (dist.reference_id === null && !lineRefId) || lineRefId === dist.reference_id;
         });
-      }
-    });
-
-    // 3. Check funnel stages without allocation
-    const funnelDists = budgetDistributions.filter(d => d.distribution_type === 'funnel_stage');
-    if (funnelDists.length > 0) {
-      funnelDists.forEach(dist => {
-        if (dist.reference_id) {
-          const funnelLines = lines.filter(l => l.funnel_stage_id === dist.reference_id);
-          const funnelAllocated = funnelLines.reduce((acc, l) => acc + Number(l.budget || 0), 0);
-          
-          if (funnelAllocated === 0 && dist.amount > 0) {
-            result.push({
-              id: `funnel-empty-${dist.id}`,
-              level: 'info',
-              title: 'Fase do funil sem linhas',
-              description: `Uma fase do funil tem orçamento planejado mas nenhuma linha alocada`,
-              action: 'Adicione linhas de mídia para esta fase do funil',
-              category: 'config',
-            });
-          }
-        }
-      });
-    }
-
-    // 4. NEW: Check moments without lines
-    const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
-    momentDists.forEach(dist => {
-      if (dist.reference_id) {
-        const momentLines = lines.filter(l => l.moment_id === dist.reference_id);
-        const momentName = moments.find(m => m.id === dist.reference_id)?.name || 'Momento';
         
-        if (momentLines.length === 0 && dist.amount > 0) {
+        const allocated = matchingLines.reduce((acc, l) => acc + Number(l.budget || 0), 0);
+        
+        // Check for budget exceeded
+        if (allocated > dist.amount && dist.amount > 0) {
           result.push({
-            id: `moment-empty-${dist.id}`,
+            id: `budget-exceeded-${level}-${dist.id}`,
             level: 'warning',
-            title: 'Momento sem linhas',
-            description: `O momento "${momentName}" tem orçamento planejado (R$ ${dist.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) mas nenhuma linha alocada`,
-            action: 'Adicione linhas de mídia para este momento',
+            title: `${levelLabel} excede orçamento`,
+            description: `Uma ${levelLabel.toLowerCase()} tem R$ ${(allocated - dist.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} alocados além do planejado`,
+            action: 'Redistribua o orçamento entre as linhas',
+            category: 'budget',
+          });
+        }
+        
+        // Check for empty allocations (budget planned but no lines)
+        if (dist.reference_id && matchingLines.length === 0 && dist.amount > 0) {
+          const levelName = level === 'moment' 
+            ? moments.find(m => m.id === dist.reference_id)?.name || levelLabel
+            : levelLabel;
+            
+          result.push({
+            id: `${level}-empty-${dist.id}`,
+            level: level === 'moment' ? 'warning' : 'info',
+            title: `${levelLabel} sem linhas`,
+            description: `${levelName} tem orçamento planejado (R$ ${dist.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) mas nenhuma linha alocada`,
+            action: `Adicione linhas de mídia para esta ${levelLabel.toLowerCase()}`,
             category: 'config',
           });
         }
-      }
+      });
     });
+    // NOTE: Legacy moment check is now handled dynamically above in section 2
 
     // 5. NEW: Check budget concentration (single line > 50% of total)
     if (totalBudget > 0 && lines.length > 1) {
@@ -284,7 +298,7 @@ export function usePlanAlerts({
     });
 
     return result;
-  }, [totalBudget, lines, creatives, budgetDistributions, planStartDate, planEndDate, moments]);
+  }, [totalBudget, lines, creatives, budgetDistributions, planStartDate, planEndDate, moments, hierarchyOrder]);
 
   // Group alerts by level
   const errorAlerts = alerts.filter(a => a.level === 'error');

@@ -78,6 +78,7 @@ export default function EditMediaPlan() {
   const [existingLines, setExistingLines] = useState<any[]>([]);
   const [planId, setPlanId] = useState<string | null>(null);
   const [planSlug, setPlanSlug] = useState<string | null>(null);
+  const [planHierarchyOrder, setPlanHierarchyOrder] = useState<string[] | null>(null);
   const { customKpis } = useCustomKpis();
 
   const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations, initializeFromPlan } = wizard;
@@ -123,6 +124,9 @@ export default function EditMediaPlan() {
       const resolvedPlanId = plan.id;
       setPlanId(resolvedPlanId);
       setPlanSlug(plan.slug);
+      
+      // Store hierarchy order (cannot be changed if lines exist)
+      setPlanHierarchyOrder(plan.hierarchy_order as string[] | null);
 
       // Fetch existing distributions
       const { data: distributions, error: distError } = await supabase

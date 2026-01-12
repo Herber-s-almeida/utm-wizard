@@ -13,6 +13,8 @@ interface FunnelVisualizationProps {
   parentBudget: number;
   parentName: string;
   onEdit: () => void;
+  /** If provided, visualization only renders when 'funnel_stage' is in the hierarchy order */
+  hierarchyOrder?: Array<'subdivision' | 'moment' | 'funnel_stage'>;
 }
 
 export function FunnelVisualization({ 
@@ -20,6 +22,7 @@ export function FunnelVisualization({
   parentBudget, 
   parentName,
   onEdit,
+  hierarchyOrder,
 }: FunnelVisualizationProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -29,6 +32,11 @@ export function FunnelVisualization({
       maximumFractionDigits: 0,
     }).format(value);
   };
+
+  // Don't render if hierarchy doesn't include funnel stages (when hierarchyOrder is provided)
+  if (hierarchyOrder && !hierarchyOrder.includes('funnel_stage')) {
+    return null;
+  }
 
   if (funnelStages.length === 0) {
     return null;
