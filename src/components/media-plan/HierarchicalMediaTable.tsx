@@ -1887,22 +1887,42 @@ export function HierarchicalMediaTable({
         </div>
 
         <div className="border rounded-lg overflow-x-auto">
-          {/* Header */}
+          {/* Header - Dynamic based on hierarchyOrder for grouped view */}
           <div className="flex bg-muted/50 text-xs font-medium text-muted-foreground border-b" style={{ minWidth: `${viewMode === 'flat' ? getMinWidth() - 100 : getMinWidth()}px` }}>
-            {visibleColumns.subdivision && (
-              <ResizableColumnHeader columnKey="subdivision" width={getWidth('subdivision')} minWidth={dynamicMinWidths.subdivision} onResize={handleResize} className="p-3 border-r">
-                Subdivisão
-              </ResizableColumnHeader>
+            {/* Render hierarchy columns in order for grouped view */}
+            {viewMode === 'grouped' && hierarchyOrder.map((level) => 
+              visibleColumns[level] && (
+                <ResizableColumnHeader 
+                  key={level}
+                  columnKey={level} 
+                  width={getWidth(level)} 
+                  minWidth={dynamicMinWidths[level]} 
+                  onResize={handleResize} 
+                  className="p-3 border-r"
+                >
+                  {getLevelLabel(level)}
+                </ResizableColumnHeader>
+              )
             )}
-            {visibleColumns.moment && (
-              <ResizableColumnHeader columnKey="moment" width={getWidth('moment')} minWidth={dynamicMinWidths.moment} onResize={handleResize} className="p-3 border-r">
-                Momento
-              </ResizableColumnHeader>
-            )}
-            {visibleColumns.funnel_stage && (
-              <ResizableColumnHeader columnKey="funnel_stage" width={getWidth('funnel_stage')} minWidth={dynamicMinWidths.funnel_stage} onResize={handleResize} className="p-3 border-r">
-                Fase
-              </ResizableColumnHeader>
+            {/* Fixed order for flat view (for backwards compatibility) */}
+            {viewMode === 'flat' && (
+              <>
+                {visibleColumns.subdivision && (
+                  <ResizableColumnHeader columnKey="subdivision" width={getWidth('subdivision')} minWidth={dynamicMinWidths.subdivision} onResize={handleResize} className="p-3 border-r">
+                    {getLevelLabel('subdivision')}
+                  </ResizableColumnHeader>
+                )}
+                {visibleColumns.moment && (
+                  <ResizableColumnHeader columnKey="moment" width={getWidth('moment')} minWidth={dynamicMinWidths.moment} onResize={handleResize} className="p-3 border-r">
+                    {getLevelLabel('moment')}
+                  </ResizableColumnHeader>
+                )}
+                {visibleColumns.funnel_stage && (
+                  <ResizableColumnHeader columnKey="funnel_stage" width={getWidth('funnel_stage')} minWidth={dynamicMinWidths.funnel_stage} onResize={handleResize} className="p-3 border-r">
+                    {getLevelLabel('funnel_stage')}
+                  </ResizableColumnHeader>
+                )}
+              </>
             )}
             <ResizableColumnHeader columnKey="line_code" width={getWidth('line_code')} onResize={handleResize} className="p-3 border-r">
               Código
