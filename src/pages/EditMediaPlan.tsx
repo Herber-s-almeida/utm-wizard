@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Save, Loader2, Layers, Clock, Filter, Calendar, FileText, Sparkles, AlertTriangle, LogOut } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, Loader2, Layers, Clock, Filter, Calendar, FileText, Sparkles, AlertTriangle, LogOut, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { WizardStepper } from '@/components/media-plan/WizardStepper';
 import { BudgetAllocationTable } from '@/components/media-plan/BudgetAllocationTable';
@@ -17,6 +18,8 @@ import { LibrarySelector } from '@/components/media-plan/LibrarySelector';
 import { PlanSummaryCard } from '@/components/media-plan/PlanSummaryCard';
 import { SubdivisionsSummaryCard } from '@/components/media-plan/SubdivisionsSummaryCard';
 import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization';
+import { SortableFunnelList } from '@/components/media-plan/SortableFunnelList';
+import { FunnelStageSelector } from '@/components/media-plan/FunnelStageSelector';
 import { TemporalEqualizer, generateTemporalPeriods } from '@/components/media-plan/TemporalEqualizer';
 import { SlugInputField } from '@/components/media-plan/SlugInputField';
 import { useMediaPlanWizard, BudgetAllocation, WizardPlanData } from '@/hooks/useMediaPlanWizard';
@@ -24,6 +27,7 @@ import { KPI_OPTIONS } from '@/types/media';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 import { CreateKpiDialog } from '@/components/media-plan/CreateKpiDialog';
 import { useCustomKpis } from '@/hooks/useCustomKpis';
+import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPlural, HIERARCHY_LEVEL_CONFIG } from '@/types/hierarchy';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,16 +39,37 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const WIZARD_STEPS = [
-  { id: 1, title: 'Plano', description: 'Dados básicos' },
-  { id: 2, title: 'Subdivisão', description: 'Opcional' },
-  { id: 3, title: 'Momentos', description: 'Opcional' },
-  { id: 4, title: 'Funil', description: 'Fases' },
-  { id: 5, title: 'Salvar', description: 'Confirmar' },
-];
+// Icons for hierarchy levels
+const LEVEL_ICONS: Record<HierarchyLevel, React.ElementType> = {
+  subdivision: Layers,
+  moment: Clock,
+  funnel_stage: Filter,
+};
 
-const MAX_SUBDIVISIONS = 12;
-const MAX_FUNNEL_STAGES = 7;
+// Max items per level
+const MAX_ITEMS_PER_LEVEL: Record<HierarchyLevel, number> = {
+  subdivision: 12,
+  moment: 12,
+  funnel_stage: 7,
+};
+
+// Descriptions per level
+const LEVEL_DESCRIPTIONS: Record<HierarchyLevel, { title: string; description: string }> = {
+  subdivision: {
+    title: 'Subdivisão do Plano',
+    description: 'Divida o orçamento por cidade, produto ou outra subdivisão.',
+  },
+  moment: {
+    title: 'Momentos de Campanha',
+    description: 'Distribua o orçamento por momentos (lançamento, sustentação, etc.).',
+  },
+  funnel_stage: {
+    title: 'Fases do Funil',
+    description: 'Distribua o orçamento por fase do funil.',
+  },
+};
+
+// Legacy constants removed - now using LEVEL_ICONS, MAX_ITEMS_PER_LEVEL
 
 interface BudgetDistribution {
   id: string;
@@ -78,10 +103,29 @@ export default function EditMediaPlan() {
   const [existingLines, setExistingLines] = useState<any[]>([]);
   const [planId, setPlanId] = useState<string | null>(null);
   const [planSlug, setPlanSlug] = useState<string | null>(null);
-  const [planHierarchyOrder, setPlanHierarchyOrder] = useState<string[] | null>(null);
+  const [planHierarchyOrder, setPlanHierarchyOrder] = useState<HierarchyLevel[]>(DEFAULT_HIERARCHY_ORDER);
   const { customKpis } = useCustomKpis();
 
-  const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations, initializeFromPlan } = wizard;
+  const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations, initializeFromPlan, getLibraryForLevel, getCreateMutationForLevel } = wizard;
+
+  // Generate wizard steps dynamically based on planHierarchyOrder
+  const wizardSteps = useMemo(() => {
+    const steps = [{ id: 1, title: 'Plano', description: 'Dados básicos' }];
+    
+    planHierarchyOrder.forEach((level, idx) => {
+      steps.push({
+        id: idx + 2,
+        title: getLevelLabel(level),
+        description: idx === 0 ? 'Opcional' : `Nível ${idx + 1}`,
+      });
+    });
+    
+    steps.push({ id: planHierarchyOrder.length + 2, title: 'Salvar', description: 'Confirmar' });
+    return steps;
+  }, [planHierarchyOrder]);
+
+  // Calculate last step number
+  const lastStep = planHierarchyOrder.length + 2;
 
   // Load existing plan data
   useEffect(() => {
@@ -126,7 +170,10 @@ export default function EditMediaPlan() {
       setPlanSlug(plan.slug);
       
       // Store hierarchy order (cannot be changed if lines exist)
-      setPlanHierarchyOrder(plan.hierarchy_order as string[] | null);
+      const loadedOrder = plan.hierarchy_order as string[] | null;
+      setPlanHierarchyOrder((loadedOrder && loadedOrder.length > 0 
+        ? loadedOrder 
+        : DEFAULT_HIERARCHY_ORDER) as HierarchyLevel[]);
 
       // Fetch existing distributions
       const { data: distributions, error: distError } = await supabase
@@ -281,21 +328,31 @@ export default function EditMediaPlan() {
     switch (state.step) {
       case 1:
         return getPlanInfoMissingFields().length === 0;
-      case 2:
-        return state.subdivisions.length === 0 || wizard.validatePercentages(state.subdivisions);
-      case 3: {
-        const keys = state.subdivisions.length > 0
-          ? state.subdivisions.map(s => s.id)
-          : ['root'];
-        return keys.every(key => {
-          const items = state.moments[key] || [];
-          return items.length === 0 || wizard.validatePercentages(items);
-        });
+      default: {
+        // For hierarchy level steps (2 onwards), validate allocations
+        const levelIndex = state.step - 2;
+        if (levelIndex >= 0 && levelIndex < planHierarchyOrder.length) {
+          const level = planHierarchyOrder[levelIndex];
+          const allocations = getAllocationsForLevel(level);
+          return allocations.length === 0 || wizard.validatePercentages(allocations);
+        }
+        return true;
       }
-      case 4:
-        return true;
+    }
+  };
+
+  // Helper to get allocations for a level
+  const getAllocationsForLevel = (level: HierarchyLevel): BudgetAllocation[] => {
+    switch (level) {
+      case 'subdivision':
+        return state.subdivisions;
+      case 'moment':
+        // For simplicity, check the root key
+        return Object.values(state.moments).flat();
+      case 'funnel_stage':
+        return Object.values(state.funnelStages).flat();
       default:
-        return true;
+        return [];
     }
   };
 
@@ -305,7 +362,7 @@ export default function EditMediaPlan() {
       return;
     }
 
-    if (state.step < 5) {
+    if (state.step < lastStep) {
       setEditingSection(null);
       goToStep(state.step + 1);
     }
@@ -593,8 +650,8 @@ export default function EditMediaPlan() {
 
   const handleFunnelAdd = (key: string, item: BudgetAllocation) => {
     const current = state.funnelStages[key] || [];
-    if (current.length >= MAX_FUNNEL_STAGES) {
-      toast.error(`Máximo de ${MAX_FUNNEL_STAGES} fases do funil`);
+    if (current.length >= MAX_ITEMS_PER_LEVEL.funnel_stage) {
+      toast.error(`Máximo de ${MAX_ITEMS_PER_LEVEL.funnel_stage} fases do funil`);
       return;
     }
     setFunnelStages(key, [...current, item]);
@@ -664,6 +721,16 @@ export default function EditMediaPlan() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    {/* Alert: Hierarchy order is locked */}
+                    {existingLines.length > 0 && (
+                      <Alert className="border-blue-500/30 bg-blue-500/5">
+                        <Info className="h-4 w-4 text-blue-500" />
+                        <AlertDescription className="text-sm">
+                          A ordem de hierarquia ({planHierarchyOrder.map(l => getLevelLabel(l)).join(' → ')}) não pode ser alterada porque existem {existingLines.length} linha(s) de mídia cadastradas.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
                     {getPlanInfoMissingFields().length > 0 && (
                       <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
                         Campos obrigatórios pendentes: {getPlanInfoMissingFields().join(', ')}
@@ -868,7 +935,7 @@ export default function EditMediaPlan() {
                       onCreate={handleCreateSubdivision}
                       label="Subdivisão"
                       createLabel="Criar nova subdivisão"
-                      maxItems={MAX_SUBDIVISIONS}
+                      maxItems={MAX_ITEMS_PER_LEVEL.subdivision}
                     />
 
                     {state.subdivisions.length === 0 && (
@@ -1026,7 +1093,7 @@ export default function EditMediaPlan() {
                             onCreate={handleCreateFunnelStage}
                             label="Fase do Funil"
                             createLabel="Criar nova fase"
-                            maxItems={MAX_FUNNEL_STAGES}
+                            maxItems={MAX_ITEMS_PER_LEVEL.funnel_stage}
                           />
 
                           {currentStages.length > 0 && (
@@ -1058,8 +1125,8 @@ export default function EditMediaPlan() {
           </AnimatePresence>
         )}
 
-        {/* Step 5: Confirm (was Step 6) */}
-        {state.step === 5 && (
+        {/* Confirm Step (last step) */}
+        {state.step === lastStep && (
           <motion.div
             key="confirm-form"
             initial={{ opacity: 0, y: 20 }}
@@ -1115,7 +1182,7 @@ export default function EditMediaPlan() {
 
         {/* Wizard Steps */}
         <WizardStepper
-          steps={WIZARD_STEPS}
+          steps={wizardSteps}
           currentStep={state.step}
           onStepClick={goToStep}
           allowAllStepsClickable={true}
@@ -1165,8 +1232,8 @@ export default function EditMediaPlan() {
               Salvar e Sair
             </Button>
 
-            {/* Next button - only on steps 1-4 */}
-            {state.step < 5 && (
+            {/* Next button - only on steps before last */}
+            {state.step < lastStep && (
               <Button
                 onClick={handleNext}
                 disabled={!canProceed()}
