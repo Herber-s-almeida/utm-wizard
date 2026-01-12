@@ -705,7 +705,7 @@ export default function MediaPlanDetail() {
     });
   }, [budgetDistributions, subdivisions.data, moments.data]);
 
-  // Plan alerts
+  // Plan alerts - now with dynamic hierarchy order
   const planAlerts = usePlanAlerts({
     totalBudget: plan?.total_budget || 0,
     lines,
@@ -713,6 +713,8 @@ export default function MediaPlanDetail() {
     budgetDistributions,
     planStartDate: plan?.start_date || null,
     planEndDate: plan?.end_date || null,
+    moments: moments.data || [],
+    hierarchyOrder,
   });
 
   // Filter lines by alerts if enabled
@@ -963,6 +965,7 @@ export default function MediaPlanDetail() {
                   planEndDate={plan.end_date}
                   canEdit={canEdit}
                   onUpdateMomentDates={handleUpdateMomentDates}
+                  hierarchyOrder={hierarchyOrder}
                 />
               </div>
             </AnimatedCollapsibleContent>
@@ -1027,6 +1030,7 @@ export default function MediaPlanDetail() {
               parentBudget={totalAllocated}
               parentName="Total do Plano"
               onEdit={() => {}}
+              hierarchyOrder={hierarchyOrder}
             />
           );
         })()}

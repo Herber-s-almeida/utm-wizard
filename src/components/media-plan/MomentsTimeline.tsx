@@ -34,6 +34,8 @@ interface MomentsTimelineProps {
   className?: string;
   canEdit?: boolean;
   onUpdateMomentDates?: (distributionId: string, startDate: string | null, endDate: string | null) => void;
+  /** If provided, timeline only renders when 'moment' is in the hierarchy order */
+  hierarchyOrder?: Array<'subdivision' | 'moment' | 'funnel_stage'>;
 }
 
 const MOMENT_COLORS = [
@@ -53,6 +55,7 @@ export function MomentsTimeline({
   className,
   canEdit = false,
   onUpdateMomentDates,
+  hierarchyOrder,
 }: MomentsTimelineProps) {
   const [editingMomentId, setEditingMomentId] = useState<string | undefined>(undefined);
   const [editStartDate, setEditStartDate] = useState<Date | undefined>(undefined);
@@ -158,6 +161,11 @@ export function MomentsTimeline({
 
   const planStartParsed = parseISO(planStartDate);
   const planEndParsed = parseISO(planEndDate);
+
+  // Don't render if hierarchy doesn't include moments (when hierarchyOrder is provided)
+  if (hierarchyOrder && !hierarchyOrder.includes('moment')) {
+    return null;
+  }
 
   if (moments.length === 0 || !planStartDate || !planEndDate) {
     return null;

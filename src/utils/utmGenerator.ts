@@ -3,6 +3,8 @@
  * Generates consistent UTM parameters for media lines based on plan and line data
  */
 
+import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER } from '@/types/hierarchy';
+
 // Convert text to slug format (lowercase, no special chars, hyphens for spaces)
 export function toSlug(text: string | null | undefined): string {
   if (!text) return '';
@@ -34,11 +36,34 @@ export interface UTMGenerationParams {
   vehicleSlug?: string | null;
   channelSlug?: string | null;
   targetSlug?: string | null;
+  hierarchyOrder?: HierarchyLevel[];
+}
+
+/**
+ * Get slug for a hierarchy level
+ */
+function getSlugForLevel(
+  level: HierarchyLevel,
+  subdivisionSlug: string | null | undefined,
+  momentSlug: string | null | undefined,
+  funnelStageSlug: string | null | undefined
+): string {
+  switch (level) {
+    case 'subdivision':
+      return subdivisionSlug || 'geral';
+    case 'moment':
+      return momentSlug || 'geral';
+    case 'funnel_stage':
+      return funnelStageSlug || 'geral';
+    default:
+      return 'geral';
+  }
 }
 
 /**
  * Generate UTM parameters for a media line
- * utm_campaign format: {lineCode}_{campaign}_{subdivision}_{moment}_{funnelStage}
+ * utm_campaign format: {lineCode}_{campaign}_{level1}_{level2}_{level3}
+ * The hierarchy order is determined by the plan's hierarchy_order setting
  */
 export function generateUTM(params: UTMGenerationParams): UTMParams {
   const {
@@ -50,16 +75,20 @@ export function generateUTM(params: UTMGenerationParams): UTMParams {
     vehicleSlug,
     channelSlug,
     targetSlug,
+    hierarchyOrder = DEFAULT_HIERARCHY_ORDER,
   } = params;
 
+  // Build hierarchy slugs in the order defined by the plan
+  const orderedHierarchySlugs = hierarchyOrder.map(level => 
+    getSlugForLevel(level, subdivisionSlug, momentSlug, funnelStageSlug)
+  );
+
   // Build utm_campaign from components
-  // Format: {lineCode}_{campaign}_{subdivision}_{moment}_{funnelStage}
+  // Format: {lineCode}_{campaign}_{level1}_{level2}_{level3}
   const campaignParts = [
     lineCode || '',
     toSlug(campaignName),
-    subdivisionSlug || 'geral',
-    momentSlug || 'geral',
-    funnelStageSlug || 'geral',
+    ...orderedHierarchySlugs,
   ].filter(Boolean);
 
   const utmCampaign = campaignParts.join('_');

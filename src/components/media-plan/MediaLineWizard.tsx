@@ -467,7 +467,7 @@ export function MediaLineWizard({
       const channel = channels.data?.find(c => c.id === selectedChannel);
       const target = targets.data?.find(t => t.id === selectedTarget);
 
-      // Generate UTM parameters
+      // Generate UTM parameters with dynamic hierarchy order
       const utmParams = generateUTM({
         lineCode: lineCode || '',
         campaignName: plan.campaign,
@@ -477,6 +477,7 @@ export function MediaLineWizard({
         vehicleSlug: (vehicle as any)?.slug || toSlug(vehicle?.name),
         channelSlug: (channel as any)?.slug || toSlug(channel?.name),
         targetSlug: (target as any)?.slug || toSlug(target?.name),
+        hierarchyOrder,
       });
 
       const lineData = {
