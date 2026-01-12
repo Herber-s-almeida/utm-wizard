@@ -377,7 +377,7 @@ export default function EditMediaPlan() {
 
     setSaving(true);
     try {
-      // 1. Update the media plan
+      // 1. Update the media plan (preserve hierarchy_order)
       const { error: planError } = await supabase
         .from('media_plans')
         .update({
@@ -392,6 +392,7 @@ export default function EditMediaPlan() {
           default_url: state.planData.default_url || null,
           objectives: state.planData.objectives.length > 0 ? state.planData.objectives : null,
           kpis: Object.keys(state.planData.kpis).length > 0 ? state.planData.kpis : null,
+          // Note: hierarchy_order is preserved (not modified during edit)
         })
         .eq('id', planId);
 

@@ -26,6 +26,7 @@ import { UTMPreview } from './UTMPreview';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 import { DuplicateLineDialog } from './DuplicateLineDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel } from '@/types/hierarchy';
 
 const STEP_TOOLTIPS: Record<string, string> = {
   subdivision: 'Agrupa linhas por região, produto ou objetivo. Define a primeira parte da estrutura do plano.',
@@ -55,6 +56,7 @@ interface MediaLineWizardProps {
   planSubdivisions: PlanHierarchyOption[];
   planMoments: PlanHierarchyOption[];
   planFunnelStages: PlanHierarchyOption[];
+  hierarchyOrder?: HierarchyLevel[];
   momentDates?: Record<string, MomentDates>; // moment_id -> dates
   existingLines?: { line_code: string; moment_id: string | null; moment_name: string }[];
   editingLine?: any; // MediaLine to edit
@@ -88,6 +90,7 @@ export function MediaLineWizard({
   planSubdivisions,
   planMoments,
   planFunnelStages,
+  hierarchyOrder = DEFAULT_HIERARCHY_ORDER,
   momentDates = {},
   existingLines = [],
   editingLine,
@@ -716,6 +719,7 @@ export function MediaLineWizard({
             >
               {currentStep === 'position' ? (
                 <HierarchyPositionSelector
+                  hierarchyOrder={hierarchyOrder}
                   planSubdivisions={planSubdivisions}
                   planMoments={planMoments}
                   planFunnelStages={planFunnelStages}

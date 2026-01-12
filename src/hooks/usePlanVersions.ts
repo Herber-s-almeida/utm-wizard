@@ -82,7 +82,7 @@ export function usePlanVersions(planId: string | undefined) {
         _change_log: `Estado antes de restaurar versão ${version.version_number}`,
       });
 
-      // Restore plan data
+      // Restore plan data (including hierarchy_order)
       const planData = snapshot.plan as Record<string, unknown>;
       const { error: planError } = await supabase
         .from('media_plans')
@@ -95,6 +95,7 @@ export function usePlanVersions(planId: string | undefined) {
           total_budget: planData.total_budget as number,
           objectives: planData.objectives as string[] | null,
           kpis: planData.kpis as Json | null,
+          hierarchy_order: planData.hierarchy_order as string[] | null,
         })
         .eq('id', planId);
 

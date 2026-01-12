@@ -84,7 +84,7 @@ import { ElementVisibilityMenu } from '@/components/media-plan/ElementVisibility
 import { usePlanElementsVisibility } from '@/hooks/usePlanElementsVisibility';
 import { LineDetailsSummaryCard } from '@/components/media-plan/LineDetailsSummaryCard';
 import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPlural } from '@/types/hierarchy';
-
+import { buildHierarchyTree, flattenHierarchyTree, HierarchyTreeNode, FlatHierarchyRow, MediaLineRef } from '@/utils/hierarchyDataBuilder';
 
 interface BudgetDistribution {
   id: string;
@@ -582,6 +582,38 @@ export default function MediaPlanDetail() {
     });
   }, [lines, budgetDistributions, subdivisions.data, moments.data, funnelStages.data]);
 
+  // Build dynamic hierarchy tree (supports any order)
+  const dynamicHierarchyTree = useMemo(() => {
+    const getNameForLevel = (level: HierarchyLevel, refId: string | null): string => {
+      if (!refId) return 'Geral';
+      switch (level) {
+        case 'subdivision':
+          return (subdivisions.data || []).find(s => s.id === refId)?.name || 'Geral';
+        case 'moment':
+          return (moments.data || []).find(m => m.id === refId)?.name || 'Geral';
+        case 'funnel_stage':
+          return (funnelStages.data || []).find(f => f.id === refId)?.name || 'Geral';
+        default:
+          return 'Geral';
+      }
+    };
+
+    const lineRefs: MediaLineRef[] = lines.map(l => ({
+      id: l.id,
+      budget: l.budget,
+      subdivision_id: l.subdivision_id,
+      moment_id: l.moment_id,
+      funnel_stage_id: l.funnel_stage_id,
+    }));
+
+    return buildHierarchyTree(
+      budgetDistributions,
+      lineRefs,
+      hierarchyOrder,
+      getNameForLevel
+    );
+  }, [lines, budgetDistributions, hierarchyOrder, subdivisions.data, moments.data, funnelStages.data]);
+
   // Build momentDates map for MediaLineWizard
   const momentDates = useMemo(() => {
     const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
@@ -945,6 +977,7 @@ export default function MediaPlanDetail() {
             totalBudget={Number(plan.total_budget) || 0}
             budgetDistributions={budgetDistributions}
             hierarchyData={hierarchyData}
+            hierarchyTree={dynamicHierarchyTree}
             hierarchyOrder={hierarchyOrder}
             onDistributionsUpdated={fetchData}
             onHide={() => hideElement('budget-hierarchy')}
@@ -1200,6 +1233,7 @@ export default function MediaPlanDetail() {
           planSubdivisions={planSubdivisions}
           planMoments={planMoments}
           planFunnelStages={planFunnelStages}
+          hierarchyOrder={hierarchyOrder}
           momentDates={momentDates}
           existingLines={existingLinesForWizard}
           editingLine={editingLine}
