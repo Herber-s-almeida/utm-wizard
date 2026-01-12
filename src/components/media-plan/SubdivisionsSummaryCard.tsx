@@ -7,9 +7,10 @@ interface SubdivisionsSummaryCardProps {
   subdivisions: BudgetAllocation[];
   totalBudget: number;
   onEdit: () => void;
+  title?: string;
 }
 
-export function SubdivisionsSummaryCard({ subdivisions, totalBudget, onEdit }: SubdivisionsSummaryCardProps) {
+export function SubdivisionsSummaryCard({ subdivisions, totalBudget, onEdit, title = 'Subdivisões do Plano' }: SubdivisionsSummaryCardProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -31,7 +32,7 @@ export function SubdivisionsSummaryCard({ subdivisions, totalBudget, onEdit }: S
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 rounded-full bg-primary" />
             <Layers className="h-4 w-4 text-primary" />
-            <h3 className="font-display text-lg font-semibold">Subdivisões do Plano</h3>
+            <h3 className="font-display text-lg font-semibold">{title}</h3>
             <div className="flex-1 h-[2px] bg-gradient-to-r from-primary/50 to-transparent rounded-full min-w-[80px]" />
             <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
               <span className="text-success font-bold text-sm">✓</span>
