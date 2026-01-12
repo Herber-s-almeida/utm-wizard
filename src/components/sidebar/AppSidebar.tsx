@@ -62,6 +62,7 @@ import { ChannelDialog } from '@/components/config/ChannelDialog';
 import { TargetDialog } from '@/components/config/TargetDialog';
 import { FormatWizardDialog } from '@/components/config/FormatWizardDialog';
 import { SegmentDialog } from '@/components/config/SegmentDialog';
+import { ClientDialog } from '@/components/config/ClientDialog';
 
 export function AppSidebar() {
   const { user, signOut } = useAuth();
@@ -1941,7 +1942,7 @@ export function AppSidebar() {
       />
 
       {/* Client Dialog - Create or Edit */}
-      <SimpleConfigDialog
+      <ClientDialog
         open={clientDialogOpen || !!editingClient}
         onOpenChange={(open) => {
           if (!open) {
@@ -1951,18 +1952,14 @@ export function AppSidebar() {
         }}
         onSave={(data) => {
           if (editingClient) {
-            clients.update.mutate({ id: editingClient.id, name: data.name, description: data.description });
+            clients.update.mutate({ id: editingClient.id, ...data });
           } else {
-            clients.create.mutate({ name: data.name, description: data.description });
+            clients.create.mutate(data);
           }
         }}
-        title={editingClient ? 'Editar cliente' : 'Criar novo cliente'}
-        nameLabel="Nome do cliente"
-        namePlaceholder="Ex: ACME Corp"
         existingNames={getClientNames().filter(n => n !== editingClient?.name)}
         initialData={editingClient || undefined}
         mode={editingClient ? 'edit' : 'create'}
-        maxNameLength={180}
       />
     </div>
   );
