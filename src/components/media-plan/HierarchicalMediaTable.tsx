@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle, Link, LayoutGrid, List, Link2, RotateCcw } from 'lucide-react';
 import { LineDetailButton } from '@/components/media-plan/LineDetailButton';
@@ -585,10 +585,18 @@ export function HierarchicalMediaTable({
     return collectLinesFromTree(dynamicHierarchyTree, new Map());
   }, [dynamicHierarchyTree, collectLinesFromTree]);
 
-  // Notify parent of filtered lines changes
-  useMemo(() => {
+  // Track previous filtered line IDs to avoid unnecessary updates
+  const prevFilteredLineIdsRef = useRef<string>('');
+
+  // Notify parent of filtered lines changes - using useEffect instead of useMemo to avoid render loop
+  useEffect(() => {
     if (onFilteredLinesChange) {
-      onFilteredLinesChange(filteredLines);
+      // Only notify if the filtered line IDs actually changed
+      const currentIds = filteredLines.map(l => l.id).sort().join(',');
+      if (currentIds !== prevFilteredLineIdsRef.current) {
+        prevFilteredLineIdsRef.current = currentIds;
+        onFilteredLinesChange(filteredLines);
+      }
     }
   }, [filteredLines, onFilteredLinesChange]);
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -158,9 +158,14 @@ export default function MediaPlanDetail() {
     }
   }, [user?.id, identifier]);
 
+  // Track previous line IDs to avoid unnecessary re-renders
+  const prevLineIdsRef = useRef<string>('');
+  
   // Initialize filteredLines with lines when lines change
   useEffect(() => {
-    if (lines.length > 0 && filteredLines.length === 0) {
+    const currentIds = lines.map(l => l.id).sort().join(',');
+    if (lines.length > 0 && currentIds !== prevLineIdsRef.current) {
+      prevLineIdsRef.current = currentIds;
       setFilteredLines(lines);
     }
   }, [lines]);
@@ -390,6 +395,11 @@ export default function MediaPlanDetail() {
       toast.error('Erro ao atualizar status');
     }
   };
+
+  // Stable callback for filtered lines - prevents unnecessary re-renders
+  const handleFilteredLinesChange = useCallback((newFilteredLines: MediaLine[]) => {
+    setFilteredLines(newFilteredLines);
+  }, []);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -1090,7 +1100,7 @@ export default function MediaPlanDetail() {
           }}
           onUpdateLine={handleUpdateLine}
           onUpdateMonthlyBudgets={fetchData}
-          onFilteredLinesChange={setFilteredLines}
+          onFilteredLinesChange={handleFilteredLinesChange}
           onValidateUTM={handleValidateUTM}
         />
       </div>
