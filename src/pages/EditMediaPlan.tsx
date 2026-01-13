@@ -41,6 +41,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 // Icons for hierarchy levels
 const LEVEL_ICONS: Record<HierarchyLevel, React.ElementType> = {
@@ -377,25 +383,52 @@ export default function EditMediaPlan() {
     return missing;
   };
 
-  const canProceed = () => {
+  // Get validation errors for current step - validates each group separately
+  const getValidationErrorsForStep = (): string[] => {
+    const errors: string[] = [];
+    
     switch (state.step) {
       case 0:
-        // Structure step - always valid (0 levels = General budget)
-        return true;
+        // Structure step - always valid
+        break;
       case 1:
-        return getPlanInfoMissingFields().length === 0;
+        return getPlanInfoMissingFields();
       default: {
-        // For hierarchy level steps (2 onwards), validate allocations
         const levelIndex = state.step - 2;
         if (levelIndex >= 0 && levelIndex < planHierarchyOrder.length) {
           const level = planHierarchyOrder[levelIndex];
-          const allocations = getAllocationsForLevel(level);
-          return allocations.length === 0 || wizard.validatePercentages(allocations);
+          const levelLabel = getLevelLabelPlural(level);
+          
+          if (levelIndex === 0) {
+            // First level: validate root only
+            const allocations = getAllocationsForLevelAtPath(level, 'root');
+            if (allocations.length > 0) {
+              const total = allocations.reduce((sum, a) => sum + a.percentage, 0);
+              if (Math.abs(total - 100) > 0.01) {
+                errors.push(`${levelLabel}: soma é ${total.toFixed(1)}% (deve ser 100%)`);
+              }
+            }
+          } else {
+            // Nested levels: validate each group separately
+            const parentItems = getParentItemsForLevel(levelIndex);
+            for (const parent of parentItems) {
+              const allocations = getAllocationsForLevelAtPath(level, parent.path);
+              if (allocations.length > 0) {
+                const total = allocations.reduce((sum, a) => sum + a.percentage, 0);
+                if (Math.abs(total - 100) > 0.01) {
+                  errors.push(`${parent.breadcrumb}: soma é ${total.toFixed(1)}% (deve ser 100%)`);
+                }
+              }
+            }
+          }
         }
-        return true;
       }
     }
+    
+    return errors;
   };
+
+  const canProceed = () => getValidationErrorsForStep().length === 0;
 
   // Handle hierarchy change with warning dialog
   const handleHierarchyChange = (newOrder: HierarchyLevel[]) => {
@@ -651,8 +684,16 @@ export default function EditMediaPlan() {
   };
 
   const handleNext = () => {
-    if (state.step === 1 && !canProceed()) {
-      toast.error(`Preencha os campos obrigatórios: ${getPlanInfoMissingFields().join(', ')}`);
+    const errors = getValidationErrorsForStep();
+    
+    if (errors.length > 0) {
+      if (state.step === 1) {
+        toast.error(`Preencha os campos obrigatórios: ${errors.join(', ')}`);
+      } else if (errors.length === 1) {
+        toast.error(errors[0]);
+      } else {
+        toast.error(`${errors.length} problemas encontrados. Verifique as alocações.`);
+      }
       return;
     }
 
@@ -1426,14 +1467,34 @@ export default function EditMediaPlan() {
 
             {/* Next button - only on steps before last */}
             {state.step < lastStep && (
-              <Button
-                onClick={handleNext}
-                disabled={!canProceed()}
-                className="gap-2"
-              >
-                Próximo
-                <ArrowRight className="w-4 h-4" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <span className={!canProceed() ? "cursor-not-allowed" : ""}>
+                      <Button
+                        onClick={handleNext}
+                        disabled={!canProceed()}
+                        className="gap-2"
+                      >
+                        Próximo
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!canProceed() && getValidationErrorsForStep().length > 0 && (
+                    <TooltipContent side="top" className="max-w-md">
+                      <div className="space-y-1">
+                        <p className="font-medium text-sm">Para avançar, corrija:</p>
+                        <ul className="text-xs list-disc list-inside space-y-0.5">
+                          {getValidationErrorsForStep().map((error, i) => (
+                            <li key={i}>{error}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </div>
