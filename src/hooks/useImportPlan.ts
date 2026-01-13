@@ -576,7 +576,7 @@ export function useImportPlan() {
       }
       
       toast.success(`Plano "${planInfo.name}" criado com ${createdLines.length} linhas!`);
-      navigate(`/media-plans/${newPlan.id}/edit`);
+      navigate(`/media-plans/${newPlan.slug || newPlan.id}`);
       
     } catch (error) {
       console.error('Error creating plan:', error);
