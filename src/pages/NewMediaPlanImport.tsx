@@ -14,7 +14,8 @@ import { WizardStepper } from '@/components/media-plan/WizardStepper';
 import { VehicleDialog } from '@/components/config/VehicleDialog';
 import { ChannelDialog } from '@/components/config/ChannelDialog';
 import { SubdivisionDialog } from '@/components/config/SubdivisionDialog';
-import { useVehicles, useMediums, useChannels, useSubdivisions, Vehicle, Medium } from '@/hooks/useConfigData';
+import { TargetDialog } from '@/components/config/TargetDialog';
+import { useVehicles, useMediums, useChannels, useSubdivisions, useTargets, Vehicle, Medium } from '@/hooks/useConfigData';
 
 const STEPS = [
   { id: 1, title: 'Upload' },
@@ -48,6 +49,7 @@ export default function NewMediaPlanImport() {
   const mediumsQuery = useMediums();
   const channelsQuery = useChannels();
   const subdivisionsQuery = useSubdivisions();
+  const targetsQuery = useTargets();
   
   const vehicles = (vehiclesQuery.activeItems || []) as Vehicle[];
   const mediums = (mediumsQuery.activeItems || []) as Medium[];
@@ -299,6 +301,38 @@ export default function NewMediaPlanImport() {
           initialData={{ 
             name: creatingEntity.originalName,
             description: ''
+          }}
+        />
+      )}
+
+      {creatingEntity?.type === 'target' && (
+        <TargetDialog
+          open={true}
+          onOpenChange={(open) => !open && handleDialogClose()}
+          onSave={async (data) => {
+            try {
+              const result = await targetsQuery.create.mutateAsync({
+                name: data.name,
+                slug: data.slug,
+                age_range: data.age_range,
+                geolocation: data.geolocation,
+                behavior: data.behavior,
+                description: data.description,
+              });
+              if (result) {
+                handleEntityCreated(creatingEntity.id, result.id, 'target', data.name);
+              }
+            } catch (error) {
+              console.error('Error creating target:', error);
+              handleDialogClose();
+            }
+          }}
+          initialData={{ 
+            name: creatingEntity.originalName,
+            age_range: '',
+            geolocation: [],
+            behavior: '',
+            description: '',
           }}
         />
       )}
