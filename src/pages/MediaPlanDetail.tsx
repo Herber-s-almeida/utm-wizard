@@ -85,6 +85,9 @@ import { usePlanElementsVisibility } from '@/hooks/usePlanElementsVisibility';
 import { LineDetailsSummaryCard } from '@/components/media-plan/LineDetailsSummaryCard';
 import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPlural } from '@/types/hierarchy';
 import { buildHierarchyTree, flattenHierarchyTree, HierarchyTreeNode, FlatHierarchyRow, MediaLineRef } from '@/utils/hierarchyDataBuilder';
+import { generateBudgetDistributionsFromLines } from '@/utils/generateBudgetDistributions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Sparkles } from 'lucide-react';
 
 interface BudgetDistribution {
   id: string;
@@ -124,6 +127,7 @@ export default function MediaPlanDetail() {
   const [filteredLines, setFilteredLines] = useState<MediaLine[]>([]);
   const [filterByAlerts, setFilterByAlerts] = useState(false);
   const [alertsVisible, setAlertsVisible] = useState(false);
+  const [isGeneratingHierarchy, setIsGeneratingHierarchy] = useState(false);
 
   // Library data for display
   const subdivisions = useSubdivisions();
@@ -467,6 +471,53 @@ export default function MediaPlanDetail() {
     return budgetDistributions.length > 0 && 
       budgetDistributions.some(d => d.distribution_type === 'subdivision' || d.distribution_type === 'moment' || d.distribution_type === 'funnel_stage');
   }, [budgetDistributions]);
+
+  // Check if plan needs hierarchy generation (has lines but no distributions)
+  const needsHierarchyGeneration = useMemo(() => {
+    return lines.length > 0 && 
+           budgetDistributions.length === 0 && 
+           hierarchyOrder.length > 0;
+  }, [lines.length, budgetDistributions.length, hierarchyOrder.length]);
+
+  // Handle generating budget hierarchy from existing lines
+  const handleGenerateHierarchy = async () => {
+    if (!plan || !user) return;
+    
+    setIsGeneratingHierarchy(true);
+    try {
+      const linesForDistribution = lines.map(line => ({
+        id: line.id,
+        budget: line.budget,
+        subdivision_id: line.subdivision_id,
+        moment_id: line.moment_id,
+        funnel_stage_id: line.funnel_stage_id,
+        start_date: line.start_date,
+        end_date: line.end_date,
+      }));
+      
+      const result = await generateBudgetDistributionsFromLines({
+        planId: plan.id,
+        userId: user.id,
+        hierarchyOrder,
+        lines: linesForDistribution,
+        totalBudget: Number(plan.total_budget) || 0,
+        clearExisting: true,
+      });
+      
+      if (result.success) {
+        toast.success(`Hierarquia do orçamento gerada com ${result.count} distribuições!`);
+        await fetchData(); // Reload to show the new distributions
+      } else {
+        toast.error(result.error || 'Erro ao gerar hierarquia');
+      }
+    } catch (error) {
+      console.error('Error generating hierarchy:', error);
+      toast.error('Erro ao gerar hierarquia do orçamento');
+    } finally {
+      setIsGeneratingHierarchy(false);
+    }
+  };
+
   // Build dynamic hierarchy tree (supports any order)
   const dynamicHierarchyTree = useMemo(() => {
     const getNameForLevel = (level: HierarchyLevel, refId: string | null): string => {
@@ -1064,6 +1115,28 @@ export default function MediaPlanDetail() {
             lines={lines}
             onHide={() => hideElement('line-details')}
           />
+        )}
+
+        {/* Banner to generate hierarchy when missing */}
+        {needsHierarchyGeneration && canEdit && (
+          <Alert className="border-primary/50 bg-primary/5">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <AlertTitle>Hierarquia do Orçamento não configurada</AlertTitle>
+            <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <span>
+                Este plano foi criado sem a distribuição hierárquica do orçamento. 
+                Gere agora para visualizar os agrupamentos e cards de orçamento.
+              </span>
+              <Button 
+                onClick={handleGenerateHierarchy}
+                disabled={isGeneratingHierarchy}
+                size="sm"
+                className="shrink-0"
+              >
+                {isGeneratingHierarchy ? 'Gerando...' : 'Gerar Hierarquia'}
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Hierarchical Media Table */}

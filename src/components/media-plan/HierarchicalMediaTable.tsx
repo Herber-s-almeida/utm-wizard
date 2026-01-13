@@ -224,6 +224,14 @@ export function HierarchicalMediaTable({
   // View mode: 'grouped' (hierarchical) or 'flat' (one line per row)
   const [viewMode, setViewMode] = useState<'grouped' | 'flat'>('grouped');
 
+  // Auto-switch to flat mode when there are no budget distributions
+  // This ensures users can see their lines even without hierarchy configured
+  useEffect(() => {
+    if (budgetDistributions.length === 0 && lines.length > 0) {
+      setViewMode('flat');
+    }
+  }, [budgetDistributions.length, lines.length]);
+
   // Get name resolver for hierarchy levels
   const getNameForLevel = useCallback<NameResolver>((level: HierarchyLevel, refId: string | null): string => {
     if (!refId) return 'Geral';

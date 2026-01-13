@@ -13,6 +13,7 @@ import {
   ParseResult,
 } from '@/utils/importPlanParser';
 import { HierarchyLevel } from '@/types/hierarchy';
+import { generateBudgetDistributionsFromLines } from '@/utils/generateBudgetDistributions';
 
 export type EntityType = 'client' | 'vehicle' | 'channel' | 'subdivision' | 'moment' | 'funnel_stage' | 'target' | 'medium' | 'format';
 
@@ -573,6 +574,34 @@ export function useImportPlan() {
           .insert(monthlyBudgetsData);
         
         if (budgetsError) throw budgetsError;
+      }
+      
+      // Generate budget distributions from the created lines
+      if (state.detectedHierarchy.length > 0 && createdLines.length > 0) {
+        const linesForDistribution = createdLines.map(line => ({
+          id: line.id,
+          budget: line.budget,
+          subdivision_id: line.subdivision_id,
+          moment_id: line.moment_id,
+          funnel_stage_id: line.funnel_stage_id,
+          start_date: line.start_date,
+          end_date: line.end_date,
+        }));
+        
+        const distResult = await generateBudgetDistributionsFromLines({
+          planId: newPlan.id,
+          userId: user.id,
+          hierarchyOrder: state.detectedHierarchy,
+          lines: linesForDistribution,
+          totalBudget,
+          clearExisting: false, // No existing distributions for a new plan
+        });
+        
+        if (!distResult.success) {
+          console.error('Error generating distributions:', distResult.error);
+          // Don't fail the whole import, just warn
+          toast.warning('Plano criado, mas a hierarquia do orçamento precisa ser gerada manualmente');
+        }
       }
       
       toast.success(`Plano "${planInfo.name}" criado com ${createdLines.length} linhas!`);
