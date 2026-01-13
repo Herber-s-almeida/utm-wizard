@@ -54,6 +54,8 @@ export interface ImportState {
   unresolvedEntities: UnresolvedEntity[];
   detectedHierarchy: HierarchyLevel[];
   isCreating: boolean;
+  isCheckingEntities: boolean;
+  existingEntities: Record<EntityType, Array<{ id: string; name: string }>>;
 }
 
 const initialPlanInfo: PlanInfo = {
@@ -84,6 +86,18 @@ export function useImportPlan() {
     unresolvedEntities: [],
     detectedHierarchy: [],
     isCreating: false,
+    isCheckingEntities: false,
+    existingEntities: {
+      client: [],
+      vehicle: [],
+      channel: [],
+      subdivision: [],
+      moment: [],
+      funnel_stage: [],
+      target: [],
+      medium: [],
+      format: [],
+    },
   });
   
   // Step 1: Handle file upload
@@ -160,192 +174,187 @@ export function useImportPlan() {
   const confirmPlanInfo = useCallback(async () => {
     if (!state.parseResult || !user) return;
     
-    const lines = state.parseResult.lines;
-    const unresolvedEntities: UnresolvedEntity[] = [];
-    let entityId = 0;
+    setState(prev => ({ ...prev, isCheckingEntities: true }));
     
-    // Collect unique entity names
-    const entityNames: Record<EntityType, Set<string>> = {
-      client: new Set(),
-      vehicle: new Set(),
-      channel: new Set(),
-      subdivision: new Set(),
-      moment: new Set(),
-      funnel_stage: new Set(),
-      target: new Set(),
-      medium: new Set(),
-      format: new Set(),
-    };
-    
-    const channelVehicleMap: Record<string, string> = {};
-    
-    lines.forEach((line, index) => {
-      entityNames.vehicle.add(line.vehicleName);
-      entityNames.channel.add(line.channelName);
-      channelVehicleMap[line.channelName] = line.vehicleName;
+    try {
+      const lines = state.parseResult.lines;
+      const unresolvedEntities: UnresolvedEntity[] = [];
+      let entityId = 0;
       
-      if (line.subdivisionName) entityNames.subdivision.add(line.subdivisionName);
-      if (line.momentName) entityNames.moment.add(line.momentName);
-      if (line.funnelStageName) entityNames.funnel_stage.add(line.funnelStageName);
-      if (line.targetName) entityNames.target.add(line.targetName);
-      if (line.mediumName) entityNames.medium.add(line.mediumName);
-      if (line.formatName) entityNames.format.add(line.formatName);
-    });
-    
-    // Check vehicles
-    const { data: vehicles } = await supabase
-      .from('vehicles')
-      .select('id, name')
-      .eq('user_id', user.id)
-      .is('deleted_at', null);
-    
-    const vehicleMap = new Map((vehicles || []).map(v => [v.name.toLowerCase(), v.id]));
-    
-    for (const name of entityNames.vehicle) {
-      if (!vehicleMap.has(name.toLowerCase())) {
-        unresolvedEntities.push({
-          id: `entity_${entityId++}`,
-          type: 'vehicle',
-          originalName: name,
-          affectedLines: lines.filter(l => l.vehicleName === name).map(l => l.rowNumber),
-          status: 'pending',
-        });
-      }
-    }
-    
-    // Check channels
-    const { data: channels } = await supabase
-      .from('channels')
-      .select('id, name, vehicle_id')
-      .eq('user_id', user.id)
-      .is('deleted_at', null);
-    
-    const channelMap = new Map((channels || []).map(c => [c.name.toLowerCase(), { id: c.id, vehicleId: c.vehicle_id }]));
-    
-    for (const name of entityNames.channel) {
-      const channel = channelMap.get(name.toLowerCase());
-      const vehicleName = channelVehicleMap[name];
+      // Collect unique entity names
+      const entityNames: Record<EntityType, Set<string>> = {
+        client: new Set(),
+        vehicle: new Set(),
+        channel: new Set(),
+        subdivision: new Set(),
+        moment: new Set(),
+        funnel_stage: new Set(),
+        target: new Set(),
+        medium: new Set(),
+        format: new Set(),
+      };
       
-      if (!channel) {
-        unresolvedEntities.push({
-          id: `entity_${entityId++}`,
-          type: 'channel',
-          originalName: name,
-          affectedLines: lines.filter(l => l.channelName === name).map(l => l.rowNumber),
-          status: 'pending',
-          parentContext: {
+      const channelVehicleMap: Record<string, string> = {};
+      
+      lines.forEach((line, index) => {
+        entityNames.vehicle.add(line.vehicleName);
+        entityNames.channel.add(line.channelName);
+        channelVehicleMap[line.channelName] = line.vehicleName;
+        
+        if (line.subdivisionName) entityNames.subdivision.add(line.subdivisionName);
+        if (line.momentName) entityNames.moment.add(line.momentName);
+        if (line.funnelStageName) entityNames.funnel_stage.add(line.funnelStageName);
+        if (line.targetName) entityNames.target.add(line.targetName);
+        if (line.mediumName) entityNames.medium.add(line.mediumName);
+        if (line.formatName) entityNames.format.add(line.formatName);
+      });
+      
+      // Fetch all existing entities in parallel
+      const [vehiclesRes, channelsRes, subdivisionsRes, momentsRes, stagesRes, targetsRes] = await Promise.all([
+        supabase.from('vehicles').select('id, name').eq('user_id', user.id).is('deleted_at', null),
+        supabase.from('channels').select('id, name, vehicle_id').eq('user_id', user.id).is('deleted_at', null),
+        supabase.from('plan_subdivisions').select('id, name').eq('user_id', user.id).is('deleted_at', null),
+        supabase.from('moments').select('id, name').eq('user_id', user.id).is('deleted_at', null),
+        supabase.from('funnel_stages').select('id, name').eq('user_id', user.id).is('deleted_at', null),
+        supabase.from('targets').select('id, name').eq('user_id', user.id).is('deleted_at', null),
+      ]);
+      
+      const existingEntities: Record<EntityType, Array<{ id: string; name: string }>> = {
+        client: [],
+        vehicle: (vehiclesRes.data || []).map(v => ({ id: v.id, name: v.name })),
+        channel: (channelsRes.data || []).map(c => ({ id: c.id, name: c.name })),
+        subdivision: (subdivisionsRes.data || []).map(s => ({ id: s.id, name: s.name })),
+        moment: (momentsRes.data || []).map(m => ({ id: m.id, name: m.name })),
+        funnel_stage: (stagesRes.data || []).map(s => ({ id: s.id, name: s.name })),
+        target: (targetsRes.data || []).map(t => ({ id: t.id, name: t.name })),
+        medium: [],
+        format: [],
+      };
+      
+      const vehicleMap = new Map((vehiclesRes.data || []).map(v => [v.name.toLowerCase(), v.id]));
+      
+      for (const name of entityNames.vehicle) {
+        if (!vehicleMap.has(name.toLowerCase())) {
+          unresolvedEntities.push({
+            id: `entity_${entityId++}`,
             type: 'vehicle',
-            name: vehicleName,
-            id: vehicleMap.get(vehicleName.toLowerCase()),
-          },
-        });
-      }
-    }
-    
-    // Check subdivisions
-    if (entityNames.subdivision.size > 0) {
-      const { data: subdivisions } = await supabase
-        .from('plan_subdivisions')
-        .select('id, name')
-        .eq('user_id', user.id)
-        .is('deleted_at', null);
-      
-      const subdivisionMap = new Map((subdivisions || []).map(s => [s.name.toLowerCase(), s.id]));
-      
-      for (const name of entityNames.subdivision) {
-        if (!subdivisionMap.has(name.toLowerCase())) {
-          unresolvedEntities.push({
-            id: `entity_${entityId++}`,
-            type: 'subdivision',
             originalName: name,
-            affectedLines: lines.filter(l => l.subdivisionName === name).map(l => l.rowNumber),
+            affectedLines: lines.filter(l => l.vehicleName === name).map(l => l.rowNumber),
             status: 'pending',
           });
         }
       }
-    }
-    
-    // Check moments
-    if (entityNames.moment.size > 0) {
-      const { data: moments } = await supabase
-        .from('moments')
-        .select('id, name')
-        .eq('user_id', user.id)
-        .is('deleted_at', null);
       
-      const momentMap = new Map((moments || []).map(m => [m.name.toLowerCase(), m.id]));
+      // Check channels
+      const channelMap = new Map((channelsRes.data || []).map(c => [c.name.toLowerCase(), { id: c.id, vehicleId: c.vehicle_id }]));
       
-      for (const name of entityNames.moment) {
-        if (!momentMap.has(name.toLowerCase())) {
+      for (const name of entityNames.channel) {
+        const channel = channelMap.get(name.toLowerCase());
+        const vehicleName = channelVehicleMap[name];
+        
+        if (!channel) {
           unresolvedEntities.push({
             id: `entity_${entityId++}`,
-            type: 'moment',
+            type: 'channel',
             originalName: name,
-            affectedLines: lines.filter(l => l.momentName === name).map(l => l.rowNumber),
+            affectedLines: lines.filter(l => l.channelName === name).map(l => l.rowNumber),
             status: 'pending',
+            parentContext: {
+              type: 'vehicle',
+              name: vehicleName,
+              id: vehicleMap.get(vehicleName.toLowerCase()),
+            },
           });
         }
       }
-    }
-    
-    // Check funnel stages
-    if (entityNames.funnel_stage.size > 0) {
-      const { data: stages } = await supabase
-        .from('funnel_stages')
-        .select('id, name')
-        .eq('user_id', user.id)
-        .is('deleted_at', null);
       
-      const stageMap = new Map((stages || []).map(s => [s.name.toLowerCase(), s.id]));
-      
-      for (const name of entityNames.funnel_stage) {
-        if (!stageMap.has(name.toLowerCase())) {
-          unresolvedEntities.push({
-            id: `entity_${entityId++}`,
-            type: 'funnel_stage',
-            originalName: name,
-            affectedLines: lines.filter(l => l.funnelStageName === name).map(l => l.rowNumber),
-            status: 'pending',
-          });
+      // Check subdivisions
+      if (entityNames.subdivision.size > 0) {
+        const subdivisionMap = new Map((subdivisionsRes.data || []).map(s => [s.name.toLowerCase(), s.id]));
+        
+        for (const name of entityNames.subdivision) {
+          if (!subdivisionMap.has(name.toLowerCase())) {
+            unresolvedEntities.push({
+              id: `entity_${entityId++}`,
+              type: 'subdivision',
+              originalName: name,
+              affectedLines: lines.filter(l => l.subdivisionName === name).map(l => l.rowNumber),
+              status: 'pending',
+            });
+          }
         }
       }
-    }
-    
-    // Check targets
-    if (entityNames.target.size > 0) {
-      const { data: targets } = await supabase
-        .from('targets')
-        .select('id, name')
-        .eq('user_id', user.id)
-        .is('deleted_at', null);
       
-      const targetMap = new Map((targets || []).map(t => [t.name.toLowerCase(), t.id]));
-      
-      for (const name of entityNames.target) {
-        if (!targetMap.has(name.toLowerCase())) {
-          unresolvedEntities.push({
-            id: `entity_${entityId++}`,
-            type: 'target',
-            originalName: name,
-            affectedLines: lines.filter(l => l.targetName === name).map(l => l.rowNumber),
-            status: 'pending',
-          });
+      // Check moments
+      if (entityNames.moment.size > 0) {
+        const momentMap = new Map((momentsRes.data || []).map(m => [m.name.toLowerCase(), m.id]));
+        
+        for (const name of entityNames.moment) {
+          if (!momentMap.has(name.toLowerCase())) {
+            unresolvedEntities.push({
+              id: `entity_${entityId++}`,
+              type: 'moment',
+              originalName: name,
+              affectedLines: lines.filter(l => l.momentName === name).map(l => l.rowNumber),
+              status: 'pending',
+            });
+          }
         }
       }
+      
+      // Check funnel stages
+      if (entityNames.funnel_stage.size > 0) {
+        const stageMap = new Map((stagesRes.data || []).map(s => [s.name.toLowerCase(), s.id]));
+        
+        for (const name of entityNames.funnel_stage) {
+          if (!stageMap.has(name.toLowerCase())) {
+            unresolvedEntities.push({
+              id: `entity_${entityId++}`,
+              type: 'funnel_stage',
+              originalName: name,
+              affectedLines: lines.filter(l => l.funnelStageName === name).map(l => l.rowNumber),
+              status: 'pending',
+            });
+          }
+        }
+      }
+      
+      // Check targets
+      if (entityNames.target.size > 0) {
+        const targetMap = new Map((targetsRes.data || []).map(t => [t.name.toLowerCase(), t.id]));
+        
+        for (const name of entityNames.target) {
+          if (!targetMap.has(name.toLowerCase())) {
+            unresolvedEntities.push({
+              id: `entity_${entityId++}`,
+              type: 'target',
+              originalName: name,
+              affectedLines: lines.filter(l => l.targetName === name).map(l => l.rowNumber),
+              status: 'pending',
+            });
+          }
+        }
+      }
+      
+      // Detect hierarchy based on data
+      const detectedHierarchy: HierarchyLevel[] = [];
+      if (entityNames.subdivision.size > 0) detectedHierarchy.push('subdivision');
+      if (entityNames.moment.size > 0) detectedHierarchy.push('moment');
+      if (entityNames.funnel_stage.size > 0) detectedHierarchy.push('funnel_stage');
+      
+      setState(prev => ({
+        ...prev,
+        unresolvedEntities,
+        existingEntities,
+        detectedHierarchy,
+        step: 4,
+        isCheckingEntities: false,
+      }));
+    } catch (error) {
+      console.error('Error checking entities:', error);
+      toast.error('Erro ao verificar entidades');
+      setState(prev => ({ ...prev, isCheckingEntities: false }));
     }
-    
-    // Detect hierarchy based on data
-    const detectedHierarchy: HierarchyLevel[] = [];
-    if (entityNames.subdivision.size > 0) detectedHierarchy.push('subdivision');
-    if (entityNames.moment.size > 0) detectedHierarchy.push('moment');
-    if (entityNames.funnel_stage.size > 0) detectedHierarchy.push('funnel_stage');
-    
-    setState(prev => ({
-      ...prev,
-      unresolvedEntities,
-      detectedHierarchy,
-      step: 4,
-    }));
   }, [state.parseResult, user]);
   
   // Step 4: Resolve entity
@@ -597,6 +606,18 @@ export function useImportPlan() {
       unresolvedEntities: [],
       detectedHierarchy: [],
       isCreating: false,
+      isCheckingEntities: false,
+      existingEntities: {
+        client: [],
+        vehicle: [],
+        channel: [],
+        subdivision: [],
+        moment: [],
+        funnel_stage: [],
+        target: [],
+        medium: [],
+        format: [],
+      },
     });
   }, []);
   
