@@ -343,6 +343,42 @@ export type Database = {
         }
         Relationships: []
       }
+      data_sources: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_sync_at: string | null
+          name: string
+          source_type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          name: string
+          source_type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          name?: string
+          source_type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       environment_members: {
         Row: {
           accepted_at: string | null
@@ -1631,6 +1667,47 @@ export type Database = {
           },
         ]
       }
+      line_targets: {
+        Row: {
+          created_at: string | null
+          id: string
+          media_line_id: string
+          metric_name: string
+          target_type: string | null
+          target_value: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          media_line_id: string
+          metric_name: string
+          target_type?: string | null
+          target_value: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          media_line_id?: string
+          metric_name?: string
+          target_type?: string | null
+          target_value?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "line_targets_media_line_id_fkey"
+            columns: ["media_line_id"]
+            isOneToOne: false
+            referencedRelation: "media_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_creatives: {
         Row: {
           approved_date: string | null
@@ -2170,6 +2247,66 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string | null
+          id: string
+          is_resolved: boolean | null
+          media_line_id: string | null
+          media_plan_id: string
+          message: string
+          metric_value: number | null
+          resolved_at: string | null
+          severity: string | null
+          threshold_value: number | null
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string | null
+          id?: string
+          is_resolved?: boolean | null
+          media_line_id?: string | null
+          media_plan_id: string
+          message: string
+          metric_value?: number | null
+          resolved_at?: string | null
+          severity?: string | null
+          threshold_value?: number | null
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string | null
+          id?: string
+          is_resolved?: boolean | null
+          media_line_id?: string | null
+          media_plan_id?: string
+          message?: string
+          metric_value?: number | null
+          resolved_at?: string | null
+          severity?: string | null
+          threshold_value?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_alerts_media_line_id_fkey"
+            columns: ["media_line_id"]
+            isOneToOne: false
+            referencedRelation: "media_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_alerts_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "media_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_budget_distributions: {
         Row: {
           amount: number
@@ -2618,6 +2755,147 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "report_imports_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "media_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_metrics: {
+        Row: {
+          avg_session_duration: number | null
+          bounce_rate: number | null
+          campaign_name: string | null
+          clicks: number | null
+          conversions: number | null
+          cost: number | null
+          created_at: string | null
+          data_source_id: string | null
+          frequency: number | null
+          id: string
+          impressions: number | null
+          leads: number | null
+          line_code: string | null
+          media_line_id: string | null
+          pageviews: number | null
+          raw_data: Json | null
+          reach: number | null
+          report_period_id: string
+          revenue: number | null
+          sales: number | null
+          sessions: number | null
+          updated_at: string | null
+          user_id: string
+          video_completions: number | null
+          video_views: number | null
+        }
+        Insert: {
+          avg_session_duration?: number | null
+          bounce_rate?: number | null
+          campaign_name?: string | null
+          clicks?: number | null
+          conversions?: number | null
+          cost?: number | null
+          created_at?: string | null
+          data_source_id?: string | null
+          frequency?: number | null
+          id?: string
+          impressions?: number | null
+          leads?: number | null
+          line_code?: string | null
+          media_line_id?: string | null
+          pageviews?: number | null
+          raw_data?: Json | null
+          reach?: number | null
+          report_period_id: string
+          revenue?: number | null
+          sales?: number | null
+          sessions?: number | null
+          updated_at?: string | null
+          user_id: string
+          video_completions?: number | null
+          video_views?: number | null
+        }
+        Update: {
+          avg_session_duration?: number | null
+          bounce_rate?: number | null
+          campaign_name?: string | null
+          clicks?: number | null
+          conversions?: number | null
+          cost?: number | null
+          created_at?: string | null
+          data_source_id?: string | null
+          frequency?: number | null
+          id?: string
+          impressions?: number | null
+          leads?: number | null
+          line_code?: string | null
+          media_line_id?: string | null
+          pageviews?: number | null
+          raw_data?: Json | null
+          reach?: number | null
+          report_period_id?: string
+          revenue?: number | null
+          sales?: number | null
+          sessions?: number | null
+          updated_at?: string | null
+          user_id?: string
+          video_completions?: number | null
+          video_views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_metrics_data_source_id_fkey"
+            columns: ["data_source_id"]
+            isOneToOne: false
+            referencedRelation: "data_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_metrics_media_line_id_fkey"
+            columns: ["media_line_id"]
+            isOneToOne: false
+            referencedRelation: "media_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_metrics_report_period_id_fkey"
+            columns: ["report_period_id"]
+            isOneToOne: false
+            referencedRelation: "report_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_periods: {
+        Row: {
+          created_at: string | null
+          id: string
+          media_plan_id: string
+          period_date: string
+          period_type: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          media_plan_id: string
+          period_date: string
+          period_type?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          media_plan_id?: string
+          period_date?: string
+          period_type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_periods_media_plan_id_fkey"
             columns: ["media_plan_id"]
             isOneToOne: false
             referencedRelation: "media_plans"
