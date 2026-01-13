@@ -75,7 +75,7 @@ const COLUMN_PATTERNS: Record<string, RegExp[]> = {
   formato: [/^formato$/i, /^format$/i, /^criativo$/i, /^creative$/i],
   objetivo: [/^objetivo$/i, /^objective$/i, /^goal$/i],
   notas: [/^notas?$/i, /^obs(erva[çc][ãa]o)?$/i, /^notes?$/i, /^comments?$/i],
-  url_destino: [/^url$/i, /^destino$/i, /^link$/i, /^destination$/i],
+  url_destino: [/^url[_\s-]?destino$/i, /^destino[_\s-]?url$/i, /^destination[_\s-]?url$/i, /^landing[_\s-]?(page|url)?$/i, /^url$/i, /^destino$/i, /^link$/i, /^destination$/i],
 };
 
 // Month patterns for detecting month columns
