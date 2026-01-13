@@ -957,12 +957,17 @@ export default function MediaPlanDetail() {
 
           if (funnelStagesForViz.length === 0) return null;
 
-          const totalAllocated = funnelStagesForViz.reduce((acc, s) => acc + s.amount, 0);
+          // Sort by funnel stage order_index
+          const sortedFunnelStages = funnelStagesForViz.sort((a, b) => {
+            const stageA = (funnelStages.data || []).find(f => f.id === a.id);
+            const stageB = (funnelStages.data || []).find(f => f.id === b.id);
+            return (stageA?.order_index ?? 999) - (stageB?.order_index ?? 999);
+          });
 
           return (
             <FunnelVisualization
-              funnelStages={funnelStagesForViz}
-              parentBudget={totalAllocated}
+              funnelStages={sortedFunnelStages}
+              parentBudget={Number(plan.total_budget) || 0}
               parentName="Total do Plano"
               onEdit={() => {}}
               hierarchyOrder={hierarchyOrder}

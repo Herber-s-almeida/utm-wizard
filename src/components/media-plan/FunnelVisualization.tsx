@@ -120,7 +120,7 @@ export function FunnelVisualization({
                           fill="hsl(var(--foreground))"
                           style={{ fontSize: Math.max(6, 9 - funnelStages.length), opacity: 0.9, textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
                         >
-                          {stage.percentage}% • R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          {stage.percentage.toFixed(1)}% • R$ {amount.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         </text>
                       </g>
                     );
@@ -145,7 +145,7 @@ export function FunnelVisualization({
                           {formatCurrency(amount)}
                         </p>
                         <span className="text-sm text-primary font-medium">
-                          {stage.percentage}% da verba ({parentName})
+                          {stage.percentage.toFixed(1)}% da verba ({parentName})
                         </span>
                       </div>
                     </div>
