@@ -969,7 +969,6 @@ export default function MediaPlanDetail() {
               funnelStages={sortedFunnelStages}
               parentBudget={Number(plan.total_budget) || 0}
               parentName="Total do Plano"
-              onEdit={() => {}}
               hierarchyOrder={hierarchyOrder}
             />
           );

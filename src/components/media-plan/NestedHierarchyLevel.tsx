@@ -162,7 +162,6 @@ export const NestedHierarchyLevel: React.FC<NestedHierarchyLevelProps> = ({
                     funnelStages={allocations}
                     parentBudget={amount}
                     parentName={breadcrumb}
-                    onEdit={() => {}}
                   />
                 </div>
               )}
@@ -282,7 +281,6 @@ export const NestedHierarchyLevel: React.FC<NestedHierarchyLevelProps> = ({
                   funnelStages={allocations}
                   parentBudget={parentAmount}
                   parentName="Plano Completo"
-                  onEdit={() => {}}
                 />
               </div>
             )}

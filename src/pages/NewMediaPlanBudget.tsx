@@ -1085,7 +1085,6 @@ export default function NewMediaPlanBudget() {
                                     funnelStages={thirdAllocations}
                                     parentBudget={itemBudget}
                                     parentName={item.name}
-                                    onEdit={() => goToStep(4)}
                                   />
                                 </div>
                               )}

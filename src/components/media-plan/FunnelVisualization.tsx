@@ -1,5 +1,4 @@
-import { Edit2, Filter, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Filter, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { BudgetAllocation } from '@/hooks/useMediaPlanWizard';
 import {
@@ -12,7 +11,6 @@ interface FunnelVisualizationProps {
   funnelStages: BudgetAllocation[];
   parentBudget: number;
   parentName: string;
-  onEdit: () => void;
   /** If provided, visualization only renders when 'funnel_stage' is in the hierarchy order */
   hierarchyOrder?: Array<'subdivision' | 'moment' | 'funnel_stage'>;
 }
@@ -21,7 +19,6 @@ export function FunnelVisualization({
   funnelStages, 
   parentBudget, 
   parentName,
-  onEdit,
   hierarchyOrder,
 }: FunnelVisualizationProps) {
   const formatCurrency = (value: number) => {
@@ -61,15 +58,11 @@ export function FunnelVisualization({
                 <h3 className="font-display text-lg font-semibold">Fases do Funil</h3>
                 <span className="text-sm text-muted-foreground">({parentName})</span>
                 <div className="flex-1 h-[2px] bg-gradient-to-r from-primary/50 to-transparent rounded-full min-w-[80px]" />
-                <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
-                  <span className="text-success font-bold text-sm">✓</span>
-                </div>
-              </button>
-            </AnimatedCollapsibleTrigger>
-            <Button variant="outline" size="sm" className="gap-2 ml-4" onClick={onEdit}>
-              <Edit2 className="h-3.5 w-3.5" />
-              Editar
-            </Button>
+                  <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
+                    <span className="text-success font-bold text-sm">✓</span>
+                  </div>
+                </button>
+              </AnimatedCollapsibleTrigger>
           </div>
 
           <AnimatedCollapsibleContent>
