@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, AlertTriangle, X, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { Check, AlertTriangle, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils';
 interface ImportEntityResolverProps {
   unresolvedEntities: UnresolvedEntity[];
   onResolve: (entityId: string, resolvedId: string) => void;
-  onIgnore: (entityId: string) => void;
   onCreateEntity: (entity: UnresolvedEntity) => void;
   existingEntities: Record<EntityType, Array<{ id: string; name: string; parentId?: string }>>;
 }
@@ -43,7 +42,6 @@ const ENTITY_SINGULAR: Record<EntityType, string> = {
 export function ImportEntityResolver({
   unresolvedEntities,
   onResolve,
-  onIgnore,
   onCreateEntity,
   existingEntities,
 }: ImportEntityResolverProps) {
@@ -131,7 +129,6 @@ export function ImportEntityResolver({
                     existingOptions={existingEntities[type] || []}
                     allExistingEntities={existingEntities}
                     onResolve={onResolve}
-                    onIgnore={onIgnore}
                     onCreateEntity={onCreateEntity}
                   />
                 ))}
@@ -149,18 +146,15 @@ function EntityRow({
   existingOptions,
   allExistingEntities,
   onResolve,
-  onIgnore,
   onCreateEntity,
 }: {
   entity: UnresolvedEntity;
   existingOptions: Array<{ id: string; name: string; parentId?: string }>;
   allExistingEntities: Record<EntityType, Array<{ id: string; name: string; parentId?: string }>>;
   onResolve: (entityId: string, resolvedId: string) => void;
-  onIgnore: (entityId: string) => void;
   onCreateEntity: (entity: UnresolvedEntity) => void;
 }) {
   const isResolved = entity.status === 'resolved';
-  const isIgnored = entity.status === 'ignored';
   const isCreating = entity.status === 'creating';
 
   // Filter existing options based on parent context
@@ -186,18 +180,15 @@ function EntityRow({
     <div className={cn(
       "p-3 rounded-lg border ml-4",
       isResolved && "bg-green-50/50 border-green-200",
-      isIgnored && "bg-muted/50 border-muted",
-      !isResolved && !isIgnored && "bg-background"
+      !isResolved && "bg-background"
     )}>
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             {isResolved && <Check className="w-4 h-4 text-green-500" />}
-            {isIgnored && <X className="w-4 h-4 text-muted-foreground" />}
-            {!isResolved && !isIgnored && <AlertTriangle className="w-4 h-4 text-amber-500" />}
+            {!isResolved && <AlertTriangle className="w-4 h-4 text-amber-500" />}
             <span className="font-medium">"{entity.originalName}"</span>
             {isResolved && <Badge variant="outline" className="text-xs text-green-600">Resolvido</Badge>}
-            {isIgnored && <Badge variant="outline" className="text-xs">Ignorado</Badge>}
           </div>
           <p className="text-xs text-muted-foreground">
             Afeta {entity.affectedLines.length} linha(s): {entity.affectedLines.slice(0, 5).join(', ')}
@@ -210,7 +201,7 @@ function EntityRow({
           )}
         </div>
 
-        {!isResolved && !isIgnored && (
+        {!isResolved && (
           <div className="flex items-center gap-2 shrink-0">
             <Button size="sm" variant="default" onClick={() => onCreateEntity(entity)} disabled={isCreating}>
               <Plus className="w-3 h-3 mr-1" />
@@ -228,9 +219,6 @@ function EntityRow({
                 </SelectContent>
               </Select>
             )}
-            <Button size="sm" variant="ghost" onClick={() => onIgnore(entity.id)}>
-              Ignorar
-            </Button>
           </div>
         )}
       </div>

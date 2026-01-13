@@ -367,15 +367,6 @@ export function useImportPlan() {
     }));
   }, []);
   
-  // Step 4: Ignore entity
-  const ignoreEntity = useCallback((entityId: string) => {
-    setState(prev => ({
-      ...prev,
-      unresolvedEntities: prev.unresolvedEntities.map(e =>
-        e.id === entityId ? { ...e, status: 'ignored' as const } : e
-      ),
-    }));
-  }, []);
   
   // Step 4: Set entity as creating
   const setEntityCreating = useCallback((entityId: string, creating: boolean) => {
@@ -640,7 +631,6 @@ export function useImportPlan() {
     updatePlanInfo,
     confirmPlanInfo,
     resolveEntity,
-    ignoreEntity,
     setEntityCreating,
     addCreatedEntity,
     confirmEntityResolution,
