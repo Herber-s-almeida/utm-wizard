@@ -55,7 +55,7 @@ export interface ImportState {
   detectedHierarchy: HierarchyLevel[];
   isCreating: boolean;
   isCheckingEntities: boolean;
-  existingEntities: Record<EntityType, Array<{ id: string; name: string }>>;
+  existingEntities: Record<EntityType, Array<{ id: string; name: string; parentId?: string }>>;
 }
 
 const initialPlanInfo: PlanInfo = {
@@ -219,10 +219,10 @@ export function useImportPlan() {
         supabase.from('targets').select('id, name').eq('user_id', user.id).is('deleted_at', null),
       ]);
       
-      const existingEntities: Record<EntityType, Array<{ id: string; name: string }>> = {
+      const existingEntities: Record<EntityType, Array<{ id: string; name: string; parentId?: string }>> = {
         client: [],
         vehicle: (vehiclesRes.data || []).map(v => ({ id: v.id, name: v.name })),
-        channel: (channelsRes.data || []).map(c => ({ id: c.id, name: c.name })),
+        channel: (channelsRes.data || []).map(c => ({ id: c.id, name: c.name, parentId: c.vehicle_id })),
         subdivision: (subdivisionsRes.data || []).map(s => ({ id: s.id, name: s.name })),
         moment: (momentsRes.data || []).map(m => ({ id: m.id, name: m.name })),
         funnel_stage: (stagesRes.data || []).map(s => ({ id: s.id, name: s.name })),
@@ -388,7 +388,7 @@ export function useImportPlan() {
   }, []);
   
   // Step 4: Add created entity to existing entities list
-  const addCreatedEntity = useCallback((type: EntityType, entity: { id: string; name: string }) => {
+  const addCreatedEntity = useCallback((type: EntityType, entity: { id: string; name: string; parentId?: string }) => {
     setState(prev => ({
       ...prev,
       existingEntities: {

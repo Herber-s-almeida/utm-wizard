@@ -85,9 +85,9 @@ export default function NewMediaPlanImport() {
     setCreatingEntity(entity);
   };
 
-  const handleEntityCreated = (entityId: string, newId: string, entityType: EntityType, entityName: string) => {
+  const handleEntityCreated = (entityId: string, newId: string, entityType: EntityType, entityName: string, parentId?: string) => {
     resolveEntity(entityId, newId);
-    addCreatedEntity(entityType, { id: newId, name: entityName });
+    addCreatedEntity(entityType, { id: newId, name: entityName, parentId });
     setCreatingEntity(null);
   };
 
@@ -267,7 +267,7 @@ export default function NewMediaPlanImport() {
               try {
                 const result = await channelsQuery.create.mutateAsync(data);
                 if (result) {
-                  handleEntityCreated(creatingEntity.id, result.id, 'channel', data.name);
+                  handleEntityCreated(creatingEntity.id, result.id, 'channel', data.name, parentVehicle.id);
                 }
               } catch (error) {
                 console.error('Error creating channel:', error);
