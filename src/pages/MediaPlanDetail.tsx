@@ -87,7 +87,6 @@ import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPl
 import { buildHierarchyTree, flattenHierarchyTree, HierarchyTreeNode, FlatHierarchyRow, MediaLineRef } from '@/utils/hierarchyDataBuilder';
 import { generateBudgetDistributionsFromLines } from '@/utils/generateBudgetDistributions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Sparkles } from 'lucide-react';
 
 interface BudgetDistribution {
   id: string;
@@ -1119,10 +1118,10 @@ export default function MediaPlanDetail() {
 
         {/* Banner to generate hierarchy when missing */}
         {needsHierarchyGeneration && canEdit && (
-          <Alert className="border-primary/50 bg-primary/5">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <AlertTitle>Hierarquia do Orçamento não configurada</AlertTitle>
-            <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <Alert variant="destructive" className="border-red-500 bg-red-50 dark:bg-red-950/30">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle className="text-red-700 dark:text-red-400">Hierarquia do Orçamento não configurada</AlertTitle>
+            <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-red-600 dark:text-red-300">
               <span>
                 Este plano foi criado sem a distribuição hierárquica do orçamento. 
                 Gere agora para visualizar os agrupamentos e cards de orçamento.
@@ -1131,6 +1130,7 @@ export default function MediaPlanDetail() {
                 onClick={handleGenerateHierarchy}
                 disabled={isGeneratingHierarchy}
                 size="sm"
+                variant="destructive"
                 className="shrink-0"
               >
                 {isGeneratingHierarchy ? 'Gerando...' : 'Gerar Hierarquia'}
