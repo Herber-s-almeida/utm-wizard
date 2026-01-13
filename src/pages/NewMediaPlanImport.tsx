@@ -1,14 +1,20 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Upload } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useImportPlan } from '@/hooks/useImportPlan';
+import { useImportPlan, UnresolvedEntity, EntityType } from '@/hooks/useImportPlan';
 import { ImportFileUpload } from '@/components/import/ImportFileUpload';
 import { ImportColumnMapper } from '@/components/import/ImportColumnMapper';
 import { ImportPlanInfo } from '@/components/import/ImportPlanInfo';
+import { ImportEntityResolver } from '@/components/import/ImportEntityResolver';
 import { WizardStepper } from '@/components/media-plan/WizardStepper';
+import { VehicleDialog } from '@/components/config/VehicleDialog';
+import { ChannelDialog } from '@/components/config/ChannelDialog';
+import { SubdivisionDialog } from '@/components/config/SubdivisionDialog';
+import { useVehicles, useMediums, useChannels, useSubdivisions, Vehicle, Medium } from '@/hooks/useConfigData';
 
 const STEPS = [
   { id: 1, title: 'Upload' },
@@ -28,11 +34,24 @@ export default function NewMediaPlanImport() {
     confirmMappings,
     updatePlanInfo,
     confirmPlanInfo,
+    resolveEntity,
+    ignoreEntity,
+    setEntityCreating,
     confirmEntityResolution,
     confirmHierarchy,
     createPlan,
     goBack,
   } = useImportPlan();
+
+  const vehiclesQuery = useVehicles();
+  const mediumsQuery = useMediums();
+  const channelsQuery = useChannels();
+  const subdivisionsQuery = useSubdivisions();
+  
+  const vehicles = (vehiclesQuery.activeItems || []) as Vehicle[];
+  const mediums = (mediumsQuery.activeItems || []) as Medium[];
+  
+  const [creatingEntity, setCreatingEntity] = useState<UnresolvedEntity | null>(null);
 
   const canProceed = () => {
     switch (state.step) {
@@ -42,7 +61,7 @@ export default function NewMediaPlanImport() {
         const required = ['linha_codigo', 'veiculo', 'canal', 'orcamento_total'];
         return required.every(f => mapped.some(m => m.systemField === f));
       }
-      case 3: return !!state.planInfo.name.trim();
+      case 3: return !!state.planInfo.name.trim() && !state.isCheckingEntities;
       case 4: return state.unresolvedEntities.every(e => e.status !== 'pending');
       case 5: return true;
       case 6: return true;
@@ -60,10 +79,34 @@ export default function NewMediaPlanImport() {
     }
   };
 
+  const handleCreateEntity = (entity: UnresolvedEntity) => {
+    setEntityCreating(entity.id, true);
+    setCreatingEntity(entity);
+  };
+
+  const handleEntityCreated = (entityId: string, newId: string) => {
+    resolveEntity(entityId, newId);
+    setCreatingEntity(null);
+  };
+
+  const handleDialogClose = () => {
+    if (creatingEntity) {
+      setEntityCreating(creatingEntity.id, false);
+    }
+    setCreatingEntity(null);
+  };
+
   const calculatedBudget = state.parseResult?.lines.reduce((sum, l) => sum + l.totalBudget, 0) || 0;
   const allDates = state.parseResult?.lines.flatMap(l => [l.startDate, l.endDate].filter(Boolean)) as Date[] || [];
   const calculatedStartDate = allDates.length > 0 ? new Date(Math.min(...allDates.map(d => d.getTime()))) : null;
   const calculatedEndDate = allDates.length > 0 ? new Date(Math.max(...allDates.map(d => d.getTime()))) : null;
+
+  // Get parent vehicle for channel creation
+  const getParentVehicle = () => {
+    if (!creatingEntity?.parentContext?.name) return null;
+    const vehicleName = creatingEntity.parentContext.name;
+    return vehicles.find(v => v.name.toLowerCase() === vehicleName.toLowerCase());
+  };
 
   return (
     <DashboardLayout>
@@ -103,7 +146,7 @@ export default function NewMediaPlanImport() {
               />
             )}
 
-            {state.step === 3 && (
+            {state.step === 3 && !state.isCheckingEntities && (
               <ImportPlanInfo
                 planInfo={state.planInfo}
                 onUpdatePlanInfo={updatePlanInfo}
@@ -113,11 +156,21 @@ export default function NewMediaPlanImport() {
               />
             )}
 
-            {state.step === 4 && (
-              <div className="text-center py-8">
-                <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            {state.step === 3 && state.isCheckingEntities && (
+              <div className="text-center py-12">
+                <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin mb-4" />
                 <p className="text-muted-foreground">Verificando entidades...</p>
               </div>
+            )}
+
+            {state.step === 4 && (
+              <ImportEntityResolver
+                unresolvedEntities={state.unresolvedEntities}
+                onResolve={resolveEntity}
+                onIgnore={ignoreEntity}
+                onCreateEntity={handleCreateEntity}
+                existingEntities={state.existingEntities}
+              />
             )}
 
             {state.step === 5 && (
@@ -145,14 +198,108 @@ export default function NewMediaPlanImport() {
 
         {/* Navigation */}
         <div className="flex justify-between">
-          <Button variant="outline" onClick={goBack} disabled={state.step === 1}>
+          <Button variant="outline" onClick={goBack} disabled={state.step === 1 || state.isCheckingEntities}>
             Voltar
           </Button>
-          <Button onClick={handleNext} disabled={!canProceed() || state.isCreating}>
+          <Button 
+            onClick={handleNext} 
+            disabled={!canProceed() || state.isCreating || state.isCheckingEntities}
+          >
             {state.step === 6 ? (state.isCreating ? 'Criando...' : 'Criar Plano') : 'Próximo'}
           </Button>
         </div>
       </motion.div>
+
+      {/* Entity Creation Dialogs */}
+      {creatingEntity?.type === 'vehicle' && (
+        <VehicleDialog
+          open={true}
+          onOpenChange={(open) => !open && handleDialogClose()}
+          onSave={async (data) => {
+            try {
+              const result = await vehiclesQuery.create.mutateAsync({
+                name: data.name,
+                description: data.description,
+                medium_id: data.medium_id,
+                slug: data.slug,
+              });
+              if (result) {
+                // Also create channels if provided
+                for (const channel of data.channels || []) {
+                  if (channel.name.trim()) {
+                    await channelsQuery.create.mutateAsync({
+                      name: channel.name,
+                      description: channel.description,
+                      slug: channel.slug,
+                      vehicle_id: result.id,
+                    });
+                  }
+                }
+                handleEntityCreated(creatingEntity.id, result.id);
+              }
+            } catch (error) {
+              console.error('Error creating vehicle:', error);
+              handleDialogClose();
+            }
+          }}
+          initialData={{ 
+            name: creatingEntity.originalName, 
+            description: '',
+            channels: []
+          }}
+          mediums={mediums}
+          onCreateMedium={async (data) => {
+            const result = await mediumsQuery.create.mutateAsync(data);
+            return result;
+          }}
+        />
+      )}
+
+      {creatingEntity?.type === 'channel' && (() => {
+        const parentVehicle = getParentVehicle();
+        return parentVehicle ? (
+          <ChannelDialog
+            open={true}
+            onOpenChange={(open) => !open && handleDialogClose()}
+            onSave={async (data) => {
+              try {
+                const result = await channelsQuery.create.mutateAsync(data);
+                if (result) {
+                  handleEntityCreated(creatingEntity.id, result.id);
+                }
+              } catch (error) {
+                console.error('Error creating channel:', error);
+                handleDialogClose();
+              }
+            }}
+            vehicleId={parentVehicle.id}
+            vehicleName={parentVehicle.name}
+            vehicleSlug={parentVehicle.slug}
+          />
+        ) : null;
+      })()}
+
+      {creatingEntity?.type === 'subdivision' && (
+        <SubdivisionDialog
+          open={true}
+          onOpenChange={(open) => !open && handleDialogClose()}
+          onSave={async (data) => {
+            try {
+              const result = await subdivisionsQuery.create.mutateAsync(data);
+              if (result) {
+                handleEntityCreated(creatingEntity.id, result.id);
+              }
+            } catch (error) {
+              console.error('Error creating subdivision:', error);
+              handleDialogClose();
+            }
+          }}
+          initialData={{ 
+            name: creatingEntity.originalName,
+            description: ''
+          }}
+        />
+      )}
     </DashboardLayout>
   );
 }
