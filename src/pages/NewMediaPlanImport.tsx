@@ -15,7 +15,8 @@ import { VehicleDialog } from '@/components/config/VehicleDialog';
 import { ChannelDialog } from '@/components/config/ChannelDialog';
 import { SubdivisionDialog } from '@/components/config/SubdivisionDialog';
 import { TargetDialog } from '@/components/config/TargetDialog';
-import { useVehicles, useMediums, useChannels, useSubdivisions, useTargets, Vehicle, Medium } from '@/hooks/useConfigData';
+import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
+import { useVehicles, useMediums, useChannels, useSubdivisions, useTargets, useMoments, useFunnelStages, Vehicle, Medium } from '@/hooks/useConfigData';
 
 const STEPS = [
   { id: 1, title: 'Upload' },
@@ -36,7 +37,6 @@ export default function NewMediaPlanImport() {
     updatePlanInfo,
     confirmPlanInfo,
     resolveEntity,
-    ignoreEntity,
     setEntityCreating,
     addCreatedEntity,
     confirmEntityResolution,
@@ -50,6 +50,8 @@ export default function NewMediaPlanImport() {
   const channelsQuery = useChannels();
   const subdivisionsQuery = useSubdivisions();
   const targetsQuery = useTargets();
+  const momentsQuery = useMoments();
+  const funnelStagesQuery = useFunnelStages();
   
   const vehicles = (vehiclesQuery.activeItems || []) as Vehicle[];
   const mediums = (mediumsQuery.activeItems || []) as Medium[];
@@ -171,7 +173,6 @@ export default function NewMediaPlanImport() {
               <ImportEntityResolver
                 unresolvedEntities={state.unresolvedEntities}
                 onResolve={resolveEntity}
-                onIgnore={ignoreEntity}
                 onCreateEntity={handleCreateEntity}
                 existingEntities={state.existingEntities}
               />
@@ -333,6 +334,62 @@ export default function NewMediaPlanImport() {
             geolocation: [],
             behavior: '',
             description: '',
+          }}
+        />
+      )}
+
+      {creatingEntity?.type === 'moment' && (
+        <SimpleConfigDialog
+          open={true}
+          onOpenChange={(open) => !open && handleDialogClose()}
+          onSave={async (data) => {
+            try {
+              const result = await momentsQuery.create.mutateAsync({
+                name: data.name,
+                description: data.description,
+              });
+              if (result) {
+                handleEntityCreated(creatingEntity.id, result.id, 'moment', data.name);
+              }
+            } catch (error) {
+              console.error('Error creating moment:', error);
+              handleDialogClose();
+            }
+          }}
+          title="Novo Momento"
+          nameLabel="Nome do Momento"
+          namePlaceholder="Ex: Black Friday, Lançamento..."
+          initialData={{ 
+            name: creatingEntity.originalName,
+            description: ''
+          }}
+        />
+      )}
+
+      {creatingEntity?.type === 'funnel_stage' && (
+        <SimpleConfigDialog
+          open={true}
+          onOpenChange={(open) => !open && handleDialogClose()}
+          onSave={async (data) => {
+            try {
+              const result = await funnelStagesQuery.create.mutateAsync({
+                name: data.name,
+                description: data.description,
+              });
+              if (result) {
+                handleEntityCreated(creatingEntity.id, result.id, 'funnel_stage', data.name);
+              }
+            } catch (error) {
+              console.error('Error creating funnel stage:', error);
+              handleDialogClose();
+            }
+          }}
+          title="Nova Fase do Funil"
+          nameLabel="Nome da Fase"
+          namePlaceholder="Ex: Awareness, Consideração, Conversão..."
+          initialData={{ 
+            name: creatingEntity.originalName,
+            description: ''
           }}
         />
       )}
