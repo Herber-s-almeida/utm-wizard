@@ -24,6 +24,7 @@ import { FunnelStageSelector } from '@/components/media-plan/FunnelStageSelector
 import { TemporalEqualizer, generateTemporalPeriods } from '@/components/media-plan/TemporalEqualizer';
 import { SlugInputField } from '@/components/media-plan/SlugInputField';
 import { HierarchyOrderSelector } from '@/components/media-plan/HierarchyOrderSelector';
+import { NestedHierarchyLevel } from '@/components/media-plan/NestedHierarchyLevel';
 import { useMediaPlanWizard, BudgetAllocation, WizardPlanData } from '@/hooks/useMediaPlanWizard';
 import { KPI_OPTIONS } from '@/types/media';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
@@ -1233,10 +1234,6 @@ export default function EditMediaPlan() {
           const stepNumber = levelIndex + 2; // Steps 2+ are hierarchy levels
           const Icon = LEVEL_ICONS[level];
           const config = LEVEL_DESCRIPTIONS[level];
-          const maxItems = MAX_ITEMS_PER_LEVEL[level];
-          const libraryItems = getLibraryForLevel(level);
-          const showDates = level === 'moment';
-          const parentItems = getParentItemsForLevel(levelIndex);
 
           return (
             <React.Fragment key={level}>
@@ -1263,80 +1260,25 @@ export default function EditMediaPlan() {
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                          {parentItems.map(parent => {
-                            const allocations = getAllocationsForLevelAtPath(level, parent.path);
-                            
-                            return (
-                              <div key={parent.path} className="border rounded-xl p-4 space-y-4 bg-muted/20">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex flex-col">
-                                    {levelIndex > 0 && parent.breadcrumb !== parent.name && (
-                                      <span className="text-xs text-muted-foreground mb-1">{parent.breadcrumb}</span>
-                                    )}
-                                    <h4 className="font-semibold">{parent.name}</h4>
-                                  </div>
-                                  <span className="text-sm text-primary font-medium bg-primary/10 px-3 py-1 rounded-full">
-                                    {formatCurrency(parent.amount)}
-                                  </span>
-                                </div>
-
-                                {level === 'funnel_stage' ? (
-                                  <>
-                                    {allocations.length < maxItems && (
-                                      <FunnelStageSelector
-                                        existingItems={libraryItems}
-                                        selectedItems={allocations}
-                                        onAdd={(item) => handleLevelAdd(level, parent.path, item)}
-                                        onCreate={(name) => handleCreateItem(level, name)}
-                                        maxItems={maxItems}
-                                      />
-                                    )}
-                                    
-                                    {allocations.length > 0 && (
-                                      <div className="mt-4">
-                                        <p className="text-sm text-muted-foreground mb-3">Arraste para reordenar as fases:</p>
-                                        <SortableFunnelList
-                                          items={allocations}
-                                          totalBudget={parent.amount}
-                                          onUpdate={(id, percentage) => handleLevelUpdate(level, parent.path, id, percentage)}
-                                          onRemove={(id) => handleLevelRemove(level, parent.path, id)}
-                                          onReorder={(items) => handleLevelReorder(level, parent.path, items)}
-                                        />
-                                      </div>
-                                    )}
-
-                                    {allocations.length > 0 && (
-                                      <div className="pt-4 border-t">
-                                        <p className="text-sm text-muted-foreground mb-4">Visualização do Funil:</p>
-                                        <FunnelVisualization
-                                          funnelStages={allocations}
-                                          parentBudget={parent.amount}
-                                          parentName={parent.name}
-                                          onEdit={() => {}}
-                                        />
-                                      </div>
-                                    )}
-                                  </>
-                                ) : (
-                                  <BudgetAllocationTable
-                                    items={allocations}
-                                    existingItems={libraryItems}
-                                    totalBudget={parent.amount}
-                                    onAdd={(item) => handleLevelAdd(level, parent.path, item)}
-                                    onUpdate={(id, percentage, dates) => handleLevelUpdate(level, parent.path, id, percentage, dates)}
-                                    onRemove={(id) => handleLevelRemove(level, parent.path, id)}
-                                    onCreate={(name) => handleCreateItem(level, name)}
-                                    label={getLevelLabel(level)}
-                                    createLabel={`Criar ${getLevelLabel(level).toLowerCase()}`}
-                                    maxItems={maxItems}
-                                    showDates={showDates}
-                                    planStartDate={state.planData.start_date}
-                                    planEndDate={state.planData.end_date}
-                                  />
-                                )}
-                              </div>
-                            );
-                          })}
+                          <NestedHierarchyLevel
+                            hierarchyOrder={planHierarchyOrder}
+                            targetLevelIndex={levelIndex}
+                            parentPath="root"
+                            parentBreadcrumb=""
+                            parentAmount={state.planData.total_budget}
+                            depth={0}
+                            getAllocations={getAllocationsForLevelAtPath}
+                            onAdd={handleLevelAdd}
+                            onUpdate={handleLevelUpdate}
+                            onRemove={handleLevelRemove}
+                            onReorder={handleLevelReorder}
+                            onCreate={handleCreateItem}
+                            getLibraryItems={getLibraryForLevel}
+                            calculateAmount={wizard.calculateAmount}
+                            maxItemsPerLevel={MAX_ITEMS_PER_LEVEL}
+                            planStartDate={state.planData.start_date}
+                            planEndDate={state.planData.end_date}
+                          />
 
                           {levelIndex === 0 && getAllocationsForLevelAtPath(level, 'root').length === 0 && (
                             <p className="text-sm text-muted-foreground text-center py-4 bg-muted/30 rounded-lg">
