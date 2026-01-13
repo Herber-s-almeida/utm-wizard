@@ -479,7 +479,7 @@ export function useImportPlan() {
         .from('media_plans')
         .insert({
           name: planInfo.name,
-          client_id: planInfo.clientId || null,
+          client_id: planInfo.clientId && planInfo.clientId !== 'none' ? planInfo.clientId : null,
           campaign: planInfo.campaign || null,
           total_budget: totalBudget,
           start_date: startDate ? format(startDate, 'yyyy-MM-dd') : null,
