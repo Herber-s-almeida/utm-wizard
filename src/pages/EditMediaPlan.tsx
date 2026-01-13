@@ -264,6 +264,33 @@ export default function EditMediaPlan() {
         }
       }
 
+      // Function to build full hierarchical path by walking up the parent chain
+      const buildFullParentPath = (
+        dist: { parent_distribution_id: string | null; distribution_type: string },
+        allDistributions: typeof distributions
+      ): string => {
+        if (!dist.parent_distribution_id) {
+          return 'root';
+        }
+
+        // Build array of reference_ids by walking up the parent chain
+        const pathParts: string[] = [];
+        let currentDistId: string | null = dist.parent_distribution_id;
+        
+        while (currentDistId) {
+          const refId = distIdToRefId[currentDistId];
+          if (refId) {
+            pathParts.unshift(refId); // Add to beginning to maintain order
+          }
+          // Find the parent of this distribution
+          const parentDist = (allDistributions || []).find(d => d.id === currentDistId);
+          currentDistId = parentDist?.parent_distribution_id || null;
+        }
+
+        // Join parts with underscore, or return 'root' if empty
+        return pathParts.length > 0 ? pathParts.join('_') : 'root';
+      };
+
       // Process each level in hierarchy order
       // For each level, find its distributions and determine the parent key dynamically
       for (let levelIndex = 0; levelIndex < hierarchyOrder.length; levelIndex++) {
@@ -274,15 +301,8 @@ export default function EditMediaPlan() {
         for (const dist of levelDists) {
           if (!dist.reference_id) continue; // Skip "Geral" entries
 
-          // Determine parent key: find the reference_id of the immediate parent
-          let parentKey = 'root';
-          if (levelIndex > 0 && dist.parent_distribution_id) {
-            // Walk up the parent chain to get the immediate parent's reference_id
-            const parentRefId = distIdToRefId[dist.parent_distribution_id];
-            if (parentRefId) {
-              parentKey = parentRefId;
-            }
-          }
+          // Build full hierarchical parent key
+          const parentKey = buildFullParentPath(dist, distributions);
 
           // Initialize array if needed
           if (!allocRecord[parentKey]) {
