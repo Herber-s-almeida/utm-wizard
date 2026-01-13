@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,6 +33,7 @@ import {
   ReportImport,
 } from '@/hooks/useReportData';
 import { ImportConfigDialog } from '@/components/reports/ImportConfigDialog';
+import { ImportWizardDialog } from '@/components/performance/ImportWizardDialog';
 import { ReportsDashboard } from '@/components/reports/ReportsDashboard';
 import { ReportsTable } from '@/components/reports/ReportsTable';
 import {
@@ -55,6 +57,7 @@ export default function MediaPlanReports() {
   const navigate = useNavigate();
 
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importWizardOpen, setImportWizardOpen] = useState(false);
   const [selectedImport, setSelectedImport] = useState<ReportImport | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [importToDelete, setImportToDelete] = useState<ReportImport | null>(null);
@@ -217,16 +220,26 @@ export default function MediaPlanReports() {
               <p className="text-muted-foreground">{plan.name}</p>
             </div>
           </div>
-          <Button
-            onClick={() => {
-              setSelectedImport(null);
-              setImportDialogOpen(true);
-            }}
-            className="gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Nova Fonte de Dados
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedImport(null);
+                setImportDialogOpen(true);
+              }}
+              className="gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              Configurar Fonte
+            </Button>
+            <Button
+              onClick={() => setImportWizardOpen(true)}
+              className="gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Importar Dados
+            </Button>
+          </div>
         </div>
 
         {/* Import Sources */}
@@ -360,6 +373,18 @@ export default function MediaPlanReports() {
           source_column: m.source_column,
           target_field: m.target_field,
         }))}
+        onComplete={() => {
+          refetchImports();
+          refetchData();
+        }}
+      />
+
+      {/* Import Wizard Dialog */}
+      <ImportWizardDialog
+        open={importWizardOpen}
+        onOpenChange={setImportWizardOpen}
+        planId={planId!}
+        mediaLines={mediaLines}
         onComplete={() => {
           refetchImports();
           refetchData();
