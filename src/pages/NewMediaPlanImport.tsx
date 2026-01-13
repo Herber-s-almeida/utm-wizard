@@ -37,6 +37,7 @@ export default function NewMediaPlanImport() {
     resolveEntity,
     ignoreEntity,
     setEntityCreating,
+    addCreatedEntity,
     confirmEntityResolution,
     confirmHierarchy,
     createPlan,
@@ -84,8 +85,9 @@ export default function NewMediaPlanImport() {
     setCreatingEntity(entity);
   };
 
-  const handleEntityCreated = (entityId: string, newId: string) => {
+  const handleEntityCreated = (entityId: string, newId: string, entityType: EntityType, entityName: string) => {
     resolveEntity(entityId, newId);
+    addCreatedEntity(entityType, { id: newId, name: entityName });
     setCreatingEntity(null);
   };
 
@@ -235,7 +237,7 @@ export default function NewMediaPlanImport() {
                     });
                   }
                 }
-                handleEntityCreated(creatingEntity.id, result.id);
+                handleEntityCreated(creatingEntity.id, result.id, 'vehicle', data.name);
               }
             } catch (error) {
               console.error('Error creating vehicle:', error);
@@ -265,7 +267,7 @@ export default function NewMediaPlanImport() {
               try {
                 const result = await channelsQuery.create.mutateAsync(data);
                 if (result) {
-                  handleEntityCreated(creatingEntity.id, result.id);
+                  handleEntityCreated(creatingEntity.id, result.id, 'channel', data.name);
                 }
               } catch (error) {
                 console.error('Error creating channel:', error);
@@ -287,7 +289,7 @@ export default function NewMediaPlanImport() {
             try {
               const result = await subdivisionsQuery.create.mutateAsync(data);
               if (result) {
-                handleEntityCreated(creatingEntity.id, result.id);
+                handleEntityCreated(creatingEntity.id, result.id, 'subdivision', data.name);
               }
             } catch (error) {
               console.error('Error creating subdivision:', error);

@@ -387,6 +387,17 @@ export function useImportPlan() {
     }));
   }, []);
   
+  // Step 4: Add created entity to existing entities list
+  const addCreatedEntity = useCallback((type: EntityType, entity: { id: string; name: string }) => {
+    setState(prev => ({
+      ...prev,
+      existingEntities: {
+        ...prev.existingEntities,
+        [type]: [...prev.existingEntities[type], entity],
+      },
+    }));
+  }, []);
+  
   // Step 4: Confirm entity resolution
   const confirmEntityResolution = useCallback(() => {
     const pending = state.unresolvedEntities.filter(e => e.status === 'pending');
@@ -631,6 +642,7 @@ export function useImportPlan() {
     resolveEntity,
     ignoreEntity,
     setEntityCreating,
+    addCreatedEntity,
     confirmEntityResolution,
     updateHierarchyOrder,
     confirmHierarchy,
