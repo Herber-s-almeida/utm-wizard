@@ -133,9 +133,22 @@ function autoDetectMapping(column: string): string | null {
 function parseDate(value: any): Date | null {
   if (!value) return null;
   
-  // If it's already a Date
+  // If it's already a valid Date with reasonable year
   if (value instanceof Date && isValid(value)) {
-    return value;
+    const year = value.getFullYear();
+    if (year >= 1900 && year <= 2100) {
+      return value;
+    }
+  }
+  
+  // If it's a number (Excel serial date: days since 1900-01-01)
+  if (typeof value === 'number' && value > 0) {
+    // Excel serial date: days since 1899-12-30 (includes the 1900 leap year bug)
+    const excelEpoch = new Date(1899, 11, 30);
+    const date = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
+    if (isValid(date) && date.getFullYear() >= 1900 && date.getFullYear() <= 2100) {
+      return date;
+    }
   }
   
   const strValue = String(value).trim();
@@ -151,14 +164,14 @@ function parseDate(value: any): Date | null {
   
   for (const fmt of formats) {
     const parsed = parse(strValue, fmt, new Date());
-    if (isValid(parsed)) {
+    if (isValid(parsed) && parsed.getFullYear() >= 1900 && parsed.getFullYear() <= 2100) {
       return parsed;
     }
   }
   
   // Try native Date parsing
   const nativeDate = new Date(strValue);
-  if (isValid(nativeDate)) {
+  if (isValid(nativeDate) && nativeDate.getFullYear() >= 1900 && nativeDate.getFullYear() <= 2100) {
     return nativeDate;
   }
   
@@ -169,11 +182,33 @@ function parseNumber(value: any): number {
   if (typeof value === 'number') return value;
   if (!value) return 0;
   
-  // Remove currency symbols and convert comma to dot
-  const cleaned = String(value)
-    .replace(/[R$\s]/g, '')
-    .replace(/\./g, '') // Remove thousand separators
-    .replace(',', '.'); // Convert decimal separator
+  const strValue = String(value).trim();
+  
+  // If already a simple number format (digits with optional decimal point)
+  if (/^\d+\.?\d*$/.test(strValue)) {
+    return parseFloat(strValue);
+  }
+  
+  // Detect format: Brazilian (1.234.567,89) vs American (1,234,567.89)
+  // Brazilian: comma is decimal separator, period is thousands
+  // American: period is decimal separator, comma is thousands
+  const lastComma = strValue.lastIndexOf(',');
+  const lastDot = strValue.lastIndexOf('.');
+  
+  let cleaned = strValue.replace(/[R$\s]/g, '');
+  
+  // Determine format based on position of last comma vs last dot
+  const isBrazilianFormat = lastComma > lastDot || 
+    (lastComma > -1 && lastDot === -1) ||
+    (lastComma > -1 && strValue.indexOf('.') < lastComma);
+  
+  if (isBrazilianFormat) {
+    // Brazilian: remove periods (thousands), replace comma with dot (decimal)
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  } else {
+    // American: remove commas (thousands), keep dot (decimal)
+    cleaned = cleaned.replace(/,/g, '');
+  }
   
   const num = parseFloat(cleaned);
   return isNaN(num) ? 0 : num;
