@@ -1,0 +1,621 @@
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+import { format, addMonths, startOfMonth, differenceInMonths } from 'date-fns';
+import { 
+  parseFile, 
+  detectColumnMappings, 
+  parseImportData, 
+  ParsedImportLine, 
+  ColumnMapping,
+  ParseResult,
+} from '@/utils/importPlanParser';
+import { HierarchyLevel } from '@/types/hierarchy';
+
+export type EntityType = 'client' | 'vehicle' | 'channel' | 'subdivision' | 'moment' | 'funnel_stage' | 'target' | 'medium' | 'format';
+
+export interface UnresolvedEntity {
+  id: string;
+  type: EntityType;
+  originalName: string;
+  affectedLines: number[];
+  status: 'pending' | 'resolved' | 'ignored' | 'creating';
+  resolvedId?: string;
+  parentContext?: {
+    type: string;
+    name: string;
+    id?: string;
+  };
+}
+
+export interface PlanInfo {
+  name: string;
+  clientId: string;
+  clientName: string;
+  campaign: string;
+  totalBudget: number;
+  startDate: Date | null;
+  endDate: Date | null;
+  useBudgetFromFile: boolean;
+  useDatesFromFile: boolean;
+}
+
+export interface ImportState {
+  step: number;
+  file: File | null;
+  rawData: any[];
+  columns: string[];
+  mappings: ColumnMapping[];
+  monthColumns: string[];
+  parseResult: ParseResult | null;
+  planInfo: PlanInfo;
+  unresolvedEntities: UnresolvedEntity[];
+  detectedHierarchy: HierarchyLevel[];
+  isCreating: boolean;
+}
+
+const initialPlanInfo: PlanInfo = {
+  name: '',
+  clientId: '',
+  clientName: '',
+  campaign: '',
+  totalBudget: 0,
+  startDate: null,
+  endDate: null,
+  useBudgetFromFile: true,
+  useDatesFromFile: true,
+};
+
+export function useImportPlan() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  const [state, setState] = useState<ImportState>({
+    step: 1,
+    file: null,
+    rawData: [],
+    columns: [],
+    mappings: [],
+    monthColumns: [],
+    parseResult: null,
+    planInfo: initialPlanInfo,
+    unresolvedEntities: [],
+    detectedHierarchy: [],
+    isCreating: false,
+  });
+  
+  // Step 1: Handle file upload
+  const handleFileUpload = useCallback(async (file: File) => {
+    try {
+      const { data, columns } = await parseFile(file);
+      const { mappings, monthColumns } = detectColumnMappings(columns);
+      
+      setState(prev => ({
+        ...prev,
+        file,
+        rawData: data,
+        columns,
+        mappings,
+        monthColumns,
+        step: 2,
+      }));
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  }, []);
+  
+  // Step 2: Update column mappings
+  const updateMapping = useCallback((fileColumn: string, systemField: string) => {
+    setState(prev => ({
+      ...prev,
+      mappings: prev.mappings.map(m => 
+        m.fileColumn === fileColumn 
+          ? { ...m, systemField, detected: false }
+          : m.systemField === systemField && systemField !== ''
+            ? { ...m, systemField: '', detected: false }
+            : m
+      ),
+    }));
+  }, []);
+  
+  // Step 2: Confirm mappings and parse data
+  const confirmMappings = useCallback(() => {
+    const result = parseImportData(state.rawData, state.mappings, state.monthColumns);
+    
+    if (result.errors.length > 0) {
+      result.errors.forEach(err => toast.error(err));
+      return;
+    }
+    
+    // Calculate totals from file
+    const totalBudget = result.lines.reduce((sum, line) => sum + line.totalBudget, 0);
+    const allDates = result.lines.flatMap(line => [line.startDate, line.endDate].filter(Boolean)) as Date[];
+    const startDate = allDates.length > 0 ? new Date(Math.min(...allDates.map(d => d.getTime()))) : null;
+    const endDate = allDates.length > 0 ? new Date(Math.max(...allDates.map(d => d.getTime()))) : null;
+    
+    setState(prev => ({
+      ...prev,
+      parseResult: result,
+      planInfo: {
+        ...prev.planInfo,
+        totalBudget,
+        startDate,
+        endDate,
+      },
+      step: 3,
+    }));
+  }, [state.rawData, state.mappings, state.monthColumns]);
+  
+  // Step 3: Update plan info
+  const updatePlanInfo = useCallback((updates: Partial<PlanInfo>) => {
+    setState(prev => ({
+      ...prev,
+      planInfo: { ...prev.planInfo, ...updates },
+    }));
+  }, []);
+  
+  // Step 3: Confirm plan info and detect entities
+  const confirmPlanInfo = useCallback(async () => {
+    if (!state.parseResult || !user) return;
+    
+    const lines = state.parseResult.lines;
+    const unresolvedEntities: UnresolvedEntity[] = [];
+    let entityId = 0;
+    
+    // Collect unique entity names
+    const entityNames: Record<EntityType, Set<string>> = {
+      client: new Set(),
+      vehicle: new Set(),
+      channel: new Set(),
+      subdivision: new Set(),
+      moment: new Set(),
+      funnel_stage: new Set(),
+      target: new Set(),
+      medium: new Set(),
+      format: new Set(),
+    };
+    
+    const channelVehicleMap: Record<string, string> = {};
+    
+    lines.forEach((line, index) => {
+      entityNames.vehicle.add(line.vehicleName);
+      entityNames.channel.add(line.channelName);
+      channelVehicleMap[line.channelName] = line.vehicleName;
+      
+      if (line.subdivisionName) entityNames.subdivision.add(line.subdivisionName);
+      if (line.momentName) entityNames.moment.add(line.momentName);
+      if (line.funnelStageName) entityNames.funnel_stage.add(line.funnelStageName);
+      if (line.targetName) entityNames.target.add(line.targetName);
+      if (line.mediumName) entityNames.medium.add(line.mediumName);
+      if (line.formatName) entityNames.format.add(line.formatName);
+    });
+    
+    // Check vehicles
+    const { data: vehicles } = await supabase
+      .from('vehicles')
+      .select('id, name')
+      .eq('user_id', user.id)
+      .is('deleted_at', null);
+    
+    const vehicleMap = new Map((vehicles || []).map(v => [v.name.toLowerCase(), v.id]));
+    
+    for (const name of entityNames.vehicle) {
+      if (!vehicleMap.has(name.toLowerCase())) {
+        unresolvedEntities.push({
+          id: `entity_${entityId++}`,
+          type: 'vehicle',
+          originalName: name,
+          affectedLines: lines.filter(l => l.vehicleName === name).map(l => l.rowNumber),
+          status: 'pending',
+        });
+      }
+    }
+    
+    // Check channels
+    const { data: channels } = await supabase
+      .from('channels')
+      .select('id, name, vehicle_id')
+      .eq('user_id', user.id)
+      .is('deleted_at', null);
+    
+    const channelMap = new Map((channels || []).map(c => [c.name.toLowerCase(), { id: c.id, vehicleId: c.vehicle_id }]));
+    
+    for (const name of entityNames.channel) {
+      const channel = channelMap.get(name.toLowerCase());
+      const vehicleName = channelVehicleMap[name];
+      
+      if (!channel) {
+        unresolvedEntities.push({
+          id: `entity_${entityId++}`,
+          type: 'channel',
+          originalName: name,
+          affectedLines: lines.filter(l => l.channelName === name).map(l => l.rowNumber),
+          status: 'pending',
+          parentContext: {
+            type: 'vehicle',
+            name: vehicleName,
+            id: vehicleMap.get(vehicleName.toLowerCase()),
+          },
+        });
+      }
+    }
+    
+    // Check subdivisions
+    if (entityNames.subdivision.size > 0) {
+      const { data: subdivisions } = await supabase
+        .from('plan_subdivisions')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .is('deleted_at', null);
+      
+      const subdivisionMap = new Map((subdivisions || []).map(s => [s.name.toLowerCase(), s.id]));
+      
+      for (const name of entityNames.subdivision) {
+        if (!subdivisionMap.has(name.toLowerCase())) {
+          unresolvedEntities.push({
+            id: `entity_${entityId++}`,
+            type: 'subdivision',
+            originalName: name,
+            affectedLines: lines.filter(l => l.subdivisionName === name).map(l => l.rowNumber),
+            status: 'pending',
+          });
+        }
+      }
+    }
+    
+    // Check moments
+    if (entityNames.moment.size > 0) {
+      const { data: moments } = await supabase
+        .from('moments')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .is('deleted_at', null);
+      
+      const momentMap = new Map((moments || []).map(m => [m.name.toLowerCase(), m.id]));
+      
+      for (const name of entityNames.moment) {
+        if (!momentMap.has(name.toLowerCase())) {
+          unresolvedEntities.push({
+            id: `entity_${entityId++}`,
+            type: 'moment',
+            originalName: name,
+            affectedLines: lines.filter(l => l.momentName === name).map(l => l.rowNumber),
+            status: 'pending',
+          });
+        }
+      }
+    }
+    
+    // Check funnel stages
+    if (entityNames.funnel_stage.size > 0) {
+      const { data: stages } = await supabase
+        .from('funnel_stages')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .is('deleted_at', null);
+      
+      const stageMap = new Map((stages || []).map(s => [s.name.toLowerCase(), s.id]));
+      
+      for (const name of entityNames.funnel_stage) {
+        if (!stageMap.has(name.toLowerCase())) {
+          unresolvedEntities.push({
+            id: `entity_${entityId++}`,
+            type: 'funnel_stage',
+            originalName: name,
+            affectedLines: lines.filter(l => l.funnelStageName === name).map(l => l.rowNumber),
+            status: 'pending',
+          });
+        }
+      }
+    }
+    
+    // Check targets
+    if (entityNames.target.size > 0) {
+      const { data: targets } = await supabase
+        .from('targets')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .is('deleted_at', null);
+      
+      const targetMap = new Map((targets || []).map(t => [t.name.toLowerCase(), t.id]));
+      
+      for (const name of entityNames.target) {
+        if (!targetMap.has(name.toLowerCase())) {
+          unresolvedEntities.push({
+            id: `entity_${entityId++}`,
+            type: 'target',
+            originalName: name,
+            affectedLines: lines.filter(l => l.targetName === name).map(l => l.rowNumber),
+            status: 'pending',
+          });
+        }
+      }
+    }
+    
+    // Detect hierarchy based on data
+    const detectedHierarchy: HierarchyLevel[] = [];
+    if (entityNames.subdivision.size > 0) detectedHierarchy.push('subdivision');
+    if (entityNames.moment.size > 0) detectedHierarchy.push('moment');
+    if (entityNames.funnel_stage.size > 0) detectedHierarchy.push('funnel_stage');
+    
+    setState(prev => ({
+      ...prev,
+      unresolvedEntities,
+      detectedHierarchy,
+      step: 4,
+    }));
+  }, [state.parseResult, user]);
+  
+  // Step 4: Resolve entity
+  const resolveEntity = useCallback((entityId: string, resolvedId: string) => {
+    setState(prev => ({
+      ...prev,
+      unresolvedEntities: prev.unresolvedEntities.map(e =>
+        e.id === entityId ? { ...e, status: 'resolved' as const, resolvedId } : e
+      ),
+    }));
+  }, []);
+  
+  // Step 4: Ignore entity
+  const ignoreEntity = useCallback((entityId: string) => {
+    setState(prev => ({
+      ...prev,
+      unresolvedEntities: prev.unresolvedEntities.map(e =>
+        e.id === entityId ? { ...e, status: 'ignored' as const } : e
+      ),
+    }));
+  }, []);
+  
+  // Step 4: Set entity as creating
+  const setEntityCreating = useCallback((entityId: string, creating: boolean) => {
+    setState(prev => ({
+      ...prev,
+      unresolvedEntities: prev.unresolvedEntities.map(e =>
+        e.id === entityId ? { ...e, status: creating ? 'creating' as const : 'pending' as const } : e
+      ),
+    }));
+  }, []);
+  
+  // Step 4: Confirm entity resolution
+  const confirmEntityResolution = useCallback(() => {
+    const pending = state.unresolvedEntities.filter(e => e.status === 'pending');
+    if (pending.length > 0) {
+      toast.error(`Ainda há ${pending.length} entidade(s) pendente(s)`);
+      return;
+    }
+    
+    setState(prev => ({ ...prev, step: 5 }));
+  }, [state.unresolvedEntities]);
+  
+  // Step 5: Update hierarchy order
+  const updateHierarchyOrder = useCallback((newOrder: HierarchyLevel[]) => {
+    setState(prev => ({ ...prev, detectedHierarchy: newOrder }));
+  }, []);
+  
+  // Step 5: Confirm hierarchy
+  const confirmHierarchy = useCallback(() => {
+    setState(prev => ({ ...prev, step: 6 }));
+  }, []);
+  
+  // Step 6: Create plan
+  const createPlan = useCallback(async () => {
+    if (!user || !state.parseResult) return;
+    
+    setState(prev => ({ ...prev, isCreating: true }));
+    
+    try {
+      const lines = state.parseResult.lines;
+      const planInfo = state.planInfo;
+      
+      // Build entity ID maps
+      const vehicleIdMap: Record<string, string> = {};
+      const channelIdMap: Record<string, string> = {};
+      const subdivisionIdMap: Record<string, string> = {};
+      const momentIdMap: Record<string, string> = {};
+      const funnelStageIdMap: Record<string, string> = {};
+      const targetIdMap: Record<string, string> = {};
+      
+      // Fetch existing entities
+      const [vehiclesRes, channelsRes, subdivisionsRes, momentsRes, stagesRes, targetsRes] = await Promise.all([
+        supabase.from('vehicles').select('id, name').eq('user_id', user.id).is('deleted_at', null),
+        supabase.from('channels').select('id, name').eq('user_id', user.id).is('deleted_at', null),
+        supabase.from('plan_subdivisions').select('id, name').eq('user_id', user.id).is('deleted_at', null),
+        supabase.from('moments').select('id, name').eq('user_id', user.id).is('deleted_at', null),
+        supabase.from('funnel_stages').select('id, name').eq('user_id', user.id).is('deleted_at', null),
+        supabase.from('targets').select('id, name').eq('user_id', user.id).is('deleted_at', null),
+      ]);
+      
+      (vehiclesRes.data || []).forEach(v => { vehicleIdMap[v.name.toLowerCase()] = v.id; });
+      (channelsRes.data || []).forEach(c => { channelIdMap[c.name.toLowerCase()] = c.id; });
+      (subdivisionsRes.data || []).forEach(s => { subdivisionIdMap[s.name.toLowerCase()] = s.id; });
+      (momentsRes.data || []).forEach(m => { momentIdMap[m.name.toLowerCase()] = m.id; });
+      (stagesRes.data || []).forEach(s => { funnelStageIdMap[s.name.toLowerCase()] = s.id; });
+      (targetsRes.data || []).forEach(t => { targetIdMap[t.name.toLowerCase()] = t.id; });
+      
+      // Add resolved entities from the unresolved list
+      for (const entity of state.unresolvedEntities) {
+        if (entity.status === 'resolved' && entity.resolvedId) {
+          const key = entity.originalName.toLowerCase();
+          switch (entity.type) {
+            case 'vehicle': vehicleIdMap[key] = entity.resolvedId; break;
+            case 'channel': channelIdMap[key] = entity.resolvedId; break;
+            case 'subdivision': subdivisionIdMap[key] = entity.resolvedId; break;
+            case 'moment': momentIdMap[key] = entity.resolvedId; break;
+            case 'funnel_stage': funnelStageIdMap[key] = entity.resolvedId; break;
+            case 'target': targetIdMap[key] = entity.resolvedId; break;
+          }
+        }
+      }
+      
+      // Calculate final values
+      const totalBudget = planInfo.useBudgetFromFile 
+        ? lines.reduce((sum, l) => sum + l.totalBudget, 0)
+        : planInfo.totalBudget;
+      
+      const allDates = lines.flatMap(l => [l.startDate, l.endDate].filter(Boolean)) as Date[];
+      const startDate = planInfo.useDatesFromFile && allDates.length > 0
+        ? new Date(Math.min(...allDates.map(d => d.getTime())))
+        : planInfo.startDate;
+      const endDate = planInfo.useDatesFromFile && allDates.length > 0
+        ? new Date(Math.max(...allDates.map(d => d.getTime())))
+        : planInfo.endDate;
+      
+      // Create plan
+      const { data: newPlan, error: planError } = await supabase
+        .from('media_plans')
+        .insert({
+          name: planInfo.name,
+          client_id: planInfo.clientId || null,
+          campaign: planInfo.campaign || null,
+          total_budget: totalBudget,
+          start_date: startDate ? format(startDate, 'yyyy-MM-dd') : null,
+          end_date: endDate ? format(endDate, 'yyyy-MM-dd') : null,
+          status: 'draft',
+          hierarchy_order: state.detectedHierarchy,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+      
+      if (planError) throw planError;
+      
+      // Filter valid lines (not ignored)
+      const ignoredLineNumbers = new Set(
+        state.unresolvedEntities
+          .filter(e => e.status === 'ignored')
+          .flatMap(e => e.affectedLines)
+      );
+      
+      const validLines = lines.filter(l => !ignoredLineNumbers.has(l.rowNumber));
+      
+      // Create media lines
+      const mediaLinesData = validLines.map(line => ({
+        media_plan_id: newPlan.id,
+        user_id: user.id,
+        platform: line.vehicleName,
+        line_code: line.lineCode,
+        budget: line.totalBudget,
+        start_date: line.startDate ? format(line.startDate, 'yyyy-MM-dd') : null,
+        end_date: line.endDate ? format(line.endDate, 'yyyy-MM-dd') : null,
+        vehicle_id: vehicleIdMap[line.vehicleName.toLowerCase()] || null,
+        channel_id: channelIdMap[line.channelName.toLowerCase()] || null,
+        subdivision_id: line.subdivisionName ? subdivisionIdMap[line.subdivisionName.toLowerCase()] || null : null,
+        moment_id: line.momentName ? momentIdMap[line.momentName.toLowerCase()] || null : null,
+        funnel_stage_id: line.funnelStageName ? funnelStageIdMap[line.funnelStageName.toLowerCase()] || null : null,
+        target_id: line.targetName ? targetIdMap[line.targetName.toLowerCase()] || null : null,
+        objective: line.objective || null,
+        notes: line.notes || null,
+        destination_url: line.destinationUrl || null,
+      }));
+      
+      const { data: createdLines, error: linesError } = await supabase
+        .from('media_lines')
+        .insert(mediaLinesData)
+        .select();
+      
+      if (linesError) throw linesError;
+      
+      // Create monthly budgets
+      const monthlyBudgetsData: any[] = [];
+      
+      validLines.forEach((line, index) => {
+        const createdLine = createdLines[index];
+        if (!createdLine) return;
+        
+        if (Object.keys(line.monthlyBudgets).length > 0) {
+          // Use monthly budgets from file
+          for (const [monthDate, amount] of Object.entries(line.monthlyBudgets)) {
+            if (amount > 0) {
+              monthlyBudgetsData.push({
+                media_line_id: createdLine.id,
+                user_id: user.id,
+                month_date: monthDate,
+                amount,
+              });
+            }
+          }
+        } else if (line.startDate && line.endDate) {
+          // Distribute evenly across months
+          const start = startOfMonth(line.startDate);
+          const end = startOfMonth(line.endDate);
+          const monthCount = differenceInMonths(end, start) + 1;
+          const monthlyAmount = line.totalBudget / monthCount;
+          
+          let current = start;
+          while (current <= end) {
+            monthlyBudgetsData.push({
+              media_line_id: createdLine.id,
+              user_id: user.id,
+              month_date: format(current, 'yyyy-MM-01'),
+              amount: monthlyAmount,
+            });
+            current = addMonths(current, 1);
+          }
+        }
+      });
+      
+      if (monthlyBudgetsData.length > 0) {
+        const { error: budgetsError } = await supabase
+          .from('media_line_monthly_budgets')
+          .insert(monthlyBudgetsData);
+        
+        if (budgetsError) throw budgetsError;
+      }
+      
+      toast.success(`Plano "${planInfo.name}" criado com ${createdLines.length} linhas!`);
+      navigate(`/media-plans/${newPlan.id}/edit`);
+      
+    } catch (error) {
+      console.error('Error creating plan:', error);
+      toast.error('Erro ao criar plano: ' + (error as Error).message);
+    } finally {
+      setState(prev => ({ ...prev, isCreating: false }));
+    }
+  }, [user, state.parseResult, state.planInfo, state.unresolvedEntities, state.detectedHierarchy, navigate]);
+  
+  // Navigation
+  const goToStep = useCallback((step: number) => {
+    setState(prev => ({ ...prev, step }));
+  }, []);
+  
+  const goBack = useCallback(() => {
+    setState(prev => ({ ...prev, step: Math.max(1, prev.step - 1) }));
+  }, []);
+  
+  const reset = useCallback(() => {
+    setState({
+      step: 1,
+      file: null,
+      rawData: [],
+      columns: [],
+      mappings: [],
+      monthColumns: [],
+      parseResult: null,
+      planInfo: initialPlanInfo,
+      unresolvedEntities: [],
+      detectedHierarchy: [],
+      isCreating: false,
+    });
+  }, []);
+  
+  return {
+    state,
+    handleFileUpload,
+    updateMapping,
+    confirmMappings,
+    updatePlanInfo,
+    confirmPlanInfo,
+    resolveEntity,
+    ignoreEntity,
+    setEntityCreating,
+    confirmEntityResolution,
+    updateHierarchyOrder,
+    confirmHierarchy,
+    createPlan,
+    goToStep,
+    goBack,
+    reset,
+  };
+}

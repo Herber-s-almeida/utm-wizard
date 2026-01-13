@@ -18,6 +18,7 @@ import NewMediaPlan from "./pages/NewMediaPlan";
 import NewMediaPlanBudget from "./pages/NewMediaPlanBudget";
 import NewMediaPlanManual from "./pages/NewMediaPlanManual";
 import NewMediaPlanSelector from "./pages/NewMediaPlanSelector";
+import NewMediaPlanImport from "./pages/NewMediaPlanImport";
 import MediaPlanDetail from "./pages/MediaPlanDetail";
 import EditMediaPlan from "./pages/EditMediaPlan";
 import MediaResourcesPage from "./pages/MediaResourcesPage";
@@ -89,6 +90,7 @@ function AppWithEnvironment() {
           <Route path="/media-plans/new" element={<ProtectedRoute><SectionProtectedRoute section="media_plans" minLevel="edit"><NewMediaPlanSelector /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans/new/budget" element={<ProtectedRoute><SectionProtectedRoute section="media_plans" minLevel="edit"><NewMediaPlanBudget /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans/new/manual" element={<ProtectedRoute><SectionProtectedRoute section="media_plans" minLevel="edit"><NewMediaPlanManual /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/media-plans/new/import" element={<ProtectedRoute><SectionProtectedRoute section="media_plans" minLevel="edit"><NewMediaPlanImport /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans/:id" element={<ProtectedRoute><SectionProtectedRoute section="media_plans"><MediaPlanDetail /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans/:id/edit" element={<ProtectedRoute><SectionProtectedRoute section="media_plans" minLevel="edit"><EditMediaPlan /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans/:id/resources" element={<ProtectedRoute><SectionProtectedRoute section="media_resources"><MediaResourcesPage /></SectionProtectedRoute></ProtectedRoute>} />
