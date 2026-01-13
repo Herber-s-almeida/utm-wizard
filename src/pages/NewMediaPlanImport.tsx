@@ -11,12 +11,12 @@ import { ImportPlanInfo } from '@/components/import/ImportPlanInfo';
 import { WizardStepper } from '@/components/media-plan/WizardStepper';
 
 const STEPS = [
-  { id: 'upload', title: 'Upload', label: 'Upload' },
-  { id: 'columns', title: 'Colunas', label: 'Colunas' },
-  { id: 'plan', title: 'Plano', label: 'Plano' },
-  { id: 'entities', title: 'Entidades', label: 'Entidades' },
-  { id: 'hierarchy', title: 'Hierarquia', label: 'Hierarquia' },
-  { id: 'confirm', title: 'Confirmar', label: 'Confirmar' },
+  { id: 1, title: 'Upload' },
+  { id: 2, title: 'Colunas' },
+  { id: 3, title: 'Plano' },
+  { id: 4, title: 'Entidades' },
+  { id: 5, title: 'Hierarquia' },
+  { id: 6, title: 'Confirmar' },
 ];
 
 export default function NewMediaPlanImport() {
