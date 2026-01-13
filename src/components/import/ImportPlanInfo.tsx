@@ -52,6 +52,13 @@ export function ImportPlanInfo({
       setShowClientDialog(true);
       return;
     }
+    
+    // Se "none" foi selecionado, limpar o cliente
+    if (clientId === 'none') {
+      onUpdatePlanInfo({ clientId: '', clientName: '' });
+      return;
+    }
+    
     const client = visibleForMediaPlans.find(c => c.id === clientId);
     onUpdatePlanInfo({ 
       clientId, 
