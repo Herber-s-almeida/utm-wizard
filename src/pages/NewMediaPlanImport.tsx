@@ -16,6 +16,7 @@ import { ChannelDialog } from '@/components/config/ChannelDialog';
 import { SubdivisionDialog } from '@/components/config/SubdivisionDialog';
 import { TargetDialog } from '@/components/config/TargetDialog';
 import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
+import { HierarchyOrderSelector } from '@/components/media-plan/HierarchyOrderSelector';
 import { useVehicles, useMediums, useChannels, useSubdivisions, useTargets, useMoments, useFunnelStages, Vehicle, Medium } from '@/hooks/useConfigData';
 
 const STEPS = [
@@ -23,7 +24,7 @@ const STEPS = [
   { id: 2, title: 'Colunas' },
   { id: 3, title: 'Plano' },
   { id: 4, title: 'Entidades' },
-  { id: 5, title: 'Hierarquia' },
+  { id: 5, title: 'Hierarquia do Orçamento' },
   { id: 6, title: 'Confirmar' },
 ];
 
@@ -40,6 +41,7 @@ export default function NewMediaPlanImport() {
     setEntityCreating,
     addCreatedEntity,
     confirmEntityResolution,
+    updateHierarchyOrder,
     confirmHierarchy,
     createPlan,
     goBack,
@@ -179,13 +181,17 @@ export default function NewMediaPlanImport() {
             )}
 
             {state.step === 5 && (
-              <div className="text-center py-8 space-y-4">
-                <h2 className="text-xl font-semibold">Hierarquia Detectada</h2>
-                <p className="text-muted-foreground">
-                  {state.detectedHierarchy.length > 0 
-                    ? `Ordem: ${state.detectedHierarchy.join(' → ')}`
-                    : 'Nenhuma hierarquia detectada'}
-                </p>
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h2 className="text-xl font-semibold">Hierarquia do Orçamento</h2>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Ajuste a ordem dos níveis de divisão do orçamento
+                  </p>
+                </div>
+                <HierarchyOrderSelector
+                  selectedLevels={state.detectedHierarchy}
+                  onOrderChange={updateHierarchyOrder}
+                />
               </div>
             )}
 
