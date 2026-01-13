@@ -13,7 +13,7 @@ interface ImportEntityResolverProps {
   onResolve: (entityId: string, resolvedId: string) => void;
   onIgnore: (entityId: string) => void;
   onCreateEntity: (entity: UnresolvedEntity) => void;
-  existingEntities: Record<EntityType, Array<{ id: string; name: string }>>;
+  existingEntities: Record<EntityType, Array<{ id: string; name: string; parentId?: string }>>;
 }
 
 const ENTITY_LABELS: Record<EntityType, string> = {
@@ -129,6 +129,7 @@ export function ImportEntityResolver({
                     key={entity.id}
                     entity={entity}
                     existingOptions={existingEntities[type] || []}
+                    allExistingEntities={existingEntities}
                     onResolve={onResolve}
                     onIgnore={onIgnore}
                     onCreateEntity={onCreateEntity}
@@ -146,12 +147,14 @@ export function ImportEntityResolver({
 function EntityRow({
   entity,
   existingOptions,
+  allExistingEntities,
   onResolve,
   onIgnore,
   onCreateEntity,
 }: {
   entity: UnresolvedEntity;
-  existingOptions: Array<{ id: string; name: string }>;
+  existingOptions: Array<{ id: string; name: string; parentId?: string }>;
+  allExistingEntities: Record<EntityType, Array<{ id: string; name: string; parentId?: string }>>;
   onResolve: (entityId: string, resolvedId: string) => void;
   onIgnore: (entityId: string) => void;
   onCreateEntity: (entity: UnresolvedEntity) => void;
@@ -159,6 +162,25 @@ function EntityRow({
   const isResolved = entity.status === 'resolved';
   const isIgnored = entity.status === 'ignored';
   const isCreating = entity.status === 'creating';
+
+  // Filter existing options based on parent context
+  const filteredOptions = (() => {
+    // For channels, filter by vehicle (parent)
+    if (entity.type === 'channel' && entity.parentContext?.type === 'vehicle') {
+      const parentVehicleName = entity.parentContext.name.toLowerCase();
+      // Find the vehicle ID from allExistingEntities
+      const vehicle = allExistingEntities.vehicle.find(
+        v => v.name.toLowerCase() === parentVehicleName
+      );
+      if (vehicle) {
+        return existingOptions.filter(opt => opt.parentId === vehicle.id);
+      }
+      // If vehicle doesn't exist yet, show nothing (user needs to create vehicle first)
+      return [];
+    }
+    // For other entity types, show all options
+    return existingOptions;
+  })();
 
   return (
     <div className={cn(
@@ -194,13 +216,13 @@ function EntityRow({
               <Plus className="w-3 h-3 mr-1" />
               Criar
             </Button>
-            {existingOptions.length > 0 && (
+            {filteredOptions.length > 0 && (
               <Select onValueChange={(id) => onResolve(entity.id, id)}>
                 <SelectTrigger className="w-[140px] h-8 text-xs">
                   <SelectValue placeholder="Usar existente" />
                 </SelectTrigger>
                 <SelectContent>
-                  {existingOptions.map(opt => (
+                  {filteredOptions.map(opt => (
                     <SelectItem key={opt.id} value={opt.id}>{opt.name}</SelectItem>
                   ))}
                 </SelectContent>
