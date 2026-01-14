@@ -198,7 +198,7 @@ export function AppSidebar() {
           isCollapsed ? "justify-center" : "justify-between"
         )}>
           {!isCollapsed && (
-            <Link to="/dashboard" className="flex items-center gap-3 min-w-0">
+            <Link to="/media-plan-dashboard" className="flex items-center gap-3 min-w-0">
               <img src="/logo.png" alt="AdsPlanning Pro" className="h-8 w-auto shrink-0" />
               <div className="flex flex-col min-w-0">
                 <span className="font-display font-bold text-sm text-primary truncate">AdsPlanning</span>
@@ -244,9 +244,9 @@ export function AppSidebar() {
           {/* Dashboard */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link to="/dashboard">
+              <Link to="/media-plan-dashboard">
                 <Button 
-                  variant={isActive('/dashboard') ? 'secondary' : 'ghost'} 
+                  variant={isActive('/media-plan-dashboard') ? 'secondary' : 'ghost'}
                   size="icon"
                   className="h-9 w-9"
                 >
@@ -527,7 +527,7 @@ export function AppSidebar() {
             <div className="flex items-center">
               <CollapsibleTrigger asChild>
                 <Button 
-                  variant={isActive('/dashboard') || isActive('/media-plans') ? 'secondary' : 'ghost'} 
+                  variant={isActive('/media-plan-dashboard') || isActive('/media-plans') ? 'secondary' : 'ghost'} 
                   size="sm" 
                   className="flex-1 justify-start gap-2 h-8 text-xs"
                 >
@@ -538,7 +538,7 @@ export function AppSidebar() {
               </CollapsibleTrigger>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Link to="/dashboard">
+                  <Link to="/media-plan-dashboard">
                     <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
