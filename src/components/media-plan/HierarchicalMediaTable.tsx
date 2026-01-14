@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef, UIEvent } from 'react';
 import { motion } from 'framer-motion';
 import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle, Link, LayoutGrid, List, Link2, RotateCcw } from 'lucide-react';
 import { LineDetailButton } from '@/components/media-plan/LineDetailButton';
@@ -223,6 +223,29 @@ export function HierarchicalMediaTable({
 
   // View mode: 'grouped' (hierarchical) or 'flat' (one line per row)
   const [viewMode, setViewMode] = useState<'grouped' | 'flat'>('grouped');
+
+  // Synchronized horizontal scroll refs
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const mainScrollRef = useRef<HTMLDivElement>(null);
+  const isScrollingSyncRef = useRef(false);
+
+  const handleTopScroll = useCallback((e: UIEvent<HTMLDivElement>) => {
+    if (isScrollingSyncRef.current) return;
+    isScrollingSyncRef.current = true;
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+    requestAnimationFrame(() => { isScrollingSyncRef.current = false; });
+  }, []);
+
+  const handleMainScroll = useCallback((e: UIEvent<HTMLDivElement>) => {
+    if (isScrollingSyncRef.current) return;
+    isScrollingSyncRef.current = true;
+    if (topScrollRef.current) {
+      topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+    requestAnimationFrame(() => { isScrollingSyncRef.current = false; });
+  }, []);
 
   // Auto-switch to flat mode when there are no budget distributions
   // This ensures users can see their lines even without hierarchy configured
@@ -1937,7 +1960,20 @@ export function HierarchicalMediaTable({
           )}
         </div>
 
-        <div className="border rounded-lg overflow-x-auto">
+        {/* Top scrollbar - synchronized with main table */}
+        <div 
+          ref={topScrollRef}
+          className="border border-b-0 rounded-t-lg overflow-x-auto scrollbar-top"
+          onScroll={handleTopScroll}
+        >
+          <div style={{ width: `${getMinWidth()}px`, height: 1 }} />
+        </div>
+
+        <div 
+          ref={mainScrollRef}
+          className="border border-t-0 rounded-b-lg overflow-x-auto scrollbar-main"
+          onScroll={handleMainScroll}
+        >
           {/* Header - Dynamic based on hierarchyOrder for grouped view */}
           <div className="flex bg-muted/50 text-xs font-medium text-muted-foreground border-b" style={{ minWidth: `${viewMode === 'flat' ? getMinWidth() - 100 : getMinWidth()}px` }}>
             {/* Render hierarchy columns in order for grouped view */}
