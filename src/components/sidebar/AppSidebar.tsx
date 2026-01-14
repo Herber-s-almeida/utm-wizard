@@ -241,22 +241,6 @@ export function AppSidebar() {
       {/* Collapsed state - show only icons */}
       {isCollapsed ? (
         <div className="flex-1 overflow-y-auto py-3 px-2 flex flex-col items-center gap-1 bg-background">
-          {/* Dashboard */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/media-plan-dashboard">
-                <Button 
-                  variant={isActive('/media-plan-dashboard') ? 'secondary' : 'ghost'}
-                  size="icon"
-                  className="h-9 w-9"
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Dashboard</TooltipContent>
-          </Tooltip>
-
           {/* Visão Gerencial */}
           {canView('executive_dashboard') && (
             <Tooltip>
@@ -313,23 +297,21 @@ export function AppSidebar() {
 
           <div className="w-8 h-px bg-border my-2" />
 
-          {/* Gerenciar Planos de Mídia */}
-          {canView('media_plans') && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link to="/media-plans">
-                  <Button 
-                    variant={location.pathname.startsWith('/media-plans') || location.pathname.startsWith('/plan/') ? 'secondary' : 'ghost'} 
-                    size="icon"
-                    className="h-9 w-9"
-                  >
-                    <FileText className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Planos de Mídia</TooltipContent>
-            </Tooltip>
-          )}
+          {/* Planos de Mídia (antigo Dashboard) */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/media-plan-dashboard">
+                <Button 
+                  variant={isActive('/media-plan-dashboard') || location.pathname.startsWith('/media-plans') || location.pathname.startsWith('/plan/') ? 'secondary' : 'ghost'}
+                  size="icon"
+                  className="h-9 w-9"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                </Button>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Planos de Mídia</TooltipContent>
+          </Tooltip>
 
           {/* Recursos de Mídia */}
           {canView('media_resources') && !isMenuHidden('media_resources') && (
