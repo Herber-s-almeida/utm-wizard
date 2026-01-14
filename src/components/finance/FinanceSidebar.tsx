@@ -42,6 +42,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Cog } from "lucide-react";
 
 const menuItems = [
   { title: "Dashboard", url: "/finance", icon: LayoutDashboard },
@@ -149,6 +150,8 @@ export function FinanceSidebar() {
   const [libraryOpen, setLibraryOpen] = useState(
     location.pathname.includes("/finance/library")
   );
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [adminSubmenuOpen, setAdminSubmenuOpen] = useState(false);
 
   const environmentName = isViewingOtherEnvironment 
     ? (viewingUser?.company || viewingUser?.full_name || viewingUser?.email)
@@ -415,53 +418,117 @@ export function FinanceSidebar() {
 
           {/* Footer with user info - Fixed at bottom */}
           <div className="shrink-0 p-3 border-t border-sidebar-border">
+            {/* Email do usuário */}
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
               <User className="h-3.5 w-3.5" />
               <span className="truncate flex-1">{user?.email}</span>
             </div>
-            {isAdmin && (
-              <div className="mb-1">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1 px-2">
-                  <ShieldCheck className="h-3 w-3" />
-                  <span className="font-medium">Administração</span>
-                </div>
-                <Link to="/admin/users">
-                  <Button
-                    variant={location.pathname === '/admin/users' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="w-full justify-start gap-2 h-7 text-xs pl-6"
+
+            {/* Seção Configurações - Colapsável */}
+            <Collapsible 
+              open={settingsOpen} 
+              onOpenChange={setSettingsOpen}
+            >
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-between gap-2 h-8 text-xs mb-1"
+                >
+                  <span className="flex items-center gap-2">
+                    <Cog className="h-3.5 w-3.5" />
+                    Configurações
+                  </span>
+                  {settingsOpen ? (
+                    <ChevronDown className="h-3 w-3" />
+                  ) : (
+                    <ChevronRight className="h-3 w-3" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+
+              <CollapsibleContent className="pl-2 space-y-0.5">
+                {/* Administração - só para admins, expansível */}
+                {isAdmin && (
+                  <Collapsible
+                    open={adminSubmenuOpen}
+                    onOpenChange={setAdminSubmenuOpen}
                   >
-                    <Users className="h-3 w-3" />
-                    Usuários
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-between gap-2 h-7 text-xs"
+                      >
+                        <span className="flex items-center gap-2">
+                          <ShieldCheck className="h-3 w-3" />
+                          Administração
+                        </span>
+                        {adminSubmenuOpen ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </CollapsibleTrigger>
+
+                    <CollapsibleContent className="pl-4 space-y-0.5">
+                      <Link to="/admin/users">
+                        <Button
+                          variant={location.pathname === '/admin/users' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className="w-full justify-start gap-2 h-7 text-xs"
+                        >
+                          <Users className="h-3 w-3" />
+                          Usuários
+                        </Button>
+                      </Link>
+                      <Link to="/admin/menu-visibility">
+                        <Button
+                          variant={location.pathname === '/admin/menu-visibility' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className="w-full justify-start gap-2 h-7 text-xs"
+                        >
+                          <Eye className="h-3 w-3" />
+                          Visibilidade do Menu
+                        </Button>
+                      </Link>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+                {/* Configurações do Ambiente */}
+                <Link to="/settings/team">
+                  <Button
+                    variant={location.pathname === '/settings/team' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start gap-2 h-7 text-xs"
+                  >
+                    <Building2 className="h-3 w-3" />
+                    Configurações do Ambiente
                   </Button>
                 </Link>
-                <Link to="/admin/menu-visibility">
+
+                {/* Minha Conta */}
+                <Link to="/account">
                   <Button
-                    variant={location.pathname === '/admin/menu-visibility' ? 'secondary' : 'ghost'}
+                    variant={location.pathname === '/account' ? 'secondary' : 'ghost'}
                     size="sm"
-                    className="w-full justify-start gap-2 h-7 text-xs pl-6"
+                    className="w-full justify-start gap-2 h-7 text-xs"
                   >
-                    <Eye className="h-3 w-3" />
-                    Visibilidade do Menu
+                    <User className="h-3 w-3" />
+                    Minha Conta
                   </Button>
                 </Link>
-              </div>
-            )}
-            <Link to="/account">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2 h-8 text-xs mb-1"
-              >
-                <Settings className="h-3.5 w-3.5" />
-                Minha Conta
-              </Button>
-            </Link>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Botão Sair - sempre visível fora do colapsável */}
             <Button
               variant="ghost"
               size="sm"
               onClick={handleSignOut}
-              className="w-full justify-start gap-2 h-8 text-xs text-destructive hover:text-destructive"
+              className="w-full justify-start gap-2 h-8 text-xs text-destructive hover:text-destructive mt-1"
             >
               <LogOut className="h-3.5 w-3.5" />
               Sair
@@ -473,27 +540,24 @@ export function FinanceSidebar() {
       {/* Collapsed footer */}
       {isCollapsed && (
         <div className="shrink-0 p-2 border-t border-sidebar-border flex flex-col items-center gap-1">
-          {isAdmin && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link to="/admin/users">
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <ShieldCheck className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Administração</TooltipContent>
-            </Tooltip>
-          )}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Link to="/account">
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </Link>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-9 w-9"
+                onClick={() => {
+                  toggleCollapse();
+                  // Expand settings section when opening sidebar via settings button
+                  if (isCollapsed) {
+                    setSettingsOpen(true);
+                  }
+                }}
+              >
+                <Cog className="h-4 w-4" />
+              </Button>
             </TooltipTrigger>
-            <TooltipContent side="right">Minha Conta</TooltipContent>
+            <TooltipContent side="right">Configurações</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
