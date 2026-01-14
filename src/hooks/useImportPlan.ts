@@ -12,7 +12,7 @@ import {
   ColumnMapping,
   ParseResult,
 } from '@/utils/importPlanParser';
-import { HierarchyLevel } from '@/types/hierarchy';
+import { HierarchyLevel, HierarchyLevelConfig, createHierarchyConfig, getHierarchyOrder } from '@/types/hierarchy';
 import { generateBudgetDistributionsFromLines } from '@/utils/generateBudgetDistributions';
 
 export type EntityType = 'client' | 'vehicle' | 'channel' | 'subdivision' | 'moment' | 'funnel_stage' | 'target' | 'medium' | 'format';
@@ -53,7 +53,7 @@ export interface ImportState {
   parseResult: ParseResult | null;
   planInfo: PlanInfo;
   unresolvedEntities: UnresolvedEntity[];
-  detectedHierarchy: HierarchyLevel[];
+  detectedHierarchy: HierarchyLevelConfig[];
   isCreating: boolean;
   isCheckingEntities: boolean;
   existingEntities: Record<EntityType, Array<{ id: string; name: string; parentId?: string }>>;
@@ -402,8 +402,8 @@ export function useImportPlan() {
   }, [state.unresolvedEntities]);
   
   // Step 5: Update hierarchy order
-  const updateHierarchyOrder = useCallback((newOrder: HierarchyLevel[]) => {
-    setState(prev => ({ ...prev, detectedHierarchy: newOrder }));
+  const updateHierarchyOrder = useCallback((newConfig: HierarchyLevelConfig[]) => {
+    setState(prev => ({ ...prev, detectedHierarchy: newConfig }));
   }, []);
   
   // Step 5: Confirm hierarchy

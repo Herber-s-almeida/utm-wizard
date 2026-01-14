@@ -1,7 +1,16 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates } from './useConfigData';
 import { useClients } from './useClients';
-import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPlural } from '@/types/hierarchy';
+import { 
+  HierarchyLevel, 
+  HierarchyLevelConfig,
+  DEFAULT_HIERARCHY_ORDER, 
+  getLevelLabel, 
+  getLevelLabelPlural,
+  getHierarchyOrder,
+  shouldAllocateBudget,
+  createHierarchyConfig,
+} from '@/types/hierarchy';
 
 export interface WizardPlanData {
   name: string;
@@ -34,8 +43,9 @@ export interface LevelAllocations {
 export interface WizardState {
   step: number;
   planData: WizardPlanData;
-  // Dynamic hierarchy support
-  hierarchyOrder: HierarchyLevel[];
+  // Dynamic hierarchy support with allocation configuration
+  hierarchyConfig: HierarchyLevelConfig[]; // New: includes allocate_budget per level
+  hierarchyOrder: HierarchyLevel[]; // Derived from hierarchyConfig for convenience
   levelAllocations: LevelAllocations;
   // All levels now use Record<string, BudgetAllocation[]> for uniform access
   // The key is the parent's reference_id, or 'root' for the first level
@@ -61,7 +71,8 @@ const createDefaultState = (): WizardState => ({
     objectives: [],
     kpis: {},
   },
-  hierarchyOrder: [], // Start with empty (General budget) - user can add levels
+  hierarchyConfig: [], // Start with empty (General budget) - user can add levels
+  hierarchyOrder: [], // Derived from hierarchyConfig
   levelAllocations: {},
   // All levels use Record for uniform dynamic access
   subdivisions: {},
@@ -143,10 +154,20 @@ export function useMediaPlanWizard() {
     }));
   }, []);
 
-  // Set hierarchy order (does not reset allocations - caller controls that)
+  // Set hierarchy configuration (includes allocate_budget per level)
+  const setHierarchyConfig = useCallback((config: HierarchyLevelConfig[]) => {
+    setState(prev => ({
+      ...prev,
+      hierarchyConfig: config,
+      hierarchyOrder: getHierarchyOrder(config),
+    }));
+  }, []);
+
+  // Set hierarchy order (backward compatibility - creates config with all allocate_budget = true)
   const setHierarchyOrder = useCallback((order: HierarchyLevel[]) => {
     setState(prev => ({
       ...prev,
+      hierarchyConfig: createHierarchyConfig(order, true),
       hierarchyOrder: order,
     }));
   }, []);
@@ -244,13 +265,19 @@ export function useMediaPlanWizard() {
     momentAllocations: Record<string, BudgetAllocation[]>,
     funnelAllocations: Record<string, BudgetAllocation[]>,
     initialStep: number = 0,
-    hierarchyOrder?: HierarchyLevel[]
+    hierarchyOrder?: HierarchyLevel[],
+    hierarchyConfig?: HierarchyLevelConfig[]
   ) => {
+    // Use provided config, or create from order with all allocate_budget = true
+    const config = hierarchyConfig ?? createHierarchyConfig(hierarchyOrder ?? [], true);
+    const order = hierarchyOrder ?? getHierarchyOrder(config);
+    
     setState({
       step: initialStep,
       planData,
       // Accept empty array as valid hierarchy (General budget)
-      hierarchyOrder: hierarchyOrder ?? [],
+      hierarchyConfig: config,
+      hierarchyOrder: order,
       levelAllocations: {},
       subdivisions: subdivisionAllocations,
       moments: momentAllocations,
@@ -299,6 +326,7 @@ export function useMediaPlanWizard() {
     getStepConfig,
     goToStep,
     updatePlanData,
+    setHierarchyConfig,
     setHierarchyOrder,
     getAllocationsForPath,
     setAllocationsForPath,

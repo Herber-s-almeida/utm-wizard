@@ -2,6 +2,28 @@
 
 export type HierarchyLevel = 'subdivision' | 'moment' | 'funnel_stage';
 
+// Configuration for each level in the hierarchy
+export interface HierarchyLevelConfig {
+  level: HierarchyLevel;
+  allocate_budget: boolean; // true = divide budget at this level; false = aggregate from children
+}
+
+// Convert HierarchyLevelConfig array to simple HierarchyLevel array
+export function getHierarchyOrder(config: HierarchyLevelConfig[]): HierarchyLevel[] {
+  return config.map(c => c.level);
+}
+
+// Check if a level should allocate budget
+export function shouldAllocateBudget(config: HierarchyLevelConfig[], level: HierarchyLevel): boolean {
+  const levelConfig = config.find(c => c.level === level);
+  return levelConfig?.allocate_budget ?? true; // Default to true for backward compatibility
+}
+
+// Create HierarchyLevelConfig array from simple HierarchyLevel array (backward compatibility)
+export function createHierarchyConfig(levels: HierarchyLevel[], allAllocate: boolean = true): HierarchyLevelConfig[] {
+  return levels.map(level => ({ level, allocate_budget: allAllocate }));
+}
+
 export const HIERARCHY_LEVEL_CONFIG: Record<HierarchyLevel, {
   label: string;
   labelPlural: string;
