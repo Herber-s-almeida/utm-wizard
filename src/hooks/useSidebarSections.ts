@@ -16,6 +16,8 @@ const DEFAULT_SECTIONS: Record<string, boolean> = {
   taxonomyDraftPlans: false,
   taxonomyActivePlans: false,
   taxonomyFinishedPlans: false,
+  // Library section - collapsible
+  library: true,
   clients: false,
   subdivisions: false,
   moments: false,
