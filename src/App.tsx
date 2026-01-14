@@ -98,6 +98,7 @@ function AppWithEnvironment() {
           <Route path="/media-plans/:id/taxonomy" element={<ProtectedRoute><SectionProtectedRoute section="taxonomy"><TaxonomyPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/taxonomy" element={<ProtectedRoute><SectionProtectedRoute section="taxonomy"><TaxonomyListPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/resources" element={<ProtectedRoute><SectionProtectedRoute section="media_resources"><MediaResourcesListPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/media-resources" element={<ProtectedRoute><SectionProtectedRoute section="media_resources"><MediaResourcesListPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans/:id/reports" element={<ProtectedRoute><SectionProtectedRoute section="reports"><MediaPlanReports /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><SectionProtectedRoute section="reports"><ReportsPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/reports/:id" element={<ProtectedRoute><SectionProtectedRoute section="reports"><MediaPlanReports /></SectionProtectedRoute></ProtectedRoute>} />
