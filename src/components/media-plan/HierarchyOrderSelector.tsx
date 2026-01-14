@@ -237,23 +237,23 @@ export function HierarchyOrderSelector({
     if (over && active.id !== over.id) {
       const oldIndex = selectedLevels.findIndex(config => config.level === active.id);
       const newIndex = selectedLevels.findIndex(config => config.level === over.id);
-      onOrderChange(arrayMove(selectedLevels, oldIndex, newIndex));
+      handleChange(arrayMove(selectedLevels, oldIndex, newIndex));
     }
   };
 
   const handleRemove = (level: HierarchyLevel) => {
-    onOrderChange(selectedLevels.filter(config => config.level !== level));
+    handleChange(selectedLevels.filter(config => config.level !== level));
   };
 
   const handleAdd = (level: HierarchyLevel) => {
     if (selectedLevels.length < 3) {
       // Default to allocate_budget = true for new levels
-      onOrderChange([...selectedLevels, { level, allocate_budget: true }]);
+      handleChange([...selectedLevels, { level, allocate_budget: true }]);
     }
   };
 
   const handleToggleAllocate = (level: HierarchyLevel) => {
-    onOrderChange(selectedLevels.map(config => 
+    handleChange(selectedLevels.map(config => 
       config.level === level 
         ? { ...config, allocate_budget: !config.allocate_budget }
         : config
