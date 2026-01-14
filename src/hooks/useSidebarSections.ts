@@ -3,6 +3,13 @@ import { useState, useEffect, useCallback } from 'react';
 const STORAGE_KEY = 'sidebar-sections-state';
 
 const DEFAULT_SECTIONS: Record<string, boolean> = {
+  // Section headers - collapsible
+  reportsSection: true,
+  financeSection: true,
+  mediaPlansSection: true,
+  mediaResourcesSection: true,
+  taxonomySection: true,
+  // Inner sections
   reports: true,
   mediaPlans: true,
   draftPlans: false,

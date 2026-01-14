@@ -525,64 +525,98 @@ export function AppSidebar() {
         {/* RELATÓRIOS */}
         {canView('reports') && !isMenuHidden('reports') && (
           <div className="mb-4">
-            <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Relatórios
-            </h3>
-
-            <div className="flex items-center">
-              <Link to="/reports" className="flex-1">
-                <Button 
-                  variant={location.pathname.startsWith('/reports') ? 'secondary' : 'ghost'} 
-                  size="sm" 
-                  className="w-full justify-start gap-2 h-8 text-xs"
-                >
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  <span>Dashboard de Performance</span>
-                </Button>
-              </Link>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link to="/reports">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                      <Eye className="h-3.5 w-3.5" />
+            <Collapsible open={openSections.reportsSection} onOpenChange={() => toggleSection('reportsSection')}>
+              <CollapsibleTrigger asChild>
+                <button className="w-full px-3 py-1.5 flex items-center justify-between hover:bg-muted/50 rounded-md transition-colors">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Relatórios
+                  </span>
+                  {openSections.reportsSection ? (
+                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="flex items-center">
+                  <Link to="/reports" className="flex-1">
+                    <Button 
+                      variant={location.pathname.startsWith('/reports') ? 'secondary' : 'ghost'} 
+                      size="sm" 
+                      className="w-full justify-start gap-2 h-8 text-xs"
+                    >
+                      <BarChart3 className="h-3.5 w-3.5" />
+                      <span>Dashboard de Performance</span>
                     </Button>
                   </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">Ver todos os relatórios</TooltipContent>
-              </Tooltip>
-            </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link to="/reports">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Ver todos os relatórios</TooltipContent>
+                  </Tooltip>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
         )}
 
         {/* FINANCE MANAGER */}
         {canView('finance') && (
         <div className="mb-4">
-          <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Financeiro
-          </h3>
-
-          <div className="flex items-center">
-            <Link to="/finance" className="flex-1">
-              <Button 
-                variant={location.pathname.startsWith('/finance') ? 'secondary' : 'ghost'} 
-                size="sm" 
-                className="w-full justify-start gap-2 h-8 text-xs text-emerald-600 hover:text-emerald-700"
-              >
-                <Wallet className="h-3.5 w-3.5" />
-                <span>Finance Manager</span>
-              </Button>
-            </Link>
-          </div>
+          <Collapsible open={openSections.financeSection} onOpenChange={() => toggleSection('financeSection')}>
+            <CollapsibleTrigger asChild>
+              <button className="w-full px-3 py-1.5 flex items-center justify-between hover:bg-muted/50 rounded-md transition-colors">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Financeiro
+                </span>
+                {openSections.financeSection ? (
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                )}
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="flex items-center">
+                <Link to="/finance" className="flex-1">
+                  <Button 
+                    variant={location.pathname.startsWith('/finance') ? 'secondary' : 'ghost'} 
+                    size="sm" 
+                    className="w-full justify-start gap-2 h-8 text-xs text-emerald-600 hover:text-emerald-700"
+                  >
+                    <Wallet className="h-3.5 w-3.5" />
+                    <span>Finance Manager</span>
+                  </Button>
+                </Link>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
         )}
 
         {/* PLANOS DE MÍDIA */}
         {canView('media_plans') && (
         <div className="mb-4">
-          <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Gerenciar Planos de Mídia
-          </h3>
-
+          <Collapsible open={openSections.mediaPlansSection} onOpenChange={() => toggleSection('mediaPlansSection')}>
+            <CollapsibleTrigger asChild>
+              <button className="w-full px-3 py-1.5 flex items-center justify-between hover:bg-muted/50 rounded-md transition-colors">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Gerenciar Planos de Mídia
+                </span>
+                {openSections.mediaPlansSection ? (
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                )}
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
           {/* Planos de Mídia - Expansível */}
           <Collapsible open={openSections.mediaPlans} onOpenChange={() => toggleSection('mediaPlans')}>
             <div className="flex items-center">
@@ -709,17 +743,29 @@ export function AppSidebar() {
               </Link>
             </CollapsibleContent>
           </Collapsible>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
         )}
 
         {/* RECURSOS DE MÍDIA */}
         {canView('media_resources') && !isMenuHidden('media_resources') && (
         <div className="mb-4">
-          <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-            <Palette className="h-3 w-3" />
-            Recursos de Mídia
-          </h3>
-
+          <Collapsible open={openSections.mediaResourcesSection} onOpenChange={() => toggleSection('mediaResourcesSection')}>
+            <CollapsibleTrigger asChild>
+              <button className="w-full px-3 py-1.5 flex items-center justify-between hover:bg-muted/50 rounded-md transition-colors">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                  <Palette className="h-3 w-3" />
+                  Recursos de Mídia
+                </span>
+                {openSections.mediaResourcesSection ? (
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                )}
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
           {/* Planos de Mídia para recursos */}
           <Collapsible open={openSections.mediaResources} onOpenChange={() => toggleSection('mediaResources')}>
             <CollapsibleTrigger asChild>
@@ -822,17 +868,29 @@ export function AppSidebar() {
               </Collapsible>
             </CollapsibleContent>
           </Collapsible>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
         )}
 
         {/* TAXONOMIA */}
         {canView('taxonomy') && !isMenuHidden('taxonomy') && (
         <div className="mb-4">
-          <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-            <Link2 className="h-3 w-3" />
-            Taxonomia
-          </h3>
-
+          <Collapsible open={openSections.taxonomySection} onOpenChange={() => toggleSection('taxonomySection')}>
+            <CollapsibleTrigger asChild>
+              <button className="w-full px-3 py-1.5 flex items-center justify-between hover:bg-muted/50 rounded-md transition-colors">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                  <Link2 className="h-3 w-3" />
+                  Taxonomia
+                </span>
+                {openSections.taxonomySection ? (
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                )}
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
           <Collapsible open={openSections.taxonomy} onOpenChange={() => toggleSection('taxonomy')}>
             <CollapsibleTrigger asChild>
               <Button 
@@ -932,6 +990,8 @@ export function AppSidebar() {
                   )}
                 </CollapsibleContent>
               </Collapsible>
+            </CollapsibleContent>
+          </Collapsible>
             </CollapsibleContent>
           </Collapsible>
         </div>
