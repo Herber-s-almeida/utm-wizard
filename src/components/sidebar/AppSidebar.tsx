@@ -1514,6 +1514,14 @@ export function AppSidebar() {
             </CollapsibleContent>
           </Collapsible>
 
+          {/* Objetivos de Mídia */}
+          <Link to="/config/objectives">
+            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
+              <Target className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Objetivos de Mídia</span>
+            </Button>
+          </Link>
+
           {/* Status */}
           <Collapsible open={openSections.statuses} onOpenChange={() => toggleSection('statuses')}>
             <div className="group flex items-center min-w-0">

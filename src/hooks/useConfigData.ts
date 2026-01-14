@@ -104,6 +104,16 @@ export interface CreativeTemplate {
   is_active?: boolean;
 }
 
+export interface MediaObjective {
+  id: string;
+  name: string;
+  description?: string | null;
+  slug?: string | null;
+  user_id: string;
+  deleted_at?: string | null;
+  is_active?: boolean;
+}
+
 // Hook for Subdivisions
 export function useSubdivisions() {
   const { user } = useAuth();
@@ -728,4 +738,80 @@ export function useMediaPlans() {
   });
 
   return { draftPlans, activePlans, finishedPlans, trashedPlans, softDelete, restore, permanentDelete, updateStatus };
+}
+
+// Hook for Media Objectives
+export function useMediaObjectives() {
+  const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
+  const queryClient = useQueryClient();
+  const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('media_objectives', 'media_objectives', 'Objetivo');
+
+  const query = useQuery({
+    queryKey: ['media_objectives', effectiveUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('media_objectives')
+        .select('*')
+        .eq('user_id', effectiveUserId!)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data as MediaObjective[];
+    },
+    enabled: !!effectiveUserId,
+  });
+
+  const create = useMutation({
+    mutationFn: async ({ name, description }: { name: string; description?: string }) => {
+      const { data, error } = await supabase
+        .from('media_objectives')
+        .insert({ 
+          name, 
+          description: description || null, 
+          user_id: user!.id 
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => { 
+      queryClient.invalidateQueries({ queryKey: ['media_objectives'] }); 
+      toast.success('Objetivo criado!'); 
+    },
+  });
+
+  const update = useMutation({
+    mutationFn: async ({ id, name, description }: { id: string; name: string; description?: string }) => {
+      const { error } = await supabase
+        .from('media_objectives')
+        .update({ name, description: description || null })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { 
+      queryClient.invalidateQueries({ queryKey: ['media_objectives'] }); 
+      toast.success('Objetivo atualizado!'); 
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      await softDelete.mutateAsync(id);
+    },
+  });
+
+  const { active, archived } = filterSoftDeleteItems(query.data);
+
+  return { 
+    ...query, 
+    activeItems: active,
+    archivedItems: archived,
+    create, 
+    update, 
+    remove,
+    softDelete,
+    restore,
+    permanentDelete,
+  };
 }

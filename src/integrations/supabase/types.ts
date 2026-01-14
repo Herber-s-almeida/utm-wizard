@@ -1850,6 +1850,7 @@ export type Database = {
           moment_id: string | null
           notes: string | null
           objective: string | null
+          objective_id: string | null
           percentage_of_plan: number | null
           placement: string | null
           platform: string
@@ -1894,6 +1895,7 @@ export type Database = {
           moment_id?: string | null
           notes?: string | null
           objective?: string | null
+          objective_id?: string | null
           percentage_of_plan?: number | null
           placement?: string | null
           platform: string
@@ -1938,6 +1940,7 @@ export type Database = {
           moment_id?: string | null
           notes?: string | null
           objective?: string | null
+          objective_id?: string | null
           percentage_of_plan?: number | null
           placement?: string | null
           platform?: string
@@ -2001,6 +2004,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "media_lines_objective_id_fkey"
+            columns: ["objective_id"]
+            isOneToOne: false
+            referencedRelation: "media_objectives"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "media_lines_status_id_fkey"
             columns: ["status_id"]
             isOneToOne: false
@@ -2029,6 +2039,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      media_objectives: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          slug: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          slug?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          slug?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       media_plan_versions: {
         Row: {

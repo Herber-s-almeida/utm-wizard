@@ -28,7 +28,8 @@ export type SoftDeleteTableName =
   | 'behavioral_segmentations'
   | 'creative_templates'
   | 'custom_kpis'
-  | 'clients';
+  | 'clients'
+  | 'media_objectives';
 
 // Tables that should check for usage before permanent delete
 const tablesWithUsageCheck: SoftDeleteTableName[] = [
