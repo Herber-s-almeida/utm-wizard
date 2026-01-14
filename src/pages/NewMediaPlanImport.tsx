@@ -155,7 +155,7 @@ export default function NewMediaPlanImport() {
         </div>
 
         {/* Stepper */}
-        <WizardStepper steps={STEPS} currentStep={state.step - 1} />
+        <WizardStepper steps={STEPS} currentStep={state.step} />
 
         {/* Content */}
         <Card>
