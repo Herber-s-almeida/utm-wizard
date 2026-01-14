@@ -16,7 +16,8 @@ import {
   Target,
   Subdivision,
   Moment,
-  FunnelStage 
+  FunnelStage,
+  useMediaObjectives 
 } from '@/hooks/useConfigData';
 import { Status } from '@/hooks/useStatuses';
 import { format, differenceInDays, startOfMonth, endOfMonth, parseISO, eachMonthOfInterval, min, max } from 'date-fns';
@@ -59,7 +60,7 @@ import {
 } from '@/utils/hierarchyDataBuilder';
 
 // Columns that can be toggled (excludes: Código, Orçamento, Status, Início, Fim, Ações)
-type ToggleableColumn = 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target' | 'creatives';
+type ToggleableColumn = 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target' | 'objective' | 'creatives';
 
 // Build toggleable columns with dynamic labels from hierarchy config
 const getToggleableColumns = (): { key: ToggleableColumn; label: string }[] => [
@@ -70,6 +71,7 @@ const getToggleableColumns = (): { key: ToggleableColumn; label: string }[] => [
   { key: 'vehicle', label: 'Veículo' },
   { key: 'channel', label: 'Canal' },
   { key: 'target', label: 'Segmentação' },
+  { key: 'objective', label: 'Objetivo' },
   { key: 'creatives', label: 'Criativos' },
 ];
 
@@ -221,6 +223,15 @@ export function HierarchicalMediaTable({
   const [editValue, setEditValue] = useState<string>('');
   const [validatingLineId, setValidatingLineId] = useState<string | null>(null);
 
+  // Fetch media objectives
+  const { data: mediaObjectives } = useMediaObjectives();
+
+  // Helper to get objective name
+  const getObjectiveName = useCallback((objectiveId: string | null | undefined): string => {
+    if (!objectiveId) return '-';
+    return mediaObjectives?.find(o => o.id === objectiveId)?.name || '-';
+  }, [mediaObjectives]);
+
   // View mode: 'grouped' (hierarchical) or 'flat' (one line per row)
   const [viewMode, setViewMode] = useState<'grouped' | 'flat'>('grouped');
 
@@ -326,6 +337,7 @@ export function HierarchicalMediaTable({
     vehicle: true,
     channel: true,
     target: true,
+    objective: true,
     creatives: true,
   });
 
@@ -1248,6 +1260,11 @@ export function HierarchicalMediaTable({
             ({info.target})
           </div>
         )}
+        {visibleColumns.objective && (
+          <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('objective') }} title={getObjectiveName(line.objective_id)}>
+            {getObjectiveName(line.objective_id)}
+          </div>
+        )}
         
         {/* Editable Budget */}
         <EditableCell
@@ -1563,6 +1580,7 @@ export function HierarchicalMediaTable({
     if (visibleColumns.vehicle) width += getWidth('vehicle');
     if (visibleColumns.channel) width += getWidth('channel');
     if (visibleColumns.target) width += getWidth('target');
+    if (visibleColumns.objective) width += getWidth('objective');
     if (visibleColumns.creatives) width += getWidth('creatives');
     return width;
   };
@@ -2034,6 +2052,11 @@ export function HierarchicalMediaTable({
                 Segmentação
               </ResizableColumnHeader>
             )}
+            {visibleColumns.objective && (
+              <ResizableColumnHeader columnKey="objective" width={getWidth('objective')} onResize={handleResize} className="p-3 border-r">
+                Objetivo
+              </ResizableColumnHeader>
+            )}
             <ResizableColumnHeader columnKey="budget" width={getWidth('budget')} onResize={handleResize} className="p-3 border-r">
               Orçamento
             </ResizableColumnHeader>
@@ -2133,6 +2156,11 @@ export function HierarchicalMediaTable({
                     {visibleColumns.target && (
                       <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('target') }} title={info.target}>
                         ({info.target})
+                      </div>
+                    )}
+                    {visibleColumns.objective && (
+                      <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('objective') }} title={getObjectiveName(line.objective_id)}>
+                        {getObjectiveName(line.objective_id)}
                       </div>
                     )}
                     

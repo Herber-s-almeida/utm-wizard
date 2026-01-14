@@ -9,6 +9,7 @@ export type ColumnKey =
   | 'vehicle' 
   | 'channel' 
   | 'target' 
+  | 'objective'
   | 'budget' 
   | 'creatives' 
   | 'status' 
@@ -28,6 +29,7 @@ export interface ColumnWidths {
   vehicle: number;
   channel: number;
   target: number;
+  objective: number;
   budget: number;
   creatives: number;
   status: number;
@@ -48,6 +50,7 @@ const DEFAULT_WIDTHS: ColumnWidths = {
   vehicle: 110,
   channel: 100,
   target: 130,
+  objective: 120,
   budget: 120,
   creatives: 90,
   status: 100,
