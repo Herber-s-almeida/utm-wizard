@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Users } from "lucide-react";
+import { Search, Users, UserPlus } from "lucide-react";
 import { UsersTable } from "@/components/admin/UsersTable";
+import { InviteSystemUserDialog } from "@/components/admin/InviteSystemUserDialog";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 export default function AdminUsers() {
   const [search, setSearch] = useState("");
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const { data: users, isLoading } = useAdminUsers();
 
   const filteredUsers = users?.filter((user) => {
@@ -22,16 +25,22 @@ export default function AdminUsers() {
   return (
     <DashboardLayout>
       <div className="container mx-auto py-6 px-4 max-w-6xl">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <Users className="h-5 w-5 text-primary" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold">Usuários do Sistema</h1>
+              <p className="text-sm text-muted-foreground">
+                Gerencie os usuários, permissões e acessos
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold">Usuários do Sistema</h1>
-            <p className="text-sm text-muted-foreground">
-              Gerencie os usuários, permissões e acessos
-            </p>
-          </div>
+          <Button onClick={() => setInviteDialogOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Convidar Usuário
+          </Button>
         </div>
 
         <div className="mb-6">
@@ -60,6 +69,11 @@ export default function AdminUsers() {
             <p>Nenhum usuário encontrado</p>
           </div>
         )}
+
+        <InviteSystemUserDialog
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+        />
       </div>
     </DashboardLayout>
   );

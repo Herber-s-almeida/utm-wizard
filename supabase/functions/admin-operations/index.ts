@@ -185,6 +185,58 @@ serve(async (req) => {
         );
       }
 
+      case "invite_user": {
+        const { email, makeAdmin } = payload;
+        
+        if (!email || typeof email !== "string") {
+          return new Response(
+            JSON.stringify({ error: "Email é obrigatório" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Check if email already exists
+        const { data: authUsers } = await adminClient.auth.admin.listUsers();
+        const existingUser = authUsers?.users.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase()
+        );
+
+        if (existingUser) {
+          return new Response(
+            JSON.stringify({ error: "Este email já está cadastrado no sistema" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Send invitation
+        const { data: inviteData, error: inviteError } = await adminClient.auth.admin
+          .inviteUserByEmail(email, {
+            redirectTo: `${supabaseUrl}/auth`,
+          });
+
+        if (inviteError) {
+          console.error("Invite error:", inviteError);
+          throw inviteError;
+        }
+
+        // If makeAdmin is true, create system_role entry
+        if (makeAdmin && inviteData.user) {
+          const { error: roleError } = await adminClient
+            .from("system_roles")
+            .insert({ user_id: inviteData.user.id, role: "system_admin" });
+          
+          if (roleError) {
+            console.error("Role creation error:", roleError);
+            // Don't throw, user was still created
+          }
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, user: inviteData.user }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: "Unknown action" }),

@@ -120,3 +120,20 @@ export function useDeleteUser() {
     },
   });
 }
+
+export function useInviteSystemUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ email, makeAdmin }: { email: string; makeAdmin?: boolean }) => {
+      return callAdminOperation("invite_user", { email, makeAdmin });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success("Convite enviado com sucesso!");
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao enviar convite: ${error.message}`);
+    },
+  });
+}
