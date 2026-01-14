@@ -112,8 +112,23 @@ export default function NewMediaPlanImport() {
   // Get parent vehicle for channel creation
   const getParentVehicle = () => {
     if (!creatingEntity?.parentContext?.name) return null;
-    const vehicleName = creatingEntity.parentContext.name;
-    return vehicles.find(v => v.name.toLowerCase() === vehicleName.toLowerCase());
+    const vehicleName = creatingEntity.parentContext.name.toLowerCase();
+    
+    // First, check if the vehicle was resolved in unresolvedEntities
+    const resolvedVehicle = state.unresolvedEntities.find(
+      e => e.type === 'vehicle' && 
+           e.originalName.toLowerCase() === vehicleName &&
+           e.status === 'resolved' &&
+           e.resolvedId
+    );
+    
+    if (resolvedVehicle?.resolvedId) {
+      // Find the full vehicle data by the resolved ID
+      return vehicles.find(v => v.id === resolvedVehicle.resolvedId);
+    }
+    
+    // Fallback: find by original name
+    return vehicles.find(v => v.name.toLowerCase() === vehicleName);
   };
 
   return (
