@@ -155,6 +155,53 @@
   }
 }
 
+/* Synchronized scrollbar styles for media plan table */
+.scrollbar-top {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.4) hsl(var(--muted));
+}
+
+.scrollbar-top::-webkit-scrollbar {
+  height: 10px;
+}
+
+.scrollbar-top::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 5px;
+}
+
+.scrollbar-top::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.4);
+  border-radius: 5px;
+  border: 2px solid hsl(var(--muted));
+}
+
+.scrollbar-top::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.6);
+}
+
+.scrollbar-main {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) hsl(var(--muted) / 0.3);
+}
+
+.scrollbar-main::-webkit-scrollbar {
+  height: 8px;
+}
+
+.scrollbar-main::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.3);
+}
+
+.scrollbar-main::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 4px;
+}
+
+.scrollbar-main::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
 @layer components {
   .glass {
     @apply bg-card/80 backdrop-blur-xl border border-border/50;
