@@ -371,6 +371,15 @@ export function useImportPlan() {
     }));
   }, []);
   
+  // Step 4: Unresolve entity (reset to pending)
+  const unresolveEntity = useCallback((entityId: string) => {
+    setState(prev => ({
+      ...prev,
+      unresolvedEntities: prev.unresolvedEntities.map(e =>
+        e.id === entityId ? { ...e, status: 'pending' as const, resolvedId: undefined } : e
+      ),
+    }));
+  }, []);
   
   // Step 4: Set entity as creating
   const setEntityCreating = useCallback((entityId: string, creating: boolean) => {
@@ -664,6 +673,7 @@ export function useImportPlan() {
     updatePlanInfo,
     confirmPlanInfo,
     resolveEntity,
+    unresolveEntity,
     setEntityCreating,
     addCreatedEntity,
     confirmEntityResolution,

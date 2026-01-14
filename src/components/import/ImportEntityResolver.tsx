@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, AlertTriangle, Plus, ChevronDown, ChevronRight, ArrowRight } from 'lucide-react';
+import { Check, AlertTriangle, Plus, ChevronDown, ChevronRight, ArrowRight, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 interface ImportEntityResolverProps {
   unresolvedEntities: UnresolvedEntity[];
   onResolve: (entityId: string, resolvedId: string) => void;
+  onUnresolve: (entityId: string) => void;
   onCreateEntity: (entity: UnresolvedEntity) => void;
   existingEntities: Record<EntityType, Array<{ id: string; name: string; parentId?: string }>>;
 }
@@ -42,6 +43,7 @@ const ENTITY_SINGULAR: Record<EntityType, string> = {
 export function ImportEntityResolver({
   unresolvedEntities,
   onResolve,
+  onUnresolve,
   onCreateEntity,
   existingEntities,
 }: ImportEntityResolverProps) {
@@ -130,6 +132,7 @@ export function ImportEntityResolver({
                     allExistingEntities={existingEntities}
                     unresolvedEntities={unresolvedEntities}
                     onResolve={onResolve}
+                    onUnresolve={onUnresolve}
                     onCreateEntity={onCreateEntity}
                   />
                 ))}
@@ -148,6 +151,7 @@ function EntityRow({
   allExistingEntities,
   unresolvedEntities,
   onResolve,
+  onUnresolve,
   onCreateEntity,
 }: {
   entity: UnresolvedEntity;
@@ -155,6 +159,7 @@ function EntityRow({
   allExistingEntities: Record<EntityType, Array<{ id: string; name: string; parentId?: string }>>;
   unresolvedEntities: UnresolvedEntity[];
   onResolve: (entityId: string, resolvedId: string) => void;
+  onUnresolve: (entityId: string) => void;
   onCreateEntity: (entity: UnresolvedEntity) => void;
 }) {
   const isResolved = entity.status === 'resolved';
@@ -270,6 +275,18 @@ function EntityRow({
             )}
             
             {isResolved && <Badge variant="outline" className="text-xs text-green-600">Resolvido</Badge>}
+            
+            {isResolved && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0 ml-1 text-muted-foreground hover:text-foreground"
+                onClick={() => onUnresolve(entity.id)}
+                title="Alterar seleção"
+              >
+                <Pencil className="w-3 h-3" />
+              </Button>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">
             Afeta {entity.affectedLines.length} linha(s): {entity.affectedLines.slice(0, 5).join(', ')}
