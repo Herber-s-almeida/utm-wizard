@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Calendar, DollarSign, Layers, FileSpreadsheet, Check, Building2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { format } from 'date-fns';
+import { HIERARCHY_LEVEL_CONFIG } from '@/types/hierarchy';
 import { useImportPlan, UnresolvedEntity, EntityType } from '@/hooks/useImportPlan';
 import { ImportFileUpload } from '@/components/import/ImportFileUpload';
 import { ImportColumnMapper } from '@/components/import/ImportColumnMapper';
@@ -213,12 +215,144 @@ export default function NewMediaPlanImport() {
             )}
 
             {state.step === 6 && (
-              <div className="text-center py-8 space-y-4">
-                <h2 className="text-xl font-semibold">Pronto para criar!</h2>
-                <p className="text-muted-foreground">
-                  Plano: {state.planInfo.name}<br />
-                  Linhas: {state.parseResult?.lines.length || 0}
-                </p>
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h2 className="text-xl font-semibold">Confirmar Importação</h2>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Revise as informações antes de criar o plano
+                  </p>
+                </div>
+
+                {/* Card: Resumo do Plano */}
+                <div className="border-2 border-primary/20 rounded-lg p-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-3 h-3 rounded-full bg-primary" />
+                    <h3 className="font-display text-lg font-semibold">Resumo do Plano</h3>
+                    <div className="flex-1 h-[2px] bg-gradient-to-r from-primary/50 to-transparent rounded-full" />
+                    <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
+                      <Check className="w-4 h-4 text-success" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Nome do Plano + Slug UTM */}
+                    <div className="bg-muted/50 rounded-xl p-4 border border-border/50">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wide">Nome do Plano</span>
+                      <p className="font-display text-xl font-semibold mt-1">{state.planInfo.name}</p>
+                      {state.planInfo.utmCampaignSlug && (
+                        <span className="text-xs text-muted-foreground">
+                          Slug UTM: {state.planInfo.utmCampaignSlug}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Grid: Cliente + Datas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Cliente */}
+                      <div className="bg-muted/50 rounded-xl p-4 border border-border/50">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground uppercase tracking-wide">Cliente</span>
+                        </div>
+                        <p className="font-semibold text-lg">{state.planInfo.clientName || 'Nenhum'}</p>
+                      </div>
+
+                      {/* Datas */}
+                      <div className="bg-muted/50 rounded-xl p-4 border border-border/50 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-primary" />
+                          <span className="text-xs text-muted-foreground uppercase">Início</span>
+                          <span className="ml-auto font-semibold">
+                            {state.planInfo.startDate 
+                              ? format(state.planInfo.startDate, 'dd/MM/yyyy') 
+                              : calculatedStartDate
+                                ? format(calculatedStartDate, 'dd/MM/yyyy')
+                                : '-'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-primary" />
+                          <span className="text-xs text-muted-foreground uppercase">Término</span>
+                          <span className="ml-auto font-semibold">
+                            {state.planInfo.endDate 
+                              ? format(state.planInfo.endDate, 'dd/MM/yyyy') 
+                              : calculatedEndDate
+                                ? format(calculatedEndDate, 'dd/MM/yyyy')
+                                : '-'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Orçamento */}
+                    <div className="bg-primary/5 rounded-xl p-4 border border-primary/20">
+                      <div className="flex items-center gap-2 mb-1">
+                        <DollarSign className="h-4 w-4 text-primary" />
+                        <span className="text-xs text-muted-foreground uppercase">Orçamento Total</span>
+                      </div>
+                      <p className="font-display text-3xl font-bold text-primary">
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                          minimumFractionDigits: 0,
+                        }).format(
+                          state.planInfo.useBudgetFromFile 
+                            ? calculatedBudget 
+                            : state.planInfo.totalBudget
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card: Hierarquia */}
+                <div className="border border-border/50 rounded-lg p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Layers className="h-4 w-4 text-primary" />
+                    <h3 className="font-semibold">Hierarquia do Orçamento</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {state.detectedHierarchy.length > 0
+                      ? state.detectedHierarchy
+                          .map(h => HIERARCHY_LEVEL_CONFIG[h.level].label)
+                          .join(' → ')
+                      : 'Orçamento geral (sem divisões)'}
+                  </p>
+                </div>
+
+                {/* Card: Estatísticas da Importação */}
+                <div className="border border-border/50 rounded-lg p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <FileSpreadsheet className="h-4 w-4 text-primary" />
+                    <h3 className="font-semibold">Dados Importados</h3>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-3 bg-muted/50 rounded-lg">
+                      <p className="text-2xl font-bold text-primary">
+                        {state.parseResult?.lines.length || 0}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Linhas</p>
+                    </div>
+                    <div className="text-center p-3 bg-muted/50 rounded-lg">
+                      <p className="text-2xl font-bold text-primary">
+                        {new Set(state.parseResult?.lines.map(l => l.vehicleName).filter(Boolean) || []).size}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Veículos</p>
+                    </div>
+                    <div className="text-center p-3 bg-muted/50 rounded-lg">
+                      <p className="text-2xl font-bold text-primary">
+                        {new Set(state.parseResult?.lines.map(l => l.channelName).filter(Boolean) || []).size}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Canais</p>
+                    </div>
+                    <div className="text-center p-3 bg-muted/50 rounded-lg">
+                      <p className="text-2xl font-bold text-primary">
+                        {state.unresolvedEntities.filter(e => e.status === 'resolved').length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Entidades Resolvidas</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
