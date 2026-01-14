@@ -30,7 +30,7 @@ import { KPI_OPTIONS } from '@/types/media';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 import { CreateKpiDialog } from '@/components/media-plan/CreateKpiDialog';
 import { useCustomKpis } from '@/hooks/useCustomKpis';
-import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPlural, HIERARCHY_LEVEL_CONFIG } from '@/types/hierarchy';
+import { HierarchyLevel, HierarchyLevelConfig, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPlural, HIERARCHY_LEVEL_CONFIG, createHierarchyConfig, getHierarchyOrder } from '@/types/hierarchy';
 import {
   AlertDialog,
   AlertDialogAction,

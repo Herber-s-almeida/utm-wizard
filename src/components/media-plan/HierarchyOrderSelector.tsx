@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -16,17 +16,32 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Layers, Clock, Filter, GripVertical, X, Plus, Check } from 'lucide-react';
+import { Layers, Clock, Filter, GripVertical, X, Plus, Check, DollarSign, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { HierarchyLevel, HIERARCHY_LEVEL_CONFIG } from '@/types/hierarchy';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { HierarchyLevel, HierarchyLevelConfig, HIERARCHY_LEVEL_CONFIG } from '@/types/hierarchy';
 
+// Backward compatible interface - accepts HierarchyLevel[] OR HierarchyLevelConfig[]
 interface HierarchyOrderSelectorProps {
-  selectedLevels: HierarchyLevel[];
+  selectedLevels: HierarchyLevelConfig[] | HierarchyLevel[];
   onOrderChange: (levels: HierarchyLevel[]) => void;
+  /** New callback that includes allocate_budget config - use this for full config support */
+  onConfigChange?: (config: HierarchyLevelConfig[]) => void;
   disabled?: boolean;
+}
+
+// Helper to normalize input to HierarchyLevelConfig[]
+function normalizeToConfig(levels: HierarchyLevelConfig[] | HierarchyLevel[]): HierarchyLevelConfig[] {
+  if (levels.length === 0) return [];
+  if (typeof levels[0] === 'string') {
+    return (levels as HierarchyLevel[]).map(level => ({ level, allocate_budget: true }));
+  }
+  return levels as HierarchyLevelConfig[];
 }
 
 const ICON_MAP = {
@@ -37,17 +52,19 @@ const ICON_MAP = {
 
 // Sortable item component
 function SortableLevel({ 
-  level, 
+  levelConfig, 
   index, 
   onRemove,
+  onToggleAllocate,
   disabled,
 }: { 
-  level: HierarchyLevel; 
+  levelConfig: HierarchyLevelConfig; 
   index: number;
   onRemove: () => void;
+  onToggleAllocate: () => void;
   disabled?: boolean;
 }) {
-  const config = HIERARCHY_LEVEL_CONFIG[level];
+  const config = HIERARCHY_LEVEL_CONFIG[levelConfig.level];
   const Icon = ICON_MAP[config.icon as keyof typeof ICON_MAP];
   
   const {
@@ -57,7 +74,7 @@ function SortableLevel({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: level, disabled });
+  } = useSortable({ id: levelConfig.level, disabled });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -101,6 +118,34 @@ function SortableLevel({
         <p className="font-medium">{config.label}</p>
         <p className="text-xs text-muted-foreground">{config.description}</p>
       </div>
+      
+      {/* Budget allocation toggle */}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/50 border">
+              {levelConfig.allocate_budget ? (
+                <DollarSign className="h-4 w-4 text-primary" />
+              ) : (
+                <Calculator className="h-4 w-4 text-muted-foreground" />
+              )}
+              <Switch
+                checked={levelConfig.allocate_budget}
+                onCheckedChange={onToggleAllocate}
+                disabled={disabled}
+                className="data-[state=checked]:bg-primary"
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="max-w-[200px]">
+            {levelConfig.allocate_budget ? (
+              <p><strong>Alocar orçamento:</strong> Você define a divisão do orçamento neste nível</p>
+            ) : (
+              <p><strong>Calcular:</strong> O valor será calculado com base nas linhas de mídia</p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       
       {!disabled && (
         <Button
@@ -156,10 +201,19 @@ function AvailableLevelCard({
 }
 
 export function HierarchyOrderSelector({
-  selectedLevels,
+  selectedLevels: rawSelectedLevels,
   onOrderChange,
+  onConfigChange,
   disabled,
 }: HierarchyOrderSelectorProps) {
+  // Normalize input to always work with HierarchyLevelConfig[]
+  const selectedLevels = useMemo(() => normalizeToConfig(rawSelectedLevels), [rawSelectedLevels]);
+
+  // Helper to call both callbacks
+  const handleChange = useCallback((newConfig: HierarchyLevelConfig[]) => {
+    onOrderChange(newConfig.map(c => c.level));
+    onConfigChange?.(newConfig);
+  }, [onOrderChange, onConfigChange]);
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -167,29 +221,43 @@ export function HierarchyOrderSelector({
     })
   );
 
+  // Get selected level types for filtering available levels
+  const selectedLevelTypes = useMemo(() => {
+    return selectedLevels.map(config => config.level);
+  }, [selectedLevels]);
+
   const availableLevels = useMemo(() => {
     const allLevels: HierarchyLevel[] = ['subdivision', 'moment', 'funnel_stage'];
-    return allLevels.filter(level => !selectedLevels.includes(level));
-  }, [selectedLevels]);
+    return allLevels.filter(level => !selectedLevelTypes.includes(level));
+  }, [selectedLevelTypes]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = selectedLevels.indexOf(active.id as HierarchyLevel);
-      const newIndex = selectedLevels.indexOf(over.id as HierarchyLevel);
+      const oldIndex = selectedLevels.findIndex(config => config.level === active.id);
+      const newIndex = selectedLevels.findIndex(config => config.level === over.id);
       onOrderChange(arrayMove(selectedLevels, oldIndex, newIndex));
     }
   };
 
   const handleRemove = (level: HierarchyLevel) => {
-    onOrderChange(selectedLevels.filter(l => l !== level));
+    onOrderChange(selectedLevels.filter(config => config.level !== level));
   };
 
   const handleAdd = (level: HierarchyLevel) => {
     if (selectedLevels.length < 3) {
-      onOrderChange([...selectedLevels, level]);
+      // Default to allocate_budget = true for new levels
+      onOrderChange([...selectedLevels, { level, allocate_budget: true }]);
     }
+  };
+
+  const handleToggleAllocate = (level: HierarchyLevel) => {
+    onOrderChange(selectedLevels.map(config => 
+      config.level === level 
+        ? { ...config, allocate_budget: !config.allocate_budget }
+        : config
+    ));
   };
 
   return (
@@ -215,10 +283,16 @@ export function HierarchyOrderSelector({
               <h3 className="text-sm font-medium text-muted-foreground">
                 Níveis selecionados ({selectedLevels.length}/3)
               </h3>
-              <Badge variant="outline" className="gap-1">
-                <Check className="h-3 w-3" />
-                Ordem definida
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="gap-1 text-xs">
+                  <DollarSign className="h-3 w-3" />
+                  Alocar
+                </Badge>
+                <Badge variant="secondary" className="gap-1 text-xs">
+                  <Calculator className="h-3 w-3" />
+                  Calcular
+                </Badge>
+              </div>
             </div>
             
             <DndContext
@@ -227,16 +301,17 @@ export function HierarchyOrderSelector({
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={selectedLevels}
+                items={selectedLevels.map(config => config.level)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-2">
-                  {selectedLevels.map((level, index) => (
+                  {selectedLevels.map((levelConfig, index) => (
                     <SortableLevel
-                      key={level}
-                      level={level}
+                      key={levelConfig.level}
+                      levelConfig={levelConfig}
                       index={index}
-                      onRemove={() => handleRemove(level)}
+                      onRemove={() => handleRemove(levelConfig.level)}
+                      onToggleAllocate={() => handleToggleAllocate(levelConfig.level)}
                       disabled={disabled}
                     />
                   ))}
@@ -252,12 +327,16 @@ export function HierarchyOrderSelector({
             <h4 className="text-sm font-medium mb-3">Preview da estrutura:</h4>
             <div className="space-y-1 text-sm font-mono">
               <p className="text-muted-foreground">Orçamento Total</p>
-              {selectedLevels.map((level, index) => {
-                const config = HIERARCHY_LEVEL_CONFIG[level];
+              {selectedLevels.map((levelConfig, index) => {
+                const config = HIERARCHY_LEVEL_CONFIG[levelConfig.level];
                 const indent = '  '.repeat(index + 1);
+                const modeIcon = levelConfig.allocate_budget ? '💰' : '📊';
                 return (
-                  <p key={level} className="text-muted-foreground">
-                    {indent}└── Nível {index + 1}: {config.label}
+                  <p key={levelConfig.level} className="text-muted-foreground">
+                    {indent}└── {modeIcon} Nível {index + 1}: {config.label}
+                    <span className="text-xs ml-2 opacity-70">
+                      ({levelConfig.allocate_budget ? 'alocado' : 'calculado'})
+                    </span>
                   </p>
                 );
               })}
@@ -303,7 +382,7 @@ export function HierarchyOrderSelector({
 
         {/* Hint */}
         <p className="text-xs text-muted-foreground text-center">
-          💡 Você pode usar de 0 a 3 níveis. Planos simples podem não ter nenhuma divisão (orçamento geral).
+          💡 Você pode usar de 0 a 3 níveis. Use o toggle para escolher se deseja alocar orçamento ou calcular a partir das linhas.
         </p>
       </CardContent>
     </Card>

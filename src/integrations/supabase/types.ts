@@ -2083,6 +2083,7 @@ export type Database = {
           default_url: string | null
           deleted_at: string | null
           end_date: string | null
+          hierarchy_config: Json | null
           hierarchy_order: string[] | null
           id: string
           kpis: Json | null
@@ -2104,6 +2105,7 @@ export type Database = {
           default_url?: string | null
           deleted_at?: string | null
           end_date?: string | null
+          hierarchy_config?: Json | null
           hierarchy_order?: string[] | null
           id?: string
           kpis?: Json | null
@@ -2125,6 +2127,7 @@ export type Database = {
           default_url?: string | null
           deleted_at?: string | null
           end_date?: string | null
+          hierarchy_config?: Json | null
           hierarchy_order?: string[] | null
           id?: string
           kpis?: Json | null
