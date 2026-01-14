@@ -939,11 +939,21 @@ export function AppSidebar() {
 
         {canView('library') && (
         <div className="mb-4">
-          <h3 className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-            <Library className="h-3 w-3" />
-            Biblioteca
-          </h3>
-
+          <Collapsible open={openSections.library} onOpenChange={() => toggleSection('library')}>
+            <CollapsibleTrigger asChild>
+              <button className="w-full px-3 py-1.5 flex items-center justify-between hover:bg-muted/50 rounded-md transition-colors">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                  <Library className="h-3 w-3" />
+                  Biblioteca
+                </span>
+                {openSections.library ? (
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                )}
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
           {/* Clientes */}
           <Collapsible open={openSections.clients} onOpenChange={() => toggleSection('clients')}>
             <div className="group flex items-center min-w-0">
@@ -1688,6 +1698,8 @@ export function AppSidebar() {
                   </Button>
                 </Link>
               )}
+            </CollapsibleContent>
+          </Collapsible>
             </CollapsibleContent>
           </Collapsible>
         </div>
