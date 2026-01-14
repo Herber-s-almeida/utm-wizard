@@ -30,6 +30,9 @@ const DEFAULT_SECTIONS: Record<string, boolean> = {
   creativeTypesList: false,
   statuses: false,
   trash: false,
+  // Footer settings section
+  settingsFooter: false,
+  adminSubmenu: false,
 };
 
 export function useSidebarSections() {
