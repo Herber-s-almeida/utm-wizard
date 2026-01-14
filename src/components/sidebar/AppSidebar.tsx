@@ -1626,10 +1626,16 @@ export function AppSidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
-                  variant={openSections.settingsFooter ? 'secondary' : 'ghost'} 
+                  variant="ghost" 
                   size="icon" 
                   className="h-9 w-9"
-                  onClick={() => toggleSection('settingsFooter')}
+                  onClick={() => {
+                    toggleCollapse();
+                    // Expand settings section when opening sidebar via settings button
+                    if (isCollapsed) {
+                      toggleSection('settingsFooter');
+                    }
+                  }}
                 >
                   <Cog className="h-4 w-4" />
                 </Button>
