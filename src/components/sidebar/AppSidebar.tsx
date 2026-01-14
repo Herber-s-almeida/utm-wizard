@@ -241,6 +241,7 @@ export function AppSidebar() {
       {/* Collapsed state - show only icons */}
       {isCollapsed ? (
         <div className="flex-1 overflow-y-auto py-3 px-2 flex flex-col items-center gap-1 bg-background">
+          {/* Dashboard */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Link to="/dashboard">
@@ -256,6 +257,7 @@ export function AppSidebar() {
             <TooltipContent side="right">Dashboard</TooltipContent>
           </Tooltip>
 
+          {/* Visão Gerencial */}
           {canView('executive_dashboard') && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -269,10 +271,11 @@ export function AppSidebar() {
                   </Button>
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="right">Dashboard Gerencial</TooltipContent>
+              <TooltipContent side="right">Visão Gerencial</TooltipContent>
             </Tooltip>
           )}
 
+          {/* Relatórios */}
           {canView('reports') && !isMenuHidden('reports') && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -290,6 +293,7 @@ export function AppSidebar() {
             </Tooltip>
           )}
 
+          {/* Financeiro */}
           {canView('finance') && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -303,190 +307,93 @@ export function AppSidebar() {
                   </Button>
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="right">Finance Manager</TooltipContent>
+              <TooltipContent side="right">Financeiro</TooltipContent>
             </Tooltip>
           )}
 
           <div className="w-8 h-px bg-border my-2" />
 
+          {/* Gerenciar Planos de Mídia */}
           {canView('media_plans') && (
-            <>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link to="/media-plans">
-                    <Button 
-                      variant={isActive('/media-plans') ? 'secondary' : 'ghost'} 
-                      size="icon"
-                      className="h-9 w-9"
-                    >
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">Planos de mídia</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link to="/media-plans/new">
-                    <Button 
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-primary"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">Novo plano</TooltipContent>
-              </Tooltip>
-            </>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link to="/media-plans">
+                  <Button 
+                    variant={location.pathname.startsWith('/media-plans') || location.pathname.startsWith('/plan/') ? 'secondary' : 'ghost'} 
+                    size="icon"
+                    className="h-9 w-9"
+                  >
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">Planos de Mídia</TooltipContent>
+            </Tooltip>
           )}
 
-          <div className="w-8 h-px bg-border my-2" />
-
+          {/* Recursos de Mídia */}
           {canView('media_resources') && !isMenuHidden('media_resources') && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Palette className="h-4 w-4" />
-                </Button>
+                <Link to="/media-resources">
+                  <Button 
+                    variant={location.pathname.startsWith('/media-resources') ? 'secondary' : 'ghost'} 
+                    size="icon"
+                    className="h-9 w-9"
+                  >
+                    <Palette className="h-4 w-4" />
+                  </Button>
+                </Link>
               </TooltipTrigger>
               <TooltipContent side="right">Recursos de Mídia</TooltipContent>
             </Tooltip>
           )}
 
+          {/* Taxonomia */}
           {canView('taxonomy') && !isMenuHidden('taxonomy') && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Link2 className="h-4 w-4" />
-                </Button>
+                <Link to="/taxonomy">
+                  <Button 
+                    variant={location.pathname.startsWith('/taxonomy') ? 'secondary' : 'ghost'} 
+                    size="icon"
+                    className="h-9 w-9"
+                  >
+                    <Link2 className="h-4 w-4" />
+                  </Button>
+                </Link>
               </TooltipTrigger>
-              <TooltipContent side="right">Taxonomia UTM</TooltipContent>
+              <TooltipContent side="right">Taxonomia</TooltipContent>
             </Tooltip>
           )}
 
+          <div className="w-8 h-px bg-border my-2" />
+
+          {/* Biblioteca */}
           {canView('library') && (
-            <>
-              <div className="w-8 h-px bg-border my-2" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link to="/config/subdivisions">
+                  <Button 
+                    variant={location.pathname.startsWith('/config') ? 'secondary' : 'ghost'} 
+                    size="icon"
+                    className="h-9 w-9"
+                  >
+                    <Library className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">Biblioteca</TooltipContent>
+            </Tooltip>
+          )}
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link to="/config/subdivisions">
-                    <Button variant="ghost" size="icon" className="h-9 w-9">
-                      <Layers className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">Subdivisões de Plano</TooltipContent>
-              </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/config/moments">
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Clock className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Momentos de Campanha</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/config/funnel-stages">
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Filter className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Fases do Funil</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/config/mediums">
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Radio className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Meios</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/config/vehicles">
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Tv className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Veículos e Canais</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/config/targets">
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Users className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Segmentação e Target</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/config/formats">
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Image className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Formatos e Especificações</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/config/statuses">
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <CircleDot className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Status</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/config/kpis">
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <TrendingUp className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">KPIs Personalizados</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link to="/config/detail-types">
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Layers className="h-4 w-4" />
-                </Button>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Tipos de Detalhamento</TooltipContent>
-          </Tooltip>
-
+          {/* Lixeira */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Link to="/trash">
                 <Button 
-                  variant="ghost" 
-                  size="icon" 
+                  variant={isActive('/trash') ? 'secondary' : 'ghost'} 
+                  size="icon"
                   className="h-9 w-9"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -495,8 +402,6 @@ export function AppSidebar() {
             </TooltipTrigger>
             <TooltipContent side="right">Lixeira</TooltipContent>
           </Tooltip>
-            </>
-          )}
         </div>
       ) : (
       <ScrollArea className="flex-1 py-3 px-2 overflow-x-hidden bg-background">
