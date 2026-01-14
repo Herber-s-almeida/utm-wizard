@@ -45,6 +45,7 @@ import AccountPage from "./pages/AccountPage";
 import TrashPage from "./pages/TrashPage";
 import DetailTypesPage from "./pages/config/DetailTypesPage";
 import ClientsPage from "./pages/config/ClientsPage";
+import ObjectivesPage from "./pages/config/ObjectivesPage";
 import SystemDocumentationPage from "./pages/admin/SystemDocumentationPage";
 
 // Finance Manager imports
@@ -112,6 +113,7 @@ function AppWithEnvironment() {
           <Route path="/config/kpis" element={<ProtectedRoute><KpisPage /></ProtectedRoute>} />
           <Route path="/config/detail-types" element={<ProtectedRoute><DetailTypesPage /></ProtectedRoute>} />
           <Route path="/config/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
+          <Route path="/config/objectives" element={<ProtectedRoute><ObjectivesPage /></ProtectedRoute>} />
           <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
           <Route path="/trash" element={<ProtectedRoute><TrashPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />

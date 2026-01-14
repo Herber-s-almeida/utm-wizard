@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { HierarchyBlockSelector, HierarchyItem } from './HierarchyBlockSelector';
 import { HierarchyPositionSelector } from './HierarchyPositionSelector';
-import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets } from '@/hooks/useConfigData';
+import { useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useMediaObjectives } from '@/hooks/useConfigData';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -120,6 +120,7 @@ export function MediaLineWizard({
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
+  const [selectedObjective, setSelectedObjective] = useState<string | null>(null);
   
   // Details form
   const [lineDetails, setLineDetails] = useState({
@@ -156,6 +157,7 @@ export function MediaLineWizard({
   const vehicles = useVehicles();
   const channels = useChannels();
   const targets = useTargets();
+  const mediaObjectives = useMediaObjectives();
 
   // Reset state when dialog opens or load editing line
   // Helper to get the appropriate value for a hierarchy selection
@@ -200,6 +202,7 @@ export function MediaLineWizard({
           setSelectedVehicle(editingLine.vehicle_id || null);
           setSelectedChannel(editingLine.channel_id || null);
           setSelectedTarget(editingLine.target_id || null);
+          setSelectedObjective(editingLine.objective_id || null);
           setLineDetails({
             budget: String(editingLine.budget || ''),
             start_date: editingLine.start_date || plan.start_date || '',
@@ -222,6 +225,7 @@ export function MediaLineWizard({
           setSelectedVehicle(null);
           setSelectedChannel(null);
           setSelectedTarget(null);
+          setSelectedObjective(null);
           setLineDetails({
             budget: '',
             start_date: plan.start_date || '',
@@ -488,6 +492,7 @@ export function MediaLineWizard({
         vehicle_id: selectedVehicle,
         channel_id: selectedChannel,
         target_id: selectedTarget,
+        objective_id: selectedObjective,
         budget: parseFloat(lineDetails.budget) || 0,
         start_date: lineDetails.start_date,
         end_date: lineDetails.end_date,
@@ -808,6 +813,32 @@ export function MediaLineWizard({
                     </div>
                   </div>
                   
+                  {/* Objective */}
+                  <div className="space-y-2">
+                    <LabelWithTooltip 
+                      htmlFor="objective" 
+                      tooltip="Objetivo de performance desta linha. Ex: Cliques, Impressões, Conversões."
+                    >
+                      Objetivo de Mídia
+                    </LabelWithTooltip>
+                    <select
+                      id="objective"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={selectedObjective || ''}
+                      onChange={(e) => setSelectedObjective(e.target.value || null)}
+                    >
+                      <option value="">Selecione um objetivo...</option>
+                      {mediaObjectives.activeItems?.map(obj => (
+                        <option key={obj.id} value={obj.id}>{obj.name}</option>
+                      ))}
+                    </select>
+                    {mediaObjectives.activeItems?.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Nenhum objetivo cadastrado. <a href="/config/objectives" target="_blank" className="text-primary hover:underline">Criar objetivos</a>
+                      </p>
+                    )}
+                  </div>
+                  
                   {/* Moment date boundary alert */}
                   {effectiveDateBoundaries.hasMomentDates && (
                     <Alert className="bg-primary/5 border-primary/20">
@@ -906,7 +937,8 @@ export function MediaLineWizard({
                       <div><span className="text-muted-foreground">Meio:</span> {mediums.data?.find(m => m.id === selectedMedium)?.name || '-'}</div>
                       <div><span className="text-muted-foreground">Veículo:</span> {vehicles.data?.find(v => v.id === selectedVehicle)?.name || '-'}</div>
                       <div><span className="text-muted-foreground">Canal:</span> {channels.data?.find(c => c.id === selectedChannel)?.name || '-'}</div>
-                      <div className="col-span-2"><span className="text-muted-foreground">Target:</span> {targets.data?.find(t => t.id === selectedTarget)?.name || '-'}</div>
+                      <div><span className="text-muted-foreground">Target:</span> {targets.data?.find(t => t.id === selectedTarget)?.name || '-'}</div>
+                      <div><span className="text-muted-foreground">Objetivo:</span> {mediaObjectives.activeItems?.find(o => o.id === selectedObjective)?.name || '-'}</div>
                     </div>
                   </div>
 
