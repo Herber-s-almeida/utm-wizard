@@ -85,7 +85,7 @@ function AppWithEnvironment() {
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/media-plan-dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/executive-dashboard" element={<ProtectedRoute><SectionProtectedRoute section="executive_dashboard"><ExecutiveDashboard /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans" element={<ProtectedRoute><SectionProtectedRoute section="media_plans"><MediaPlans /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans/new" element={<ProtectedRoute><SectionProtectedRoute section="media_plans" minLevel="edit"><NewMediaPlanSelector /></SectionProtectedRoute></ProtectedRoute>} />

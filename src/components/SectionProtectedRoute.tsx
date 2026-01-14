@@ -25,7 +25,7 @@ export function SectionProtectedRoute({
   children, 
   section, 
   minLevel = 'view',
-  fallbackPath = '/dashboard'
+  fallbackPath = '/media-plan-dashboard'
 }: SectionProtectedRouteProps) {
   const { user, loading: authLoading } = useAuth();
   const { getPermission, isEnvironmentOwner, isSystemAdmin, isLoadingPermissions } = useEnvironment();

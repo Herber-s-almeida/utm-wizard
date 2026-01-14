@@ -69,7 +69,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && mode !== 'reset') {
-      navigate('/dashboard');
+      navigate('/media-plan-dashboard');
     }
   }, [user, navigate, mode]);
 
@@ -91,7 +91,7 @@ export default function Auth() {
           toast.error(getAuthErrorMessage(error));
         } else {
           toast.success('Login realizado com sucesso!');
-          navigate('/dashboard');
+          navigate('/media-plan-dashboard');
         }
       } else if (mode === 'signup') {
         const validation = signupSchema.safeParse({ email, password, fullName });
@@ -106,7 +106,7 @@ export default function Auth() {
           toast.error(getAuthErrorMessage(error));
         } else {
           toast.success('Conta criada com sucesso!');
-          navigate('/dashboard');
+          navigate('/media-plan-dashboard');
         }
       } else if (mode === 'forgot') {
         const validation = resetSchema.safeParse({ email });
@@ -136,7 +136,7 @@ export default function Auth() {
           toast.error(getAuthErrorMessage(error));
         } else {
           toast.success('Senha atualizada com sucesso!');
-          navigate('/dashboard');
+          navigate('/media-plan-dashboard');
         }
       }
     } finally {

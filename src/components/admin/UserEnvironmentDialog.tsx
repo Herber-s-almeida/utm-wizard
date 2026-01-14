@@ -62,7 +62,7 @@ export function UserEnvironmentDialog({
         company: user.company,
       });
       onOpenChange(false);
-      navigate('/dashboard');
+      navigate('/media-plan-dashboard');
     }
   };
 
