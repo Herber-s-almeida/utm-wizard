@@ -35,7 +35,7 @@ export interface PlanInfo {
   name: string;
   clientId: string;
   clientName: string;
-  campaign: string;
+  utmCampaignSlug: string | null;
   totalBudget: number;
   startDate: Date | null;
   endDate: Date | null;
@@ -63,7 +63,7 @@ const initialPlanInfo: PlanInfo = {
   name: '',
   clientId: '',
   clientName: '',
-  campaign: '',
+  utmCampaignSlug: null,
   totalBudget: 0,
   startDate: null,
   endDate: null,
@@ -492,7 +492,8 @@ export function useImportPlan() {
         .insert({
           name: planInfo.name,
           client_id: planInfo.clientId && planInfo.clientId !== 'none' ? planInfo.clientId : null,
-          campaign: planInfo.campaign || null,
+          campaign: planInfo.name, // Campanha = Nome do plano
+          utm_campaign_slug: planInfo.utmCampaignSlug || null,
           total_budget: totalBudget,
           start_date: startDate ? format(startDate, 'yyyy-MM-dd') : null,
           end_date: endDate ? format(endDate, 'yyyy-MM-dd') : null,

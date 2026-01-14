@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Plus, Building2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClientDialog } from '@/components/config/ClientDialog';
-import { useClients, Client } from '@/hooks/useClients';
+import { SlugInputField } from '@/components/media-plan/SlugInputField';
+import { useClients } from '@/hooks/useClients';
 import { PlanInfo } from '@/hooks/useImportPlan';
 import { format } from 'date-fns';
 
@@ -76,16 +77,13 @@ export function ImportPlanInfo({
       </div>
 
       <div className="space-y-6 max-w-xl mx-auto">
-        {/* Plan Name */}
-        <div className="space-y-2">
-          <Label htmlFor="plan-name">Nome do Plano *</Label>
-          <Input
-            id="plan-name"
-            value={planInfo.name}
-            onChange={(e) => onUpdatePlanInfo({ name: e.target.value })}
-            placeholder="Ex: Campanha Verão 2026"
-          />
-        </div>
+        {/* Plan Name + UTM Slug */}
+        <SlugInputField
+          name={planInfo.name}
+          slug={planInfo.utmCampaignSlug}
+          onNameChange={(name) => onUpdatePlanInfo({ name })}
+          onSlugChange={(utmCampaignSlug) => onUpdatePlanInfo({ utmCampaignSlug })}
+        />
 
         {/* Client */}
         <div className="space-y-2">
@@ -118,17 +116,6 @@ export function ImportPlanInfo({
               Novo
             </Button>
           </div>
-        </div>
-
-        {/* Campaign */}
-        <div className="space-y-2">
-          <Label htmlFor="campaign">Campanha</Label>
-          <Input
-            id="campaign"
-            value={planInfo.campaign}
-            onChange={(e) => onUpdatePlanInfo({ campaign: e.target.value })}
-            placeholder="Ex: Verão 2026"
-          />
         </div>
 
         {/* Budget */}
