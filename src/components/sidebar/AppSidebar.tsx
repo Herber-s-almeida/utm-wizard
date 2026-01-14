@@ -37,12 +37,14 @@ import { useSystemAdmin } from '@/hooks/useSystemAdmin';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { useCurrentProfile } from '@/hooks/useCurrentProfile';
 import { useEnvironmentPermissions } from '@/hooks/useEnvironmentPermissions';
-import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates, useBehavioralSegmentations } from '@/hooks/useConfigData';
+import { useMediaPlans, useSubdivisions, useMoments, useFunnelStages, useMediums, useVehicles, useChannels, useTargets, useCreativeTemplates, useBehavioralSegmentations, useMediaObjectives } from '@/hooks/useConfigData';
 import { useClients } from '@/hooks/useClients';
 import { useFormatsHierarchy } from '@/hooks/useFormatsHierarchy';
 import { useCreativeTypes } from '@/hooks/useCreativeTypes';
 import { useMenuVisibility } from '@/hooks/useMenuVisibility';
 import { useStatuses } from '@/hooks/useStatuses';
+import { useCustomKpis } from '@/hooks/useCustomKpis';
+import { useLineDetailTypes } from '@/hooks/useLineDetailTypes';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -100,6 +102,9 @@ export function AppSidebar() {
   const formatsHierarchy = useFormatsHierarchy();
   const creativeTypesGlobal = useCreativeTypes();
   const { isMenuHidden } = useMenuVisibility();
+  const mediaObjectives = useMediaObjectives();
+  const { customKpis } = useCustomKpis();
+  const { types: lineDetailTypes } = useLineDetailTypes();
 
   // Get environment display name - show for all users, not just when viewing other environments
   const environmentName = isViewingOtherEnvironment 
@@ -1516,12 +1521,46 @@ export function AppSidebar() {
           </Collapsible>
 
           {/* Objetivos de Mídia */}
-          <Link to="/config/objectives">
-            <Button variant="ghost" size="sm" className="w-full justify-start gap-2 h-8 text-xs">
-              <Target className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">Objetivos de Mídia</span>
-            </Button>
-          </Link>
+          <Collapsible open={openSections.objectives} onOpenChange={() => toggleSection('objectives')}>
+            <div className="group flex items-center min-w-0">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs min-w-0 overflow-hidden">
+                  {openSections.objectives ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                  <Target className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Objetivos de Mídia</span>
+                </Button>
+              </CollapsibleTrigger>
+              <Link to="/config/objectives" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </Link>
+            </div>
+            <CollapsibleContent className="pl-4">
+              {mediaObjectives.activeItems?.slice(0, MAX_ITEMS).map(objective => (
+                <div key={objective.id} className="flex items-center px-3 py-1 text-xs text-muted-foreground">
+                  <span className="truncate">{objective.name}</span>
+                </div>
+              ))}
+              <Link to="/config/objectives">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                >
+                  <Plus className="h-3 w-3" />
+                  Novo
+                </Button>
+              </Link>
+              {(mediaObjectives.activeItems?.length || 0) > MAX_ITEMS && (
+                <Link to="/config/objectives">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                    ... ver todos ({mediaObjectives.activeItems?.length})
+                  </Button>
+                </Link>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Status */}
           <Collapsible open={openSections.statuses} onOpenChange={() => toggleSection('statuses')}>
@@ -1568,28 +1607,89 @@ export function AppSidebar() {
           </Collapsible>
 
           {/* KPIs Personalizados */}
-          <Link to="/config/kpis">
-            <Button 
-              variant={location.pathname === '/config/kpis' ? 'secondary' : 'ghost'} 
-              size="sm" 
-              className="w-full justify-start gap-2 h-8 text-xs"
-            >
-              <TrendingUp className="h-3.5 w-3.5" />
-              <span>KPIs Personalizados</span>
-            </Button>
-          </Link>
+          <Collapsible open={openSections.kpis} onOpenChange={() => toggleSection('kpis')}>
+            <div className="group flex items-center min-w-0">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs min-w-0 overflow-hidden">
+                  {openSections.kpis ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                  <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">KPIs Personalizados</span>
+                </Button>
+              </CollapsibleTrigger>
+              <Link to="/config/kpis" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </Link>
+            </div>
+            <CollapsibleContent className="pl-4">
+              {customKpis?.slice(0, MAX_ITEMS).map(kpi => (
+                <div key={kpi.id} className="flex items-center px-3 py-1 text-xs text-muted-foreground">
+                  <span className="truncate">{kpi.name}</span>
+                  <span className="ml-1 text-[10px]">({kpi.unit})</span>
+                </div>
+              ))}
+              <Link to="/config/kpis">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                >
+                  <Plus className="h-3 w-3" />
+                  Novo
+                </Button>
+              </Link>
+              {(customKpis?.length || 0) > MAX_ITEMS && (
+                <Link to="/config/kpis">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                    ... ver todos ({customKpis?.length})
+                  </Button>
+                </Link>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
 
-          {/* Tipos de Detalhamento */}
-          <Link to="/config/detail-types">
-            <Button 
-              variant={location.pathname === '/config/detail-types' ? 'secondary' : 'ghost'} 
-              size="sm" 
-              className="w-full justify-start gap-2 h-8 text-xs"
-            >
-              <Layers className="h-3.5 w-3.5" />
-              <span>Tipos de Detalhamento</span>
-            </Button>
-          </Link>
+          {/* Detalhamentos de Mídia */}
+          <Collapsible open={openSections.detailTypes} onOpenChange={() => toggleSection('detailTypes')}>
+            <div className="group flex items-center min-w-0">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex-1 justify-start gap-2 h-8 text-xs min-w-0 overflow-hidden">
+                  {openSections.detailTypes ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ChevronRight className="h-3 w-3 shrink-0" />}
+                  <Layers className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Detalhamentos de Mídia</span>
+                </Button>
+              </CollapsibleTrigger>
+              <Link to="/config/detail-types" className="shrink-0 opacity-70 transition-opacity hover:opacity-100 focus-within:opacity-100">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </Link>
+            </div>
+            <CollapsibleContent className="pl-4">
+              {lineDetailTypes?.slice(0, MAX_ITEMS).map(detailType => (
+                <div key={detailType.id} className="flex items-center px-3 py-1 text-xs text-muted-foreground">
+                  <span className="truncate">{detailType.name}</span>
+                </div>
+              ))}
+              <Link to="/config/detail-types">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2 h-7 text-xs text-primary hover:text-primary"
+                >
+                  <Plus className="h-3 w-3" />
+                  Novo
+                </Button>
+              </Link>
+              {(lineDetailTypes?.length || 0) > MAX_ITEMS && (
+                <Link to="/config/detail-types">
+                  <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
+                    ... ver todos ({lineDetailTypes?.length})
+                  </Button>
+                </Link>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
         </div>
         )}
 
