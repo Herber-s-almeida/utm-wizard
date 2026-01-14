@@ -128,6 +128,7 @@ export function ImportEntityResolver({
                     entity={entity}
                     existingOptions={existingEntities[type] || []}
                     allExistingEntities={existingEntities}
+                    unresolvedEntities={unresolvedEntities}
                     onResolve={onResolve}
                     onCreateEntity={onCreateEntity}
                   />
@@ -145,12 +146,14 @@ function EntityRow({
   entity,
   existingOptions,
   allExistingEntities,
+  unresolvedEntities,
   onResolve,
   onCreateEntity,
 }: {
   entity: UnresolvedEntity;
   existingOptions: Array<{ id: string; name: string; parentId?: string }>;
   allExistingEntities: Record<EntityType, Array<{ id: string; name: string; parentId?: string }>>;
+  unresolvedEntities: UnresolvedEntity[];
   onResolve: (entityId: string, resolvedId: string) => void;
   onCreateEntity: (entity: UnresolvedEntity) => void;
 }) {
@@ -162,13 +165,28 @@ function EntityRow({
     // For channels, filter by vehicle (parent)
     if (entity.type === 'channel' && entity.parentContext?.type === 'vehicle') {
       const parentVehicleName = entity.parentContext.name.toLowerCase();
-      // Find the vehicle ID from allExistingEntities
+      
+      // First, check if the parent vehicle was resolved in unresolvedEntities
+      const resolvedVehicle = unresolvedEntities.find(
+        e => e.type === 'vehicle' && 
+             e.originalName.toLowerCase() === parentVehicleName &&
+             e.status === 'resolved' &&
+             e.resolvedId
+      );
+      
+      if (resolvedVehicle?.resolvedId) {
+        // Vehicle was resolved - filter channels by resolvedId
+        return existingOptions.filter(opt => opt.parentId === resolvedVehicle.resolvedId);
+      }
+      
+      // Fallback: try to find vehicle by original name in existing entities
       const vehicle = allExistingEntities.vehicle.find(
         v => v.name.toLowerCase() === parentVehicleName
       );
       if (vehicle) {
         return existingOptions.filter(opt => opt.parentId === vehicle.id);
       }
+      
       // If vehicle doesn't exist yet, show nothing (user needs to create vehicle first)
       return [];
     }
