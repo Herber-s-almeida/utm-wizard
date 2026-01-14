@@ -337,7 +337,7 @@ export function AppSidebar() {
               <TooltipTrigger asChild>
                 <Link to="/media-resources">
                   <Button 
-                    variant={location.pathname.startsWith('/media-resources') ? 'secondary' : 'ghost'} 
+                    variant={location.pathname.startsWith('/media-resources') || location.pathname.startsWith('/resources') ? 'secondary' : 'ghost'}
                     size="icon"
                     className="h-9 w-9"
                   >
