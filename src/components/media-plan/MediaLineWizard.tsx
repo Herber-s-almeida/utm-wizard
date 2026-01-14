@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, Loader2, X, Save, Link2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Loader2, X, Save, Link2, AlertCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -121,6 +121,10 @@ export function MediaLineWizard({
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [selectedObjective, setSelectedObjective] = useState<string | null>(null);
+  
+  // Inline objective creation state
+  const [newObjectiveName, setNewObjectiveName] = useState('');
+  const [creatingObjective, setCreatingObjective] = useState(false);
   
   // Details form
   const [lineDetails, setLineDetails] = useState({
@@ -320,7 +324,25 @@ export function MediaLineWizard({
     };
   };
 
-  
+  // Create objective inline
+  const handleCreateObjective = async () => {
+    if (!newObjectiveName.trim() || !user) return;
+    
+    setCreatingObjective(true);
+    try {
+      const created = await mediaObjectives.create.mutateAsync({ 
+        name: newObjectiveName.trim() 
+      });
+      setSelectedObjective(created.id);
+      setNewObjectiveName('');
+      toast.success(`Objetivo "${created.name}" criado!`);
+    } catch (error) {
+      // Toast de erro já é exibido pelo hook
+    } finally {
+      setCreatingObjective(false);
+    }
+  };
+
 
   const handleNext = () => {
     if (currentStepIndex < STEP_ORDER.length - 1) {
@@ -832,11 +854,36 @@ export function MediaLineWizard({
                         <option key={obj.id} value={obj.id}>{obj.name}</option>
                       ))}
                     </select>
-                    {mediaObjectives.activeItems?.length === 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        Nenhum objetivo cadastrado. <a href="/config/objectives" target="_blank" className="text-primary hover:underline">Criar objetivos</a>
-                      </p>
-                    )}
+                    
+                    {/* Inline creation - matching wizard pattern */}
+                    <div className="flex gap-2 mt-2">
+                      <Input
+                        placeholder="Novo objetivo (ex: Cliques, Conversões)"
+                        value={newObjectiveName}
+                        onChange={(e) => setNewObjectiveName(e.target.value.slice(0, 25))}
+                        maxLength={25}
+                        className="flex-1"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCreateObjective();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCreateObjective}
+                        disabled={!newObjectiveName.trim() || creatingObjective}
+                        title="Criar objetivo"
+                      >
+                        {creatingObjective ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {newObjectiveName.length}/25 caracteres
+                    </p>
                   </div>
                   
                   {/* Moment date boundary alert */}
