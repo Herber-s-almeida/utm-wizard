@@ -29,7 +29,8 @@ import { HierarchyLevel, HierarchyLevelConfig, HIERARCHY_LEVEL_CONFIG } from '@/
 // Backward compatible interface - accepts HierarchyLevel[] OR HierarchyLevelConfig[]
 interface HierarchyOrderSelectorProps {
   selectedLevels: HierarchyLevelConfig[] | HierarchyLevel[];
-  onOrderChange: (levels: HierarchyLevel[]) => void;
+  /** Legacy callback - only receives HierarchyLevel[] */
+  onOrderChange?: (levels: HierarchyLevel[]) => void;
   /** New callback that includes allocate_budget config - use this for full config support */
   onConfigChange?: (config: HierarchyLevelConfig[]) => void;
   disabled?: boolean;

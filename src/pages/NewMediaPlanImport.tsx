@@ -190,7 +190,7 @@ export default function NewMediaPlanImport() {
                 </div>
                 <HierarchyOrderSelector
                   selectedLevels={state.detectedHierarchy}
-                  onOrderChange={updateHierarchyOrder}
+                  onConfigChange={updateHierarchyOrder}
                 />
               </div>
             )}

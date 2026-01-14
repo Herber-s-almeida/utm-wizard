@@ -122,14 +122,18 @@ export default function EditMediaPlan() {
   const [existingLines, setExistingLines] = useState<any[]>([]);
   const [planId, setPlanId] = useState<string | null>(null);
   const [planSlug, setPlanSlug] = useState<string | null>(null);
-  const [planHierarchyOrder, setPlanHierarchyOrder] = useState<HierarchyLevel[]>([]);
-  const [originalHierarchyOrder, setOriginalHierarchyOrder] = useState<HierarchyLevel[]>([]);
+  const [planHierarchyConfig, setPlanHierarchyConfig] = useState<HierarchyLevelConfig[]>([]);
+  const [originalHierarchyConfig, setOriginalHierarchyConfig] = useState<HierarchyLevelConfig[]>([]);
   const [hierarchyChanged, setHierarchyChanged] = useState(false);
   const [showHierarchyWarning, setShowHierarchyWarning] = useState(false);
-  const [pendingHierarchyChange, setPendingHierarchyChange] = useState<HierarchyLevel[] | null>(null);
+  const [pendingHierarchyChange, setPendingHierarchyChange] = useState<HierarchyLevelConfig[] | null>(null);
+  
+  // Derived planHierarchyOrder for backward compatibility
+  const planHierarchyOrder = useMemo(() => getHierarchyOrder(planHierarchyConfig), [planHierarchyConfig]);
+  const originalHierarchyOrder = useMemo(() => getHierarchyOrder(originalHierarchyConfig), [originalHierarchyConfig]);
   const { customKpis } = useCustomKpis();
 
-  const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations, initializeFromPlan, getLibraryForLevel, getCreateMutationForLevel, setHierarchyOrder: setWizardHierarchyOrder, reset: resetWizard } = wizard;
+  const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations, initializeFromPlan, getLibraryForLevel, getCreateMutationForLevel, setHierarchyOrder: setWizardHierarchyOrder, setHierarchyConfig: setWizardHierarchyConfig, reset: resetWizard } = wizard;
 
   // Generate wizard steps dynamically based on planHierarchyOrder (includes step 0 for structure)
   const wizardSteps = useMemo(() => {
@@ -195,11 +199,15 @@ export default function EditMediaPlan() {
       setPlanId(resolvedPlanId);
       setPlanSlug(plan.slug);
       
-      // Store hierarchy order (can now be changed)
+      // Store hierarchy config (can now be changed)
       const loadedOrder = plan.hierarchy_order as string[] | null;
-      const hierarchyOrder = (loadedOrder ?? []) as HierarchyLevel[];
-      setPlanHierarchyOrder(hierarchyOrder);
-      setOriginalHierarchyOrder(hierarchyOrder); // Store original for comparison
+      const loadedConfig = plan.hierarchy_config as unknown as HierarchyLevelConfig[] | null;
+      // If hierarchy_config exists, use it; otherwise convert from hierarchy_order
+      const hierarchyConfig = loadedConfig && Array.isArray(loadedConfig) && loadedConfig.length > 0
+        ? loadedConfig
+        : createHierarchyConfig((loadedOrder ?? []) as HierarchyLevel[]);
+      setPlanHierarchyConfig(hierarchyConfig);
+      setOriginalHierarchyConfig(hierarchyConfig); // Store original for comparison
 
       // Fetch existing distributions
       const { data: distributions, error: distError } = await supabase
@@ -300,8 +308,9 @@ export default function EditMediaPlan() {
 
       // Process each level in hierarchy order
       // For each level, find its distributions and determine the parent key dynamically
-      for (let levelIndex = 0; levelIndex < hierarchyOrder.length; levelIndex++) {
-        const level = hierarchyOrder[levelIndex];
+      const loadedHierarchyOrder = getHierarchyOrder(hierarchyConfig);
+      for (let levelIndex = 0; levelIndex < loadedHierarchyOrder.length; levelIndex++) {
+        const level = loadedHierarchyOrder[levelIndex];
         const levelDists = (distributions || []).filter(d => d.distribution_type === level);
         const allocRecord = getAllocRecord(level);
 
@@ -338,7 +347,7 @@ export default function EditMediaPlan() {
       }
 
       // Initialize wizard with loaded data, starting at step 0 (Structure)
-      initializeFromPlan(planData, subdivisionAllocations, momentAllocations, funnelAllocations, 0, hierarchyOrder);
+      initializeFromPlan(planData, subdivisionAllocations, momentAllocations, funnelAllocations, 0, loadedHierarchyOrder, hierarchyConfig);
     } catch (error) {
       console.error('Error loading plan:', error);
       toast.error('Erro ao carregar plano');
@@ -430,27 +439,40 @@ export default function EditMediaPlan() {
 
   const canProceed = () => getValidationErrorsForStep().length === 0;
 
-  // Handle hierarchy change with warning dialog
-  const handleHierarchyChange = (newOrder: HierarchyLevel[]) => {
+  // Handle hierarchy change with warning dialog - accepts HierarchyLevelConfig[]
+  const handleHierarchyConfigChange = (newConfig: HierarchyLevelConfig[]) => {
+    const newOrder = getHierarchyOrder(newConfig);
     // Check if there are impacts to warn about
     const removedLevels = originalHierarchyOrder.filter(level => !newOrder.includes(level));
     const hasImpact = existingLines.length > 0 && (removedLevels.length > 0 || originalHierarchyOrder.length !== newOrder.length);
     
     if (hasImpact) {
-      setPendingHierarchyChange(newOrder);
+      setPendingHierarchyChange(newConfig);
       setShowHierarchyWarning(true);
     } else {
-      applyHierarchyChange(newOrder);
+      applyHierarchyChange(newConfig);
     }
+  };
+  
+  // Legacy handler for onOrderChange (converts to config)
+  const handleHierarchyChange = (newOrder: HierarchyLevel[]) => {
+    // Preserve allocate_budget settings from existing config when possible
+    const newConfig = newOrder.map(level => {
+      const existingConfig = planHierarchyConfig.find(c => c.level === level);
+      return existingConfig || { level, allocate_budget: true };
+    });
+    handleHierarchyConfigChange(newConfig);
   };
 
   // Apply hierarchy change after confirmation
-  const applyHierarchyChange = (newOrder: HierarchyLevel[]) => {
-    setPlanHierarchyOrder(newOrder);
+  const applyHierarchyChange = (newConfig: HierarchyLevelConfig[]) => {
+    const newOrder = getHierarchyOrder(newConfig);
+    setPlanHierarchyConfig(newConfig);
     setWizardHierarchyOrder(newOrder);
+    setWizardHierarchyConfig(newConfig);
     
     // Check if hierarchy actually changed from original
-    const isChanged = JSON.stringify(newOrder) !== JSON.stringify(originalHierarchyOrder);
+    const isChanged = JSON.stringify(newConfig) !== JSON.stringify(originalHierarchyConfig);
     setHierarchyChanged(isChanged);
     
     // Clear allocations for removed levels
@@ -1045,8 +1067,9 @@ export default function EditMediaPlan() {
             )}
             
             <HierarchyOrderSelector
-              selectedLevels={planHierarchyOrder}
+              selectedLevels={planHierarchyConfig}
               onOrderChange={handleHierarchyChange}
+              onConfigChange={handleHierarchyConfigChange}
               disabled={false}
             />
             
