@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, AlertTriangle, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { Check, AlertTriangle, Plus, ChevronDown, ChevronRight, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -194,6 +194,59 @@ function EntityRow({
     return existingOptions;
   })();
 
+  // Determine if "Criar" button should be shown for channels
+  const canShowCreateButton = (() => {
+    if (entity.type === 'channel' && entity.parentContext?.type === 'vehicle') {
+      const parentVehicleName = entity.parentContext.name.toLowerCase();
+      
+      // Check if the vehicle was resolved in unresolvedEntities
+      const resolvedVehicle = unresolvedEntities.find(
+        e => e.type === 'vehicle' && 
+             e.originalName.toLowerCase() === parentVehicleName &&
+             e.status === 'resolved' &&
+             e.resolvedId
+      );
+      
+      if (resolvedVehicle?.resolvedId) return true;
+      
+      // Check if the vehicle already exists in library
+      const existingVehicle = allExistingEntities.vehicle.find(
+        v => v.name.toLowerCase() === parentVehicleName
+      );
+      
+      return !!existingVehicle;
+    }
+    return true;
+  })();
+
+  // Get resolved name for display
+  const getResolvedName = () => {
+    if (!entity.resolvedId) return null;
+    const options = existingOptions.length > 0 ? existingOptions : allExistingEntities[entity.type] || [];
+    return options.find(opt => opt.id === entity.resolvedId)?.name;
+  };
+
+  // For channels, get resolved vehicle name
+  const getResolvedVehicleName = () => {
+    if (entity.type !== 'channel' || !entity.parentContext?.name) return null;
+    const parentVehicleName = entity.parentContext.name.toLowerCase();
+    
+    const resolvedVehicle = unresolvedEntities.find(
+      e => e.type === 'vehicle' && 
+           e.originalName.toLowerCase() === parentVehicleName &&
+           e.status === 'resolved' &&
+           e.resolvedId
+    );
+    
+    if (resolvedVehicle?.resolvedId) {
+      return allExistingEntities.vehicle.find(v => v.id === resolvedVehicle.resolvedId)?.name;
+    }
+    return null;
+  };
+
+  const resolvedName = getResolvedName();
+  const resolvedVehicleName = getResolvedVehicleName();
+
   return (
     <div className={cn(
       "p-3 rounded-lg border ml-4",
@@ -202,10 +255,20 @@ function EntityRow({
     )}>
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {isResolved && <Check className="w-4 h-4 text-green-500" />}
             {!isResolved && <AlertTriangle className="w-4 h-4 text-amber-500" />}
-            <span className="font-medium">"{entity.originalName}"</span>
+            
+            {isResolved && resolvedName ? (
+              <>
+                <span className="text-muted-foreground line-through">"{entity.originalName}"</span>
+                <ArrowRight className="w-4 h-4 text-green-500" />
+                <span className="font-medium text-green-700">"{resolvedName}"</span>
+              </>
+            ) : (
+              <span className="font-medium">"{entity.originalName}"</span>
+            )}
+            
             {isResolved && <Badge variant="outline" className="text-xs text-green-600">Resolvido</Badge>}
           </div>
           <p className="text-xs text-muted-foreground">
@@ -214,17 +277,28 @@ function EntityRow({
           </p>
           {entity.parentContext && (
             <p className="text-xs text-muted-foreground">
-              {ENTITY_SINGULAR[entity.parentContext.type as EntityType]}: {entity.parentContext.name}
+              {ENTITY_SINGULAR[entity.parentContext.type as EntityType]}:{' '}
+              {resolvedVehicleName ? (
+                <>
+                  <span className="line-through">{entity.parentContext.name}</span>
+                  {' → '}
+                  <span className="text-green-600">{resolvedVehicleName}</span>
+                </>
+              ) : (
+                entity.parentContext.name
+              )}
             </p>
           )}
         </div>
 
         {!isResolved && (
           <div className="flex items-center gap-2 shrink-0">
-            <Button size="sm" variant="default" onClick={() => onCreateEntity(entity)} disabled={isCreating}>
-              <Plus className="w-3 h-3 mr-1" />
-              Criar
-            </Button>
+            {canShowCreateButton && (
+              <Button size="sm" variant="default" onClick={() => onCreateEntity(entity)} disabled={isCreating}>
+                <Plus className="w-3 h-3 mr-1" />
+                Criar
+              </Button>
+            )}
             {filteredOptions.length > 0 && (
               <Select onValueChange={(id) => onResolve(entity.id, id)}>
                 <SelectTrigger className="w-[140px] h-8 text-xs">
@@ -236,6 +310,11 @@ function EntityRow({
                   ))}
                 </SelectContent>
               </Select>
+            )}
+            {!canShowCreateButton && filteredOptions.length === 0 && (
+              <p className="text-xs text-muted-foreground italic">
+                Valide o veículo primeiro
+              </p>
             )}
           </div>
         )}
