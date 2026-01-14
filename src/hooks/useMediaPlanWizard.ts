@@ -52,6 +52,8 @@ export interface WizardState {
   subdivisions: Record<string, BudgetAllocation[]>;
   moments: Record<string, BudgetAllocation[]>;
   funnelStages: Record<string, BudgetAllocation[]>;
+  // Funnel order: custom order of funnel stages for this plan (IDs ordered from top to bottom)
+  funnelOrder: string[];
   // Temporal
   temporalGranularity: 'monthly' | 'quarterly';
   temporalDistribution: Record<string, BudgetAllocation[]>;
@@ -78,6 +80,7 @@ const createDefaultState = (): WizardState => ({
   subdivisions: {},
   moments: {},
   funnelStages: {},
+  funnelOrder: [], // Custom funnel order for this plan
   temporalGranularity: 'monthly',
   temporalDistribution: {},
 });
@@ -230,6 +233,14 @@ export function useMediaPlanWizard() {
     }));
   }, []);
 
+  // Set custom funnel order for this plan (array of IDs from top to bottom)
+  const setFunnelOrder = useCallback((order: string[]) => {
+    setState(prev => ({
+      ...prev,
+      funnelOrder: order,
+    }));
+  }, []);
+
   const setTemporalGranularity = useCallback((granularity: 'monthly' | 'quarterly') => {
     setState(prev => ({
       ...prev,
@@ -266,7 +277,8 @@ export function useMediaPlanWizard() {
     funnelAllocations: Record<string, BudgetAllocation[]>,
     initialStep: number = 0,
     hierarchyOrder?: HierarchyLevel[],
-    hierarchyConfig?: HierarchyLevelConfig[]
+    hierarchyConfig?: HierarchyLevelConfig[],
+    funnelOrder?: string[]
   ) => {
     // Use provided config, or create from order with all allocate_budget = true
     const config = hierarchyConfig ?? createHierarchyConfig(hierarchyOrder ?? [], true);
@@ -282,6 +294,7 @@ export function useMediaPlanWizard() {
       subdivisions: subdivisionAllocations,
       moments: momentAllocations,
       funnelStages: funnelAllocations,
+      funnelOrder: funnelOrder ?? [],
       temporalGranularity: 'monthly',
       temporalDistribution: {},
     });
@@ -334,6 +347,7 @@ export function useMediaPlanWizard() {
     setSubdivisions,
     setMoments,
     setFunnelStages,
+    setFunnelOrder,
     setTemporalGranularity,
     setTemporalDistribution,
     validatePercentages,
