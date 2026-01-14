@@ -24,7 +24,7 @@ import { HierarchyOrderSelector } from '@/components/media-plan/HierarchyOrderSe
 import { NestedHierarchyLevel } from '@/components/media-plan/NestedHierarchyLevel';
 import { useMediaPlanWizard, BudgetAllocation } from '@/hooks/useMediaPlanWizard';
 import { KPI_OPTIONS } from '@/types/media';
-import { HierarchyLevel, getLevelLabel, getLevelLabelPlural, HIERARCHY_LEVEL_CONFIG } from '@/types/hierarchy';
+import { HierarchyLevel, HierarchyLevelConfig, getLevelLabel, getLevelLabelPlural, HIERARCHY_LEVEL_CONFIG, createHierarchyConfig } from '@/types/hierarchy';
 import { Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
@@ -103,6 +103,7 @@ export default function NewMediaPlanBudget() {
     goToStep, 
     updatePlanData, 
     setHierarchyOrder,
+    setHierarchyConfig,
     setSubdivisions, 
     setMoments, 
     setFunnelStages, 
@@ -680,8 +681,9 @@ export default function NewMediaPlanBudget() {
             transition={{ duration: 0.3 }}
           >
             <HierarchyOrderSelector
-              selectedLevels={state.hierarchyOrder}
+              selectedLevels={state.hierarchyConfig}
               onOrderChange={setHierarchyOrder}
+              onConfigChange={setHierarchyConfig}
             />
           </motion.div>
         )}

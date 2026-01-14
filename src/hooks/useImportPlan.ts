@@ -12,7 +12,7 @@ import {
   ColumnMapping,
   ParseResult,
 } from '@/utils/importPlanParser';
-import { HierarchyLevel } from '@/types/hierarchy';
+import { HierarchyLevel, HierarchyLevelConfig, createHierarchyConfig, getHierarchyOrder } from '@/types/hierarchy';
 import { generateBudgetDistributionsFromLines } from '@/utils/generateBudgetDistributions';
 
 export type EntityType = 'client' | 'vehicle' | 'channel' | 'subdivision' | 'moment' | 'funnel_stage' | 'target' | 'medium' | 'format';
@@ -53,7 +53,7 @@ export interface ImportState {
   parseResult: ParseResult | null;
   planInfo: PlanInfo;
   unresolvedEntities: UnresolvedEntity[];
-  detectedHierarchy: HierarchyLevel[]; // Keep as HierarchyLevel[] for backward compatibility
+  detectedHierarchy: HierarchyLevelConfig[];
   isCreating: boolean;
   isCheckingEntities: boolean;
   existingEntities: Record<EntityType, Array<{ id: string; name: string; parentId?: string }>>;
@@ -338,10 +338,13 @@ export function useImportPlan() {
       }
       
       // Detect hierarchy based on data
-      const detectedHierarchy: HierarchyLevel[] = [];
-      if (entityNames.subdivision.size > 0) detectedHierarchy.push('subdivision');
-      if (entityNames.moment.size > 0) detectedHierarchy.push('moment');
-      if (entityNames.funnel_stage.size > 0) detectedHierarchy.push('funnel_stage');
+      const detectedLevels: HierarchyLevel[] = [];
+      if (entityNames.subdivision.size > 0) detectedLevels.push('subdivision');
+      if (entityNames.moment.size > 0) detectedLevels.push('moment');
+      if (entityNames.funnel_stage.size > 0) detectedLevels.push('funnel_stage');
+      
+      // Convert to HierarchyLevelConfig with default allocate_budget = true
+      const detectedHierarchy = createHierarchyConfig(detectedLevels, true);
       
       setState(prev => ({
         ...prev,
@@ -401,9 +404,9 @@ export function useImportPlan() {
     setState(prev => ({ ...prev, step: 5 }));
   }, [state.unresolvedEntities]);
   
-  // Step 5: Update hierarchy order (accepts HierarchyLevel[] for backward compatibility)
-  const updateHierarchyOrder = useCallback((newOrder: HierarchyLevel[]) => {
-    setState(prev => ({ ...prev, detectedHierarchy: newOrder }));
+  // Step 5: Update hierarchy config
+  const updateHierarchyOrder = useCallback((newConfig: HierarchyLevelConfig[]) => {
+    setState(prev => ({ ...prev, detectedHierarchy: newConfig }));
   }, []);
   
   // Step 5: Confirm hierarchy
@@ -485,9 +488,10 @@ export function useImportPlan() {
           start_date: startDate ? format(startDate, 'yyyy-MM-dd') : null,
           end_date: endDate ? format(endDate, 'yyyy-MM-dd') : null,
           status: 'draft',
-          hierarchy_order: state.detectedHierarchy,
+          hierarchy_order: getHierarchyOrder(state.detectedHierarchy),
+          hierarchy_config: state.detectedHierarchy as unknown as Record<string, unknown>[],
           user_id: user.id,
-        })
+        } as any)
         .select()
         .single();
       
@@ -591,7 +595,7 @@ export function useImportPlan() {
         const distResult = await generateBudgetDistributionsFromLines({
           planId: newPlan.id,
           userId: user.id,
-          hierarchyOrder: state.detectedHierarchy,
+          hierarchyOrder: getHierarchyOrder(state.detectedHierarchy),
           lines: linesForDistribution,
           totalBudget,
           clearExisting: false, // No existing distributions for a new plan
