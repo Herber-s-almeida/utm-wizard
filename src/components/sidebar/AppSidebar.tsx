@@ -180,7 +180,7 @@ export function AppSidebar() {
   return (
     <div className={cn(
       "flex flex-col h-full border-r border-sidebar-border bg-sidebar overflow-x-hidden transition-all duration-300",
-      isCollapsed ? "w-16" : "w-80"
+      isCollapsed ? "w-[72px]" : "w-80"
     )}>
       {/* Header - Fixed at top */}
       <div className={cn(
