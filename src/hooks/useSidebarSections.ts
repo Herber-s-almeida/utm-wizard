@@ -33,6 +33,10 @@ const DEFAULT_SECTIONS: Record<string, boolean> = {
   // Footer settings section
   settingsFooter: false,
   adminSubmenu: false,
+  // Library config sections
+  objectives: false,
+  kpis: false,
+  detailTypes: false,
 };
 
 export function useSidebarSections() {
