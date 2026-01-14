@@ -7,6 +7,7 @@ import { BudgetAllocationTable } from './BudgetAllocationTable';
 import { FunnelStageSelector } from './FunnelStageSelector';
 import { SortableFunnelList } from './SortableFunnelList';
 import { FunnelVisualization } from './FunnelVisualization';
+import { FunnelOrderEditor } from './FunnelOrderEditor';
 
 // Icons for hierarchy levels
 const LEVEL_ICONS: Record<HierarchyLevel, React.ElementType> = {
@@ -28,11 +29,14 @@ interface NestedHierarchyLevelProps {
   onRemove: (level: HierarchyLevel, path: string, id: string) => void;
   onReorder: (level: HierarchyLevel, path: string, items: BudgetAllocation[]) => void;
   onCreate: (level: HierarchyLevel, name: string) => Promise<any>;
-  getLibraryItems: (level: HierarchyLevel) => { id: string; name: string }[];
+  getLibraryItems: (level: HierarchyLevel) => { id: string; name: string; description?: string | null }[];
   calculateAmount: (parentAmount: number, percentage: number) => number;
   maxItemsPerLevel: Record<HierarchyLevel, number>;
   planStartDate: string;
   planEndDate: string;
+  // Funnel order support
+  funnelOrder?: string[];
+  onFunnelOrderChange?: (order: string[]) => void;
 }
 
 const formatCurrency = (value: number) => {
@@ -107,6 +111,8 @@ export const NestedHierarchyLevel: React.FC<NestedHierarchyLevelProps> = ({
   maxItemsPerLevel,
   planStartDate,
   planEndDate,
+  funnelOrder,
+  onFunnelOrderChange,
 }) => {
   const renderLevel = (
     currentLevelIndex: number,

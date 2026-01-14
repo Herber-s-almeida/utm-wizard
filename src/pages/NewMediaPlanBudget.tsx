@@ -325,7 +325,7 @@ export default function NewMediaPlanBudget() {
 
     setSaving(true);
     try {
-      // 1. Create the media plan with hierarchy_order
+      // 1. Create the media plan with hierarchy_order and funnel_order
       const { data: plan, error: planError } = await supabase
         .from('media_plans')
         .insert({
@@ -342,7 +342,8 @@ export default function NewMediaPlanBudget() {
           objectives: state.planData.objectives.length > 0 ? state.planData.objectives : null,
           kpis: Object.keys(state.planData.kpis).length > 0 ? state.planData.kpis : null,
           status: 'draft',
-          hierarchy_order: state.hierarchyOrder, // Save the hierarchy order
+          hierarchy_order: state.hierarchyOrder,
+          funnel_order: state.funnelOrder.length > 0 ? state.funnelOrder : null,
         })
         .select()
         .single();

@@ -2083,6 +2083,7 @@ export type Database = {
           default_url: string | null
           deleted_at: string | null
           end_date: string | null
+          funnel_order: string[] | null
           hierarchy_config: Json | null
           hierarchy_order: string[] | null
           id: string
@@ -2105,6 +2106,7 @@ export type Database = {
           default_url?: string | null
           deleted_at?: string | null
           end_date?: string | null
+          funnel_order?: string[] | null
           hierarchy_config?: Json | null
           hierarchy_order?: string[] | null
           id?: string
@@ -2127,6 +2129,7 @@ export type Database = {
           default_url?: string | null
           deleted_at?: string | null
           end_date?: string | null
+          funnel_order?: string[] | null
           hierarchy_config?: Json | null
           hierarchy_order?: string[] | null
           id?: string
