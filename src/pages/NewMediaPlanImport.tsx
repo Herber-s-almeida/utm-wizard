@@ -38,6 +38,7 @@ export default function NewMediaPlanImport() {
     updatePlanInfo,
     confirmPlanInfo,
     resolveEntity,
+    unresolveEntity,
     setEntityCreating,
     addCreatedEntity,
     confirmEntityResolution,
@@ -190,6 +191,7 @@ export default function NewMediaPlanImport() {
               <ImportEntityResolver
                 unresolvedEntities={state.unresolvedEntities}
                 onResolve={resolveEntity}
+                onUnresolve={unresolveEntity}
                 onCreateEntity={handleCreateEntity}
                 existingEntities={state.existingEntities}
               />
