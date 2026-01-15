@@ -17,8 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Shield, Eye, Edit, Ban, UserPlus, Wand2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Shield, Eye, Edit, Ban, UserPlus, Wand2, Copy, CheckCircle } from 'lucide-react';
 import { PermissionLevel, EnvironmentSection } from '@/hooks/useEnvironmentPermissions';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -109,6 +109,8 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
   const queryClient = useQueryClient();
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
   const [permissions, setPermissions] = useState<Record<EnvironmentSection, PermissionLevel>>({
     executive_dashboard: 'view',
     reports: 'view',
@@ -152,16 +154,23 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
       // Show appropriate message based on result type
       if (data?.type === 'existing_user') {
         toast.success('Membro adicionado com sucesso!');
+        queryClient.invalidateQueries({ queryKey: ['environment-members'] });
+        queryClient.invalidateQueries({ queryKey: ['pending-invites'] });
+        onOpenChange(false);
+        setEmail('');
       } else if (data?.type === 'invite_sent') {
-        toast.success('Convite enviado! O usuário receberá um email para criar conta.');
+        // Show link for copying
+        setInviteLink(data.inviteLink || null);
+        setInviteSuccess(true);
+        toast.success('Convite criado! Copie o link abaixo.');
+        queryClient.invalidateQueries({ queryKey: ['pending-invites'] });
       } else {
         toast.success(data?.message || `Convite enviado para ${email}`);
+        queryClient.invalidateQueries({ queryKey: ['environment-members'] });
+        queryClient.invalidateQueries({ queryKey: ['pending-invites'] });
+        onOpenChange(false);
+        setEmail('');
       }
-      
-      queryClient.invalidateQueries({ queryKey: ['environment-members'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-invites'] });
-      onOpenChange(false);
-      setEmail('');
     } catch (error: any) {
       console.error('Invite error:', error);
       toast.error(error.message || 'Erro ao enviar convite');
@@ -173,6 +182,71 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
   const handlePermissionChange = (section: EnvironmentSection, level: PermissionLevel) => {
     setPermissions(prev => ({ ...prev, [section]: level }));
   };
+
+  const handleCopyLink = async () => {
+    if (inviteLink) {
+      await navigator.clipboard.writeText(inviteLink);
+      toast.success('Link copiado!');
+    }
+  };
+
+  const handleClose = () => {
+    setInviteLink(null);
+    setInviteSuccess(false);
+    setEmail('');
+    onOpenChange(false);
+  };
+
+  // If invite was sent successfully, show the link copy UI
+  if (inviteSuccess && inviteLink) {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              Convite Criado
+            </DialogTitle>
+            <DialogDescription>
+              Compartilhe o link abaixo com o usuário para que ele possa criar sua conta
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <Alert>
+              <AlertDescription className="text-sm">
+                <strong>Email:</strong> {email}
+              </AlertDescription>
+            </Alert>
+            
+            <div className="space-y-2">
+              <Label>Link de convite</Label>
+              <div className="flex gap-2">
+                <Input 
+                  value={inviteLink} 
+                  readOnly 
+                  className="font-mono text-xs"
+                />
+                <Button onClick={handleCopyLink} variant="outline">
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copiar
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Este link expira em 7 dias. O usuário também receberá um email de convite.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={handleClose}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
