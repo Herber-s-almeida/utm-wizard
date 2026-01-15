@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Image, FileText, ExternalLink, ChevronDown, ChevronRight, Check, Plus, Calendar, Link as LinkIcon, X } from 'lucide-react';
+import { ArrowLeft, Image, FileText, ExternalLink, ChevronDown, ChevronRight, Check, Plus, Calendar, Link as LinkIcon, X, Bell } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { usePlanBySlug, getPlanUrl } from '@/hooks/usePlanBySlug';
+import { SendNotificationDialog } from '@/components/media-plan/SendNotificationDialog';
 
 const PRODUCTION_STATUSES = [
   { value: 'solicitado', label: 'Solicitado', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
@@ -560,6 +561,7 @@ export default function MediaResourcesPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
 
   // Fetch plan by slug or ID
   const { data: mediaPlan, isLoading: loadingPlan } = usePlanBySlug(identifier);
@@ -757,6 +759,15 @@ export default function MediaResourcesPage() {
               </p>
             )}
           </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2"
+            onClick={() => setNotificationDialogOpen(true)}
+          >
+            <Bell className="h-3.5 w-3.5" />
+            Notificar
+          </Button>
           <Link to={planUrl}>
             <Button variant="outline" size="sm" className="gap-2">
               <ExternalLink className="h-3.5 w-3.5" />
@@ -961,6 +972,21 @@ export default function MediaResourcesPage() {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {/* Notification Dialog */}
+        {mediaPlan && planId && (
+          <SendNotificationDialog
+            open={notificationDialogOpen}
+            onOpenChange={setNotificationDialogOpen}
+            planId={planId}
+            planName={mediaPlan.name}
+            recentChangeLogs={(creatives || [])
+              .flatMap(c => c.change_logs || [])
+              .sort((a, b) => new Date(b.change_date).getTime() - new Date(a.change_date).getTime())
+              .slice(0, 10)
+            }
+          />
         )}
       </div>
     </DashboardLayout>

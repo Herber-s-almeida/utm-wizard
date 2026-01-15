@@ -388,6 +388,7 @@ export type Database = {
           invited_at: string | null
           invited_by: string | null
           member_user_id: string
+          notify_media_resources: boolean | null
           perm_executive_dashboard:
             | Database["public"]["Enums"]["environment_permission_level"]
             | null
@@ -419,6 +420,7 @@ export type Database = {
           invited_at?: string | null
           invited_by?: string | null
           member_user_id: string
+          notify_media_resources?: boolean | null
           perm_executive_dashboard?:
             | Database["public"]["Enums"]["environment_permission_level"]
             | null
@@ -450,6 +452,7 @@ export type Database = {
           invited_at?: string | null
           invited_by?: string | null
           member_user_id?: string
+          notify_media_resources?: boolean | null
           perm_executive_dashboard?:
             | Database["public"]["Enums"]["environment_permission_level"]
             | null
