@@ -149,8 +149,17 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
 
       if (error) throw error;
 
-      toast.success(`Convite enviado para ${email}`);
+      // Show appropriate message based on result type
+      if (data?.type === 'existing_user') {
+        toast.success('Membro adicionado com sucesso!');
+      } else if (data?.type === 'invite_sent') {
+        toast.success('Convite enviado! O usuário receberá um email para criar conta.');
+      } else {
+        toast.success(data?.message || `Convite enviado para ${email}`);
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['environment-members'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-invites'] });
       onOpenChange(false);
       setEmail('');
     } catch (error: any) {

@@ -66,55 +66,128 @@ serve(async (req) => {
 
     const targetUser = usersData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
-    if (!targetUser) {
-      throw new Error("Usuário não encontrado. O usuário precisa ter uma conta na plataforma.");
+    if (targetUser) {
+      // ===== USER EXISTS - Add directly as member =====
+      
+      if (targetUser.id === user.id) {
+        throw new Error("Você não pode convidar a si mesmo");
+      }
+
+      // Check if already a member
+      const { data: existingMember } = await adminClient
+        .from('environment_members')
+        .select('id')
+        .eq('environment_owner_id', user.id)
+        .eq('member_user_id', targetUser.id)
+        .maybeSingle();
+
+      if (existingMember) {
+        throw new Error("Este usuário já é membro do seu ambiente");
+      }
+
+      // Insert the new member
+      const { data: newMember, error: insertError } = await adminClient
+        .from('environment_members')
+        .insert({
+          environment_owner_id: user.id,
+          member_user_id: targetUser.id,
+          invited_by: user.id,
+          invited_at: new Date().toISOString(),
+          accepted_at: new Date().toISOString(), // Auto-accept since user exists
+          perm_executive_dashboard: permissions.executive_dashboard || 'none',
+          perm_reports: permissions.reports || 'none',
+          perm_finance: permissions.finance || 'none',
+          perm_media_plans: permissions.media_plans || 'none',
+          perm_media_resources: permissions.media_resources || 'none',
+          perm_taxonomy: permissions.taxonomy || 'none',
+          perm_library: permissions.library || 'none',
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Insert error:", insertError);
+        throw new Error(insertError.message || "Erro ao adicionar membro");
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          member: newMember, 
+          type: 'existing_user',
+          message: 'Membro adicionado com sucesso!'
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+
+    } else {
+      // ===== USER DOES NOT EXIST - Create pending invite and send email =====
+      
+      // Check if there's already a pending invite for this email
+      const { data: existingInvite } = await adminClient
+        .from('pending_environment_invites')
+        .select('id')
+        .eq('email', email.toLowerCase())
+        .eq('environment_owner_id', user.id)
+        .maybeSingle();
+
+      if (existingInvite) {
+        throw new Error("Já existe um convite pendente para este email");
+      }
+
+      // Create pending invite record
+      const { error: pendingError } = await adminClient
+        .from('pending_environment_invites')
+        .insert({
+          email: email.toLowerCase(),
+          environment_owner_id: user.id,
+          invited_by: user.id,
+          perm_executive_dashboard: permissions.executive_dashboard || 'none',
+          perm_reports: permissions.reports || 'none',
+          perm_finance: permissions.finance || 'none',
+          perm_media_plans: permissions.media_plans || 'none',
+          perm_media_resources: permissions.media_resources || 'none',
+          perm_taxonomy: permissions.taxonomy || 'none',
+          perm_library: permissions.library || 'none',
+        });
+
+      if (pendingError) {
+        console.error("Pending invite error:", pendingError);
+        throw new Error(pendingError.message || "Erro ao criar convite pendente");
+      }
+
+      // Send invitation email via Supabase Auth
+      // is_system_user = false means the user will NOT have their own environment
+      const { data: inviteData, error: inviteError } = await adminClient.auth.admin
+        .inviteUserByEmail(email, {
+          redirectTo: `${supabaseUrl}/auth`,
+          data: {
+            is_system_user: false, // Environment-only user - no personal environment
+            invited_to_environment: user.id,
+          },
+        });
+
+      if (inviteError) {
+        // Rollback pending invite if email fails
+        await adminClient
+          .from('pending_environment_invites')
+          .delete()
+          .eq('email', email.toLowerCase())
+          .eq('environment_owner_id', user.id);
+        
+        console.error("Invite email error:", inviteError);
+        throw new Error(inviteError.message || "Erro ao enviar convite por email");
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          type: 'invite_sent',
+          message: 'Convite enviado! O usuário receberá um email para criar conta.'
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
-
-    if (targetUser.id === user.id) {
-      throw new Error("Você não pode convidar a si mesmo");
-    }
-
-    // Check if already a member
-    const { data: existingMember } = await adminClient
-      .from('environment_members')
-      .select('id')
-      .eq('environment_owner_id', user.id)
-      .eq('member_user_id', targetUser.id)
-      .maybeSingle();
-
-    if (existingMember) {
-      throw new Error("Este usuário já é membro do seu ambiente");
-    }
-
-    // Insert the new member
-    const { data: newMember, error: insertError } = await adminClient
-      .from('environment_members')
-      .insert({
-        environment_owner_id: user.id,
-        member_user_id: targetUser.id,
-        invited_by: user.id,
-        invited_at: new Date().toISOString(),
-        accepted_at: new Date().toISOString(), // Auto-accept for now
-        perm_executive_dashboard: permissions.executive_dashboard || 'none',
-        perm_reports: permissions.reports || 'none',
-        perm_finance: permissions.finance || 'none',
-        perm_media_plans: permissions.media_plans || 'none',
-        perm_media_resources: permissions.media_resources || 'none',
-        perm_taxonomy: permissions.taxonomy || 'none',
-        perm_library: permissions.library || 'none',
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error("Insert error:", insertError);
-      throw new Error(insertError.message || "Erro ao adicionar membro");
-    }
-
-    return new Response(
-      JSON.stringify({ success: true, member: newMember }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
 
   } catch (error: unknown) {
     console.error("Error:", error);

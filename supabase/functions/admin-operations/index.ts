@@ -208,10 +208,13 @@ serve(async (req) => {
           );
         }
 
-        // Send invitation
+        // Send invitation with is_system_user = true (system user gets their own environment)
         const { data: inviteData, error: inviteError } = await adminClient.auth.admin
           .inviteUserByEmail(email, {
             redirectTo: `${supabaseUrl}/auth`,
+            data: {
+              is_system_user: true, // Mark as system user - will have their own environment
+            },
           });
 
         if (inviteError) {

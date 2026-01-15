@@ -8,3 +8,12 @@ verify_jwt = false
 
 [functions.seed-test-plans]
 verify_jwt = false
+
+[functions.admin-operations]
+verify_jwt = false
+
+[functions.invite-environment-member]
+verify_jwt = false
+
+[functions.send-resource-notification]
+verify_jwt = false

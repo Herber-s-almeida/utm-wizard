@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,8 +31,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Bell } from 'lucide-react';
+import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Bell, Clock, RotateCw, Mail } from 'lucide-react';
 import { useEnvironmentPermissions, PermissionLevel, EnvironmentSection } from '@/hooks/useEnvironmentPermissions';
+import { usePendingInvites, PendingInvite } from '@/hooks/usePendingInvites';
 import { useResourceNotifications } from '@/hooks/useResourceNotifications';
 import { InviteMemberDialog } from '@/components/admin/InviteMemberDialog';
 import { toast } from 'sonner';
@@ -64,10 +67,19 @@ export default function EnvironmentMembersPage() {
     isRemoving,
   } = useEnvironmentPermissions();
 
+  const {
+    pendingInvites,
+    pendingInviteCount,
+    isLoadingPendingInvites,
+    deletePendingInvite,
+    isDeletingInvite,
+  } = usePendingInvites();
+
   const { updateNotificationPreference, isUpdatingPreference } = useResourceNotifications();
 
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
+  const [inviteToDelete, setInviteToDelete] = useState<string | null>(null);
 
   const handlePermissionChange = (memberId: string, section: EnvironmentSection, level: PermissionLevel) => {
     updateMemberPermissions(
@@ -91,6 +103,18 @@ export default function EnvironmentMembersPage() {
     });
   };
 
+  const handleDeleteInvite = () => {
+    if (!inviteToDelete) return;
+    
+    deletePendingInvite(inviteToDelete, {
+      onSuccess: () => {
+        toast.success('Convite cancelado');
+        setInviteToDelete(null);
+      },
+      onError: (error: any) => toast.error(`Erro ao cancelar: ${error.message}`),
+    });
+  };
+
   const handleNotificationToggle = (memberId: string, enabled: boolean) => {
     updateNotificationPreference(
       { memberId, enabled },
@@ -110,6 +134,9 @@ export default function EnvironmentMembersPage() {
     }
   };
 
+  const totalSlots = memberCount + pendingInviteCount;
+  const canInvite = totalSlots < 30;
+
   return (
     <DashboardLayout>
       <div className="container py-6 space-y-6">
@@ -126,11 +153,11 @@ export default function EnvironmentMembersPage() {
           
           <div className="flex items-center gap-4">
             <Badge variant="outline" className="text-sm py-1 px-3">
-              {memberCount}/30 membros
+              {memberCount} ativos {pendingInviteCount > 0 && `+ ${pendingInviteCount} pendentes`} / 30
             </Badge>
             <Button 
               onClick={() => setInviteDialogOpen(true)}
-              disabled={!canInviteMore}
+              disabled={!canInvite}
             >
               <UserPlus className="h-4 w-4 mr-2" />
               Convidar Membro
@@ -138,6 +165,62 @@ export default function EnvironmentMembersPage() {
           </div>
         </div>
 
+        {/* Pending Invites Section */}
+        {pendingInvites.length > 0 && (
+          <Card className="border-dashed border-amber-500/50 bg-amber-500/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Clock className="h-4 w-4 text-amber-500" />
+                Convites Pendentes
+              </CardTitle>
+              <CardDescription>
+                Usuários que ainda não criaram conta na plataforma
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Enviado em</TableHead>
+                    <TableHead>Expira em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingInvites.map((invite) => (
+                    <TableRow key={invite.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          {invite.email}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(invite.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(invite.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setInviteToDelete(invite.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Active Members Section */}
         <Card>
           <CardHeader>
             <CardTitle>Membros Ativos</CardTitle>
@@ -153,7 +236,7 @@ export default function EnvironmentMembersPage() {
             ) : environmentMembers.length === 0 ? (
               <div className="text-center py-12">
                 <Users className="h-12 w-12 mx-auto text-muted-foreground/50" />
-                <h3 className="mt-4 text-lg font-medium">Nenhum membro convidado</h3>
+                <h3 className="mt-4 text-lg font-medium">Nenhum membro ativo</h3>
                 <p className="text-muted-foreground mt-2">
                   Convide até 30 pessoas para colaborar no seu ambiente
                 </p>
@@ -196,11 +279,6 @@ export default function EnvironmentMembersPage() {
                             <p className="text-sm text-muted-foreground">
                               {member.email || member.member_user_id.slice(0, 8)}
                             </p>
-                            {!member.accepted_at && (
-                              <Badge variant="outline" className="mt-1 text-xs">
-                                Convite pendente
-                              </Badge>
-                            )}
                           </div>
                         </TableCell>
                         
@@ -295,7 +373,7 @@ export default function EnvironmentMembersPage() {
           onOpenChange={setInviteDialogOpen} 
         />
 
-        {/* Remove Confirmation Dialog */}
+        {/* Remove Member Confirmation Dialog */}
         <AlertDialog open={!!memberToRemove} onOpenChange={() => setMemberToRemove(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -313,6 +391,28 @@ export default function EnvironmentMembersPage() {
                 disabled={isRemoving}
               >
                 {isRemoving ? 'Removendo...' : 'Remover'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Cancel Invite Confirmation Dialog */}
+        <AlertDialog open={!!inviteToDelete} onOpenChange={() => setInviteToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancelar convite?</AlertDialogTitle>
+              <AlertDialogDescription>
+                O link de convite será invalidado e o usuário não poderá mais usá-lo para criar conta.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Manter convite</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteInvite}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={isDeletingInvite}
+              >
+                {isDeletingInvite ? 'Cancelando...' : 'Cancelar convite'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -2302,6 +2302,99 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_environment_invites: {
+        Row: {
+          created_at: string | null
+          email: string
+          environment_owner_id: string
+          expires_at: string | null
+          id: string
+          invited_by: string
+          notify_media_resources: boolean | null
+          perm_executive_dashboard:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_finance:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_library:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_plans:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_resources:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_reports:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_taxonomy:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          environment_owner_id: string
+          expires_at?: string | null
+          id?: string
+          invited_by: string
+          notify_media_resources?: boolean | null
+          perm_executive_dashboard?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_finance?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_library?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_plans?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_resources?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_reports?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_taxonomy?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          environment_owner_id?: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string
+          notify_media_resources?: boolean | null
+          perm_executive_dashboard?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_finance?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_library?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_plans?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_resources?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_reports?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_taxonomy?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+        }
+        Relationships: []
+      }
       performance_alerts: {
         Row: {
           alert_type: string
@@ -2605,6 +2698,7 @@ export type Database = {
           created_at: string | null
           full_name: string | null
           id: string
+          is_system_user: boolean | null
           phone: string | null
           updated_at: string | null
           user_id: string
@@ -2614,6 +2708,7 @@ export type Database = {
           created_at?: string | null
           full_name?: string | null
           id?: string
+          is_system_user?: boolean | null
           phone?: string | null
           updated_at?: string | null
           user_id: string
@@ -2623,6 +2718,7 @@ export type Database = {
           created_at?: string | null
           full_name?: string | null
           id?: string
+          is_system_user?: boolean | null
           phone?: string | null
           updated_at?: string | null
           user_id?: string
@@ -3402,6 +3498,7 @@ export type Database = {
         Args: { _environment_owner_id: string; _user_id: string }
         Returns: boolean
       }
+      is_environment_owner: { Args: { _user_id: string }; Returns: boolean }
       is_system_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
