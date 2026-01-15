@@ -233,7 +233,7 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Este link expira em 7 dias. O usuário também receberá um email de convite.
+                Este link expira em 7 dias. Envie para o usuário por email ou WhatsApp.
               </p>
             </div>
           </div>

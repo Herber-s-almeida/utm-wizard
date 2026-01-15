@@ -2309,6 +2309,7 @@ export type Database = {
           environment_owner_id: string
           expires_at: string | null
           id: string
+          invite_token: string | null
           invited_by: string
           notify_media_resources: boolean | null
           perm_executive_dashboard:
@@ -2339,6 +2340,7 @@ export type Database = {
           environment_owner_id: string
           expires_at?: string | null
           id?: string
+          invite_token?: string | null
           invited_by: string
           notify_media_resources?: boolean | null
           perm_executive_dashboard?:
@@ -2369,6 +2371,7 @@ export type Database = {
           environment_owner_id?: string
           expires_at?: string | null
           id?: string
+          invite_token?: string | null
           invited_by?: string
           notify_media_resources?: boolean | null
           perm_executive_dashboard?:

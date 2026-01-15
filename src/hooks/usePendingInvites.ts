@@ -70,7 +70,7 @@ export function usePendingInvites() {
       
       if (deleteError) throw deleteError;
       
-      // Then create a new invite (which will generate a new link)
+      // Then create a new invite (which will generate a new token/link)
       const { data, error } = await supabase.functions.invoke('invite-environment-member', {
         body: {
           email: invite.email,
