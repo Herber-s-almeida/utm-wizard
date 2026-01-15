@@ -59,10 +59,18 @@ export function usePendingInvites() {
     },
   });
 
-  // Resend an invite (delete and recreate)
-  const resendInviteMutation = useMutation({
+  // Regenerate invite link for an existing pending invite
+  const regenerateInviteLinkMutation = useMutation({
     mutationFn: async (invite: PendingInvite) => {
-      // Call the edge function to resend
+      // First delete the existing pending invite
+      const { error: deleteError } = await supabase
+        .from('pending_environment_invites')
+        .delete()
+        .eq('id', invite.id);
+      
+      if (deleteError) throw deleteError;
+      
+      // Then create a new invite (which will generate a new link)
       const { data, error } = await supabase.functions.invoke('invite-environment-member', {
         body: {
           email: invite.email,
@@ -92,8 +100,8 @@ export function usePendingInvites() {
     pendingInviteCount: pendingInvites.length,
     isLoadingPendingInvites,
     deletePendingInvite: deletePendingInviteMutation.mutate,
-    resendInvite: resendInviteMutation.mutate,
+    regenerateInviteLink: regenerateInviteLinkMutation.mutateAsync,
     isDeletingInvite: deletePendingInviteMutation.isPending,
-    isResendingInvite: resendInviteMutation.isPending,
+    isRegeneratingLink: regenerateInviteLinkMutation.isPending,
   };
 }

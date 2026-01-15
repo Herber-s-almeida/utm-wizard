@@ -31,12 +31,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Bell, Clock, RotateCw, Mail } from 'lucide-react';
+import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Bell, Clock, Copy, Mail } from 'lucide-react';
 import { useEnvironmentPermissions, PermissionLevel, EnvironmentSection } from '@/hooks/useEnvironmentPermissions';
 import { usePendingInvites, PendingInvite } from '@/hooks/usePendingInvites';
 import { useResourceNotifications } from '@/hooks/useResourceNotifications';
 import { InviteMemberDialog } from '@/components/admin/InviteMemberDialog';
 import { toast } from 'sonner';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const SECTIONS: { key: EnvironmentSection; label: string }[] = [
   { key: 'executive_dashboard', label: 'Dashboard' },
@@ -72,7 +73,9 @@ export default function EnvironmentMembersPage() {
     pendingInviteCount,
     isLoadingPendingInvites,
     deletePendingInvite,
+    regenerateInviteLink,
     isDeletingInvite,
+    isRegeneratingLink,
   } = usePendingInvites();
 
   const { updateNotificationPreference, isUpdatingPreference } = useResourceNotifications();
@@ -131,6 +134,20 @@ export default function EnvironmentMembersPage() {
       case 'edit': return 'secondary';
       case 'view': return 'outline';
       default: return 'destructive';
+    }
+  };
+
+  const handleCopyInviteLink = async (invite: PendingInvite) => {
+    try {
+      const result = await regenerateInviteLink(invite);
+      if (result?.inviteLink) {
+        await navigator.clipboard.writeText(result.inviteLink);
+        toast.success('Link copiado!');
+      } else {
+        toast.error('Não foi possível gerar o link');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao gerar link');
     }
   };
 
@@ -203,14 +220,40 @@ export default function EnvironmentMembersPage() {
                         {format(new Date(invite.expires_at), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setInviteToDelete(invite.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider>
+                          <div className="flex items-center gap-1 justify-end">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleCopyInviteLink(invite)}
+                                  disabled={isRegeneratingLink}
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Copiar link de convite</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setInviteToDelete(invite.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Cancelar convite</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))}

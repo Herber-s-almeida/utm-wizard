@@ -156,34 +156,45 @@ serve(async (req) => {
         throw new Error(pendingError.message || "Erro ao criar convite pendente");
       }
 
-      // Send invitation email via Supabase Auth
+      // Get origin for redirect URL
+      const origin = req.headers.get("origin") || supabaseUrl;
+
+      // Generate invite link using generateLink (returns the action_link)
       // is_system_user = false means the user will NOT have their own environment
-      const { data: inviteData, error: inviteError } = await adminClient.auth.admin
-        .inviteUserByEmail(email, {
-          redirectTo: `${supabaseUrl}/auth`,
-          data: {
-            is_system_user: false, // Environment-only user - no personal environment
-            invited_to_environment: user.id,
+      const { data: linkData, error: linkError } = await adminClient.auth.admin
+        .generateLink({
+          type: 'invite',
+          email: email,
+          options: {
+            redirectTo: `${origin}/auth`,
+            data: {
+              is_system_user: false, // Environment-only user - no personal environment
+              invited_to_environment: user.id,
+            },
           },
         });
 
-      if (inviteError) {
-        // Rollback pending invite if email fails
+      if (linkError) {
+        // Rollback pending invite if link generation fails
         await adminClient
           .from('pending_environment_invites')
           .delete()
           .eq('email', email.toLowerCase())
           .eq('environment_owner_id', user.id);
         
-        console.error("Invite email error:", inviteError);
-        throw new Error(inviteError.message || "Erro ao enviar convite por email");
+        console.error("Generate link error:", linkError);
+        throw new Error(linkError.message || "Erro ao gerar link de convite");
       }
+
+      const inviteLink = linkData?.properties?.action_link;
+      console.log("Invite link generated:", inviteLink ? "success" : "no link");
 
       return new Response(
         JSON.stringify({ 
           success: true, 
           type: 'invite_sent',
-          message: 'Convite enviado! O usuário receberá um email para criar conta.'
+          inviteLink: inviteLink || null,
+          message: 'Convite criado! Copie o link ou compartilhe com o usuário.'
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
