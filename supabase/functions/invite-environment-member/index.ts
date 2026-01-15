@@ -6,13 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Generate a random token for the invite
-function generateInviteToken(): string {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -128,7 +121,7 @@ serve(async (req) => {
       );
 
     } else {
-      // ===== USER DOES NOT EXIST - Create pending invite with our own token =====
+      // ===== USER DOES NOT EXIST - Create pending invite =====
       
       // Check if there's already a pending invite for this email
       const { data: existingInvite } = await adminClient
@@ -142,17 +135,13 @@ serve(async (req) => {
         throw new Error("Já existe um convite pendente para este email");
       }
 
-      // Generate our own invite token
-      const inviteToken = generateInviteToken();
-
-      // Create pending invite record with token
+      // Create pending invite record (without token - we validate by email now)
       const { error: pendingError } = await adminClient
         .from('pending_environment_invites')
         .insert({
           email: email.toLowerCase(),
           environment_owner_id: user.id,
           invited_by: user.id,
-          invite_token: inviteToken,
           perm_executive_dashboard: permissions.executive_dashboard || 'none',
           perm_reports: permissions.reports || 'none',
           perm_finance: permissions.finance || 'none',
@@ -167,20 +156,13 @@ serve(async (req) => {
         throw new Error(pendingError.message || "Erro ao criar convite pendente");
       }
 
-      // Get origin for friendly invite link (pointing to our app, not supabase)
-      const origin = req.headers.get("origin") || "https://mediaplab.lovable.app";
-      
-      // Generate friendly invite link pointing to our /auth/register page
-      const inviteLink = `${origin}/auth/register?token=${inviteToken}&email=${encodeURIComponent(email.toLowerCase())}`;
-      
-      console.log("Invite link generated:", inviteLink ? "success" : "no link");
+      console.log("Invite created for email:", email.toLowerCase());
 
       return new Response(
         JSON.stringify({ 
           success: true, 
           type: 'invite_sent',
-          inviteLink: inviteLink,
-          message: 'Convite criado! Copie o link e compartilhe com o usuário.'
+          message: 'Convite criado! O usuário pode criar conta em /auth/register'
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

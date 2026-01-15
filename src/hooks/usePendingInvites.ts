@@ -59,49 +59,11 @@ export function usePendingInvites() {
     },
   });
 
-  // Regenerate invite link for an existing pending invite
-  const regenerateInviteLinkMutation = useMutation({
-    mutationFn: async (invite: PendingInvite) => {
-      // First delete the existing pending invite
-      const { error: deleteError } = await supabase
-        .from('pending_environment_invites')
-        .delete()
-        .eq('id', invite.id);
-      
-      if (deleteError) throw deleteError;
-      
-      // Then create a new invite (which will generate a new token/link)
-      const { data, error } = await supabase.functions.invoke('invite-environment-member', {
-        body: {
-          email: invite.email,
-          permissions: {
-            executive_dashboard: invite.perm_executive_dashboard,
-            reports: invite.perm_reports,
-            finance: invite.perm_finance,
-            media_plans: invite.perm_media_plans,
-            media_resources: invite.perm_media_resources,
-            taxonomy: invite.perm_taxonomy,
-            library: invite.perm_library,
-          },
-        },
-      });
-      
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pending-invites'] });
-    },
-  });
-
   return {
     pendingInvites,
     pendingInviteCount: pendingInvites.length,
     isLoadingPendingInvites,
     deletePendingInvite: deletePendingInviteMutation.mutate,
-    regenerateInviteLink: regenerateInviteLinkMutation.mutateAsync,
     isDeletingInvite: deletePendingInviteMutation.isPending,
-    isRegeneratingLink: regenerateInviteLinkMutation.isPending,
   };
 }
