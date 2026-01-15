@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { LayoutDashboard, Mail, Lock, User, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, Mail, Lock, User, ArrowRight, Loader2, AlertCircle, Building2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 
 const signupSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -32,34 +33,84 @@ const getAuthErrorMessage = (error: Error): string => {
   return 'Erro ao processar solicitação. Tente novamente';
 };
 
+interface PendingInvite {
+  id: string;
+  email: string;
+  environment_owner_id: string;
+  expires_at: string;
+}
+
 export default function AuthRegister() {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [validating, setValidating] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [isValidInvite, setIsValidInvite] = useState<boolean | null>(null);
+  const [inviteData, setInviteData] = useState<PendingInvite | null>(null);
+  const [environmentName, setEnvironmentName] = useState<string>('');
   const { signUp, user } = useAuth();
   const navigate = useNavigate();
 
-  // Check if this is a valid invite link
+  // Validate invite token
   useEffect(() => {
-    const token = searchParams.get('token');
-    const type = searchParams.get('type');
-    
-    // If there's a token or type=invite, it's coming from an invite link
-    if (token || type === 'invite' || type === 'signup') {
-      setIsValidInvite(true);
-      
-      // Try to extract email from URL if present
+    async function validateInvite() {
+      const token = searchParams.get('token');
       const emailParam = searchParams.get('email');
-      if (emailParam) {
-        setEmail(emailParam);
+      
+      // If no token, check if it's a Supabase auth redirect
+      if (!token) {
+        // Check for Supabase's type=invite or type=signup params (legacy support)
+        const type = searchParams.get('type');
+        if (type === 'invite' || type === 'signup') {
+          setIsValidInvite(true);
+          if (emailParam) setEmail(emailParam);
+          setValidating(false);
+          return;
+        }
+        
+        setIsValidInvite(false);
+        setValidating(false);
+        return;
       }
-    } else {
-      // No invite token - not allowed to register
-      setIsValidInvite(false);
+
+      try {
+        // Validate our custom invite token
+        const { data: invite, error } = await supabase
+          .from('pending_environment_invites')
+          .select('id, email, environment_owner_id, expires_at')
+          .eq('invite_token', token)
+          .gt('expires_at', new Date().toISOString())
+          .maybeSingle();
+
+        if (error || !invite) {
+          console.error('Invalid or expired invite token:', error);
+          setIsValidInvite(false);
+          setValidating(false);
+          return;
+        }
+
+        // Get environment owner name
+        const { data: ownerProfile } = await supabase
+          .from('profiles')
+          .select('company, full_name')
+          .eq('user_id', invite.environment_owner_id)
+          .maybeSingle();
+
+        setInviteData(invite);
+        setEmail(invite.email);
+        setEnvironmentName(ownerProfile?.company || ownerProfile?.full_name || 'Ambiente');
+        setIsValidInvite(true);
+      } catch (err) {
+        console.error('Error validating invite:', err);
+        setIsValidInvite(false);
+      } finally {
+        setValidating(false);
+      }
     }
+
+    validateInvite();
   }, [searchParams]);
 
   useEffect(() => {
@@ -85,6 +136,7 @@ export default function AuthRegister() {
         toast.error(getAuthErrorMessage(error));
       } else {
         toast.success('Conta criada com sucesso!');
+        // The trigger will automatically process the pending invite
         navigate('/media-plan-dashboard');
       }
     } finally {
@@ -92,8 +144,8 @@ export default function AuthRegister() {
     }
   };
 
-  // If we're still checking validity
-  if (isValidInvite === null) {
+  // Loading state while validating
+  if (validating) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -122,18 +174,17 @@ export default function AuthRegister() {
                 <AlertCircle className="w-7 h-7 text-destructive" />
               </div>
               <CardTitle className="font-display text-2xl">
-                Acesso Restrito
+                Link Inválido ou Expirado
               </CardTitle>
               <CardDescription className="text-muted-foreground">
-                Novas contas só podem ser criadas através de convite.
+                Este link de convite não é válido ou já expirou.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Se você recebeu um convite, use o link enviado por email. 
-                  Caso contrário, solicite um convite ao administrador do sistema.
+                  Solicite um novo convite ao administrador do ambiente que deseja acessar.
                 </AlertDescription>
               </Alert>
               
@@ -176,6 +227,16 @@ export default function AuthRegister() {
             <CardDescription className="text-muted-foreground">
               Complete seu cadastro para acessar a plataforma
             </CardDescription>
+            
+            {environmentName && (
+              <div className="mt-3 p-3 bg-muted/50 rounded-lg border border-border/50">
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Building2 className="h-4 w-4" />
+                  <span>Você foi convidado para:</span>
+                </div>
+                <p className="font-semibold text-foreground mt-1">{environmentName}</p>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -206,9 +267,14 @@ export default function AuthRegister() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
-                    disabled={!!searchParams.get('email')}
+                    disabled={!!inviteData}
                   />
                 </div>
+                {inviteData && (
+                  <p className="text-xs text-muted-foreground">
+                    O email é pré-definido pelo convite
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

@@ -6,6 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Generate a random token for the invite
+function generateInviteToken(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -121,7 +128,7 @@ serve(async (req) => {
       );
 
     } else {
-      // ===== USER DOES NOT EXIST - Create pending invite and send email =====
+      // ===== USER DOES NOT EXIST - Create pending invite with our own token =====
       
       // Check if there's already a pending invite for this email
       const { data: existingInvite } = await adminClient
@@ -135,13 +142,17 @@ serve(async (req) => {
         throw new Error("Já existe um convite pendente para este email");
       }
 
-      // Create pending invite record
+      // Generate our own invite token
+      const inviteToken = generateInviteToken();
+
+      // Create pending invite record with token
       const { error: pendingError } = await adminClient
         .from('pending_environment_invites')
         .insert({
           email: email.toLowerCase(),
           environment_owner_id: user.id,
           invited_by: user.id,
+          invite_token: inviteToken,
           perm_executive_dashboard: permissions.executive_dashboard || 'none',
           perm_reports: permissions.reports || 'none',
           perm_finance: permissions.finance || 'none',
@@ -156,45 +167,20 @@ serve(async (req) => {
         throw new Error(pendingError.message || "Erro ao criar convite pendente");
       }
 
-      // Get origin for redirect URL
-      const origin = req.headers.get("origin") || supabaseUrl;
-
-      // Generate invite link using generateLink (returns the action_link)
-      // is_system_user = false means the user will NOT have their own environment
-      const { data: linkData, error: linkError } = await adminClient.auth.admin
-        .generateLink({
-          type: 'invite',
-          email: email,
-          options: {
-            redirectTo: `${origin}/auth`,
-            data: {
-              is_system_user: false, // Environment-only user - no personal environment
-              invited_to_environment: user.id,
-            },
-          },
-        });
-
-      if (linkError) {
-        // Rollback pending invite if link generation fails
-        await adminClient
-          .from('pending_environment_invites')
-          .delete()
-          .eq('email', email.toLowerCase())
-          .eq('environment_owner_id', user.id);
-        
-        console.error("Generate link error:", linkError);
-        throw new Error(linkError.message || "Erro ao gerar link de convite");
-      }
-
-      const inviteLink = linkData?.properties?.action_link;
+      // Get origin for friendly invite link (pointing to our app, not supabase)
+      const origin = req.headers.get("origin") || "https://mediaplab.lovable.app";
+      
+      // Generate friendly invite link pointing to our /auth/register page
+      const inviteLink = `${origin}/auth/register?token=${inviteToken}&email=${encodeURIComponent(email.toLowerCase())}`;
+      
       console.log("Invite link generated:", inviteLink ? "success" : "no link");
 
       return new Response(
         JSON.stringify({ 
           success: true, 
           type: 'invite_sent',
-          inviteLink: inviteLink || null,
-          message: 'Convite criado! Copie o link ou compartilhe com o usuário.'
+          inviteLink: inviteLink,
+          message: 'Convite criado! Copie o link e compartilhe com o usuário.'
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
