@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Eye, Edit, Ban, UserPlus, Wand2, Copy, CheckCircle } from 'lucide-react';
+import { Shield, Eye, Edit, Ban, UserPlus, Wand2, CheckCircle, Info } from 'lucide-react';
 import { PermissionLevel, EnvironmentSection } from '@/hooks/useEnvironmentPermissions';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -109,8 +109,8 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
   const queryClient = useQueryClient();
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState(false);
+  const [successEmail, setSuccessEmail] = useState('');
   const [permissions, setPermissions] = useState<Record<EnvironmentSection, PermissionLevel>>({
     executive_dashboard: 'view',
     reports: 'view',
@@ -159,13 +159,12 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
         onOpenChange(false);
         setEmail('');
       } else if (data?.type === 'invite_sent') {
-        // Show link for copying
-        setInviteLink(data.inviteLink || null);
+        // Show success message with instructions
+        setSuccessEmail(email);
         setInviteSuccess(true);
-        toast.success('Convite criado! Copie o link abaixo.');
         queryClient.invalidateQueries({ queryKey: ['pending-invites'] });
       } else {
-        toast.success(data?.message || `Convite enviado para ${email}`);
+        toast.success(data?.message || `Convite criado para ${email}`);
         queryClient.invalidateQueries({ queryKey: ['environment-members'] });
         queryClient.invalidateQueries({ queryKey: ['pending-invites'] });
         onOpenChange(false);
@@ -183,22 +182,15 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
     setPermissions(prev => ({ ...prev, [section]: level }));
   };
 
-  const handleCopyLink = async () => {
-    if (inviteLink) {
-      await navigator.clipboard.writeText(inviteLink);
-      toast.success('Link copiado!');
-    }
-  };
-
   const handleClose = () => {
-    setInviteLink(null);
     setInviteSuccess(false);
+    setSuccessEmail('');
     setEmail('');
     onOpenChange(false);
   };
 
-  // If invite was sent successfully, show the link copy UI
-  if (inviteSuccess && inviteLink) {
+  // If invite was sent successfully, show instructions
+  if (inviteSuccess) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-lg">
@@ -208,32 +200,29 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
               Convite Criado
             </DialogTitle>
             <DialogDescription>
-              Compartilhe o link abaixo com o usuário para que ele possa criar sua conta
+              O convite foi registrado no sistema
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <Alert>
+              <Info className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                <strong>Email:</strong> {email}
+                <strong>Email convidado:</strong> {successEmail}
               </AlertDescription>
             </Alert>
             
-            <div className="space-y-2">
-              <Label>Link de convite</Label>
-              <div className="flex gap-2">
-                <Input 
-                  value={inviteLink} 
-                  readOnly 
-                  className="font-mono text-xs"
-                />
-                <Button onClick={handleCopyLink} variant="outline">
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copiar
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Este link expira em 7 dias. Envie para o usuário por email ou WhatsApp.
+            <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+              <p className="text-sm font-medium">
+                Instruções para o usuário:
+              </p>
+              <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                <li>Acesse <code className="bg-background px-1 rounded">mediaplab.lovable.app/auth/register</code></li>
+                <li>Preencha o formulário com o email <strong>{successEmail}</strong></li>
+                <li>Complete o cadastro com nome e senha</li>
+              </ol>
+              <p className="text-xs text-muted-foreground mt-2">
+                O convite expira em 7 dias. Você pode enviar estas instruções por email ou WhatsApp.
               </p>
             </div>
           </div>
@@ -272,6 +261,9 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
               onChange={(e) => setEmail(e.target.value)}
               required
             />
+            <p className="text-xs text-muted-foreground">
+              O usuário poderá criar conta em <code>/auth/register</code> usando este email
+            </p>
           </div>
 
           <div className="space-y-3">
@@ -328,7 +320,7 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
               Cancelar
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Enviando...' : 'Enviar Convite'}
+              {isSubmitting ? 'Enviando...' : 'Criar Convite'}
             </Button>
           </DialogFooter>
         </form>
