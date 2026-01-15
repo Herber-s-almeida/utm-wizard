@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Users, UserPlus } from "lucide-react";
+import { Search, Building2, Plus } from "lucide-react";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { InviteSystemUserDialog } from "@/components/admin/InviteSystemUserDialog";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
@@ -28,18 +28,18 @@ export default function AdminUsers() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Users className="h-5 w-5 text-primary" />
+              <Building2 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold">Usuários do Sistema</h1>
+              <h1 className="text-2xl font-semibold">Ambientes do Sistema</h1>
               <p className="text-sm text-muted-foreground">
-                Gerencie os usuários, permissões e acessos
+                Gerencie os ambientes e seus proprietários
               </p>
             </div>
           </div>
           <Button onClick={() => setInviteDialogOpen(true)}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Convidar Usuário
+            <Plus className="h-4 w-4 mr-2" />
+            Criar Novo Ambiente
           </Button>
         </div>
 
@@ -65,8 +65,8 @@ export default function AdminUsers() {
           <UsersTable users={filteredUsers} />
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Users className="h-12 w-12 mb-4 opacity-50" />
-            <p>Nenhum usuário encontrado</p>
+            <Building2 className="h-12 w-12 mb-4 opacity-50" />
+            <p>Nenhum ambiente encontrado</p>
           </div>
         )}
 

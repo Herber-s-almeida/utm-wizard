@@ -28,8 +28,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, Pencil, Trash2, Shield, FolderOpen, ShieldOff } from "lucide-react";
-import { AdminUser, useDeleteUser, useUpdateSystemRole } from "@/hooks/useAdminUsers";
+import { MoreHorizontal, Pencil, Trash2, Shield, FolderOpen, ShieldOff, Building2, Users } from "lucide-react";
+import { AdminUser, useDeleteUser, useUpdateSystemRole, usePromoteToSystemUser } from "@/hooks/useAdminUsers";
 import { EditUserDialog } from "./EditUserDialog";
 import { UserEnvironmentDialog } from "./UserEnvironmentDialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,6 +46,7 @@ export function UsersTable({ users }: UsersTableProps) {
   
   const deleteUserMutation = useDeleteUser();
   const updateRoleMutation = useUpdateSystemRole();
+  const promoteToSystemUserMutation = usePromoteToSystemUser();
 
   const handleDelete = () => {
     if (deleteUserId) {
@@ -59,6 +60,10 @@ export function UsersTable({ users }: UsersTableProps) {
     updateRoleMutation.mutate({ userId: user.id, role: newRole });
   };
 
+  const handlePromoteToSystemUser = (user: AdminUser) => {
+    promoteToSystemUserMutation.mutate(user.id);
+  };
+
   return (
     <>
       <div className="rounded-md border">
@@ -66,7 +71,8 @@ export function UsersTable({ users }: UsersTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Usuário</TableHead>
-              <TableHead>Empresa</TableHead>
+              <TableHead>Ambiente</TableHead>
+              <TableHead>Tipo</TableHead>
               <TableHead>Criado em</TableHead>
               <TableHead>Último acesso</TableHead>
               <TableHead>Permissão</TableHead>
@@ -88,8 +94,20 @@ export function UsersTable({ users }: UsersTableProps) {
                 </TableCell>
                 <TableCell>
                   {user.company || (
-                    <span className="text-muted-foreground">-</span>
+                    <span className="text-muted-foreground text-xs italic">Não configurado</span>
                   )}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant={user.is_system_user ? "default" : "outline"}
+                    className={user.is_system_user ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : ""}
+                  >
+                    {user.is_system_user ? (
+                      <><Building2 className="h-3 w-3 mr-1" />Owner</>
+                    ) : (
+                      <><Users className="h-3 w-3 mr-1" />Membro</>
+                    )}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   {format(new Date(user.created_at), "dd/MM/yyyy", {
@@ -127,6 +145,14 @@ export function UsersTable({ users }: UsersTableProps) {
                         Ver ambiente
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
+                      {!user.is_system_user && (
+                        <DropdownMenuItem
+                          onClick={() => handlePromoteToSystemUser(user)}
+                        >
+                          <Building2 className="mr-2 h-4 w-4" />
+                          Promover a Owner de Ambiente
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem
                         onClick={() => handleToggleAdmin(user)}
                         disabled={user.id === currentUser?.id}
@@ -134,12 +160,12 @@ export function UsersTable({ users }: UsersTableProps) {
                         {user.system_role === "system_admin" ? (
                           <>
                             <ShieldOff className="mr-2 h-4 w-4" />
-                            Remover admin
+                            Remover admin do sistema
                           </>
                         ) : (
                           <>
                             <Shield className="mr-2 h-4 w-4" />
-                            Promover a admin
+                            Promover a admin do sistema
                           </>
                         )}
                       </DropdownMenuItem>

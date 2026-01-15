@@ -11,6 +11,8 @@ import { SectionProtectedRoute } from "@/components/SectionProtectedRoute";
 import { AdminRoute } from "@/components/admin/AdminRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AuthRegister from "./pages/AuthRegister";
+import AwaitingAccess from "./pages/AwaitingAccess";
 import Dashboard from "./pages/Dashboard";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import MediaPlans from "./pages/MediaPlans";
@@ -47,6 +49,7 @@ import DetailTypesPage from "./pages/config/DetailTypesPage";
 import ClientsPage from "./pages/config/ClientsPage";
 import ObjectivesPage from "./pages/config/ObjectivesPage";
 import SystemDocumentationPage from "./pages/admin/SystemDocumentationPage";
+import EnvironmentSetup from "./pages/settings/EnvironmentSetup";
 
 // Finance Manager imports
 import { FinanceLayout } from "./components/layout/FinanceLayout";
@@ -85,6 +88,9 @@ function AppWithEnvironment() {
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/auth/register" element={<AuthRegister />} />
+          <Route path="/awaiting-access" element={<AwaitingAccess />} />
+          <Route path="/settings/setup" element={<ProtectedRoute><EnvironmentSetup /></ProtectedRoute>} />
           <Route path="/media-plan-dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/executive-dashboard" element={<ProtectedRoute><SectionProtectedRoute section="executive_dashboard"><ExecutiveDashboard /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans" element={<ProtectedRoute><SectionProtectedRoute section="media_plans"><MediaPlans /></SectionProtectedRoute></ProtectedRoute>} />

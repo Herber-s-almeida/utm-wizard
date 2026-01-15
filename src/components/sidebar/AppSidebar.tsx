@@ -1778,8 +1778,8 @@ export function AppSidebar() {
                           size="sm"
                           className="w-full justify-start gap-2 h-7 text-xs"
                         >
-                          <Users className="h-3 w-3" />
-                          Usuários
+                          <Building2 className="h-3 w-3" />
+                          Ambientes do Sistema
                         </Button>
                       </Link>
                       <Link to="/admin/menu-visibility">

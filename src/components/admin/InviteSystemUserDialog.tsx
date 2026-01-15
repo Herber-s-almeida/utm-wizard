@@ -57,11 +57,11 @@ export function InviteSystemUserDialog({ open, onOpenChange }: InviteSystemUserD
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-primary" />
-            Convidar Novo Usuário
+            Criar Novo Ambiente
           </DialogTitle>
           <DialogDescription>
-            Envie um convite por email para que uma nova pessoa crie sua conta na plataforma.
-            Ela terá seu próprio ambiente de trabalho.
+            Convide uma pessoa por email para criar seu próprio ambiente na plataforma.
+            Esta pessoa será a proprietária do novo ambiente.
           </DialogDescription>
         </DialogHeader>
 
@@ -114,12 +114,12 @@ export function InviteSystemUserDialog({ open, onOpenChange }: InviteSystemUserD
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando...
+                  Criando...
                 </>
               ) : (
                 <>
                   <UserPlus className="mr-2 h-4 w-4" />
-                  Enviar Convite
+                  Criar Ambiente
                 </>
               )}
             </Button>

@@ -10,6 +10,7 @@ export interface AdminUser {
   full_name: string | null;
   company: string | null;
   system_role: "system_admin" | "user";
+  is_system_user: boolean;
 }
 
 export interface UserMediaPlan {
@@ -130,10 +131,27 @@ export function useInviteSystemUser() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      toast.success("Convite enviado com sucesso!");
+      toast.success("Ambiente criado! Convite enviado.");
     },
     onError: (error: Error) => {
-      toast.error(`Erro ao enviar convite: ${error.message}`);
+      toast.error(`Erro ao criar ambiente: ${error.message}`);
+    },
+  });
+}
+
+export function usePromoteToSystemUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      return callAdminOperation("promote_to_system_user", { userId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success("Usuário promovido a Owner de Ambiente!");
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao promover usuário: ${error.message}`);
     },
   });
 }
