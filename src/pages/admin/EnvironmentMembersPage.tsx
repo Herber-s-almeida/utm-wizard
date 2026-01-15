@@ -3,6 +3,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { 
   Table, 
   TableBody, 
@@ -28,8 +29,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban } from 'lucide-react';
+import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Bell } from 'lucide-react';
 import { useEnvironmentPermissions, PermissionLevel, EnvironmentSection } from '@/hooks/useEnvironmentPermissions';
+import { useResourceNotifications } from '@/hooks/useResourceNotifications';
 import { InviteMemberDialog } from '@/components/admin/InviteMemberDialog';
 import { toast } from 'sonner';
 
@@ -62,6 +64,8 @@ export default function EnvironmentMembersPage() {
     isRemoving,
   } = useEnvironmentPermissions();
 
+  const { updateNotificationPreference, isUpdatingPreference } = useResourceNotifications();
+
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
 
@@ -85,6 +89,16 @@ export default function EnvironmentMembersPage() {
       },
       onError: (error) => toast.error(`Erro ao remover: ${error.message}`),
     });
+  };
+
+  const handleNotificationToggle = (memberId: string, enabled: boolean) => {
+    updateNotificationPreference(
+      { memberId, enabled },
+      {
+        onSuccess: () => toast.success(`Notificações ${enabled ? 'ativadas' : 'desativadas'}`),
+        onError: (error) => toast.error(`Erro: ${error.message}`),
+      }
+    );
   };
 
   const getPermissionBadgeVariant = (level: PermissionLevel) => {
@@ -162,6 +176,12 @@ export default function EnvironmentMembersPage() {
                           {section.label}
                         </TableHead>
                       ))}
+                      <TableHead className="text-center min-w-[100px]">
+                        <div className="flex items-center justify-center gap-1">
+                          <Bell className="h-3 w-3" />
+                          Notif.
+                        </div>
+                      </TableHead>
                       <TableHead className="w-[80px]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -214,6 +234,16 @@ export default function EnvironmentMembersPage() {
                             </TableCell>
                           );
                         })}
+                        
+                        <TableCell className="text-center">
+                          <Switch
+                            checked={member.notify_media_resources || false}
+                            onCheckedChange={(checked) => 
+                              handleNotificationToggle(member.id, checked)
+                            }
+                            disabled={isUpdatingPreference}
+                          />
+                        </TableCell>
                         
                         <TableCell>
                           <Button

@@ -22,6 +22,7 @@ export interface EnvironmentMember {
   perm_media_resources: PermissionLevel;
   perm_taxonomy: PermissionLevel;
   perm_library: PermissionLevel;
+  notify_media_resources: boolean;
   // Joined profile data
   profile?: {
     full_name: string | null;
