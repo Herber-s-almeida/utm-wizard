@@ -79,11 +79,29 @@ serve(async (req) => {
             full_name: profile?.full_name || null,
             company: profile?.company || null,
             system_role: systemRole?.role || "user",
+            is_system_user: profile?.is_system_user || false,
           };
         });
 
         return new Response(
           JSON.stringify({ users }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "promote_to_system_user": {
+        const { userId } = payload;
+        
+        // Update profile to mark as system user
+        const { error } = await adminClient
+          .from("profiles")
+          .update({ is_system_user: true, updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+          
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }

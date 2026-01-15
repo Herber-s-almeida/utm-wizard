@@ -8,15 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { LayoutDashboard, Mail, Lock, User, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Mail, Lock, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
-});
-
-const signupSchema = loginSchema.extend({
-  fullName: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
 });
 
 const resetSchema = z.object({
@@ -46,7 +43,40 @@ const getAuthErrorMessage = (error: Error): string => {
   return 'Erro ao processar solicitação. Tente novamente';
 };
 
-type AuthMode = 'login' | 'signup' | 'forgot' | 'reset';
+type AuthMode = 'login' | 'forgot' | 'reset';
+
+// Helper function to determine user destination after login
+async function getUserDestination(userId: string): Promise<string> {
+  // 1. Check if user is a system user (has their own environment)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_system_user, company')
+    .eq('user_id', userId)
+    .single();
+
+  if (profile?.is_system_user) {
+    // If they don't have company name yet, redirect to setup
+    if (!profile.company) {
+      return '/settings/setup';
+    }
+    return '/media-plan-dashboard';
+  }
+
+  // 2. Not a system user - check if they're a member of any environment
+  const { data: memberships } = await supabase
+    .from('environment_members')
+    .select('environment_owner_id')
+    .eq('member_user_id', userId)
+    .limit(1);
+
+  if (memberships && memberships.length > 0) {
+    // They have at least one environment membership
+    return '/media-plan-dashboard';
+  }
+
+  // 3. Not in any environment - show awaiting access page
+  return '/awaiting-access';
+}
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
@@ -55,8 +85,7 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const { signIn, signUp, resetPassword, updatePassword, user, session } = useAuth();
+  const { signIn, resetPassword, updatePassword, user, session } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -69,7 +98,10 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && mode !== 'reset') {
-      navigate('/media-plan-dashboard');
+      // Determine where to redirect the user
+      getUserDestination(user.id).then(destination => {
+        navigate(destination);
+      });
     }
   }, [user, navigate, mode]);
 
@@ -91,22 +123,7 @@ export default function Auth() {
           toast.error(getAuthErrorMessage(error));
         } else {
           toast.success('Login realizado com sucesso!');
-          navigate('/media-plan-dashboard');
-        }
-      } else if (mode === 'signup') {
-        const validation = signupSchema.safeParse({ email, password, fullName });
-        if (!validation.success) {
-          toast.error(validation.error.errors[0].message);
-          setLoading(false);
-          return;
-        }
-
-        const { error } = await signUp(email, password, fullName);
-        if (error) {
-          toast.error(getAuthErrorMessage(error));
-        } else {
-          toast.success('Conta criada com sucesso!');
-          navigate('/media-plan-dashboard');
+          // Redirect will happen via useEffect
         }
       } else if (mode === 'forgot') {
         const validation = resetSchema.safeParse({ email });
@@ -147,7 +164,6 @@ export default function Auth() {
   const getTitle = () => {
     switch (mode) {
       case 'login': return 'Bem-vindo de volta';
-      case 'signup': return 'Crie sua conta';
       case 'forgot': return 'Recuperar senha';
       case 'reset': return 'Nova senha';
     }
@@ -156,7 +172,6 @@ export default function Auth() {
   const getDescription = () => {
     switch (mode) {
       case 'login': return 'Entre para acessar seus planos de mídia';
-      case 'signup': return 'Comece a criar seus planos de mídia agora';
       case 'forgot': return 'Digite seu email para receber o link de recuperação';
       case 'reset': return 'Digite sua nova senha';
     }
@@ -165,7 +180,6 @@ export default function Auth() {
   const getButtonText = () => {
     switch (mode) {
       case 'login': return 'Entrar';
-      case 'signup': return 'Criar conta';
       case 'forgot': return 'Enviar link';
       case 'reset': return 'Atualizar senha';
     }
@@ -199,29 +213,7 @@ export default function Auth() {
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === 'signup' && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="space-y-2"
-                >
-                  <Label htmlFor="fullName">Nome completo</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="fullName"
-                      type="text"
-                      placeholder="Seu nome"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </motion.div>
-              )}
-
-              {(mode === 'login' || mode === 'signup' || mode === 'forgot') && (
+              {(mode === 'login' || mode === 'forgot') && (
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <div className="relative">
@@ -238,7 +230,7 @@ export default function Auth() {
                 </div>
               )}
 
-              {(mode === 'login' || mode === 'signup' || mode === 'reset') && (
+              {(mode === 'login' || mode === 'reset') && (
                 <div className="space-y-2">
                   <Label htmlFor="password">{mode === 'reset' ? 'Nova senha' : 'Senha'}</Label>
                   <div className="relative">
@@ -310,20 +302,6 @@ export default function Auth() {
                 >
                   <ArrowLeft className="h-3 w-3" />
                   Voltar para login
-                </button>
-              )}
-              
-              {(mode === 'login' || mode === 'signup') && (
-                <button
-                  type="button"
-                  onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                >
-                  {mode === 'login' ? (
-                    <>Não tem conta? <span className="text-primary font-medium">Criar conta</span></>
-                  ) : (
-                    <>Já tem conta? <span className="text-primary font-medium">Fazer login</span></>
-                  )}
                 </button>
               )}
             </div>
