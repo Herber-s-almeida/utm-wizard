@@ -139,7 +139,7 @@ export function useSubdivisions() {
     mutationFn: async ({ name, description, parent_id }: { name: string; description?: string; parent_id?: string }) => {
       const { data, error } = await supabase
         .from('plan_subdivisions')
-        .insert({ name, description: description || null, parent_id: parent_id || null, user_id: user!.id })
+        .insert({ name, description: description || null, parent_id: parent_id || null, user_id: effectiveUserId! })
         .select()
         .single();
       if (error) throw error;
@@ -207,7 +207,7 @@ export function useMoments() {
 
   const create = useMutation({
     mutationFn: async ({ name, description }: { name: string; description?: string }) => {
-      const { data, error } = await supabase.from('moments').insert({ name, description: description || null, user_id: user!.id }).select().single();
+      const { data, error } = await supabase.from('moments').insert({ name, description: description || null, user_id: effectiveUserId! }).select().single();
       if (error) throw error;
       return data;
     },
@@ -264,7 +264,7 @@ export function useFunnelStages() {
     mutationFn: async ({ name, description }: { name: string; description?: string }) => {
       const activeStages = query.data?.filter(s => !s.deleted_at) || [];
       const maxOrder = activeStages.reduce((max, s) => Math.max(max, s.order_index), -1);
-      const { data, error } = await supabase.from('funnel_stages').insert({ name, description: description || null, order_index: maxOrder + 1, user_id: user!.id }).select().single();
+      const { data, error } = await supabase.from('funnel_stages').insert({ name, description: description || null, order_index: maxOrder + 1, user_id: effectiveUserId! }).select().single();
       if (error) throw error;
       return data;
     },
@@ -319,7 +319,7 @@ export function useMediums() {
 
   const create = useMutation({
     mutationFn: async ({ name, description }: { name: string; description?: string }) => {
-      const { data, error } = await supabase.from('mediums').insert({ name, description: description || null, user_id: user!.id }).select().single();
+      const { data, error } = await supabase.from('mediums').insert({ name, description: description || null, user_id: effectiveUserId! }).select().single();
       if (error) throw error;
       return data;
     },
@@ -374,7 +374,7 @@ export function useVehicles() {
 
   const create = useMutation({
     mutationFn: async ({ name, description, medium_id, slug }: { name: string; description?: string; medium_id?: string; slug?: string }) => {
-      const { data, error } = await supabase.from('vehicles').insert({ name, description: description || null, medium_id: medium_id || null, slug: slug || null, user_id: user!.id }).select().single();
+      const { data, error } = await supabase.from('vehicles').insert({ name, description: description || null, medium_id: medium_id || null, slug: slug || null, user_id: effectiveUserId! }).select().single();
       if (error) throw error;
       return data;
     },
@@ -429,7 +429,7 @@ export function useChannels() {
 
   const create = useMutation({
     mutationFn: async ({ name, description, slug, vehicle_id }: { name: string; description?: string; slug?: string; vehicle_id: string }) => {
-      const { data, error } = await supabase.from('channels').insert({ name, description: description || null, slug: slug || null, vehicle_id, user_id: user!.id }).select().single();
+      const { data, error } = await supabase.from('channels').insert({ name, description: description || null, slug: slug || null, vehicle_id, user_id: effectiveUserId! }).select().single();
       if (error) throw error;
       return data;
     },
@@ -484,7 +484,7 @@ export function useBehavioralSegmentations() {
 
   const create = useMutation({
     mutationFn: async ({ name, description }: { name: string; description?: string }) => {
-      const { data, error } = await supabase.from('behavioral_segmentations').insert({ name, description: description || null, user_id: user!.id }).select().single();
+      const { data, error } = await supabase.from('behavioral_segmentations').insert({ name, description: description || null, user_id: effectiveUserId! }).select().single();
       if (error) throw error;
       return data;
     },
@@ -546,7 +546,7 @@ export function useTargets() {
         geolocation: target.geolocation || [], 
         behavior: target.behavior || null, 
         description: target.description || null, 
-        user_id: user!.id 
+        user_id: effectiveUserId! 
       }).select().single();
       if (error) throw error;
       return data;
@@ -602,7 +602,7 @@ export function useCreativeTemplates() {
 
   const create = useMutation({
     mutationFn: async (template: { name: string; format: string; dimension?: string | null; duration?: string | null; message?: string | null; objective?: string | null }) => {
-      const { data, error } = await supabase.from('creative_templates').insert({ name: template.name, format: template.format, dimension: template.dimension || null, duration: template.duration || null, message: template.message || null, objective: template.objective || null, user_id: user!.id }).select().single();
+      const { data, error } = await supabase.from('creative_templates').insert({ name: template.name, format: template.format, dimension: template.dimension || null, duration: template.duration || null, message: template.message || null, objective: template.objective || null, user_id: effectiveUserId! }).select().single();
       if (error) throw error;
       return data;
     },
@@ -768,7 +768,7 @@ export function useMediaObjectives() {
         .insert({ 
           name, 
           description: description || null, 
-          user_id: user!.id 
+          user_id: effectiveUserId! 
         })
         .select()
         .single();

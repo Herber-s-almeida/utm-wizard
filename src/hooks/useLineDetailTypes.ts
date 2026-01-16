@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
 
@@ -51,10 +52,11 @@ function parseMetadataSchema(data: Json | null): MetadataSchemaItem[] {
 
 export function useLineDetailTypes() {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['line-detail-types', user?.id],
+    queryKey: ['line-detail-types', effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('line_detail_types')
@@ -77,7 +79,7 @@ export function useLineDetailTypes() {
 
   const createMutation = useMutation({
     mutationFn: async (data: Omit<LineDetailType, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'deleted_at'>) => {
-      if (!user?.id) throw new Error('User not authenticated');
+      if (!effectiveUserId) throw new Error('User not authenticated');
       
       const { data: result, error } = await supabase
         .from('line_detail_types')
@@ -92,7 +94,7 @@ export function useLineDetailTypes() {
           insertion_grid_type: data.insertion_grid_type,
           is_system: data.is_system,
           is_active: data.is_active,
-          user_id: user.id,
+          user_id: effectiveUserId,
         })
         .select()
         .single();

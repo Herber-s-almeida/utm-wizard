@@ -45,7 +45,7 @@ export function useClients() {
         .insert({ 
           name, 
           description: description || null, 
-          user_id: user!.id,
+          user_id: effectiveUserId!,
           visible_for_media_plans: visible_for_media_plans ?? true
         })
         .select()
