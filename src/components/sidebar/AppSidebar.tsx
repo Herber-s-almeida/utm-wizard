@@ -51,6 +51,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ConfigItemRow } from './ConfigItemRow';
 import { PlanItemRow } from './PlanItemRow';
 import { SimplePlanLink } from './SimplePlanLink';
+import { EnvironmentSwitcher } from './EnvironmentSwitcher';
 import { cn } from '@/lib/utils';
 import { useSidebarCollapse } from '@/hooks/useSidebarCollapse';
 import { useSidebarSections, useSidebarSubsections } from '@/hooks/useSidebarSections';
@@ -227,15 +228,8 @@ export function AppSidebar() {
           </Tooltip>
         </div>
         
-        {/* Environment name display */}
-        {!isCollapsed && environmentName && (
-          <div className="mt-2 px-2 py-1.5 bg-muted/50 rounded-md border border-border/50">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Building2 className="h-3 w-3 shrink-0" />
-              <span className="truncate font-medium">{environmentName}</span>
-            </div>
-          </div>
-        )}
+        {/* Environment Switcher */}
+        {!isCollapsed && <EnvironmentSwitcher className="mt-2" />}
       </div>
 
       {/* Collapsed state - show only icons */}

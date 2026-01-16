@@ -37,10 +37,31 @@ serve(async (req) => {
       throw new Error("Usuário não autenticado");
     }
 
-    const { email, permissions } = await req.json();
+    const { email, permissions, environment_role = 'user' } = await req.json();
 
     if (!email) {
       throw new Error("Email é obrigatório");
+    }
+
+    // Validate environment_role
+    const validRoles = ['admin', 'user'];
+    const normalizedRole = validRoles.includes(environment_role) ? environment_role : 'user';
+
+    console.log(`Inviting ${email} with role ${normalizedRole}`);
+
+    // Check if user can invite (must be owner or admin)
+    const { data: canInvite, error: canInviteError } = await adminClient
+      .rpc('can_invite_to_environment', { 
+        _environment_owner_id: user.id,
+        _user_id: user.id 
+      });
+
+    if (canInviteError) {
+      console.error("Can invite check error:", canInviteError);
+    }
+
+    if (!canInvite) {
+      throw new Error("Você não tem permissão para convidar membros");
     }
 
     // Check member count limit
@@ -85,7 +106,7 @@ serve(async (req) => {
         throw new Error("Este usuário já é membro do seu ambiente");
       }
 
-      // Insert the new member
+      // Insert the new member with environment_role
       const { data: newMember, error: insertError } = await adminClient
         .from('environment_members')
         .insert({
@@ -94,13 +115,14 @@ serve(async (req) => {
           invited_by: user.id,
           invited_at: new Date().toISOString(),
           accepted_at: new Date().toISOString(), // Auto-accept since user exists
-          perm_executive_dashboard: permissions.executive_dashboard || 'none',
-          perm_reports: permissions.reports || 'none',
-          perm_finance: permissions.finance || 'none',
-          perm_media_plans: permissions.media_plans || 'none',
-          perm_media_resources: permissions.media_resources || 'none',
-          perm_taxonomy: permissions.taxonomy || 'none',
-          perm_library: permissions.library || 'none',
+          environment_role: normalizedRole,
+          perm_executive_dashboard: normalizedRole === 'admin' ? 'admin' : (permissions?.executive_dashboard || 'none'),
+          perm_reports: normalizedRole === 'admin' ? 'admin' : (permissions?.reports || 'none'),
+          perm_finance: normalizedRole === 'admin' ? 'admin' : (permissions?.finance || 'none'),
+          perm_media_plans: normalizedRole === 'admin' ? 'admin' : (permissions?.media_plans || 'none'),
+          perm_media_resources: normalizedRole === 'admin' ? 'admin' : (permissions?.media_resources || 'none'),
+          perm_taxonomy: normalizedRole === 'admin' ? 'admin' : (permissions?.taxonomy || 'none'),
+          perm_library: normalizedRole === 'admin' ? 'admin' : (permissions?.library || 'none'),
         })
         .select()
         .single();
@@ -109,6 +131,8 @@ serve(async (req) => {
         console.error("Insert error:", insertError);
         throw new Error(insertError.message || "Erro ao adicionar membro");
       }
+
+      console.log(`Member ${email} added with role ${normalizedRole}`);
 
       return new Response(
         JSON.stringify({ 
@@ -135,20 +159,21 @@ serve(async (req) => {
         throw new Error("Já existe um convite pendente para este email");
       }
 
-      // Create pending invite record (without token - we validate by email now)
+      // Create pending invite record with environment_role
       const { error: pendingError } = await adminClient
         .from('pending_environment_invites')
         .insert({
           email: email.toLowerCase(),
           environment_owner_id: user.id,
           invited_by: user.id,
-          perm_executive_dashboard: permissions.executive_dashboard || 'none',
-          perm_reports: permissions.reports || 'none',
-          perm_finance: permissions.finance || 'none',
-          perm_media_plans: permissions.media_plans || 'none',
-          perm_media_resources: permissions.media_resources || 'none',
-          perm_taxonomy: permissions.taxonomy || 'none',
-          perm_library: permissions.library || 'none',
+          environment_role: normalizedRole,
+          perm_executive_dashboard: normalizedRole === 'admin' ? 'admin' : (permissions?.executive_dashboard || 'none'),
+          perm_reports: normalizedRole === 'admin' ? 'admin' : (permissions?.reports || 'none'),
+          perm_finance: normalizedRole === 'admin' ? 'admin' : (permissions?.finance || 'none'),
+          perm_media_plans: normalizedRole === 'admin' ? 'admin' : (permissions?.media_plans || 'none'),
+          perm_media_resources: normalizedRole === 'admin' ? 'admin' : (permissions?.media_resources || 'none'),
+          perm_taxonomy: normalizedRole === 'admin' ? 'admin' : (permissions?.taxonomy || 'none'),
+          perm_library: normalizedRole === 'admin' ? 'admin' : (permissions?.library || 'none'),
         });
 
       if (pendingError) {
@@ -156,7 +181,7 @@ serve(async (req) => {
         throw new Error(pendingError.message || "Erro ao criar convite pendente");
       }
 
-      console.log("Invite created for email:", email.toLowerCase());
+      console.log(`Invite created for email: ${email.toLowerCase()} with role ${normalizedRole}`);
 
       return new Response(
         JSON.stringify({ 

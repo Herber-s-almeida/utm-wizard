@@ -384,6 +384,7 @@ export type Database = {
           accepted_at: string | null
           created_at: string | null
           environment_owner_id: string
+          environment_role: Database["public"]["Enums"]["environment_role"]
           id: string
           invited_at: string | null
           invited_by: string | null
@@ -416,6 +417,7 @@ export type Database = {
           accepted_at?: string | null
           created_at?: string | null
           environment_owner_id: string
+          environment_role?: Database["public"]["Enums"]["environment_role"]
           id?: string
           invited_at?: string | null
           invited_by?: string | null
@@ -448,6 +450,7 @@ export type Database = {
           accepted_at?: string | null
           created_at?: string | null
           environment_owner_id?: string
+          environment_role?: Database["public"]["Enums"]["environment_role"]
           id?: string
           invited_at?: string | null
           invited_by?: string | null
@@ -2307,6 +2310,7 @@ export type Database = {
           created_at: string | null
           email: string
           environment_owner_id: string
+          environment_role: Database["public"]["Enums"]["environment_role"]
           expires_at: string | null
           id: string
           invite_token: string | null
@@ -2338,6 +2342,7 @@ export type Database = {
           created_at?: string | null
           email: string
           environment_owner_id: string
+          environment_role?: Database["public"]["Enums"]["environment_role"]
           expires_at?: string | null
           id?: string
           invite_token?: string | null
@@ -2369,6 +2374,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           environment_owner_id?: string
+          environment_role?: Database["public"]["Enums"]["environment_role"]
           expires_at?: string | null
           id?: string
           invite_token?: string | null
@@ -3419,6 +3425,26 @@ export type Database = {
         Args: { _environment_owner_id: string }
         Returns: boolean
       }
+      can_invite_to_environment: {
+        Args: { _environment_owner_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_manage_member_role: {
+        Args: {
+          _environment_owner_id: string
+          _manager_user_id: string
+          _target_user_id: string
+        }
+        Returns: boolean
+      }
+      can_remove_environment_member: {
+        Args: {
+          _environment_owner_id: string
+          _remover_user_id: string
+          _target_user_id: string
+        }
+        Returns: boolean
+      }
       can_transition_status: {
         Args: {
           _from_status: string
@@ -3459,9 +3485,22 @@ export type Database = {
         }
         Returns: Database["public"]["Enums"]["environment_permission_level"]
       }
+      get_environment_role: {
+        Args: { _environment_owner_id: string; _user_id: string }
+        Returns: Database["public"]["Enums"]["environment_role"]
+      }
       get_plan_role: {
         Args: { _plan_id: string; _user_id: string }
         Returns: string
+      }
+      get_user_environments: {
+        Args: { _user_id: string }
+        Returns: {
+          environment_name: string
+          environment_owner_id: string
+          environment_role: Database["public"]["Enums"]["environment_role"]
+          is_own_environment: boolean
+        }[]
       }
       get_valid_transitions: {
         Args: { _from_status: string; _plan_id: string; _user_id: string }
@@ -3507,6 +3546,7 @@ export type Database = {
     Enums: {
       app_role: "owner" | "editor" | "viewer" | "approver"
       environment_permission_level: "none" | "view" | "edit" | "admin"
+      environment_role: "owner" | "admin" | "user"
       environment_section:
         | "executive_dashboard"
         | "reports"
@@ -3645,6 +3685,7 @@ export const Constants = {
     Enums: {
       app_role: ["owner", "editor", "viewer", "approver"],
       environment_permission_level: ["none", "view", "edit", "admin"],
+      environment_role: ["owner", "admin", "user"],
       environment_section: [
         "executive_dashboard",
         "reports",
