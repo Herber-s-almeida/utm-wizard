@@ -116,7 +116,7 @@ export function useFormats() {
     mutationFn: async (name: string) => {
       const { data, error } = await supabase
         .from('formats')
-        .insert({ name: name.trim(), user_id: user!.id })
+        .insert({ name: name.trim(), user_id: effectiveUserId! })
         .select()
         .single();
       if (error) throw error;
@@ -170,7 +170,7 @@ export function useFormats() {
         .from('formats')
         .insert({ 
           name: `${sourceFormat.name} (cópia)`, 
-          user_id: user!.id,
+          user_id: effectiveUserId!,
           is_system: false
         })
         .select()
@@ -194,7 +194,7 @@ export function useFormats() {
           .insert({
             format_id: newFormat.id,
             name: ct.name,
-            user_id: user!.id
+            user_id: effectiveUserId!
           })
           .select()
           .single();
@@ -222,7 +222,7 @@ export function useFormats() {
               duration_unit: spec.duration_unit,
               max_weight: spec.max_weight,
               weight_unit: spec.weight_unit,
-              user_id: user!.id
+              user_id: effectiveUserId!
             })
             .select()
             .single();
@@ -242,7 +242,7 @@ export function useFormats() {
               name: cf.name,
               max_characters: cf.max_characters,
               observation: cf.observation,
-              user_id: user!.id
+              user_id: effectiveUserId!
             });
           }
 
@@ -261,7 +261,7 @@ export function useFormats() {
               unit: dim.unit,
               description: dim.description,
               observation: dim.observation,
-              user_id: user!.id
+              user_id: effectiveUserId!
             });
           }
 
@@ -275,7 +275,7 @@ export function useFormats() {
             await supabase.from('specification_extensions').insert({
               specification_id: newSpec.id,
               extension_id: ext.extension_id,
-              user_id: user!.id
+              user_id: effectiveUserId!
             });
           }
         }
@@ -312,6 +312,7 @@ export function useFormats() {
 // Hook for Creative Types (within a format)
 export function useFormatCreativeTypes(formatId?: string) {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -337,7 +338,7 @@ export function useFormatCreativeTypes(formatId?: string) {
     mutationFn: async ({ formatId, name }: { formatId: string; name: string }) => {
       const { data, error } = await supabase
         .from('format_creative_types')
-        .insert({ format_id: formatId, name: name.trim(), user_id: user!.id })
+        .insert({ format_id: formatId, name: name.trim(), user_id: effectiveUserId! })
         .select()
         .single();
       if (error) throw error;
@@ -383,6 +384,7 @@ export function useFormatCreativeTypes(formatId?: string) {
 // Hook for Specifications
 export function useCreativeTypeSpecifications(creativeTypeId?: string) {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -424,7 +426,7 @@ export function useCreativeTypeSpecifications(creativeTypeId?: string) {
           duration_unit: params.durationUnit || null,
           max_weight: params.maxWeight || null,
           weight_unit: params.weightUnit || null,
-          user_id: user!.id,
+          user_id: effectiveUserId!,
         })
         .select()
         .single();
@@ -487,6 +489,7 @@ export function useCreativeTypeSpecifications(creativeTypeId?: string) {
 // Hook for Copy Fields
 export function useSpecificationCopyFields(specificationId?: string) {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -517,7 +520,7 @@ export function useSpecificationCopyFields(specificationId?: string) {
           name: params.name.trim(),
           max_characters: params.maxCharacters || null,
           observation: params.observation?.trim() || null,
-          user_id: user!.id,
+          user_id: effectiveUserId!,
         })
         .select()
         .single();
@@ -571,6 +574,7 @@ export function useSpecificationCopyFields(specificationId?: string) {
 // Hook for Dimensions
 export function useSpecificationDimensions(specificationId?: string) {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -601,7 +605,7 @@ export function useSpecificationDimensions(specificationId?: string) {
           width: params.width,
           height: params.height,
           unit: params.unit,
-          user_id: user!.id,
+          user_id: effectiveUserId!,
         })
         .select()
         .single();
@@ -675,6 +679,7 @@ export function useFileExtensions() {
 // Hook for Specification Extensions
 export function useSpecificationExtensions(specificationId?: string) {
   const { user } = useAuth();
+  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -697,7 +702,7 @@ export function useSpecificationExtensions(specificationId?: string) {
         .insert({
           specification_id: specificationId,
           extension_id: extensionId,
-          user_id: user!.id,
+          user_id: effectiveUserId!,
         })
         .select()
         .single();

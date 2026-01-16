@@ -50,7 +50,7 @@ export function useStatuses() {
           name, 
           description: description || null, 
           is_system: false,
-          user_id: user!.id 
+          user_id: effectiveUserId! 
         })
         .select()
         .single();

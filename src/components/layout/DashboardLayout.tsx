@@ -12,13 +12,16 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { isViewingOtherEnvironment, viewingUser, setViewingUser } = useEnvironment();
+  const { isViewingOtherEnvironment, viewingUser, setViewingUser, userEnvironments } = useEnvironment();
+
+  // Check if user has their own environment (is a System User)
+  const hasOwnEnvironment = userEnvironments.some(env => env.is_own_environment);
 
   return (
     <SidebarCollapseProvider>
       <div className="min-h-screen flex flex-col w-full bg-background">
-        {/* Admin viewing banner */}
-        {isViewingOtherEnvironment && (
+        {/* Admin viewing banner - only show if user has their own environment to return to */}
+        {isViewingOtherEnvironment && hasOwnEnvironment && (
           <div className="bg-destructive text-destructive-foreground px-4 py-2 flex items-center justify-between gap-4 z-50">
             <div className="flex items-center gap-2 text-sm font-medium">
               <span>Visualizando ambiente de:</span>
