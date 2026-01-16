@@ -278,6 +278,28 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
     return environmentRole === 'owner' || environmentRole === 'admin';
   }, [isSystemAdmin, environmentRole]);
 
+  // Auto-select first environment for members who don't have their own environment
+  useEffect(() => {
+    // Still loading, wait
+    if (isLoadingEnvironments) return;
+    
+    // Already has a viewing user selected
+    if (viewingUser !== null) return;
+    
+    // No environments available
+    if (userEnvironments.length === 0) return;
+    
+    // Check if user has their own environment
+    const ownEnv = userEnvironments.find(env => env.is_own_environment);
+    
+    // If user doesn't have their own environment but is member of at least one
+    if (!ownEnv && userEnvironments.length > 0) {
+      const firstEnv = userEnvironments[0];
+      console.log('Auto-selecting environment for member:', firstEnv);
+      switchEnvironment(firstEnv.environment_owner_id);
+    }
+  }, [userEnvironments, isLoadingEnvironments, viewingUser, switchEnvironment]);
+
   const value = useMemo(() => ({
     viewingUser,
     setViewingUser,
