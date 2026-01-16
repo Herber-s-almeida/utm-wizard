@@ -18,17 +18,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Eye, Edit, Ban, UserPlus, Wand2, CheckCircle, Info } from 'lucide-react';
+import { Shield, Eye, Edit, Ban, UserPlus, Wand2, CheckCircle, Info, Crown, User } from 'lucide-react';
 import { PermissionLevel, EnvironmentSection } from '@/hooks/useEnvironmentPermissions';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface InviteMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+type EnvironmentRole = 'admin' | 'user';
 
 const SECTIONS: { key: EnvironmentSection; label: string }[] = [
   { key: 'executive_dashboard', label: 'Dashboard Gerencial' },
@@ -45,6 +50,21 @@ const PERMISSION_OPTIONS: { value: PermissionLevel; label: string; icon: React.R
   { value: 'view', label: 'Visualizar', icon: <Eye className="h-3 w-3" /> },
   { value: 'edit', label: 'Editar', icon: <Edit className="h-3 w-3" /> },
   { value: 'admin', label: 'Admin', icon: <Shield className="h-3 w-3" /> },
+];
+
+const ROLE_OPTIONS: { value: EnvironmentRole; label: string; description: string; icon: React.ReactNode }[] = [
+  { 
+    value: 'admin', 
+    label: 'Administrador', 
+    description: 'Pode convidar outros membros e gerenciar permissões',
+    icon: <Shield className="h-5 w-5 text-blue-500" />
+  },
+  { 
+    value: 'user', 
+    label: 'Usuário', 
+    description: 'Acesso baseado nas permissões granulares abaixo',
+    icon: <User className="h-5 w-5 text-muted-foreground" />
+  },
 ];
 
 const PRESETS = {
@@ -87,9 +107,9 @@ const PRESETS = {
       library: 'none' as PermissionLevel,
     },
   },
-  admin: {
-    label: 'Administrador',
-    description: 'Acesso total ao ambiente',
+  full_access: {
+    label: 'Acesso Total',
+    description: 'Acesso completo a todas as seções',
     permissions: {
       executive_dashboard: 'admin' as PermissionLevel,
       reports: 'admin' as PermissionLevel,
@@ -111,6 +131,7 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [successEmail, setSuccessEmail] = useState('');
+  const [selectedRole, setSelectedRole] = useState<EnvironmentRole>('user');
   const [permissions, setPermissions] = useState<Record<EnvironmentSection, PermissionLevel>>({
     executive_dashboard: 'view',
     reports: 'view',
@@ -141,11 +162,12 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
     setIsSubmitting(true);
 
     try {
-      // Call edge function to invite member
+      // Call edge function to invite member with role
       const { data, error } = await supabase.functions.invoke('invite-environment-member', {
         body: {
           email: email.trim(),
           permissions,
+          environment_role: selectedRole,
         },
       });
 
@@ -156,8 +178,9 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
         toast.success('Membro adicionado com sucesso!');
         queryClient.invalidateQueries({ queryKey: ['environment-members'] });
         queryClient.invalidateQueries({ queryKey: ['pending-invites'] });
+        queryClient.invalidateQueries({ queryKey: ['user-environments'] });
         onOpenChange(false);
-        setEmail('');
+        resetForm();
       } else if (data?.type === 'invite_sent') {
         // Show success message with instructions
         setSuccessEmail(email);
@@ -168,7 +191,7 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
         queryClient.invalidateQueries({ queryKey: ['environment-members'] });
         queryClient.invalidateQueries({ queryKey: ['pending-invites'] });
         onOpenChange(false);
-        setEmail('');
+        resetForm();
       }
     } catch (error: any) {
       console.error('Invite error:', error);
@@ -182,10 +205,24 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
     setPermissions(prev => ({ ...prev, [section]: level }));
   };
 
+  const resetForm = () => {
+    setEmail('');
+    setSelectedRole('user');
+    setPermissions({
+      executive_dashboard: 'view',
+      reports: 'view',
+      finance: 'none',
+      media_plans: 'view',
+      media_resources: 'view',
+      taxonomy: 'view',
+      library: 'view',
+    });
+  };
+
   const handleClose = () => {
     setInviteSuccess(false);
     setSuccessEmail('');
-    setEmail('');
+    resetForm();
     onOpenChange(false);
   };
 
@@ -239,7 +276,7 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
@@ -266,54 +303,108 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
             </p>
           </div>
 
+          {/* Role Selection */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Permissões por seção</Label>
-              <div className="flex gap-2">
-                {(Object.entries(PRESETS) as [PresetKey, typeof PRESETS.viewer][]).map(([key, preset]) => (
-                  <Button
-                    key={key}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => applyPreset(key)}
-                    className="text-xs"
-                  >
-                    <Wand2 className="h-3 w-3 mr-1" />
-                    {preset.label}
-                  </Button>
+            <Label>Papel no Ambiente</Label>
+            <RadioGroup
+              value={selectedRole}
+              onValueChange={(value) => setSelectedRole(value as EnvironmentRole)}
+              className="grid grid-cols-2 gap-4"
+            >
+              {ROLE_OPTIONS.map((role) => (
+                <Card 
+                  key={role.value}
+                  className={cn(
+                    "cursor-pointer transition-colors",
+                    selectedRole === role.value 
+                      ? "border-primary bg-primary/5" 
+                      : "hover:border-muted-foreground/50"
+                  )}
+                  onClick={() => setSelectedRole(role.value)}
+                >
+                  <CardContent className="p-4 flex items-start gap-3">
+                    <RadioGroupItem value={role.value} id={role.value} className="mt-1" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        {role.icon}
+                        <Label 
+                          htmlFor={role.value} 
+                          className="font-medium cursor-pointer"
+                        >
+                          {role.label}
+                        </Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {role.description}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* Granular permissions - only show for 'user' role */}
+          {selectedRole === 'user' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Permissões por seção</Label>
+                <div className="flex gap-2 flex-wrap justify-end">
+                  {(Object.entries(PRESETS) as [PresetKey, typeof PRESETS.viewer][]).map(([key, preset]) => (
+                    <Button
+                      key={key}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => applyPreset(key)}
+                      className="text-xs"
+                    >
+                      <Wand2 className="h-3 w-3 mr-1" />
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border rounded-lg divide-y">
+                {SECTIONS.map(section => (
+                  <div key={section.key} className="flex items-center justify-between p-3">
+                    <span className="font-medium">{section.label}</span>
+                    <Select
+                      value={permissions[section.key]}
+                      onValueChange={(value) => 
+                        handlePermissionChange(section.key, value as PermissionLevel)
+                      }
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PERMISSION_OPTIONS.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            <div className="flex items-center gap-2">
+                              {option.icon}
+                              {option.label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 ))}
               </div>
             </div>
+          )}
 
-            <div className="border rounded-lg divide-y">
-              {SECTIONS.map(section => (
-                <div key={section.key} className="flex items-center justify-between p-3">
-                  <span className="font-medium">{section.label}</span>
-                  <Select
-                    value={permissions[section.key]}
-                    onValueChange={(value) => 
-                      handlePermissionChange(section.key, value as PermissionLevel)
-                    }
-                  >
-                    <SelectTrigger className="w-[140px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PERMISSION_OPTIONS.map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <div className="flex items-center gap-2">
-                            {option.icon}
-                            {option.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Admin role info */}
+          {selectedRole === 'admin' && (
+            <Alert>
+              <Shield className="h-4 w-4" />
+              <AlertDescription>
+                Administradores têm acesso total ao ambiente e podem convidar outros membros.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
