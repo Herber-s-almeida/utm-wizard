@@ -37,44 +37,65 @@ serve(async (req) => {
       throw new Error("Usuário não autenticado");
     }
 
-    const { email, permissions, environment_role = 'user' } = await req.json();
+    const { email, permissions, environment_role = 'user', environment_id } = await req.json();
 
     if (!email) {
       throw new Error("Email é obrigatório");
     }
 
+    if (!environment_id) {
+      throw new Error("ID do ambiente é obrigatório");
+    }
+
     // Validate environment_role
     const validRoles = ['admin', 'user'];
     const normalizedRole = validRoles.includes(environment_role) ? environment_role : 'user';
+    const isAdminRole = normalizedRole === 'admin';
 
-    console.log(`Inviting ${email} with role ${normalizedRole}`);
+    console.log(`Inviting ${email} to environment ${environment_id} with role ${normalizedRole}`);
 
-    // Check if user can invite (must be owner or admin)
-    const { data: canInvite, error: canInviteError } = await adminClient
-      .rpc('can_invite_to_environment', { 
-        _environment_owner_id: user.id,
-        _user_id: user.id 
-      });
+    // Check if user can invite to THIS environment (using environment_roles)
+    const { data: canInviteData, error: canInviteError } = await adminClient
+      .from('environment_roles')
+      .select('role_invite')
+      .eq('environment_id', environment_id)
+      .eq('user_id', user.id)
+      .maybeSingle();
 
     if (canInviteError) {
       console.error("Can invite check error:", canInviteError);
     }
 
-    if (!canInvite) {
-      throw new Error("Você não tem permissão para convidar membros");
+    // Check if current user is the environment owner
+    const { data: envData } = await adminClient
+      .from('environments')
+      .select('owner_user_id')
+      .eq('id', environment_id)
+      .single();
+
+    const isOwner = envData?.owner_user_id === user.id;
+    const canInvite = isOwner || canInviteData?.role_invite === true;
+
+    // Also check system admin
+    const { data: isSystemAdmin } = await adminClient.rpc('is_system_admin', { _user_id: user.id });
+
+    if (!canInvite && !isSystemAdmin) {
+      throw new Error("Você não tem permissão para convidar membros neste ambiente");
     }
 
-    // Check member count limit
-    const { data: countData, error: countError } = await adminClient
-      .rpc('count_environment_members', { _environment_owner_id: user.id });
+    // Check member count limit for this environment
+    const { count: memberCount, error: countError } = await adminClient
+      .from('environment_roles')
+      .select('*', { count: 'exact', head: true })
+      .eq('environment_id', environment_id);
     
     if (countError) {
       console.error("Count error:", countError);
       throw new Error("Erro ao verificar limite de membros");
     }
 
-    if (countData >= 30) {
-      throw new Error("Limite de 30 membros atingido");
+    if ((memberCount || 0) >= 30) {
+      throw new Error("Limite de 30 membros atingido neste ambiente");
     }
 
     // Find user by email using admin client
@@ -88,41 +109,46 @@ serve(async (req) => {
     const targetUser = usersData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
     if (targetUser) {
-      // ===== USER EXISTS - Add directly as member =====
+      // ===== USER EXISTS - Add directly to environment_roles =====
       
       if (targetUser.id === user.id) {
         throw new Error("Você não pode convidar a si mesmo");
       }
 
-      // Check if already a member
-      const { data: existingMember } = await adminClient
-        .from('environment_members')
+      // Check if already has access to this environment
+      const { data: existingRole } = await adminClient
+        .from('environment_roles')
         .select('id')
-        .eq('environment_owner_id', user.id)
-        .eq('member_user_id', targetUser.id)
+        .eq('environment_id', environment_id)
+        .eq('user_id', targetUser.id)
         .maybeSingle();
 
-      if (existingMember) {
-        throw new Error("Este usuário já é membro do seu ambiente");
+      if (existingRole) {
+        throw new Error("Este usuário já tem acesso a este ambiente");
       }
 
-      // Insert the new member with environment_role
-      const { data: newMember, error: insertError } = await adminClient
-        .from('environment_members')
+      // Insert into environment_roles with proper permissions
+      const { data: newRole, error: insertError } = await adminClient
+        .from('environment_roles')
         .insert({
-          environment_owner_id: user.id,
-          member_user_id: targetUser.id,
+          environment_id: environment_id,
+          user_id: targetUser.id,
           invited_by: user.id,
           invited_at: new Date().toISOString(),
           accepted_at: new Date().toISOString(), // Auto-accept since user exists
-          environment_role: normalizedRole,
-          perm_executive_dashboard: normalizedRole === 'admin' ? 'admin' : (permissions?.executive_dashboard || 'none'),
-          perm_reports: normalizedRole === 'admin' ? 'admin' : (permissions?.reports || 'none'),
-          perm_finance: normalizedRole === 'admin' ? 'admin' : (permissions?.finance || 'none'),
-          perm_media_plans: normalizedRole === 'admin' ? 'admin' : (permissions?.media_plans || 'none'),
-          perm_media_resources: normalizedRole === 'admin' ? 'admin' : (permissions?.media_resources || 'none'),
-          perm_taxonomy: normalizedRole === 'admin' ? 'admin' : (permissions?.taxonomy || 'none'),
-          perm_library: normalizedRole === 'admin' ? 'admin' : (permissions?.library || 'none'),
+          // Role-based permissions
+          role_read: true,
+          role_edit: isAdminRole,
+          role_delete: isAdminRole,
+          role_invite: isAdminRole,
+          // Section permissions
+          perm_executive_dashboard: isAdminRole ? 'admin' : (permissions?.executive_dashboard || 'view'),
+          perm_reports: isAdminRole ? 'admin' : (permissions?.reports || 'view'),
+          perm_finance: isAdminRole ? 'admin' : (permissions?.finance || 'none'),
+          perm_media_plans: isAdminRole ? 'admin' : (permissions?.media_plans || 'view'),
+          perm_media_resources: isAdminRole ? 'admin' : (permissions?.media_resources || 'view'),
+          perm_taxonomy: isAdminRole ? 'admin' : (permissions?.taxonomy || 'view'),
+          perm_library: isAdminRole ? 'admin' : (permissions?.library || 'view'),
         })
         .select()
         .single();
@@ -132,12 +158,12 @@ serve(async (req) => {
         throw new Error(insertError.message || "Erro ao adicionar membro");
       }
 
-      console.log(`Member ${email} added with role ${normalizedRole}`);
+      console.log(`Member ${email} added to environment ${environment_id} with role ${normalizedRole}`);
 
       return new Response(
         JSON.stringify({ 
           success: true, 
-          member: newMember, 
+          member: newRole, 
           type: 'existing_user',
           message: 'Membro adicionado com sucesso!'
         }),
@@ -147,33 +173,35 @@ serve(async (req) => {
     } else {
       // ===== USER DOES NOT EXIST - Create pending invite =====
       
-      // Check if there's already a pending invite for this email
+      // Check if there's already a pending invite for this email in this environment
       const { data: existingInvite } = await adminClient
         .from('pending_environment_invites')
         .select('id')
         .eq('email', email.toLowerCase())
-        .eq('environment_owner_id', user.id)
+        .eq('environment_owner_id', envData?.owner_user_id || user.id)
         .maybeSingle();
 
       if (existingInvite) {
         throw new Error("Já existe um convite pendente para este email");
       }
 
-      // Create pending invite record with environment_role
+      // Create pending invite record
+      // Note: We store environment_owner_id to later create environment_roles entry
+      // The trigger on user registration will need to create the environment_roles entry
       const { error: pendingError } = await adminClient
         .from('pending_environment_invites')
         .insert({
           email: email.toLowerCase(),
-          environment_owner_id: user.id,
+          environment_owner_id: envData?.owner_user_id || user.id,
           invited_by: user.id,
           environment_role: normalizedRole,
-          perm_executive_dashboard: normalizedRole === 'admin' ? 'admin' : (permissions?.executive_dashboard || 'none'),
-          perm_reports: normalizedRole === 'admin' ? 'admin' : (permissions?.reports || 'none'),
-          perm_finance: normalizedRole === 'admin' ? 'admin' : (permissions?.finance || 'none'),
-          perm_media_plans: normalizedRole === 'admin' ? 'admin' : (permissions?.media_plans || 'none'),
-          perm_media_resources: normalizedRole === 'admin' ? 'admin' : (permissions?.media_resources || 'none'),
-          perm_taxonomy: normalizedRole === 'admin' ? 'admin' : (permissions?.taxonomy || 'none'),
-          perm_library: normalizedRole === 'admin' ? 'admin' : (permissions?.library || 'none'),
+          perm_executive_dashboard: isAdminRole ? 'admin' : (permissions?.executive_dashboard || 'view'),
+          perm_reports: isAdminRole ? 'admin' : (permissions?.reports || 'view'),
+          perm_finance: isAdminRole ? 'admin' : (permissions?.finance || 'none'),
+          perm_media_plans: isAdminRole ? 'admin' : (permissions?.media_plans || 'view'),
+          perm_media_resources: isAdminRole ? 'admin' : (permissions?.media_resources || 'view'),
+          perm_taxonomy: isAdminRole ? 'admin' : (permissions?.taxonomy || 'view'),
+          perm_library: isAdminRole ? 'admin' : (permissions?.library || 'view'),
         });
 
       if (pendingError) {
