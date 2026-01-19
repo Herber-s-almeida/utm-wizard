@@ -1,11 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { toast } from 'sonner';
 
 export interface CustomKpi {
   id: string;
   user_id: string;
+  environment_id?: string;
   name: string;
   key: string;
   unit: string;
@@ -32,6 +34,7 @@ const MAX_CUSTOM_KPIS = 250;
 
 export function useCustomKpis() {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
 
   // Generate a slug key from the name
@@ -48,14 +51,14 @@ export function useCustomKpis() {
   };
 
   const { data: customKpis = [], isLoading } = useQuery({
-    queryKey: ['custom-kpis', user?.id],
+    queryKey: ['custom-kpis', currentEnvironmentId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!currentEnvironmentId) return [];
       
       const { data, error } = await supabase
         .from('custom_kpis')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('environment_id', currentEnvironmentId)
         .eq('is_active', true)
         .order('created_at', { ascending: true });
 
@@ -66,12 +69,13 @@ export function useCustomKpis() {
 
       return data as CustomKpi[];
     },
-    enabled: !!user?.id,
+    enabled: !!currentEnvironmentId,
   });
 
   const createKpi = useMutation({
     mutationFn: async (params: CreateCustomKpiParams) => {
       if (!user?.id) throw new Error('User not authenticated');
+      if (!currentEnvironmentId) throw new Error('No environment selected');
       
       if (customKpis.length >= MAX_CUSTOM_KPIS) {
         throw new Error(`Limite de ${MAX_CUSTOM_KPIS} KPIs customizados atingido`);
@@ -89,6 +93,7 @@ export function useCustomKpis() {
         .from('custom_kpis')
         .insert({
           user_id: user.id,
+          environment_id: currentEnvironmentId,
           name: params.name,
           key,
           unit: params.unit,
@@ -136,7 +141,6 @@ export function useCustomKpis() {
         .from('custom_kpis')
         .update(updateData)
         .eq('id', params.id)
-        .eq('user_id', user.id)
         .select()
         .single();
 
@@ -165,8 +169,7 @@ export function useCustomKpis() {
       const { error } = await supabase
         .from('custom_kpis')
         .update({ is_active: false })
-        .eq('id', kpiId)
-        .eq('user_id', user.id);
+        .eq('id', kpiId);
 
       if (error) throw error;
     },
