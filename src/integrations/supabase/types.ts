@@ -1319,6 +1319,7 @@ export type Database = {
           created_at: string | null
           entity_id: string
           entity_type: string
+          environment_id: string | null
           id: string
           reason: string | null
           user_id: string
@@ -1330,6 +1331,7 @@ export type Database = {
           created_at?: string | null
           entity_id: string
           entity_type: string
+          environment_id?: string | null
           id?: string
           reason?: string | null
           user_id: string
@@ -1341,11 +1343,20 @@ export type Database = {
           created_at?: string | null
           entity_id?: string
           entity_type?: string
+          environment_id?: string | null
           id?: string
           reason?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "financial_audit_log_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_documents: {
         Row: {
@@ -2970,6 +2981,7 @@ export type Database = {
         Row: {
           alert_type: string
           created_at: string | null
+          environment_id: string | null
           id: string
           is_resolved: boolean | null
           media_line_id: string | null
@@ -2984,6 +2996,7 @@ export type Database = {
         Insert: {
           alert_type: string
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           is_resolved?: boolean | null
           media_line_id?: string | null
@@ -2998,6 +3011,7 @@ export type Database = {
         Update: {
           alert_type?: string
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           is_resolved?: boolean | null
           media_line_id?: string | null
@@ -3010,6 +3024,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "performance_alerts_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "performance_alerts_media_line_id_fkey"
             columns: ["media_line_id"]
@@ -3460,6 +3481,7 @@ export type Database = {
       report_imports: {
         Row: {
           created_at: string
+          environment_id: string | null
           error_message: string | null
           id: string
           import_status: string | null
@@ -3472,6 +3494,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          environment_id?: string | null
           error_message?: string | null
           id?: string
           import_status?: string | null
@@ -3484,6 +3507,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          environment_id?: string | null
           error_message?: string | null
           id?: string
           import_status?: string | null
@@ -3495,6 +3519,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "report_imports_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "report_imports_media_plan_id_fkey"
             columns: ["media_plan_id"]
@@ -3613,6 +3644,7 @@ export type Database = {
       report_periods: {
         Row: {
           created_at: string | null
+          environment_id: string | null
           id: string
           media_plan_id: string
           period_date: string
@@ -3621,6 +3653,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           media_plan_id: string
           period_date: string
@@ -3629,6 +3662,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           media_plan_id?: string
           period_date?: string
@@ -3636,6 +3670,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "report_periods_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "report_periods_media_plan_id_fkey"
             columns: ["media_plan_id"]
@@ -3787,6 +3828,7 @@ export type Database = {
       status_transitions: {
         Row: {
           created_at: string | null
+          environment_id: string | null
           from_status_id: string | null
           id: string
           is_system: boolean | null
@@ -3797,6 +3839,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          environment_id?: string | null
           from_status_id?: string | null
           id?: string
           is_system?: boolean | null
@@ -3807,6 +3850,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          environment_id?: string | null
           from_status_id?: string | null
           id?: string
           is_system?: boolean | null
@@ -3816,6 +3860,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "status_transitions_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "status_transitions_from_status_id_fkey"
             columns: ["from_status_id"]
