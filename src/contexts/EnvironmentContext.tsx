@@ -14,21 +14,18 @@ export type EnvironmentSection =
   | 'taxonomy' 
   | 'library';
 
-interface EnvironmentUser {
-  id: string;
-  email: string;
-  full_name: string | null;
-  company: string | null;
-}
-
 export interface UserEnvironment {
-  environment_owner_id: string;
+  environment_id: string;
   environment_name: string;
-  environment_role: EnvironmentRole;
+  environment_owner_id: string;
   is_own_environment: boolean;
+  role_read: boolean;
+  role_edit: boolean;
+  role_delete: boolean;
+  role_invite: boolean;
 }
 
-interface EnvironmentMembership {
+interface EnvironmentRole2 {
   perm_executive_dashboard: PermissionLevel;
   perm_reports: PermissionLevel;
   perm_finance: PermissionLevel;
@@ -36,10 +33,13 @@ interface EnvironmentMembership {
   perm_media_resources: PermissionLevel;
   perm_taxonomy: PermissionLevel;
   perm_library: PermissionLevel;
-  environment_role?: EnvironmentRole;
+  role_read: boolean;
+  role_edit: boolean;
+  role_delete: boolean;
+  role_invite: boolean;
 }
 
-const SECTION_TO_COLUMN: Record<EnvironmentSection, keyof EnvironmentMembership> = {
+const SECTION_TO_COLUMN: Record<EnvironmentSection, keyof EnvironmentRole2> = {
   executive_dashboard: 'perm_executive_dashboard',
   reports: 'perm_reports',
   finance: 'perm_finance',
@@ -50,13 +50,11 @@ const SECTION_TO_COLUMN: Record<EnvironmentSection, keyof EnvironmentMembership>
 };
 
 interface EnvironmentContextType {
-  /** The user whose environment is being viewed. null = viewing own environment */
-  viewingUser: EnvironmentUser | null;
-  /** Set the user whose environment to view. Pass null to return to own environment */
-  setViewingUser: (user: EnvironmentUser | null) => void;
+  /** The current environment ID being viewed */
+  currentEnvironmentId: string | null;
   /** Whether currently viewing another user's environment */
   isViewingOtherEnvironment: boolean;
-  /** The user_id to use for filtering data (either viewing user or current auth user) */
+  /** @deprecated Use currentEnvironmentId instead */
   effectiveUserId: string | null;
   
   // Permission-related
@@ -75,9 +73,6 @@ interface EnvironmentContextType {
   /** Whether permissions are still loading */
   isLoadingPermissions: boolean;
   
-  // New role-based fields
-  /** Current user's role in the viewed environment */
-  environmentRole: EnvironmentRole | null;
   /** Whether current user can invite members to the environment */
   canInviteMembers: boolean;
   /** List of environments the user has access to */
@@ -85,7 +80,7 @@ interface EnvironmentContextType {
   /** Whether environments list is loading */
   isLoadingEnvironments: boolean;
   /** Switch to a different environment */
-  switchEnvironment: (environmentOwnerId: string) => void;
+  switchEnvironment: (environmentId: string) => void;
 }
 
 const EnvironmentContext = createContext<EnvironmentContextType | undefined>(undefined);
@@ -96,11 +91,7 @@ interface EnvironmentProviderProps {
 }
 
 export function EnvironmentProvider({ children, currentUserId }: EnvironmentProviderProps) {
-  const [viewingUser, setViewingUser] = useState<EnvironmentUser | null>(null);
-
-  const isViewingOtherEnvironment = viewingUser !== null;
-  const effectiveUserId = viewingUser?.id ?? currentUserId;
-  const environmentOwnerId = effectiveUserId;
+  const [currentEnvironmentId, setCurrentEnvironmentId] = useState<string | null>(null);
 
   // Check if user is system admin
   const { data: isSystemAdmin = false, isLoading: isLoadingSystemAdmin } = useQuery({
@@ -116,16 +107,16 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
       return data as boolean;
     },
     enabled: !!currentUserId,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch user's available environments
+  // Fetch user's available environments using the new function
   const { data: userEnvironments = [], isLoading: isLoadingEnvironments } = useQuery({
-    queryKey: ['user-environments', currentUserId],
+    queryKey: ['user-environments-v2', currentUserId],
     queryFn: async () => {
       if (!currentUserId) return [];
       
-      const { data, error } = await supabase.rpc('get_user_environments', {
+      const { data, error } = await supabase.rpc('get_user_environments_v2', {
         _user_id: currentUserId,
       });
       
@@ -140,106 +131,59 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
     staleTime: 30 * 1000,
   });
 
-  // Get current user's role in the viewed environment
-  const { data: environmentRole = null } = useQuery({
-    queryKey: ['environment-role', environmentOwnerId, currentUserId],
+  // Get current user's role in the current environment
+  const { data: myRole, isLoading: isLoadingRole } = useQuery({
+    queryKey: ['environment-role-v2', currentEnvironmentId, currentUserId],
     queryFn: async () => {
-      if (!environmentOwnerId || !currentUserId) return null;
-      
-      const { data, error } = await supabase.rpc('get_environment_role', {
-        _environment_owner_id: environmentOwnerId,
-        _user_id: currentUserId,
-      });
-      
-      if (error) {
-        console.error('Error fetching environment role:', error);
-        return null;
-      }
-      
-      return data as EnvironmentRole | null;
-    },
-    enabled: !!environmentOwnerId && !!currentUserId,
-    staleTime: 30 * 1000,
-  });
-
-  // Fetch current user's membership in the viewed environment
-  const { data: myMembership, isLoading: isLoadingMembership } = useQuery({
-    queryKey: ['environment-membership', environmentOwnerId, currentUserId],
-    queryFn: async () => {
-      if (!environmentOwnerId || !currentUserId || environmentOwnerId === currentUserId) {
-        return null;
-      }
+      if (!currentEnvironmentId || !currentUserId) return null;
       
       const { data, error } = await supabase
-        .from('environment_members')
-        .select('perm_executive_dashboard, perm_reports, perm_finance, perm_media_plans, perm_media_resources, perm_taxonomy, perm_library, environment_role')
-        .eq('environment_owner_id', environmentOwnerId)
-        .eq('member_user_id', currentUserId)
+        .from('environment_roles')
+        .select('perm_executive_dashboard, perm_reports, perm_finance, perm_media_plans, perm_media_resources, perm_taxonomy, perm_library, role_read, role_edit, role_delete, role_invite')
+        .eq('environment_id', currentEnvironmentId)
+        .eq('user_id', currentUserId)
         .maybeSingle();
       
       if (error) return null;
-      return data as EnvironmentMembership | null;
+      return data as EnvironmentRole2 | null;
     },
-    enabled: !!environmentOwnerId && !!currentUserId && isViewingOtherEnvironment,
-    staleTime: 30 * 1000, // Cache for 30 seconds
+    enabled: !!currentEnvironmentId && !!currentUserId,
+    staleTime: 30 * 1000,
   });
 
-  const isLoadingPermissions = isLoadingSystemAdmin || (isViewingOtherEnvironment && isLoadingMembership);
+  const isLoadingPermissions = isLoadingSystemAdmin || isLoadingRole;
+
+  // Determine if viewing own or other environment
+  const currentEnvDetails = useMemo(() => {
+    return userEnvironments.find(env => env.environment_id === currentEnvironmentId);
+  }, [userEnvironments, currentEnvironmentId]);
+
+  const isViewingOtherEnvironment = currentEnvDetails ? !currentEnvDetails.is_own_environment : false;
+  const isEnvironmentOwner = currentEnvDetails?.is_own_environment ?? false;
+
+  // For backwards compatibility
+  const effectiveUserId = currentEnvDetails?.environment_owner_id ?? currentUserId;
 
   // Switch environment function
-  const switchEnvironment = useCallback(async (environmentOwnerId: string) => {
-    // If switching to own environment
-    if (environmentOwnerId === currentUserId) {
-      setViewingUser(null);
-      return;
-    }
-
-    // Get profile of the environment owner
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('user_id, full_name, company')
-      .eq('user_id', environmentOwnerId)
-      .single();
-
-    if (error || !profile) {
-      console.error('Error fetching profile:', error);
-      return;
-    }
-
-    // Get email from auth (if system admin)
-    const { data: userData } = await supabase.auth.getUser();
-    
-    setViewingUser({
-      id: profile.user_id,
-      email: userData?.user?.email || '',
-      full_name: profile.full_name,
-      company: profile.company,
-    });
-  }, [currentUserId]);
+  const switchEnvironment = useCallback((environmentId: string) => {
+    setCurrentEnvironmentId(environmentId);
+  }, []);
 
   // Get permission for a specific section
   const getPermission = useCallback((section: EnvironmentSection): PermissionLevel => {
-    // System admin has full access
     if (isSystemAdmin) return 'admin';
+    if (isEnvironmentOwner) return 'admin';
     
-    // If viewing own environment, has full access
-    if (!isViewingOtherEnvironment || environmentOwnerId === currentUserId) {
-      return 'admin';
-    }
-    
-    // If user is admin in the environment, has full access
-    if (environmentRole === 'admin') {
-      return 'admin';
-    }
-    
-    // Get permission from membership
-    if (myMembership) {
+    if (myRole) {
       const columnName = SECTION_TO_COLUMN[section];
-      return (myMembership[columnName] as PermissionLevel) || 'none';
+      const value = myRole[columnName];
+      if (typeof value === 'string') {
+        return value as PermissionLevel;
+      }
     }
     
     return 'none';
-  }, [isSystemAdmin, isViewingOtherEnvironment, environmentOwnerId, currentUserId, myMembership, environmentRole]);
+  }, [isSystemAdmin, isEnvironmentOwner, myRole]);
 
   const canView = useCallback((section: EnvironmentSection): boolean => {
     const level = getPermission(section);
@@ -251,58 +195,37 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
     return level === 'edit' || level === 'admin';
   }, [getPermission]);
 
-  const isEnvironmentOwner = !isViewingOtherEnvironment || environmentOwnerId === currentUserId;
-  
   const isEnvironmentAdmin = useMemo(() => {
     if (isSystemAdmin || isEnvironmentOwner) return true;
-    if (environmentRole === 'admin') return true;
-    
-    if (myMembership) {
-      return (
-        myMembership.perm_executive_dashboard === 'admin' ||
-        myMembership.perm_reports === 'admin' ||
-        myMembership.perm_finance === 'admin' ||
-        myMembership.perm_media_plans === 'admin' ||
-        myMembership.perm_media_resources === 'admin' ||
-        myMembership.perm_taxonomy === 'admin' ||
-        myMembership.perm_library === 'admin'
-      );
+    if (myRole) {
+      return myRole.role_edit && myRole.role_delete && myRole.role_invite;
     }
-    
     return false;
-  }, [isSystemAdmin, isEnvironmentOwner, myMembership, environmentRole]);
+  }, [isSystemAdmin, isEnvironmentOwner, myRole]);
 
-  // Can invite if owner or admin
   const canInviteMembers = useMemo(() => {
     if (isSystemAdmin) return true;
-    return environmentRole === 'owner' || environmentRole === 'admin';
-  }, [isSystemAdmin, environmentRole]);
+    return myRole?.role_invite ?? false;
+  }, [isSystemAdmin, myRole]);
 
-  // Auto-select first environment for members who don't have their own environment
+  // Auto-select first environment when user loads
   useEffect(() => {
-    // Still loading, wait
     if (isLoadingEnvironments) return;
-    
-    // Already has a viewing user selected
-    if (viewingUser !== null) return;
-    
-    // No environments available
+    if (currentEnvironmentId !== null) return;
     if (userEnvironments.length === 0) return;
     
-    // Check if user has their own environment
+    // Prefer own environment, otherwise first available
     const ownEnv = userEnvironments.find(env => env.is_own_environment);
+    const envToSelect = ownEnv || userEnvironments[0];
     
-    // If user doesn't have their own environment but is member of at least one
-    if (!ownEnv && userEnvironments.length > 0) {
-      const firstEnv = userEnvironments[0];
-      console.log('Auto-selecting environment for member:', firstEnv);
-      switchEnvironment(firstEnv.environment_owner_id);
+    if (envToSelect) {
+      console.log('Auto-selecting environment:', envToSelect.environment_name);
+      setCurrentEnvironmentId(envToSelect.environment_id);
     }
-  }, [userEnvironments, isLoadingEnvironments, viewingUser, switchEnvironment]);
+  }, [userEnvironments, isLoadingEnvironments, currentEnvironmentId]);
 
   const value = useMemo(() => ({
-    viewingUser,
-    setViewingUser,
+    currentEnvironmentId,
     isViewingOtherEnvironment,
     effectiveUserId,
     isEnvironmentOwner,
@@ -312,14 +235,12 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
     canView,
     canEdit,
     isLoadingPermissions,
-    // New fields
-    environmentRole,
     canInviteMembers,
     userEnvironments,
     isLoadingEnvironments,
     switchEnvironment,
   }), [
-    viewingUser,
+    currentEnvironmentId,
     isViewingOtherEnvironment,
     effectiveUserId,
     isEnvironmentOwner,
@@ -329,7 +250,6 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
     canView,
     canEdit,
     isLoadingPermissions,
-    environmentRole,
     canInviteMembers,
     userEnvironments,
     isLoadingEnvironments,
