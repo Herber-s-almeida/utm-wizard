@@ -18,8 +18,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Eye, Edit, Ban, UserPlus, Wand2, CheckCircle, Info, Crown, User } from 'lucide-react';
-import { PermissionLevel, EnvironmentSection } from '@/hooks/useEnvironmentPermissions';
+import { Shield, Eye, Edit, Ban, UserPlus, Wand2, CheckCircle, Info, User } from 'lucide-react';
+import { PermissionLevel, EnvironmentSection, useEnvironment } from '@/contexts/EnvironmentContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -126,6 +126,7 @@ type PresetKey = keyof typeof PRESETS;
 
 export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogProps) {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -159,15 +160,21 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
       return;
     }
 
+    if (!currentEnvironmentId) {
+      toast.error('Nenhum ambiente selecionado');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // Call edge function to invite member with role
+      // Call edge function with environment_id
       const { data, error } = await supabase.functions.invoke('invite-environment-member', {
         body: {
           email: email.trim(),
           permissions,
           environment_role: selectedRole,
+          environment_id: currentEnvironmentId,
         },
       });
 
@@ -177,8 +184,10 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
       if (data?.type === 'existing_user') {
         toast.success('Membro adicionado com sucesso!');
         queryClient.invalidateQueries({ queryKey: ['environment-members'] });
+        queryClient.invalidateQueries({ queryKey: ['environment-roles'] });
         queryClient.invalidateQueries({ queryKey: ['pending-invites'] });
         queryClient.invalidateQueries({ queryKey: ['user-environments'] });
+        queryClient.invalidateQueries({ queryKey: ['user-environments-v2'] });
         onOpenChange(false);
         resetForm();
       } else if (data?.type === 'invite_sent') {
@@ -283,7 +292,7 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
             Convidar Membro
           </DialogTitle>
           <DialogDescription>
-            Convide um usuário para acessar seu ambiente com permissões personalizadas
+            Convide um usuário para acessar este ambiente com permissões personalizadas
           </DialogDescription>
         </DialogHeader>
 
@@ -410,7 +419,7 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !currentEnvironmentId}>
               {isSubmitting ? 'Enviando...' : 'Criar Convite'}
             </Button>
           </DialogFooter>

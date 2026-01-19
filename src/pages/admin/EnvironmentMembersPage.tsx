@@ -31,10 +31,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Bell, Clock, Mail } from 'lucide-react';
+import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Bell, Clock, Mail, Crown } from 'lucide-react';
 import { useEnvironmentPermissions, PermissionLevel, EnvironmentSection } from '@/hooks/useEnvironmentPermissions';
 import { usePendingInvites, PendingInvite } from '@/hooks/usePendingInvites';
 import { useResourceNotifications } from '@/hooks/useResourceNotifications';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { InviteMemberDialog } from '@/components/admin/InviteMemberDialog';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -66,7 +67,11 @@ export default function EnvironmentMembersPage() {
     removeMember,
     isUpdating,
     isRemoving,
+    isEnvironmentOwner,
+    canEdit: canEditPermissions,
   } = useEnvironmentPermissions();
+
+  const { userEnvironments, currentEnvironmentId } = useEnvironment();
 
   const {
     pendingInvites,
@@ -81,6 +86,10 @@ export default function EnvironmentMembersPage() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
   const [inviteToDelete, setInviteToDelete] = useState<string | null>(null);
+
+  // Get current environment details
+  const currentEnv = userEnvironments.find(e => e.environment_id === currentEnvironmentId);
+  const environmentOwnerUserId = currentEnv?.environment_owner_id;
 
   const handlePermissionChange = (memberId: string, section: EnvironmentSection, level: PermissionLevel) => {
     updateMemberPermissions(
@@ -136,7 +145,10 @@ export default function EnvironmentMembersPage() {
   };
 
   const totalSlots = memberCount + pendingInviteCount;
-  const canInvite = totalSlots < 30;
+  const canInvite = totalSlots < 30 && canEditPermissions;
+
+  // Filter out the environment owner from the members list (they have implicit full access)
+  const displayMembers = environmentMembers.filter(m => m.user_id !== environmentOwnerUserId);
 
   return (
     <DashboardLayout>
@@ -148,21 +160,26 @@ export default function EnvironmentMembersPage() {
               Membros do Ambiente
             </h1>
             <p className="text-muted-foreground mt-1">
-              Gerencie os usuários que têm acesso ao seu ambiente
+              Gerencie os usuários que têm acesso a este ambiente
+              {currentEnv && (
+                <span className="ml-1 font-medium text-foreground">({currentEnv.environment_name})</span>
+              )}
             </p>
           </div>
           
           <div className="flex items-center gap-4">
             <Badge variant="outline" className="text-sm py-1 px-3">
-              {memberCount} ativos {pendingInviteCount > 0 && `+ ${pendingInviteCount} pendentes`} / 30
+              {displayMembers.length} membros {pendingInviteCount > 0 && `+ ${pendingInviteCount} pendentes`} / 30
             </Badge>
-            <Button 
-              onClick={() => setInviteDialogOpen(true)}
-              disabled={!canInvite}
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Convidar Membro
-            </Button>
+            {canEditPermissions && (
+              <Button 
+                onClick={() => setInviteDialogOpen(true)}
+                disabled={!canInvite}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Convidar Membro
+              </Button>
+            )}
           </div>
         </div>
 
@@ -204,23 +221,25 @@ export default function EnvironmentMembersPage() {
                         {format(new Date(invite.expires_at), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell className="text-right">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => setInviteToDelete(invite.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Cancelar convite</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        {canEditPermissions && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setInviteToDelete(invite.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Cancelar convite</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -243,20 +262,22 @@ export default function EnvironmentMembersPage() {
               <div className="text-center py-8 text-muted-foreground">
                 Carregando membros...
               </div>
-            ) : environmentMembers.length === 0 ? (
+            ) : displayMembers.length === 0 ? (
               <div className="text-center py-12">
                 <Users className="h-12 w-12 mx-auto text-muted-foreground/50" />
-                <h3 className="mt-4 text-lg font-medium">Nenhum membro ativo</h3>
+                <h3 className="mt-4 text-lg font-medium">Nenhum membro convidado</h3>
                 <p className="text-muted-foreground mt-2">
-                  Convide até 30 pessoas para colaborar no seu ambiente
+                  Convide até 30 pessoas para colaborar neste ambiente
                 </p>
-                <Button 
-                  className="mt-4"
-                  onClick={() => setInviteDialogOpen(true)}
-                >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Convidar Primeiro Membro
-                </Button>
+                {canEditPermissions && (
+                  <Button 
+                    className="mt-4"
+                    onClick={() => setInviteDialogOpen(true)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Convidar Primeiro Membro
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -279,72 +300,83 @@ export default function EnvironmentMembersPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {environmentMembers.map(member => (
-                      <TableRow key={member.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">
-                              {member.profile?.full_name || 'Usuário'}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {member.email || member.member_user_id.slice(0, 8)}
-                            </p>
-                          </div>
-                        </TableCell>
-                        
-                        {SECTIONS.map(section => {
-                          const columnKey = `perm_${section.key}` as keyof typeof member;
-                          const currentLevel = member[columnKey] as PermissionLevel;
+                    {displayMembers.map(member => {
+                      const isOwner = member.user_id === environmentOwnerUserId;
+                      
+                      return (
+                        <TableRow key={member.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {isOwner && (
+                                <Crown className="h-4 w-4 text-amber-500" />
+                              )}
+                              <div>
+                                <p className="font-medium">
+                                  {member.profile?.full_name || 'Usuário'}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {member.email || member.user_id.slice(0, 8)}
+                                </p>
+                              </div>
+                            </div>
+                          </TableCell>
                           
-                          return (
-                            <TableCell key={section.key} className="text-center">
-                              <Select
-                                value={currentLevel}
-                                onValueChange={(value) => 
-                                  handlePermissionChange(member.id, section.key, value as PermissionLevel)
-                                }
-                                disabled={isUpdating}
+                          {SECTIONS.map(section => {
+                            const columnKey = `perm_${section.key}` as keyof typeof member;
+                            const currentLevel = member[columnKey] as PermissionLevel;
+                            
+                            return (
+                              <TableCell key={section.key} className="text-center">
+                                <Select
+                                  value={currentLevel}
+                                  onValueChange={(value) => 
+                                    handlePermissionChange(member.id, section.key, value as PermissionLevel)
+                                  }
+                                  disabled={isUpdating || !canEditPermissions || isOwner}
+                                >
+                                  <SelectTrigger className="w-[110px] mx-auto">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {PERMISSION_OPTIONS.map(option => (
+                                      <SelectItem key={option.value} value={option.value}>
+                                        <div className="flex items-center gap-2">
+                                          {option.icon}
+                                          {option.label}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                            );
+                          })}
+                          
+                          <TableCell className="text-center">
+                            <Switch
+                              checked={member.notify_media_resources || false}
+                              onCheckedChange={(checked) => 
+                                handleNotificationToggle(member.id, checked)
+                              }
+                              disabled={isUpdatingPreference || !canEditPermissions}
+                            />
+                          </TableCell>
+                          
+                          <TableCell>
+                            {canEditPermissions && !isOwner && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => setMemberToRemove(member.id)}
                               >
-                                <SelectTrigger className="w-[110px] mx-auto">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {PERMISSION_OPTIONS.map(option => (
-                                    <SelectItem key={option.value} value={option.value}>
-                                      <div className="flex items-center gap-2">
-                                        {option.icon}
-                                        {option.label}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                          );
-                        })}
-                        
-                        <TableCell className="text-center">
-                          <Switch
-                            checked={member.notify_media_resources || false}
-                            onCheckedChange={(checked) => 
-                              handleNotificationToggle(member.id, checked)
-                            }
-                            disabled={isUpdatingPreference}
-                          />
-                        </TableCell>
-                        
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setMemberToRemove(member.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -389,7 +421,7 @@ export default function EnvironmentMembersPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Remover membro?</AlertDialogTitle>
               <AlertDialogDescription>
-                Este membro perderá todo o acesso ao seu ambiente. 
+                Este membro perderá todo o acesso ao ambiente. 
                 Esta ação não pode ser desfeita.
               </AlertDialogDescription>
             </AlertDialogHeader>

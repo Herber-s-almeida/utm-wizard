@@ -8,13 +8,17 @@ export type { PermissionLevel, EnvironmentSection } from '@/contexts/Environment
 
 export interface EnvironmentMember {
   id: string;
-  environment_owner_id: string;
-  member_user_id: string;
+  environment_id: string;
+  user_id: string;
   invited_by: string | null;
   invited_at: string | null;
   accepted_at: string | null;
   created_at: string;
   updated_at: string;
+  role_read: boolean;
+  role_edit: boolean;
+  role_delete: boolean;
+  role_invite: boolean;
   perm_executive_dashboard: PermissionLevel;
   perm_reports: PermissionLevel;
   perm_finance: PermissionLevel;
@@ -22,7 +26,7 @@ export interface EnvironmentMember {
   perm_media_resources: PermissionLevel;
   perm_taxonomy: PermissionLevel;
   perm_library: PermissionLevel;
-  notify_media_resources: boolean;
+  notify_media_resources?: boolean;
   // Joined profile data
   profile?: {
     full_name: string | null;
@@ -60,6 +64,7 @@ export function useEnvironmentPermissions() {
   
   // Get permission-related values directly from context (no duplicate queries)
   const {
+    currentEnvironmentId,
     getPermission,
     canView,
     canEdit,
@@ -71,22 +76,37 @@ export function useEnvironmentPermissions() {
   
   const currentUserId = user?.id;
 
-  // Fetch all members of the current user's environment (when they're the owner)
+  // Fetch all members of the current environment from environment_roles
   const { data: environmentMembers = [], isLoading: isLoadingMembers, refetch: refetchMembers } = useQuery({
-    queryKey: ['environment-members', currentUserId],
+    queryKey: ['environment-members', currentEnvironmentId],
     queryFn: async () => {
-      if (!currentUserId) return [];
+      if (!currentEnvironmentId) return [];
       
-      const { data, error } = await supabase
-        .from('environment_members')
+      // Get environment_roles for the current environment (excluding current user if they're the owner)
+      const { data: roles, error } = await supabase
+        .from('environment_roles')
         .select('*')
-        .eq('environment_owner_id', currentUserId)
+        .eq('environment_id', currentEnvironmentId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as EnvironmentMember[];
+      
+      // Fetch profiles for all users
+      const userIds = roles.map(r => r.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, company')
+        .in('id', userIds);
+      
+      // Combine data
+      const membersWithProfiles = roles.map(role => ({
+        ...role,
+        profile: profiles?.find(p => p.id === role.user_id) || null,
+      }));
+      
+      return membersWithProfiles as EnvironmentMember[];
     },
-    enabled: !!currentUserId,
+    enabled: !!currentEnvironmentId,
   });
 
   const memberCount = environmentMembers.length;
@@ -96,10 +116,11 @@ export function useEnvironmentPermissions() {
   const inviteMemberMutation = useMutation({
     mutationFn: async ({ email, permissions }: InviteMemberData) => {
       if (!currentUserId) throw new Error('Usuário não autenticado');
+      if (!currentEnvironmentId) throw new Error('Ambiente não selecionado');
       if (!canInviteMore) throw new Error('Limite de 30 membros atingido');
       
       const { data, error } = await supabase.functions.invoke('invite-environment-member', {
-        body: { email, permissions },
+        body: { email, permissions, environment_id: currentEnvironmentId },
       });
       
       if (error) throw error;
@@ -108,10 +129,12 @@ export function useEnvironmentPermissions() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['environment-members'] });
+      queryClient.invalidateQueries({ queryKey: ['environment-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['user-environments-v2'] });
     },
   });
 
-  // Update member permissions mutation
+  // Update member permissions mutation (now uses environment_roles)
   const updateMemberMutation = useMutation({
     mutationFn: async ({ 
       memberId, 
@@ -130,7 +153,7 @@ export function useEnvironmentPermissions() {
       }
       
       const { data, error } = await supabase
-        .from('environment_members')
+        .from('environment_roles')
         .update(updateData)
         .eq('id', memberId)
         .select()
@@ -141,14 +164,15 @@ export function useEnvironmentPermissions() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['environment-members'] });
+      queryClient.invalidateQueries({ queryKey: ['environment-roles'] });
     },
   });
 
-  // Remove member mutation
+  // Remove member mutation (now uses environment_roles)
   const removeMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
       const { error } = await supabase
-        .from('environment_members')
+        .from('environment_roles')
         .delete()
         .eq('id', memberId);
       
@@ -156,6 +180,8 @@ export function useEnvironmentPermissions() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['environment-members'] });
+      queryClient.invalidateQueries({ queryKey: ['environment-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['user-environments-v2'] });
     },
   });
 
