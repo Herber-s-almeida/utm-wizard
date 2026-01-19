@@ -143,7 +143,7 @@ export function FinanceSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { isViewingOtherEnvironment, viewingUser } = useEnvironment();
+  const { isViewingOtherEnvironment, userEnvironments, currentEnvironmentId } = useEnvironment();
   const { data: currentProfile } = useCurrentProfile();
   const { isAdmin } = useSystemAdmin();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -153,8 +153,11 @@ export function FinanceSidebar() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [adminSubmenuOpen, setAdminSubmenuOpen] = useState(false);
 
+  // Get current environment details for display
+  const currentEnv = userEnvironments.find(env => env.environment_id === currentEnvironmentId);
+
   const environmentName = isViewingOtherEnvironment 
-    ? (viewingUser?.company || viewingUser?.full_name || viewingUser?.email)
+    ? currentEnv?.environment_name
     : (currentProfile?.company || currentProfile?.full_name || user?.email);
 
   const isActive = (url: string) => {

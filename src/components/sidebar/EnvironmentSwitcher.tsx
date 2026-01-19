@@ -29,23 +29,32 @@ export function EnvironmentSwitcher({ className }: EnvironmentSwitcherProps) {
     userEnvironments, 
     isLoadingEnvironments, 
     switchEnvironment,
-    effectiveUserId,
-    environmentRole,
+    currentEnvironmentId,
+    isEnvironmentOwner,
   } = useEnvironment();
   
   const [isOpen, setIsOpen] = useState(false);
 
   // Find current environment
   const currentEnvironment = userEnvironments.find(
-    env => env.environment_owner_id === effectiveUserId
+    env => env.environment_id === currentEnvironmentId
   ) || userEnvironments.find(env => env.is_own_environment);
 
   // Separate own environment from others
   const ownEnvironment = userEnvironments.find(env => env.is_own_environment);
   const otherEnvironments = userEnvironments.filter(env => !env.is_own_environment);
 
+  // Derive role from current environment
+  const environmentRole: EnvironmentRole | null = currentEnvironment 
+    ? (currentEnvironment.is_own_environment 
+        ? 'owner' 
+        : (currentEnvironment.role_edit && currentEnvironment.role_delete && currentEnvironment.role_invite 
+            ? 'admin' 
+            : 'user'))
+    : null;
+
   const handleSelectEnvironment = (env: UserEnvironment) => {
-    switchEnvironment(env.environment_owner_id);
+    switchEnvironment(env.environment_id);
     setIsOpen(false);
   };
 
@@ -121,7 +130,7 @@ export function EnvironmentSwitcher({ className }: EnvironmentSwitcherProps) {
                   </div>
                 </div>
               </div>
-              {currentEnvironment?.environment_owner_id === ownEnvironment.environment_owner_id && (
+              {currentEnvironment?.environment_id === ownEnvironment.environment_id && (
                 <Check className="h-4 w-4 text-primary" />
               )}
             </DropdownMenuItem>
@@ -136,12 +145,13 @@ export function EnvironmentSwitcher({ className }: EnvironmentSwitcherProps) {
               Ambientes Compartilhados
             </DropdownMenuLabel>
             {otherEnvironments.map((env) => {
-              const roleConfig = ROLE_CONFIG[env.environment_role];
-              const isSelected = currentEnvironment?.environment_owner_id === env.environment_owner_id;
+              const envRole: EnvironmentRole = env.role_edit && env.role_delete && env.role_invite ? 'admin' : 'user';
+              const roleConfig = ROLE_CONFIG[envRole];
+              const isSelected = currentEnvironment?.environment_id === env.environment_id;
               
               return (
                 <DropdownMenuItem
-                  key={env.environment_owner_id}
+                  key={env.environment_id}
                   onClick={() => handleSelectEnvironment(env)}
                   className="flex items-center justify-between cursor-pointer"
                 >
