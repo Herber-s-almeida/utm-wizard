@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { useSoftDeleteMutations, filterSoftDeleteItems } from './useSoftDelete';
 
@@ -20,6 +21,7 @@ export interface Client {
 
 export function useClients() {
   const { currentEnvironmentId } = useEnvironment();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('clients', 'clients', 'Cliente');
 
@@ -39,12 +41,15 @@ export function useClients() {
 
   const create = useMutation({
     mutationFn: async ({ name, description, visible_for_media_plans }: { name: string; description?: string; visible_for_media_plans?: boolean }) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
       const { data, error } = await supabase
         .from('clients')
         .insert({ 
           name, 
           description: description || null, 
           environment_id: currentEnvironmentId!,
+          user_id: user.id,
           visible_for_media_plans: visible_for_media_plans ?? true
         })
         .select()

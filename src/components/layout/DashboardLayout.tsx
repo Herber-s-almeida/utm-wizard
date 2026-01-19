@@ -12,10 +12,20 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { isViewingOtherEnvironment, viewingUser, setViewingUser, userEnvironments } = useEnvironment();
+  const { isViewingOtherEnvironment, userEnvironments, switchEnvironment, currentEnvironmentId } = useEnvironment();
 
   // Check if user has their own environment (is a System User)
   const hasOwnEnvironment = userEnvironments.some(env => env.is_own_environment);
+  const ownEnvironment = userEnvironments.find(env => env.is_own_environment);
+  
+  // Get current environment details for display
+  const currentEnv = userEnvironments.find(env => env.environment_id === currentEnvironmentId);
+
+  const handleReturnToOwnEnvironment = () => {
+    if (ownEnvironment) {
+      switchEnvironment(ownEnvironment.environment_id);
+    }
+  };
 
   return (
     <SidebarCollapseProvider>
@@ -25,15 +35,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="bg-destructive text-destructive-foreground px-4 py-2 flex items-center justify-between gap-4 z-50">
             <div className="flex items-center gap-2 text-sm font-medium">
               <span>Visualizando ambiente de:</span>
-              <span className="font-bold">{viewingUser?.full_name || viewingUser?.email}</span>
-              {viewingUser?.company && (
-                <span className="opacity-75">({viewingUser.company})</span>
-              )}
+              <span className="font-bold">{currentEnv?.environment_name || 'Outro ambiente'}</span>
             </div>
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => setViewingUser(null)}
+              onClick={handleReturnToOwnEnvironment}
               className="gap-2"
             >
               <ArrowLeft className="h-4 w-4" />

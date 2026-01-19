@@ -46,7 +46,7 @@ export function UserEnvironmentDialog({
 }: UserEnvironmentDialogProps) {
   const navigate = useNavigate();
   const { data: plans, isLoading } = useAdminUserPlans(user?.id ?? null);
-  const { setViewingUser } = useEnvironment();
+  const { userEnvironments, switchEnvironment } = useEnvironment();
 
   const handleViewPlan = (planId: string) => {
     onOpenChange(false);
@@ -55,12 +55,11 @@ export function UserEnvironmentDialog({
 
   const handleEnterEnvironment = () => {
     if (user) {
-      setViewingUser({
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        company: user.company,
-      });
+      // Find the environment owned by this user
+      const userEnv = userEnvironments.find(env => env.environment_owner_id === user.id);
+      if (userEnv) {
+        switchEnvironment(userEnv.environment_id);
+      }
       onOpenChange(false);
       navigate('/media-plan-dashboard');
     }
