@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
-import { useEffectiveUserId } from './useEffectiveUserId';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { toast } from 'sonner';
 import { useSoftDeleteMutations, filterSoftDeleteItems } from './useSoftDelete';
 
@@ -11,6 +10,7 @@ export interface Client {
   description?: string | null;
   slug?: string | null;
   user_id: string;
+  environment_id?: string | null;
   created_at?: string;
   updated_at?: string;
   deleted_at?: string | null;
@@ -19,23 +19,22 @@ export interface Client {
 }
 
 export function useClients() {
-  const { user } = useAuth();
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('clients', 'clients', 'Cliente');
 
   const query = useQuery({
-    queryKey: ['clients', effectiveUserId],
+    queryKey: ['clients', currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('clients')
         .select('*')
-        .eq('user_id', effectiveUserId!)
+        .eq('environment_id', currentEnvironmentId!)
         .order('name', { ascending: true });
       if (error) throw error;
       return data as Client[];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 
   const create = useMutation({
@@ -45,7 +44,7 @@ export function useClients() {
         .insert({ 
           name, 
           description: description || null, 
-          user_id: effectiveUserId!,
+          environment_id: currentEnvironmentId!,
           visible_for_media_plans: visible_for_media_plans ?? true
         })
         .select()

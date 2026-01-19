@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -29,6 +30,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -39,19 +41,29 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "behavioral_segmentations_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       channels: {
         Row: {
           created_at: string
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -64,6 +76,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -76,6 +89,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -85,6 +99,13 @@ export type Database = {
           vehicle_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "channels_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "channels_vehicle_id_fkey"
             columns: ["vehicle_id"]
@@ -99,6 +120,7 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -111,6 +133,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -123,6 +146,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -131,7 +155,15 @@ export type Database = {
           user_id?: string
           visible_for_media_plans?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       creative_change_logs: {
         Row: {
@@ -176,6 +208,7 @@ export type Database = {
           dimension: string | null
           dimensions: Json | null
           duration: string | null
+          environment_id: string | null
           format: string
           id: string
           is_active: boolean | null
@@ -192,6 +225,7 @@ export type Database = {
           dimension?: string | null
           dimensions?: Json | null
           duration?: string | null
+          environment_id?: string | null
           format: string
           id?: string
           is_active?: boolean | null
@@ -208,6 +242,7 @@ export type Database = {
           dimension?: string | null
           dimensions?: Json | null
           duration?: string | null
+          environment_id?: string | null
           format?: string
           id?: string
           is_active?: boolean | null
@@ -225,6 +260,13 @@ export type Database = {
             referencedRelation: "creative_types"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "creative_templates_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
         ]
       }
       creative_type_specifications: {
@@ -234,6 +276,7 @@ export type Database = {
           deleted_at: string | null
           duration_unit: string | null
           duration_value: number | null
+          environment_id: string | null
           has_duration: boolean | null
           id: string
           is_active: boolean | null
@@ -249,6 +292,7 @@ export type Database = {
           deleted_at?: string | null
           duration_unit?: string | null
           duration_value?: number | null
+          environment_id?: string | null
           has_duration?: boolean | null
           id?: string
           is_active?: boolean | null
@@ -264,6 +308,7 @@ export type Database = {
           deleted_at?: string | null
           duration_unit?: string | null
           duration_value?: number | null
+          environment_id?: string | null
           has_duration?: boolean | null
           id?: string
           is_active?: boolean | null
@@ -279,6 +324,13 @@ export type Database = {
             columns: ["creative_type_id"]
             isOneToOne: false
             referencedRelation: "format_creative_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creative_type_specifications_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
             referencedColumns: ["id"]
           },
         ]
@@ -309,6 +361,7 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           key: string
@@ -321,6 +374,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           key: string
@@ -333,6 +387,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           key?: string
@@ -341,12 +396,21 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "custom_kpis_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       data_sources: {
         Row: {
           config: Json | null
           created_at: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           last_sync_at: string | null
@@ -358,6 +422,7 @@ export type Database = {
         Insert: {
           config?: Json | null
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           last_sync_at?: string | null
@@ -369,6 +434,7 @@ export type Database = {
         Update: {
           config?: Json | null
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           last_sync_at?: string | null
@@ -377,7 +443,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "data_sources_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       environment_members: {
         Row: {
@@ -481,6 +555,146 @@ export type Database = {
         }
         Relationships: []
       }
+      environment_roles: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          environment_id: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          perm_executive_dashboard:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_finance:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_library:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_plans:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_resources:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_reports:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_taxonomy:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          role_delete: boolean
+          role_edit: boolean
+          role_invite: boolean
+          role_read: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          environment_id: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          perm_executive_dashboard?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_finance?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_library?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_plans?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_resources?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_reports?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_taxonomy?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          role_delete?: boolean
+          role_edit?: boolean
+          role_invite?: boolean
+          role_read?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          environment_id?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          perm_executive_dashboard?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_finance?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_library?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_plans?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_media_resources?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_reports?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          perm_taxonomy?:
+            | Database["public"]["Enums"]["environment_permission_level"]
+            | null
+          role_delete?: boolean
+          role_edit?: boolean
+          role_invite?: boolean
+          role_read?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "environment_roles_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      environments: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       file_extensions: {
         Row: {
           created_at: string
@@ -507,6 +721,7 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           email: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -518,6 +733,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           email?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -529,6 +745,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           email?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -536,13 +753,22 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "finance_account_managers_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       finance_accounts: {
         Row: {
           category: string | null
           created_at: string | null
           deleted_at: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -553,6 +779,7 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -563,19 +790,29 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "finance_accounts_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       finance_campaign_projects: {
         Row: {
           created_at: string | null
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -586,6 +823,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -596,19 +834,29 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "finance_campaign_projects_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       finance_cost_centers: {
         Row: {
           code: string
           created_at: string | null
           deleted_at: string | null
+          environment_id: string | null
           full_name: string | null
           id: string
           is_active: boolean | null
@@ -620,6 +868,7 @@ export type Database = {
           code: string
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           full_name?: string | null
           id?: string
           is_active?: boolean | null
@@ -631,6 +880,7 @@ export type Database = {
           code?: string
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           full_name?: string | null
           id?: string
           is_active?: boolean | null
@@ -638,13 +888,22 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "finance_cost_centers_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       finance_document_types: {
         Row: {
           created_at: string | null
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -655,6 +914,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -665,18 +925,28 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "finance_document_types_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       finance_expense_classifications: {
         Row: {
           created_at: string | null
           deleted_at: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           macro_classification_id: string | null
@@ -687,6 +957,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           macro_classification_id?: string | null
@@ -697,6 +968,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           macro_classification_id?: string | null
@@ -705,6 +977,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "finance_expense_classifications_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "finance_expense_classifications_macro_classification_id_fkey"
             columns: ["macro_classification_id"]
@@ -718,6 +997,7 @@ export type Database = {
         Row: {
           created_at: string | null
           deleted_at: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -727,6 +1007,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -736,18 +1017,28 @@ export type Database = {
         Update: {
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "finance_macro_classifications_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       finance_packages: {
         Row: {
           created_at: string | null
           deleted_at: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -757,6 +1048,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -766,18 +1058,28 @@ export type Database = {
         Update: {
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "finance_packages_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       finance_request_types: {
         Row: {
           created_at: string | null
           deleted_at: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -787,6 +1089,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -796,13 +1099,22 @@ export type Database = {
         Update: {
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "finance_request_types_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       finance_statuses: {
         Row: {
@@ -810,6 +1122,7 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -821,6 +1134,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -832,18 +1146,28 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "finance_statuses_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       finance_teams: {
         Row: {
           created_at: string | null
           deleted_at: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -853,6 +1177,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -862,19 +1187,29 @@ export type Database = {
         Update: {
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "finance_teams_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_actuals: {
         Row: {
           actual_amount: number
           created_at: string | null
           dimensions_json: Json | null
+          environment_id: string | null
           id: string
           import_batch_id: string | null
           media_plan_id: string
@@ -889,6 +1224,7 @@ export type Database = {
           actual_amount?: number
           created_at?: string | null
           dimensions_json?: Json | null
+          environment_id?: string | null
           id?: string
           import_batch_id?: string | null
           media_plan_id: string
@@ -903,6 +1239,7 @@ export type Database = {
           actual_amount?: number
           created_at?: string | null
           dimensions_json?: Json | null
+          environment_id?: string | null
           id?: string
           import_batch_id?: string | null
           media_plan_id?: string
@@ -914,6 +1251,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "financial_actuals_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "financial_actuals_media_plan_id_fkey"
             columns: ["media_plan_id"]
@@ -927,6 +1271,7 @@ export type Database = {
         Row: {
           alert_type: string
           created_at: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           threshold_days: number | null
@@ -937,6 +1282,7 @@ export type Database = {
         Insert: {
           alert_type: string
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           threshold_days?: number | null
@@ -947,6 +1293,7 @@ export type Database = {
         Update: {
           alert_type?: string
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           threshold_days?: number | null
@@ -954,7 +1301,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "financial_alert_configs_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_audit_log: {
         Row: {
@@ -1012,6 +1367,7 @@ export type Database = {
           document_number: string | null
           document_type: string
           due_date: string
+          environment_id: string | null
           expense_classification: string | null
           financial_account: string | null
           id: string
@@ -1052,6 +1408,7 @@ export type Database = {
           document_number?: string | null
           document_type?: string
           due_date: string
+          environment_id?: string | null
           expense_classification?: string | null
           financial_account?: string | null
           id?: string
@@ -1092,6 +1449,7 @@ export type Database = {
           document_number?: string | null
           document_type?: string
           due_date?: string
+          environment_id?: string | null
           expense_classification?: string | null
           financial_account?: string | null
           id?: string
@@ -1115,6 +1473,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "financial_documents_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "financial_documents_media_plan_id_fkey"
             columns: ["media_plan_id"]
             isOneToOne: false
@@ -1134,6 +1499,7 @@ export type Database = {
         Row: {
           created_at: string | null
           dimensions_json: Json | null
+          environment_id: string | null
           granularity: string
           id: string
           is_locked: boolean | null
@@ -1150,6 +1516,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           dimensions_json?: Json | null
+          environment_id?: string | null
           granularity?: string
           id?: string
           is_locked?: boolean | null
@@ -1166,6 +1533,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           dimensions_json?: Json | null
+          environment_id?: string | null
           granularity?: string
           id?: string
           is_locked?: boolean | null
@@ -1181,6 +1549,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "financial_forecasts_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "financial_forecasts_media_plan_id_fkey"
             columns: ["media_plan_id"]
             isOneToOne: false
@@ -1194,6 +1569,7 @@ export type Database = {
           actual_payment_date: string | null
           created_at: string | null
           deleted_at: string | null
+          environment_id: string | null
           financial_document_id: string
           id: string
           installment_number: number | null
@@ -1211,6 +1587,7 @@ export type Database = {
           actual_payment_date?: string | null
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           financial_document_id: string
           id?: string
           installment_number?: number | null
@@ -1228,6 +1605,7 @@ export type Database = {
           actual_payment_date?: string | null
           created_at?: string | null
           deleted_at?: string | null
+          environment_id?: string | null
           financial_document_id?: string
           id?: string
           installment_number?: number | null
@@ -1243,6 +1621,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "financial_payments_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "financial_payments_financial_document_id_fkey"
             columns: ["financial_document_id"]
             isOneToOne: false
@@ -1254,6 +1639,7 @@ export type Database = {
       financial_revenues: {
         Row: {
           created_at: string | null
+          environment_id: string | null
           id: string
           media_plan_id: string | null
           period_end: string
@@ -1266,6 +1652,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           media_plan_id?: string | null
           period_end: string
@@ -1278,6 +1665,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           media_plan_id?: string | null
           period_end?: string
@@ -1289,6 +1677,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "financial_revenues_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "financial_revenues_media_plan_id_fkey"
             columns: ["media_plan_id"]
@@ -1328,6 +1723,7 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           document: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -1340,6 +1736,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           document?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -1352,6 +1749,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           document?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -1359,12 +1757,21 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "financial_vendors_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       format_creative_types: {
         Row: {
           created_at: string
           deleted_at: string | null
+          environment_id: string | null
           format_id: string
           id: string
           is_active: boolean | null
@@ -1375,6 +1782,7 @@ export type Database = {
         Insert: {
           created_at?: string
           deleted_at?: string | null
+          environment_id?: string | null
           format_id: string
           id?: string
           is_active?: boolean | null
@@ -1385,6 +1793,7 @@ export type Database = {
         Update: {
           created_at?: string
           deleted_at?: string | null
+          environment_id?: string | null
           format_id?: string
           id?: string
           is_active?: boolean | null
@@ -1393,6 +1802,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "format_creative_types_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "format_creative_types_format_id_fkey"
             columns: ["format_id"]
@@ -1406,6 +1822,7 @@ export type Database = {
         Row: {
           created_at: string
           deleted_at: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           is_system: boolean
@@ -1417,6 +1834,7 @@ export type Database = {
         Insert: {
           created_at?: string
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           is_system?: boolean
@@ -1428,6 +1846,7 @@ export type Database = {
         Update: {
           created_at?: string
           deleted_at?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           is_system?: boolean
@@ -1436,13 +1855,22 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "formats_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       funnel_stages: {
         Row: {
           created_at: string
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           is_system: boolean
@@ -1456,6 +1884,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           is_system?: boolean
@@ -1469,6 +1898,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           is_system?: boolean
@@ -1478,11 +1908,20 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "funnel_stages_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       line_detail_insertions: {
         Row: {
           created_at: string | null
+          environment_id: string | null
           id: string
           insertion_date: string
           line_detail_item_id: string
@@ -1492,6 +1931,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           insertion_date: string
           line_detail_item_id: string
@@ -1501,6 +1941,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           insertion_date?: string
           line_detail_item_id?: string
@@ -1509,6 +1950,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "line_detail_insertions_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "line_detail_insertions_line_detail_item_id_fkey"
             columns: ["line_detail_item_id"]
@@ -1522,6 +1970,7 @@ export type Database = {
         Row: {
           created_at: string | null
           data: Json
+          environment_id: string | null
           id: string
           is_active: boolean | null
           line_detail_id: string
@@ -1535,6 +1984,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           data?: Json
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           line_detail_id: string
@@ -1548,6 +1998,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           data?: Json
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           line_detail_id?: string
@@ -1559,6 +2010,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "line_detail_items_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "line_detail_items_line_detail_id_fkey"
             columns: ["line_detail_id"]
@@ -1573,6 +2031,7 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           field_schema: Json
           has_insertion_grid: boolean | null
           icon: string | null
@@ -1590,6 +2049,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           field_schema?: Json
           has_insertion_grid?: boolean | null
           icon?: string | null
@@ -1607,6 +2067,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           field_schema?: Json
           has_insertion_grid?: boolean | null
           icon?: string | null
@@ -1620,12 +2081,21 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "line_detail_types_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       line_details: {
         Row: {
           created_at: string | null
           detail_type_id: string
+          environment_id: string | null
           id: string
           media_line_id: string
           metadata: Json | null
@@ -1637,6 +2107,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           detail_type_id: string
+          environment_id?: string | null
           id?: string
           media_line_id: string
           metadata?: Json | null
@@ -1648,6 +2119,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           detail_type_id?: string
+          environment_id?: string | null
           id?: string
           media_line_id?: string
           metadata?: Json | null
@@ -1665,6 +2137,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "line_details_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "line_details_media_line_id_fkey"
             columns: ["media_line_id"]
             isOneToOne: false
@@ -1676,6 +2155,7 @@ export type Database = {
       line_targets: {
         Row: {
           created_at: string | null
+          environment_id: string | null
           id: string
           media_line_id: string
           metric_name: string
@@ -1686,6 +2166,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           media_line_id: string
           metric_name: string
@@ -1696,6 +2177,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          environment_id?: string | null
           id?: string
           media_line_id?: string
           metric_name?: string
@@ -1705,6 +2187,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "line_targets_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "line_targets_media_line_id_fkey"
             columns: ["media_line_id"]
@@ -1722,6 +2211,7 @@ export type Database = {
           created_at: string | null
           creative_id: string | null
           creative_type: string | null
+          environment_id: string | null
           format_id: string | null
           id: string
           media_line_id: string
@@ -1742,6 +2232,7 @@ export type Database = {
           created_at?: string | null
           creative_id?: string | null
           creative_type?: string | null
+          environment_id?: string | null
           format_id?: string | null
           id?: string
           media_line_id: string
@@ -1762,6 +2253,7 @@ export type Database = {
           created_at?: string | null
           creative_id?: string | null
           creative_type?: string | null
+          environment_id?: string | null
           format_id?: string | null
           id?: string
           media_line_id?: string
@@ -1776,6 +2268,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "media_creatives_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "media_creatives_format_id_fkey"
             columns: ["format_id"]
@@ -1796,6 +2295,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          environment_id: string | null
           id: string
           media_line_id: string
           month_date: string
@@ -1805,6 +2305,7 @@ export type Database = {
         Insert: {
           amount?: number
           created_at?: string
+          environment_id?: string | null
           id?: string
           media_line_id: string
           month_date: string
@@ -1814,6 +2315,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          environment_id?: string | null
           id?: string
           media_line_id?: string
           month_date?: string
@@ -1821,6 +2323,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "media_line_monthly_budgets_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "media_line_monthly_budgets_media_line_id_fkey"
             columns: ["media_line_id"]
@@ -1845,6 +2354,7 @@ export type Database = {
           deleted_at: string | null
           destination_url: string | null
           end_date: string | null
+          environment_id: string | null
           format: string | null
           funnel_stage: string | null
           funnel_stage_id: string | null
@@ -1890,6 +2400,7 @@ export type Database = {
           deleted_at?: string | null
           destination_url?: string | null
           end_date?: string | null
+          environment_id?: string | null
           format?: string | null
           funnel_stage?: string | null
           funnel_stage_id?: string | null
@@ -1935,6 +2446,7 @@ export type Database = {
           deleted_at?: string | null
           destination_url?: string | null
           end_date?: string | null
+          environment_id?: string | null
           format?: string | null
           funnel_stage?: string | null
           funnel_stage_id?: string | null
@@ -1979,6 +2491,13 @@ export type Database = {
             columns: ["creative_template_id"]
             isOneToOne: false
             referencedRelation: "creative_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_lines_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
             referencedColumns: ["id"]
           },
           {
@@ -2051,6 +2570,7 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -2062,6 +2582,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -2073,6 +2594,7 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -2080,7 +2602,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "media_objectives_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       media_plan_versions: {
         Row: {
@@ -2135,6 +2665,7 @@ export type Database = {
           default_url: string | null
           deleted_at: string | null
           end_date: string | null
+          environment_id: string | null
           funnel_order: string[] | null
           hierarchy_config: Json | null
           hierarchy_order: string[] | null
@@ -2158,6 +2689,7 @@ export type Database = {
           default_url?: string | null
           deleted_at?: string | null
           end_date?: string | null
+          environment_id?: string | null
           funnel_order?: string[] | null
           hierarchy_config?: Json | null
           hierarchy_order?: string[] | null
@@ -2181,6 +2713,7 @@ export type Database = {
           default_url?: string | null
           deleted_at?: string | null
           end_date?: string | null
+          environment_id?: string | null
           funnel_order?: string[] | null
           hierarchy_config?: Json | null
           hierarchy_order?: string[] | null
@@ -2204,6 +2737,13 @@ export type Database = {
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "media_plans_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
         ]
       }
       mediums: {
@@ -2211,6 +2751,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -2222,6 +2763,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -2233,6 +2775,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -2240,7 +2783,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mediums_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       menu_visibility_settings: {
         Row: {
@@ -2271,6 +2822,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           is_system: boolean
@@ -2283,6 +2835,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           is_system?: boolean
@@ -2295,6 +2848,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           is_system?: boolean
@@ -2303,7 +2857,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "moments_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pending_environment_invites: {
         Row: {
@@ -2470,6 +3032,7 @@ export type Database = {
           created_at: string
           distribution_type: string
           end_date: string | null
+          environment_id: string | null
           id: string
           media_plan_id: string
           parent_distribution_id: string | null
@@ -2486,6 +3049,7 @@ export type Database = {
           created_at?: string
           distribution_type: string
           end_date?: string | null
+          environment_id?: string | null
           id?: string
           media_plan_id: string
           parent_distribution_id?: string | null
@@ -2502,6 +3066,7 @@ export type Database = {
           created_at?: string
           distribution_type?: string
           end_date?: string | null
+          environment_id?: string | null
           id?: string
           media_plan_id?: string
           parent_distribution_id?: string | null
@@ -2514,6 +3079,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "plan_budget_distributions_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "plan_budget_distributions_media_plan_id_fkey"
             columns: ["media_plan_id"]
@@ -2656,6 +3228,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           is_system: boolean
@@ -2669,6 +3242,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           is_system?: boolean
@@ -2682,6 +3256,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           is_system?: boolean
@@ -2692,6 +3267,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "plan_subdivisions_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "plan_subdivisions_parent_id_fkey"
             columns: ["parent_id"]
@@ -3255,6 +3837,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           is_system: boolean
@@ -3266,6 +3849,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           is_system?: boolean
@@ -3277,6 +3861,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           is_system?: boolean
@@ -3284,7 +3869,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "statuses_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_roles: {
         Row: {
@@ -3317,6 +3910,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           geolocation: Json | null
           id: string
           is_active: boolean | null
@@ -3331,6 +3925,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           geolocation?: Json | null
           id?: string
           is_active?: boolean | null
@@ -3345,6 +3940,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           geolocation?: Json | null
           id?: string
           is_active?: boolean | null
@@ -3353,13 +3949,22 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "targets_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vehicles: {
         Row: {
           created_at: string
           deleted_at: string | null
           description: string | null
+          environment_id: string | null
           id: string
           is_active: boolean | null
           medium_id: string | null
@@ -3372,6 +3977,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           medium_id?: string | null
@@ -3384,6 +3990,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          environment_id?: string | null
           id?: string
           is_active?: boolean | null
           medium_id?: string | null
@@ -3393,6 +4000,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "vehicles_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vehicles_medium_id_fkey"
             columns: ["medium_id"]
@@ -3481,6 +4095,10 @@ export type Database = {
         Args: { p_current_id?: string; p_name: string; p_user_id: string }
         Returns: string
       }
+      get_environment_id_for_user: {
+        Args: { _user_id: string }
+        Returns: string
+      }
       get_environment_permission: {
         Args: {
           _environment_owner_id: string
@@ -3506,6 +4124,19 @@ export type Database = {
           is_own_environment: boolean
         }[]
       }
+      get_user_environments_v2: {
+        Args: { _user_id: string }
+        Returns: {
+          environment_id: string
+          environment_name: string
+          environment_owner_id: string
+          is_own_environment: boolean
+          role_delete: boolean
+          role_edit: boolean
+          role_invite: boolean
+          role_read: boolean
+        }[]
+      }
       get_valid_transitions: {
         Args: { _from_status: string; _plan_id: string; _user_id: string }
         Returns: {
@@ -3515,12 +4146,24 @@ export type Database = {
           to_status_id: string
         }[]
       }
+      has_environment_access: {
+        Args: { _environment_id: string; _permission?: string }
+        Returns: boolean
+      }
       has_environment_permission: {
         Args: {
           _environment_owner_id: string
           _min_level: Database["public"]["Enums"]["environment_permission_level"]
           _section: string
           _user_id: string
+        }
+        Returns: boolean
+      }
+      has_environment_section_access: {
+        Args: {
+          _environment_id: string
+          _required_level?: string
+          _section: string
         }
         Returns: boolean
       }
