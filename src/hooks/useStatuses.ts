@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useEffectiveUserId } from './useEffectiveUserId';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { toast } from 'sonner';
 import { useSoftDeleteMutations, filterSoftDeleteItems } from './useSoftDelete';
 
@@ -11,6 +11,7 @@ export interface Status {
   description: string | null;
   is_system: boolean;
   user_id: string;
+  environment_id?: string;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
@@ -22,24 +23,24 @@ const SYSTEM_STATUSES = ['Ativo', 'Finalizado', 'Pendente'];
 
 export function useStatuses() {
   const { user } = useAuth();
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('statuses', 'statuses', 'Status');
 
   const query = useQuery({
-    queryKey: ['statuses', effectiveUserId],
+    queryKey: ['statuses', currentEnvironmentId],
     queryFn: async () => {
-      // Fetch user's own statuses AND system statuses (global)
+      // Fetch environment's statuses AND system statuses (global)
       const { data, error } = await supabase
         .from('statuses')
         .select('*')
-        .or(`user_id.eq.${effectiveUserId},is_system.eq.true`)
+        .or(`environment_id.eq.${currentEnvironmentId},is_system.eq.true`)
         .order('is_system', { ascending: false })
         .order('created_at', { ascending: true });
       if (error) throw error;
       return data as Status[];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 
   const create = useMutation({
@@ -50,7 +51,8 @@ export function useStatuses() {
           name, 
           description: description || null, 
           is_system: false,
-          user_id: effectiveUserId! 
+          user_id: user!.id,
+          environment_id: currentEnvironmentId!
         })
         .select()
         .single();
