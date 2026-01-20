@@ -28,7 +28,7 @@ export function SectionProtectedRoute({
   fallbackPath = '/media-plan-dashboard'
 }: SectionProtectedRouteProps) {
   const { user, loading: authLoading } = useAuth();
-  const { getPermission, isEnvironmentOwner, isSystemAdmin, isLoadingPermissions } = useEnvironment();
+  const { getPermission, isEnvironmentAdmin, isSystemAdmin, isLoadingPermissions } = useEnvironment();
 
   // Still loading auth or permissions
   if (authLoading || isLoadingPermissions) {
@@ -47,8 +47,8 @@ export function SectionProtectedRoute({
     return <Navigate to="/auth" replace />;
   }
 
-  // System admin and environment owner always have full access
-  if (isSystemAdmin || isEnvironmentOwner) {
+  // System admin and environment admin always have full access
+  if (isSystemAdmin || isEnvironmentAdmin) {
     return <>{children}</>;
   }
 

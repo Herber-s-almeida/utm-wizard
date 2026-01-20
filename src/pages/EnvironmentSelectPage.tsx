@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Users, Crown, ChevronRight, LayoutDashboard, LogOut } from 'lucide-react';
+import { Building2, Users, ChevronRight, LayoutDashboard, LogOut, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -84,14 +84,6 @@ export default function EnvironmentSelectPage() {
 
   const getRoleBadge = (env: UserEnvironment) => {
     if (env.is_own_environment) {
-      return (
-        <Badge variant="default" className="bg-amber-500/20 text-amber-400 border-amber-500/30">
-          <Crown className="h-3 w-3 mr-1" />
-          Proprietário
-        </Badge>
-      );
-    }
-    if (env.role_invite) {
       return (
         <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/30">
           Administrador
@@ -173,12 +165,12 @@ export default function EnvironmentSelectPage() {
           </div>
 
           <div className="space-y-6">
-            {/* Own Environments */}
+            {/* Admin Environments */}
             {ownEnvironments.length > 0 && (
               <div>
                 <h2 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                  <Crown className="h-4 w-4" />
-                  Meu Ambiente
+                  <Shield className="h-4 w-4" />
+                  Meus Ambientes
                 </h2>
                 <div className="space-y-3">
                   {ownEnvironments.map((env, index) => (
@@ -197,13 +189,13 @@ export default function EnvironmentSelectPage() {
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                              <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                                <Building2 className="h-6 w-6 text-amber-500" />
+                              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                                <Building2 className="h-6 w-6 text-primary" />
                               </div>
                               <div>
                                 <h3 className="font-medium">{env.environment_name}</h3>
                                 <p className="text-sm text-muted-foreground">
-                                  Ambiente principal
+                                  Ambiente administrado
                                 </p>
                               </div>
                             </div>

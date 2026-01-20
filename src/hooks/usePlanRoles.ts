@@ -3,10 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 
-export type AppRole = 'owner' | 'editor' | 'viewer' | 'approver';
+export type AppRole = 'editor' | 'viewer' | 'approver';
 
 const ROLE_LABELS: Record<AppRole, string> = {
-  owner: 'Proprietário',
   editor: 'Editor',
   viewer: 'Visualizador',
   approver: 'Aprovador',
@@ -49,14 +48,14 @@ export function usePlanRoles(planId: string | undefined) {
  */
 export function useUserPlanRole(planId: string | undefined) {
   const { user } = useAuth();
-  const { isEnvironmentOwner, isEnvironmentAdmin, canEdit, canView } = useEnvironment();
+  const { isEnvironmentAdmin, canEdit, canView } = useEnvironment();
 
   return useQuery({
-    queryKey: ['plan_role_badge_v2', planId, user?.id, isEnvironmentOwner, isEnvironmentAdmin],
+    queryKey: ['plan_role_badge_v2', planId, user?.id, isEnvironmentAdmin],
     queryFn: async () => {
       if (!planId || !user) return null;
 
-      // Check if user is owner of the plan
+      // Check if user is creator of the plan
       const { data: plan } = await supabase
         .from('media_plans')
         .select('user_id')
@@ -64,7 +63,7 @@ export function useUserPlanRole(planId: string | undefined) {
         .single();
 
       if (plan?.user_id === user.id) {
-        return { role: 'owner' as AppRole, label: ROLE_LABELS.owner };
+        return { role: 'editor' as AppRole, label: ROLE_LABELS.editor };
       }
 
       // Environment admins get editor role

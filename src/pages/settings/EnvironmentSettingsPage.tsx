@@ -26,7 +26,7 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 export default function EnvironmentSettingsPage() {
   const navigate = useNavigate();
   const { settings, isLoading, canEdit, updateSettings, isUpdating } = useEnvironmentSettings();
-  const { isEnvironmentOwner, isEnvironmentAdmin, isSystemAdmin } = useEnvironment();
+  const { isEnvironmentAdmin, isSystemAdmin } = useEnvironment();
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
