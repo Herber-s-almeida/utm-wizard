@@ -12,6 +12,7 @@ import { AdminRoute } from "@/components/admin/AdminRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AuthRegister from "./pages/AuthRegister";
+import EnvironmentSelectPage from "./pages/EnvironmentSelectPage";
 import AwaitingAccess from "./pages/AwaitingAccess";
 import Dashboard from "./pages/Dashboard";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
@@ -89,6 +90,7 @@ function AppWithEnvironment() {
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/auth/register" element={<AuthRegister />} />
+          <Route path="/environment-select" element={<ProtectedRoute><EnvironmentSelectPage /></ProtectedRoute>} />
           <Route path="/awaiting-access" element={<AwaitingAccess />} />
           <Route path="/settings/setup" element={<ProtectedRoute><EnvironmentSetup /></ProtectedRoute>} />
           <Route path="/media-plan-dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

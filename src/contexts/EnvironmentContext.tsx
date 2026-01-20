@@ -166,6 +166,7 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
 
   // Switch environment function
   const switchEnvironment = useCallback((environmentId: string) => {
+    localStorage.setItem('selectedEnvironmentId', environmentId);
     setCurrentEnvironmentId(environmentId);
   }, []);
 
@@ -208,11 +209,27 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
     return myRole?.role_invite ?? false;
   }, [isSystemAdmin, myRole]);
 
-  // Auto-select first environment when user loads
+  // Auto-select environment when user loads
   useEffect(() => {
     if (isLoadingEnvironments) return;
     if (currentEnvironmentId !== null) return;
     if (userEnvironments.length === 0) return;
+    
+    // Check if there's a stored environment preference
+    const storedEnvId = localStorage.getItem('selectedEnvironmentId');
+    
+    if (storedEnvId) {
+      // Verify the stored environment is still accessible
+      const storedEnv = userEnvironments.find(env => env.environment_id === storedEnvId);
+      if (storedEnv) {
+        console.log('Using stored environment:', storedEnv.environment_name);
+        setCurrentEnvironmentId(storedEnvId);
+        return;
+      } else {
+        // Stored environment no longer accessible, clear it
+        localStorage.removeItem('selectedEnvironmentId');
+      }
+    }
     
     // Prefer own environment, otherwise first available
     const ownEnv = userEnvironments.find(env => env.is_own_environment);
@@ -221,6 +238,7 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
     if (envToSelect) {
       console.log('Auto-selecting environment:', envToSelect.environment_name);
       setCurrentEnvironmentId(envToSelect.environment_id);
+      localStorage.setItem('selectedEnvironmentId', envToSelect.environment_id);
     }
   }, [userEnvironments, isLoadingEnvironments, currentEnvironmentId]);
 
