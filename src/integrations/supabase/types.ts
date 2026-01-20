@@ -4271,13 +4271,10 @@ export type Database = {
         Args: { p_environment_id: string }
         Returns: {
           accepted_at: string
-          created_at: string
           email: string
-          environment_id: string
           full_name: string
-          id: string
+          invited_at: string
           is_environment_admin: boolean
-          notify_media_resources: boolean
           perm_executive_dashboard: string
           perm_finance: string
           perm_library: string

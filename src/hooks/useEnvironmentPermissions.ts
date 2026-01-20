@@ -7,8 +7,6 @@ import { useEnvironment, PermissionLevel, EnvironmentSection } from '@/contexts/
 export type { PermissionLevel, EnvironmentSection } from '@/contexts/EnvironmentContext';
 
 export interface EnvironmentMember {
-  id: string;
-  environment_id: string;
   user_id: string;
   full_name: string | null;
   email: string | null;
@@ -24,9 +22,8 @@ export interface EnvironmentMember {
   perm_media_resources: PermissionLevel;
   perm_taxonomy: PermissionLevel;
   perm_library: PermissionLevel;
-  notify_media_resources?: boolean;
-  created_at: string;
   accepted_at: string | null;
+  invited_at: string | null;
 }
 
 export interface InviteMemberData {
