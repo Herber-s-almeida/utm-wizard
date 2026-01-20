@@ -1,38 +1,40 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
+import { useAuth } from "@/hooks/useAuth";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { toast } from "sonner";
 import { registerPayment } from "@/utils/finance/documentWorkflow";
 
 export function useFinancialPayments() {
-  const effectiveUserId = useEffectiveUserId();
+  const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
 
   const { data: payments = [], isLoading } = useQuery({
-    queryKey: ["financial-payments", effectiveUserId],
+    queryKey: ["financial-payments", currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("financial_payments")
         .select("*, financial_documents(vendor_name, document_number, media_plan_id)")
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .is("deleted_at", null)
         .order("planned_payment_date");
       if (error) throw error;
       return data;
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 
   const markAsPaidMutation = useMutation({
     mutationFn: async (paymentId: string) => {
-      if (!effectiveUserId) throw new Error("User not authenticated");
+      if (!user?.id) throw new Error("User not authenticated");
       
       const payment = payments.find(p => p.id === paymentId);
       if (!payment) throw new Error("Payment not found");
 
       const result = await registerPayment(
         paymentId,
-        effectiveUserId,
+        user.id,
         Number(payment.planned_amount),
         "other" // Default method
       );
@@ -66,11 +68,11 @@ export function useFinancialPayments() {
       paymentMethod: string;
       proofUrl?: string;
     }) => {
-      if (!effectiveUserId) throw new Error("User not authenticated");
+      if (!user?.id) throw new Error("User not authenticated");
 
       const result = await registerPayment(
         paymentId,
-        effectiveUserId,
+        user.id,
         paidAmount,
         paymentMethod,
         proofUrl

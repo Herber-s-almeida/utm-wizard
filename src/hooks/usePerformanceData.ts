@@ -2,11 +2,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from './useAuth';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 // Types
 export interface DataSource {
   id: string;
   user_id: string;
+  environment_id?: string;
   name: string;
   source_type: 'google_sheets' | 'csv_upload' | 'google_ads_api' | 'meta_api' | 'manual';
   config: Record<string, any>;
@@ -62,6 +64,7 @@ export interface PerformanceAlert {
   media_plan_id: string;
   media_line_id: string | null;
   user_id: string;
+  environment_id?: string;
   alert_type: string;
   severity: 'info' | 'warning' | 'critical';
   message: string;
@@ -104,20 +107,21 @@ export interface PerformanceSummary {
 // Hook: Fetch data sources
 export function useDataSources() {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   
   return useQuery({
-    queryKey: ['data-sources', user?.id],
+    queryKey: ['data-sources', currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('data_sources')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('environment_id', currentEnvironmentId!)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data as DataSource[];
     },
-    enabled: !!user?.id,
+    enabled: !!currentEnvironmentId,
   });
 }
 
@@ -200,14 +204,16 @@ export function useLineTargets(lineIds: string[]) {
 export function useCreateDataSource() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
 
   return useMutation({
-    mutationFn: async (data: Omit<DataSource, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (data: Omit<DataSource, 'id' | 'user_id' | 'environment_id' | 'created_at' | 'updated_at'>) => {
       const { data: result, error } = await supabase
         .from('data_sources')
         .insert({
           ...data,
           user_id: user!.id,
+          environment_id: currentEnvironmentId!,
         })
         .select()
         .single();
@@ -229,6 +235,7 @@ export function useCreateDataSource() {
 export function useImportMetrics() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
 
   return useMutation({
     mutationFn: async (data: {
@@ -246,6 +253,7 @@ export function useImportMetrics() {
           period_date: data.periodDate,
           period_type: data.periodType,
           user_id: user!.id,
+          environment_id: currentEnvironmentId!,
         }, {
           onConflict: 'media_plan_id,period_date,period_type',
         })
@@ -285,14 +293,16 @@ export function useImportMetrics() {
 export function useCreatePerformanceAlert() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
 
   return useMutation({
-    mutationFn: async (data: Omit<PerformanceAlert, 'id' | 'user_id' | 'created_at' | 'is_resolved' | 'resolved_at'>) => {
+    mutationFn: async (data: Omit<PerformanceAlert, 'id' | 'user_id' | 'environment_id' | 'created_at' | 'is_resolved' | 'resolved_at'>) => {
       const { data: result, error } = await supabase
         .from('performance_alerts')
         .insert({
           ...data,
           user_id: user!.id,
+          environment_id: currentEnvironmentId!,
         })
         .select()
         .single();

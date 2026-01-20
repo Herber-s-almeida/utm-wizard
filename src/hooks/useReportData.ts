@@ -1,11 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from './useAuth';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 export interface ReportImport {
   id: string;
   media_plan_id: string;
   user_id: string;
+  environment_id?: string;
   source_url: string;
   source_name: string;
   last_import_at: string | null;
@@ -136,13 +139,14 @@ export function useColumnMappings(importId: string) {
 
 export function useCreateReportImport() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
 
   return useMutation({
     mutationFn: async (data: {
       media_plan_id: string;
       source_url: string;
       source_name: string;
-      user_id: string;
     }) => {
       const { data: result, error } = await supabase
         .from('report_imports')
@@ -150,7 +154,8 @@ export function useCreateReportImport() {
           media_plan_id: data.media_plan_id,
           source_url: data.source_url,
           source_name: data.source_name,
-          user_id: data.user_id,
+          user_id: user!.id,
+          environment_id: currentEnvironmentId!,
           import_status: 'pending',
         })
         .select()
@@ -167,11 +172,11 @@ export function useCreateReportImport() {
 
 export function useSaveColumnMappings() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (data: {
       import_id: string;
-      user_id: string;
       mappings: { source_column: string; target_field: string }[];
     }) => {
       // Delete existing mappings
@@ -186,7 +191,7 @@ export function useSaveColumnMappings() {
         .insert(
           data.mappings.map((m) => ({
             import_id: data.import_id,
-            user_id: data.user_id,
+            user_id: user!.id,
             source_column: m.source_column,
             target_field: m.target_field,
           }))
