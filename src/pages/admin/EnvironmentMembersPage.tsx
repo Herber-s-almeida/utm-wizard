@@ -5,7 +5,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
+
 import { 
   Table, 
   TableBody, 
@@ -31,10 +31,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Bell, Clock, Mail, Crown, User } from 'lucide-react';
+import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Clock, Mail, Crown, User } from 'lucide-react';
 import { useEnvironmentPermissions, PermissionLevel, EnvironmentSection, EnvironmentMember } from '@/hooks/useEnvironmentPermissions';
 import { usePendingInvites } from '@/hooks/usePendingInvites';
-import { useResourceNotifications } from '@/hooks/useResourceNotifications';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { InviteMemberDialog } from '@/components/admin/InviteMemberDialog';
 import { toast } from 'sonner';
@@ -83,8 +82,6 @@ export default function EnvironmentMembersPage() {
     isDeletingInvite,
   } = usePendingInvites();
 
-  const { updateNotificationPreference, isUpdatingPreference } = useResourceNotifications();
-
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
   const [inviteToDelete, setInviteToDelete] = useState<string | null>(null);
@@ -98,7 +95,7 @@ export default function EnvironmentMembersPage() {
     
     updateMemberPermissions(
       { 
-        memberId: member.id, 
+        memberId: member.user_id, 
         isAdmin,
         // When demoting from admin, reset to 'view' for all sections
         ...(!isAdmin && {
@@ -154,15 +151,7 @@ export default function EnvironmentMembersPage() {
     });
   };
 
-  const handleNotificationToggle = (memberId: string, enabled: boolean) => {
-    updateNotificationPreference(
-      { memberId, enabled },
-      {
-        onSuccess: () => toast.success(`Notificações ${enabled ? 'ativadas' : 'desativadas'}`),
-        onError: (error) => toast.error(`Erro: ${error.message}`),
-      }
-    );
-  };
+  // Notification toggle removed - column notify_media_resources no longer exists
 
   const getPermissionBadgeVariant = (level: PermissionLevel) => {
     switch (level) {
@@ -320,12 +309,6 @@ export default function EnvironmentMembersPage() {
                           {section.label}
                         </TableHead>
                       ))}
-                      <TableHead className="text-center min-w-[80px]">
-                        <div className="flex items-center justify-center gap-1">
-                          <Bell className="h-3 w-3" />
-                          Notif.
-                        </div>
-                      </TableHead>
                       <TableHead className="w-[60px]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -335,7 +318,7 @@ export default function EnvironmentMembersPage() {
                       const isAdmin = member.is_environment_admin;
                       
                       return (
-                        <TableRow key={member.id} className={isAdmin ? 'bg-primary/5' : undefined}>
+                        <TableRow key={member.user_id} className={isAdmin ? 'bg-primary/5' : undefined}>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               {isOwner && (
@@ -397,7 +380,7 @@ export default function EnvironmentMembersPage() {
                                   <Select
                                     value={currentLevel === 'admin' ? 'edit' : currentLevel}
                                     onValueChange={(value) => 
-                                      handlePermissionChange(member.id, section.key, value as PermissionLevel)
+                                      handlePermissionChange(member.user_id, section.key, value as PermissionLevel)
                                     }
                                     disabled={isUpdating || !canEditPermissions || isOwner}
                                   >
@@ -420,15 +403,8 @@ export default function EnvironmentMembersPage() {
                             );
                           })}
                           
-                          <TableCell className="text-center">
-                            <Switch
-                              checked={member.notify_media_resources || false}
-                              onCheckedChange={(checked) => 
-                                handleNotificationToggle(member.id, checked)
-                              }
-                              disabled={isUpdatingPreference || !canEditPermissions}
-                            />
-                          </TableCell>
+                          {/* Notification toggle removed - column notify_media_resources no longer exists */}
+                          
                           
                           <TableCell>
                             {canEditPermissions && !isOwner && (
@@ -436,7 +412,7 @@ export default function EnvironmentMembersPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="text-destructive hover:text-destructive"
-                                onClick={() => setMemberToRemove(member.id)}
+                                onClick={() => setMemberToRemove(member.user_id)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
