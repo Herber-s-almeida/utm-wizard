@@ -31,9 +31,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Bell, Clock, Mail, Crown } from 'lucide-react';
-import { useEnvironmentPermissions, PermissionLevel, EnvironmentSection } from '@/hooks/useEnvironmentPermissions';
-import { usePendingInvites, PendingInvite } from '@/hooks/usePendingInvites';
+import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Bell, Clock, Mail, Crown, User } from 'lucide-react';
+import { useEnvironmentPermissions, PermissionLevel, EnvironmentSection, EnvironmentMember } from '@/hooks/useEnvironmentPermissions';
+import { usePendingInvites } from '@/hooks/usePendingInvites';
 import { useResourceNotifications } from '@/hooks/useResourceNotifications';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { InviteMemberDialog } from '@/components/admin/InviteMemberDialog';
@@ -50,12 +50,14 @@ const SECTIONS: { key: EnvironmentSection; label: string }[] = [
   { key: 'library', label: 'Biblioteca' },
 ];
 
-const PERMISSION_OPTIONS: { value: PermissionLevel; label: string; icon: React.ReactNode }[] = [
+// Permission options for regular members (no 'admin' option)
+const MEMBER_PERMISSION_OPTIONS: { value: PermissionLevel; label: string; icon: React.ReactNode }[] = [
   { value: 'none', label: 'Sem acesso', icon: <Ban className="h-3 w-3" /> },
   { value: 'view', label: 'Visualizar', icon: <Eye className="h-3 w-3" /> },
   { value: 'edit', label: 'Editar', icon: <Edit className="h-3 w-3" /> },
-  { value: 'admin', label: 'Admin', icon: <Shield className="h-3 w-3" /> },
 ];
+
+type MemberRole = 'admin' | 'member';
 
 export default function EnvironmentMembersPage() {
   const {
@@ -90,6 +92,33 @@ export default function EnvironmentMembersPage() {
   // Get current environment details
   const currentEnv = userEnvironments.find(e => e.environment_id === currentEnvironmentId);
   const environmentOwnerUserId = currentEnv?.environment_owner_id;
+
+  const handleRoleChange = (member: EnvironmentMember, newRole: MemberRole) => {
+    const isAdmin = newRole === 'admin';
+    
+    updateMemberPermissions(
+      { 
+        memberId: member.id, 
+        isAdmin,
+        // When demoting from admin, reset to 'view' for all sections
+        ...(!isAdmin && {
+          permissions: {
+            executive_dashboard: 'view',
+            reports: 'view',
+            finance: 'view',
+            media_plans: 'view',
+            media_resources: 'view',
+            taxonomy: 'view',
+            library: 'view',
+          }
+        })
+      },
+      {
+        onSuccess: () => toast.success(isAdmin ? 'Membro promovido a administrador' : 'Permissões de membro ajustadas'),
+        onError: (error) => toast.error(`Erro ao atualizar: ${error.message}`),
+      }
+    );
+  };
 
   const handlePermissionChange = (memberId: string, section: EnvironmentSection, level: PermissionLevel) => {
     updateMemberPermissions(
@@ -254,7 +283,7 @@ export default function EnvironmentMembersPage() {
           <CardHeader>
             <CardTitle>Membros Ativos</CardTitle>
             <CardDescription>
-              Configure as permissões de cada membro por seção da plataforma
+              Configure o papel e as permissões de cada membro por seção da plataforma
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -285,69 +314,108 @@ export default function EnvironmentMembersPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[200px]">Membro</TableHead>
+                      <TableHead className="w-[140px]">Papel</TableHead>
                       {SECTIONS.map(section => (
                         <TableHead key={section.key} className="text-center min-w-[100px]">
                           {section.label}
                         </TableHead>
                       ))}
-                      <TableHead className="text-center min-w-[100px]">
+                      <TableHead className="text-center min-w-[80px]">
                         <div className="flex items-center justify-center gap-1">
                           <Bell className="h-3 w-3" />
                           Notif.
                         </div>
                       </TableHead>
-                      <TableHead className="w-[80px]">Ações</TableHead>
+                      <TableHead className="w-[60px]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {displayMembers.map(member => {
                       const isOwner = member.user_id === environmentOwnerUserId;
+                      const isAdmin = member.is_environment_admin;
                       
                       return (
-                        <TableRow key={member.id}>
+                        <TableRow key={member.id} className={isAdmin ? 'bg-primary/5' : undefined}>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               {isOwner && (
-                                <Crown className="h-4 w-4 text-amber-500" />
+                                <Crown className="h-4 w-4 text-amber-500 flex-shrink-0" />
                               )}
-                              <div>
-                                <p className="font-medium">
-                                  {member.profile?.full_name || 'Usuário'}
+                              <div className="min-w-0">
+                                <p className="font-medium truncate">
+                                  {member.full_name || 'Usuário'}
                                 </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {member.email || member.user_id.slice(0, 8)}
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {member.email || 'Email não disponível'}
                                 </p>
                               </div>
                             </div>
                           </TableCell>
                           
+                          {/* Role Selector */}
+                          <TableCell>
+                            <Select
+                              value={isAdmin ? 'admin' : 'member'}
+                              onValueChange={(value) => handleRoleChange(member, value as MemberRole)}
+                              disabled={isUpdating || !canEditPermissions || isOwner}
+                            >
+                              <SelectTrigger className="w-[130px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="admin">
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="h-3 w-3 text-primary" />
+                                    Administrador
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="member">
+                                  <div className="flex items-center gap-2">
+                                    <User className="h-3 w-3" />
+                                    Membro
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          
+                          {/* Section Permissions */}
                           {SECTIONS.map(section => {
                             const columnKey = `perm_${section.key}` as keyof typeof member;
                             const currentLevel = member[columnKey] as PermissionLevel;
                             
                             return (
                               <TableCell key={section.key} className="text-center">
-                                <Select
-                                  value={currentLevel}
-                                  onValueChange={(value) => 
-                                    handlePermissionChange(member.id, section.key, value as PermissionLevel)
-                                  }
-                                  disabled={isUpdating || !canEditPermissions || isOwner}
-                                >
-                                  <SelectTrigger className="w-[110px] mx-auto">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {PERMISSION_OPTIONS.map(option => (
-                                      <SelectItem key={option.value} value={option.value}>
-                                        <div className="flex items-center gap-2">
-                                          {option.icon}
-                                          {option.label}
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                {isAdmin ? (
+                                  // Admin has full access - show disabled badge
+                                  <Badge variant="default" className="opacity-60">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    Admin
+                                  </Badge>
+                                ) : (
+                                  // Regular member - show permission selector without 'admin' option
+                                  <Select
+                                    value={currentLevel === 'admin' ? 'edit' : currentLevel}
+                                    onValueChange={(value) => 
+                                      handlePermissionChange(member.id, section.key, value as PermissionLevel)
+                                    }
+                                    disabled={isUpdating || !canEditPermissions || isOwner}
+                                  >
+                                    <SelectTrigger className="w-[105px] mx-auto">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {MEMBER_PERMISSION_OPTIONS.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                          <div className="flex items-center gap-2">
+                                            {option.icon}
+                                            {option.label}
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
                               </TableCell>
                             );
                           })}
@@ -390,21 +458,49 @@ export default function EnvironmentMembersPage() {
             <CardTitle className="text-base">Legenda de Permissões</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {PERMISSION_OPTIONS.map(option => (
-                <div key={option.value} className="flex items-center gap-2">
-                  <Badge variant={getPermissionBadgeVariant(option.value)} className="w-20 justify-center">
-                    {option.icon}
-                    <span className="ml-1">{option.label}</span>
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {option.value === 'none' && 'Seção invisível'}
-                    {option.value === 'view' && 'Apenas leitura'}
-                    {option.value === 'edit' && 'Criar e editar'}
-                    {option.value === 'admin' && 'Controle total'}
-                  </span>
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-medium mb-2">Papéis</h4>
+                <div className="flex gap-6">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default">
+                      <Shield className="h-3 w-3 mr-1" />
+                      Administrador
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      Acesso total a todas as seções
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
+                      <User className="h-3 w-3 mr-1" />
+                      Membro
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      Permissões configuráveis por seção
+                    </span>
+                  </div>
                 </div>
-              ))}
+              </div>
+              
+              <div>
+                <h4 className="text-sm font-medium mb-2">Níveis de Permissão (para Membros)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {MEMBER_PERMISSION_OPTIONS.map(option => (
+                    <div key={option.value} className="flex items-center gap-2">
+                      <Badge variant={getPermissionBadgeVariant(option.value)} className="w-24 justify-center">
+                        {option.icon}
+                        <span className="ml-1">{option.label}</span>
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {option.value === 'none' && 'Seção invisível'}
+                        {option.value === 'view' && 'Apenas leitura'}
+                        {option.value === 'edit' && 'Criar e editar'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -438,23 +534,24 @@ export default function EnvironmentMembersPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Cancel Invite Confirmation Dialog */}
+        {/* Delete Invite Confirmation Dialog */}
         <AlertDialog open={!!inviteToDelete} onOpenChange={() => setInviteToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Cancelar convite?</AlertDialogTitle>
               <AlertDialogDescription>
-                O link de convite será invalidado e o usuário não poderá mais usá-lo para criar conta.
+                O link de convite será invalidado e o usuário não poderá mais 
+                utilizá-lo para criar conta.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Manter convite</AlertDialogCancel>
+              <AlertDialogCancel>Voltar</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={handleDeleteInvite}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 disabled={isDeletingInvite}
               >
-                {isDeletingInvite ? 'Cancelando...' : 'Cancelar convite'}
+                {isDeletingInvite ? 'Cancelando...' : 'Cancelar Convite'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

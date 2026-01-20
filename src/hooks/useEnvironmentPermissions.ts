@@ -10,11 +10,9 @@ export interface EnvironmentMember {
   id: string;
   environment_id: string;
   user_id: string;
-  invited_by: string | null;
-  invited_at: string | null;
-  accepted_at: string | null;
-  created_at: string;
-  updated_at: string;
+  full_name: string | null;
+  email: string | null;
+  is_environment_admin: boolean;
   role_read: boolean;
   role_edit: boolean;
   role_delete: boolean;
@@ -27,16 +25,13 @@ export interface EnvironmentMember {
   perm_taxonomy: PermissionLevel;
   perm_library: PermissionLevel;
   notify_media_resources?: boolean;
-  // Joined profile data
-  profile?: {
-    full_name: string | null;
-    company: string | null;
-  };
-  email?: string;
+  created_at: string;
+  accepted_at: string | null;
 }
 
 export interface InviteMemberData {
   email: string;
+  isAdmin?: boolean;
   permissions: {
     executive_dashboard: PermissionLevel;
     reports: PermissionLevel;
@@ -76,35 +71,31 @@ export function useEnvironmentPermissions() {
   
   const currentUserId = user?.id;
 
-  // Fetch all members of the current environment from environment_roles
+  // Fetch all members of the current environment using the RPC function
   const { data: environmentMembers = [], isLoading: isLoadingMembers, refetch: refetchMembers } = useQuery({
     queryKey: ['environment-members', currentEnvironmentId],
     queryFn: async () => {
       if (!currentEnvironmentId) return [];
       
-      // Get environment_roles for the current environment (excluding current user if they're the owner)
-      const { data: roles, error } = await supabase
-        .from('environment_roles')
-        .select('*')
-        .eq('environment_id', currentEnvironmentId)
-        .order('created_at', { ascending: false });
+      // Use the RPC function that returns full member details including email
+      const { data, error } = await supabase
+        .rpc('get_environment_members_with_details', {
+          p_environment_id: currentEnvironmentId
+        });
       
       if (error) throw error;
       
-      // Fetch profiles for all users
-      const userIds = roles.map(r => r.user_id);
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name, company')
-        .in('id', userIds);
-      
-      // Combine data
-      const membersWithProfiles = roles.map(role => ({
-        ...role,
-        profile: profiles?.find(p => p.id === role.user_id) || null,
-      }));
-      
-      return membersWithProfiles as EnvironmentMember[];
+      // Map the response to match our interface
+      return (data || []).map(member => ({
+        ...member,
+        perm_executive_dashboard: member.perm_executive_dashboard as PermissionLevel,
+        perm_reports: member.perm_reports as PermissionLevel,
+        perm_finance: member.perm_finance as PermissionLevel,
+        perm_media_plans: member.perm_media_plans as PermissionLevel,
+        perm_media_resources: member.perm_media_resources as PermissionLevel,
+        perm_taxonomy: member.perm_taxonomy as PermissionLevel,
+        perm_library: member.perm_library as PermissionLevel,
+      })) as EnvironmentMember[];
     },
     enabled: !!currentEnvironmentId,
   });
@@ -114,13 +105,18 @@ export function useEnvironmentPermissions() {
 
   // Invite member mutation (uses edge function)
   const inviteMemberMutation = useMutation({
-    mutationFn: async ({ email, permissions }: InviteMemberData) => {
+    mutationFn: async ({ email, isAdmin, permissions }: InviteMemberData) => {
       if (!currentUserId) throw new Error('Usuário não autenticado');
       if (!currentEnvironmentId) throw new Error('Ambiente não selecionado');
       if (!canInviteMore) throw new Error('Limite de 30 membros atingido');
       
       const { data, error } = await supabase.functions.invoke('invite-environment-member', {
-        body: { email, permissions, environment_id: currentEnvironmentId },
+        body: { 
+          email, 
+          permissions, 
+          environment_id: currentEnvironmentId,
+          is_environment_admin: isAdmin || false,
+        },
       });
       
       if (error) throw error;
@@ -138,17 +134,34 @@ export function useEnvironmentPermissions() {
   const updateMemberMutation = useMutation({
     mutationFn: async ({ 
       memberId, 
+      isAdmin,
       permissions 
     }: { 
       memberId: string; 
-      permissions: Partial<Record<EnvironmentSection, PermissionLevel>>;
+      isAdmin?: boolean;
+      permissions?: Partial<Record<EnvironmentSection, PermissionLevel>>;
     }) => {
-      const updateData: Record<string, PermissionLevel> = {};
+      const updateData: Record<string, any> = {};
       
-      for (const [section, level] of Object.entries(permissions)) {
-        const column = SECTION_TO_COLUMN[section as EnvironmentSection];
-        if (column) {
-          updateData[column] = level;
+      // If setting as admin, set all permissions to 'admin'
+      if (isAdmin !== undefined) {
+        updateData.is_environment_admin = isAdmin;
+        
+        if (isAdmin) {
+          // When promoted to admin, set all permissions to 'admin'
+          for (const column of Object.values(SECTION_TO_COLUMN)) {
+            updateData[column] = 'admin';
+          }
+        }
+      }
+      
+      // Apply individual permission changes (only if not admin or explicitly provided)
+      if (permissions) {
+        for (const [section, level] of Object.entries(permissions)) {
+          const column = SECTION_TO_COLUMN[section as EnvironmentSection];
+          if (column) {
+            updateData[column] = level;
+          }
         }
       }
       
