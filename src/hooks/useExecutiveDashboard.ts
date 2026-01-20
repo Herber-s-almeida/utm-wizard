@@ -188,62 +188,27 @@ export function useExecutiveDashboard(filters: DashboardFilters = {}) {
         throw new Error('User not authenticated');
       }
 
-      // First get plan IDs where user has a role (shared plans)
-      const { data: sharedPlanRoles } = await supabase
-        .from('plan_roles')
-        .select('media_plan_id')
-        .eq('user_id', effectiveUserId);
-      
-      const sharedPlanIds = sharedPlanRoles?.map(r => r.media_plan_id) || [];
-
-      // Fetch plans owned by user
-      let ownedPlansQuery = supabase
+      // Fetch plans owned by the effective user (environment owner)
+      // Access is now controlled by environment roles, not plan_roles
+      let plansQuery = supabase
         .from('media_plans')
         .select('*')
         .eq('user_id', effectiveUserId)
         .is('deleted_at', null);
 
       if (statusFilter === 'active') {
-        ownedPlansQuery = ownedPlansQuery.eq('status', 'active');
+        plansQuery = plansQuery.eq('status', 'active');
       } else if (statusFilter === 'finished') {
-        ownedPlansQuery = ownedPlansQuery.eq('status', 'finished');
+        plansQuery = plansQuery.eq('status', 'finished');
       } else if (statusFilter === 'draft') {
-        ownedPlansQuery = ownedPlansQuery.eq('status', 'draft');
+        plansQuery = plansQuery.eq('status', 'draft');
       }
       // 'all' = no status filter
 
-      const { data: ownedPlans, error: ownedError } = await ownedPlansQuery;
-      if (ownedError) throw ownedError;
+      const { data: plans, error: plansError } = await plansQuery;
+      if (plansError) throw plansError;
 
-      // Fetch shared plans if any
-      let sharedPlans: typeof ownedPlans = [];
-      if (sharedPlanIds.length > 0) {
-        let sharedPlansQuery = supabase
-          .from('media_plans')
-          .select('*')
-          .in('id', sharedPlanIds)
-          .is('deleted_at', null);
-
-        if (statusFilter === 'active') {
-          sharedPlansQuery = sharedPlansQuery.eq('status', 'active');
-        } else if (statusFilter === 'finished') {
-          sharedPlansQuery = sharedPlansQuery.eq('status', 'finished');
-        } else if (statusFilter === 'draft') {
-          sharedPlansQuery = sharedPlansQuery.eq('status', 'draft');
-        }
-
-        const { data: sharedData, error: sharedError } = await sharedPlansQuery;
-        if (sharedError) throw sharedError;
-        sharedPlans = sharedData || [];
-      }
-
-      // Combine and deduplicate plans
-      const allPlansMap = new Map<string, typeof ownedPlans extends (infer T)[] ? T : never>();
-      (ownedPlans || []).forEach(p => allPlansMap.set(p.id, p));
-      (sharedPlans || []).forEach(p => allPlansMap.set(p.id, p));
-      const plans = Array.from(allPlansMap.values());
-
-      const planIds = plans.map(p => p.id);
+      const planIds = plans?.map(p => p.id) || [];
 
       if (planIds.length === 0) {
         return {
@@ -287,17 +252,15 @@ export function useExecutiveDashboard(filters: DashboardFilters = {}) {
         monthlyBudgets = budgetsData || [];
       }
 
-      // Fetch reference data - get all user IDs from plans to fetch their config data
-      const planOwnerIds = [...new Set(plans.map(p => p.user_id))];
-      
+      // Fetch reference data
       const [
         { data: mediums },
         { data: vehicles },
         { data: funnelStages },
       ] = await Promise.all([
-        supabase.from('mediums').select('id, name').in('user_id', planOwnerIds).is('deleted_at', null),
-        supabase.from('vehicles').select('id, name, medium_id').in('user_id', planOwnerIds).is('deleted_at', null),
-        supabase.from('funnel_stages').select('id, name, slug, order_index').in('user_id', planOwnerIds).is('deleted_at', null),
+        supabase.from('mediums').select('id, name').eq('user_id', effectiveUserId).is('deleted_at', null),
+        supabase.from('vehicles').select('id, name, medium_id').eq('user_id', effectiveUserId).is('deleted_at', null),
+        supabase.from('funnel_stages').select('id, name, slug, order_index').eq('user_id', effectiveUserId).is('deleted_at', null),
       ]);
 
       // Calculate metrics

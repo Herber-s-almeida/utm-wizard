@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LoadingPage } from '@/components/ui/loading-dots';
-import { Palette, Search, ExternalLink, Calendar, DollarSign, Image, Video, FileText } from 'lucide-react';
+import { Palette, Search, ExternalLink, Calendar, DollarSign, Image, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -66,13 +66,14 @@ export default function MediaResourcesListPage() {
   }, []);
 
   // Fetch media plans with creative counts
+  // Access is controlled by environment roles, not plan_roles
   const { data: plans, isLoading } = useQuery({
     queryKey: ['resources-plans-list', effectiveUserId],
     queryFn: async () => {
       if (!effectiveUserId) return [];
       
-      // Fetch owned plans
-      const { data: ownedPlans, error: ownedError } = await supabase
+      // Fetch plans owned by the effective user (environment owner)
+      const { data: plans, error } = await supabase
         .from('media_plans')
         .select(`
           id,
@@ -95,54 +96,9 @@ export default function MediaResourcesListPage() {
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
-      if (ownedError) throw ownedError;
+      if (error) throw error;
 
-      // Fetch shared plans
-      const { data: sharedRoles, error: rolesError } = await supabase
-        .from('plan_roles')
-        .select('media_plan_id')
-        .eq('user_id', user?.id || '');
-
-      if (rolesError) throw rolesError;
-
-      const sharedPlanIds = sharedRoles?.map(r => r.media_plan_id) || [];
-      
-      let sharedPlans: MediaPlan[] = [];
-      if (sharedPlanIds.length > 0) {
-        const { data: shared, error: sharedError } = await supabase
-          .from('media_plans')
-          .select(`
-            id,
-            name,
-            slug,
-            campaign,
-            status,
-            start_date,
-            end_date,
-            total_budget,
-            created_at,
-            media_lines (
-              id,
-              media_creatives (
-                id
-              )
-            )
-          `)
-          .in('id', sharedPlanIds)
-          .is('deleted_at', null)
-          .order('created_at', { ascending: false });
-
-        if (sharedError) throw sharedError;
-        sharedPlans = shared || [];
-      }
-
-      // Combine and deduplicate
-      const allPlans = [...(ownedPlans || []), ...sharedPlans];
-      const uniquePlans = allPlans.filter((plan, index, self) =>
-        index === self.findIndex(p => p.id === plan.id)
-      );
-
-      return uniquePlans as MediaPlan[];
+      return (plans || []) as MediaPlan[];
     },
     enabled: !!effectiveUserId,
   });

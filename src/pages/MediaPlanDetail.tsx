@@ -74,7 +74,6 @@ import { motion } from 'framer-motion';
 import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization';
 import { RoleBadge } from '@/components/media-plan/RoleBadge';
 import { usePlanRoles } from '@/hooks/usePlanRoles';
-import { TeamManagementDialog } from '@/components/media-plan/TeamManagementDialog';
 import { SaveVersionDropdownItem } from '@/components/media-plan/SaveVersionDropdownItem';
 import { VersionHistoryDialog } from '@/components/media-plan/VersionHistoryDialog';
 import { usePlanAlerts } from '@/hooks/usePlanAlerts';
@@ -121,7 +120,7 @@ export default function MediaPlanDetail() {
   } | undefined>(undefined);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lineToDelete, setLineToDelete] = useState<MediaLine | null>(null);
-  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+  // Team dialog removed - managed at environment level now
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [filteredLines, setFilteredLines] = useState<MediaLine[]>([]);
   const [filterByAlerts, setFilterByAlerts] = useState(false);
@@ -791,13 +790,6 @@ export default function MediaPlanDetail() {
                   <Settings2 className="w-4 h-4 mr-2" />
                   Editar Plano
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => setTeamDialogOpen(true)}
-                  disabled={isLoadingRole || !canManageTeam}
-                >
-                  <Users className="w-4 h-4 mr-2" />
-                  Gerenciar Equipe
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate(`/reports/${planId}`)}>
                   <BarChart3 className="w-4 h-4 mr-2" />
@@ -1229,12 +1221,7 @@ export default function MediaPlanDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Team Management Dialog */}
-      <TeamManagementDialog
-        planId={planId!}
-        open={teamDialogOpen}
-        onOpenChange={setTeamDialogOpen}
-      />
+      {/* Team Management moved to environment level (/settings/team) */}
 
       {/* Version History Dialog */}
       <VersionHistoryDialog
