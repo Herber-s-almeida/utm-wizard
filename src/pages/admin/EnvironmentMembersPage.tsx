@@ -313,7 +313,7 @@ export default function EnvironmentMembersPage() {
                       <TableHead className="w-[200px]">Membro</TableHead>
                       <TableHead className="w-[140px]">Papel</TableHead>
                       {SECTIONS.map(section => (
-                        <TableHead key={section.key} className="text-center min-w-[100px]">
+                        <TableHead key={section.key} className="text-center min-w-[60px]">
                           {section.label}
                         </TableHead>
                       ))}
@@ -392,8 +392,10 @@ export default function EnvironmentMembersPage() {
                                     }
                                     disabled={isUpdating || !isEnvironmentAdmin || isSelf}
                                   >
-                                    <SelectTrigger className="w-[105px] mx-auto">
-                                      <SelectValue />
+                                    <SelectTrigger className="w-[50px] mx-auto">
+                                      {currentLevel === 'none' && <Ban className="h-4 w-4" />}
+                                      {currentLevel === 'view' && <Eye className="h-4 w-4" />}
+                                      {(currentLevel === 'edit' || currentLevel === 'admin') && <Edit className="h-4 w-4" />}
                                     </SelectTrigger>
                                     <SelectContent>
                                       {MEMBER_PERMISSION_OPTIONS.map(option => (
