@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -142,6 +142,21 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
     taxonomy: 'view',
     library: 'view',
   });
+
+  // When admin role is selected, set all permissions to 'edit'
+  useEffect(() => {
+    if (selectedRole === 'admin') {
+      setPermissions({
+        executive_dashboard: 'edit',
+        reports: 'edit',
+        finance: 'edit',
+        media_plans: 'edit',
+        media_resources: 'edit',
+        taxonomy: 'edit',
+        library: 'edit',
+      });
+    }
+  }, [selectedRole]);
 
   const applyPreset = (presetKey: PresetKey) => {
     setPermissions(PRESETS[presetKey].permissions);
@@ -329,25 +344,21 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
                       ? "border-primary bg-primary/5" 
                       : "hover:border-muted-foreground/50"
                   )}
-                  onClick={() => setSelectedRole(role.value)}
                 >
-                  <CardContent className="p-4 flex items-start gap-3">
-                    <RadioGroupItem value={role.value} id={role.value} className="mt-1" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        {role.icon}
-                        <Label 
-                          htmlFor={role.value} 
-                          className="font-medium cursor-pointer"
-                        >
-                          {role.label}
-                        </Label>
+                  <label htmlFor={`role-${role.value}`} className="cursor-pointer block">
+                    <CardContent className="p-4 flex items-start gap-3">
+                      <RadioGroupItem value={role.value} id={`role-${role.value}`} className="mt-1" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {role.icon}
+                          <span className="font-medium">{role.label}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {role.description}
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {role.description}
-                      </p>
-                    </div>
-                  </CardContent>
+                    </CardContent>
+                  </label>
                 </Card>
               ))}
             </RadioGroup>
