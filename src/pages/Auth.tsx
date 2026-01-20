@@ -54,27 +54,31 @@ async function getUserDestination(userId: string): Promise<string> {
     .eq('user_id', userId)
     .single();
 
-  if (profile?.is_system_user) {
-    // If they don't have company name yet, redirect to setup
-    if (!profile.company) {
-      return '/settings/setup';
-    }
+  // 2. Get all environments user has access to
+  const { data: environments } = await supabase.rpc('get_user_environments_v2', {
+    _user_id: userId,
+  });
+
+  const envCount = environments?.length || 0;
+
+  // 3. If user has access to multiple environments, show selection page
+  if (envCount > 1) {
+    return '/environment-select';
+  }
+
+  // 4. If system user without company, go to setup
+  if (profile?.is_system_user && !profile.company) {
+    return '/settings/setup';
+  }
+
+  // 5. If user has exactly one environment, go to dashboard
+  if (envCount === 1) {
+    // Store the environment ID for the context to pick up
+    localStorage.setItem('selectedEnvironmentId', environments[0].environment_id);
     return '/media-plan-dashboard';
   }
 
-  // 2. Not a system user - check if they're a member of any environment
-  const { data: memberships } = await supabase
-    .from('environment_members')
-    .select('environment_owner_id')
-    .eq('member_user_id', userId)
-    .limit(1);
-
-  if (memberships && memberships.length > 0) {
-    // They have at least one environment membership
-    return '/media-plan-dashboard';
-  }
-
-  // 3. Not in any environment - show awaiting access page
+  // 6. No environments - show awaiting access page
   return '/awaiting-access';
 }
 
