@@ -4123,6 +4123,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      can_view_environment_roles: {
+        Args: { _environment_id: string }
+        Returns: boolean
+      }
       cleanup_old_auto_backups: { Args: never; Returns: number }
       count_environment_members: {
         Args: { _environment_owner_id: string }
