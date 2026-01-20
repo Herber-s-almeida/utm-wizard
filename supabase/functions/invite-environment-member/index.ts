@@ -61,27 +61,21 @@ serve(async (req) => {
 
     console.log(`Inviting ${email} to environment ${environment_id} with role ${normalizedRole}`);
 
-    // Check if user can invite to THIS environment (using environment_roles)
-    const { data: canInviteData, error: canInviteError } = await adminClient
+    // Check if user is admin in this environment (only admins can invite)
+    const { data: adminCheck, error: adminCheckError } = await adminClient
       .from('environment_roles')
-      .select('role_invite')
+      .select('is_environment_admin, role_invite')
       .eq('environment_id', environment_id)
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (canInviteError) {
-      console.error("Can invite check error:", canInviteError);
+    if (adminCheckError) {
+      console.error("Admin check error:", adminCheckError);
     }
 
-    // Check if current user is the environment owner
-    const { data: envData } = await adminClient
-      .from('environments')
-      .select('owner_user_id, name')
-      .eq('id', environment_id)
-      .single();
-
-    const isOwner = envData?.owner_user_id === user.id;
-    const canInvite = isOwner || canInviteData?.role_invite === true;
+    const isEnvAdmin = adminCheck?.is_environment_admin === true;
+    const hasInvitePermission = adminCheck?.role_invite === true;
+    const canInvite = isEnvAdmin || hasInvitePermission;
 
     // Also check system admin
     const { data: isSystemAdmin } = await adminClient.rpc('is_system_admin', { _user_id: user.id });
@@ -89,6 +83,13 @@ serve(async (req) => {
     if (!canInvite && !isSystemAdmin) {
       throw new Error("Você não tem permissão para convidar membros neste ambiente");
     }
+
+    // Get environment data for email
+    const { data: envData } = await adminClient
+      .from('environments')
+      .select('owner_user_id, name')
+      .eq('id', environment_id)
+      .single();
 
     // Check member count limit for this environment
     const { count: memberCount, error: countError } = await adminClient
