@@ -258,6 +258,115 @@ serve(async (req) => {
         );
       }
 
+      case "list_access_requests": {
+        const { data: requests, error } = await adminClient
+          .from("system_access_requests")
+          .select("*")
+          .order("requested_at", { ascending: false });
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ requests }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "approve_access_request": {
+        const { requestId, makeAdmin } = payload;
+        
+        // Get the request
+        const { data: request, error: fetchError } = await adminClient
+          .from("system_access_requests")
+          .select("*")
+          .eq("id", requestId)
+          .single();
+
+        if (fetchError || !request) {
+          return new Response(
+            JSON.stringify({ error: "Solicitação não encontrada" }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        if (request.status !== "pending") {
+          return new Response(
+            JSON.stringify({ error: "Solicitação já foi processada" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Check if email already exists
+        const { data: authUsers } = await adminClient.auth.admin.listUsers();
+        const existingUser = authUsers?.users.find(
+          (u) => u.email?.toLowerCase() === request.email.toLowerCase()
+        );
+
+        if (existingUser) {
+          return new Response(
+            JSON.stringify({ error: "Este email já está cadastrado no sistema" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Send invitation
+        const { data: inviteData, error: inviteError } = await adminClient.auth.admin
+          .inviteUserByEmail(request.email, {
+            redirectTo: `${supabaseUrl}/auth`,
+            data: {
+              is_system_user: true,
+              full_name: request.full_name,
+              company: request.company_name,
+            },
+          });
+
+        if (inviteError) throw inviteError;
+
+        // If makeAdmin, create system_role entry
+        if (makeAdmin && inviteData.user) {
+          await adminClient
+            .from("system_roles")
+            .insert({ user_id: inviteData.user.id, role: "system_admin" });
+        }
+
+        // Update request status
+        await adminClient
+          .from("system_access_requests")
+          .update({
+            status: "approved",
+            reviewed_by: user.id,
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq("id", requestId);
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "reject_access_request": {
+        const { requestId, reason } = payload;
+
+        const { error } = await adminClient
+          .from("system_access_requests")
+          .update({
+            status: "rejected",
+            reviewed_by: user.id,
+            reviewed_at: new Date().toISOString(),
+            rejection_reason: reason || null,
+          })
+          .eq("id", requestId)
+          .eq("status", "pending");
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: "Unknown action" }),

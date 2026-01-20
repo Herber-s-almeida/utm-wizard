@@ -8,13 +8,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { LayoutDashboard, Mail, Lock, User, ArrowRight, Loader2, AlertCircle, Building2, CheckCircle2 } from 'lucide-react';
+import { LayoutDashboard, Mail, Lock, User, ArrowRight, Loader2, AlertCircle, Building2, CheckCircle2, Send } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
+import { useCreateAccessRequest } from '@/hooks/useAccessRequests';
 
 const signupSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  fullName: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
+});
+
+const requestSchema = z.object({
+  email: z.string().email('Email inválido'),
   fullName: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
 });
 
@@ -38,6 +44,8 @@ interface InviteInfo {
   email?: string;
 }
 
+type RegistrationMode = 'checking' | 'invite' | 'request' | 'request_sent';
+
 export default function AuthRegister() {
   const [searchParams] = useSearchParams();
   const tokenFromUrl = searchParams.get('token');
@@ -46,13 +54,16 @@ export default function AuthRegister() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailChecked, setEmailChecked] = useState(false);
   const [tokenValidated, setTokenValidated] = useState(false);
+  const [mode, setMode] = useState<RegistrationMode>('checking');
   const { signUp, user } = useAuth();
   const navigate = useNavigate();
+  const createAccessRequest = useCreateAccessRequest();
 
   useEffect(() => {
     if (user) {
@@ -86,18 +97,21 @@ export default function AuthRegister() {
         console.error('Error validating token:', error);
         setEmailError('Erro ao validar convite. Tente novamente.');
         setEmailChecked(true);
+        setMode('request');
         return;
       }
 
       if (!invite) {
-        setEmailError('Convite inválido, expirado ou já utilizado. Solicite um novo convite ao administrador.');
+        setEmailError('Convite inválido, expirado ou já utilizado. Você pode solicitar acesso ao sistema.');
         setEmailChecked(true);
+        setMode('request');
         return;
       }
 
       // Pre-fill email from invite
       setEmail(invite.email);
       setTokenValidated(true);
+      setMode('invite');
 
       // Get environment name
       let environmentName = 'Ambiente';
@@ -135,6 +149,7 @@ export default function AuthRegister() {
       console.error('Error validating token:', err);
       setEmailError('Erro ao validar convite. Tente novamente.');
       setEmailChecked(true);
+      setMode('request');
     } finally {
       setCheckingEmail(false);
     }
@@ -149,6 +164,7 @@ export default function AuthRegister() {
       setInviteInfo(null);
       setEmailError(null);
       setEmailChecked(false);
+      setMode('checking');
       return;
     }
 
@@ -175,10 +191,14 @@ export default function AuthRegister() {
       }
 
       if (!invite) {
-        setEmailError('Este email não possui um convite pendente. Solicite um convite ao administrador do ambiente.');
+        // No invite found - switch to request mode
+        setMode('request');
         setEmailChecked(true);
         return;
       }
+
+      // Invite found
+      setMode('invite');
 
       // Get environment owner name
       const { data: ownerProfile } = await supabase
@@ -228,7 +248,7 @@ export default function AuthRegister() {
         .maybeSingle();
 
       if (inviteError || !invite) {
-        toast.error('Você não possui um convite válido para criar conta. Solicite um convite ao administrador.');
+        toast.error('Você não possui um convite válido para criar conta. Solicite acesso ao sistema.');
         setLoading(false);
         return;
       }
@@ -246,7 +266,80 @@ export default function AuthRegister() {
     }
   };
 
-  const canSubmit = emailChecked && inviteInfo && !emailError && !checkingEmail;
+  const handleRequestAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const validation = requestSchema.safeParse({ email, fullName });
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
+
+    createAccessRequest.mutate(
+      { email, fullName, companyName: companyName || undefined },
+      {
+        onSuccess: () => {
+          setMode('request_sent');
+          toast.success('Solicitação enviada com sucesso!');
+        },
+        onError: (error) => {
+          toast.error(error.message);
+        },
+      }
+    );
+  };
+
+  const canSubmit = mode === 'invite' && emailChecked && inviteInfo && !emailError && !checkingEmail;
+
+  // Request sent confirmation
+  if (mode === 'request_sent') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md relative z-10"
+        >
+          <Card className="border-border/50 shadow-2xl shadow-primary/5 backdrop-blur-sm">
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-7 h-7 text-primary" />
+              </div>
+              <CardTitle className="font-display text-2xl">
+                Solicitação Enviada!
+              </CardTitle>
+              <CardDescription className="text-muted-foreground">
+                Sua solicitação de acesso foi enviada com sucesso. Um administrador do sistema irá analisar e você receberá um email quando for aprovada.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="p-4 bg-muted/50 rounded-lg mb-6">
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Email:</span>
+                  <span className="font-medium">{email}</span>
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate('/auth')}
+              >
+                Voltar para Login
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30 p-4">
@@ -268,14 +361,17 @@ export default function AuthRegister() {
               <LayoutDashboard className="w-7 h-7 text-primary" />
             </div>
             <CardTitle className="font-display text-2xl">
-              Crie sua conta
+              {mode === 'request' ? 'Solicitar Acesso' : 'Crie sua conta'}
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              Para criar uma conta, você precisa ter sido convidado por um administrador
+              {mode === 'request' 
+                ? 'Preencha seus dados para solicitar acesso ao sistema. Um administrador irá analisar sua solicitação.'
+                : 'Para criar uma conta, você precisa ter sido convidado por um administrador'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={mode === 'request' ? handleRequestAccess : handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="fullName">Nome completo</Label>
                 <div className="relative">
@@ -304,12 +400,16 @@ export default function AuthRegister() {
                     onChange={(e) => {
                       setEmail(e.target.value);
                       // Reset states when email changes
-                      setEmailChecked(false);
-                      setEmailError(null);
-                      setInviteInfo(null);
+                      if (!tokenValidated) {
+                        setEmailChecked(false);
+                        setEmailError(null);
+                        setInviteInfo(null);
+                        setMode('checking');
+                      }
                     }}
                     onBlur={handleEmailBlur}
                     className="pl-10"
+                    disabled={tokenValidated}
                   />
                   {checkingEmail && (
                     <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
@@ -317,9 +417,9 @@ export default function AuthRegister() {
                 </div>
                 
                 {/* Email validation feedback */}
-                {emailChecked && inviteInfo && (
-                  <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                    <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+                {mode === 'invite' && inviteInfo && (
+                  <div className="p-3 bg-primary/10 border border-primary/30 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-primary">
                       <CheckCircle2 className="h-4 w-4" />
                       <span>Convite válido encontrado!</span>
                     </div>
@@ -328,6 +428,18 @@ export default function AuthRegister() {
                       <span className="text-muted-foreground">Você será membro de:</span>
                       <span className="font-semibold">{inviteInfo.environmentName}</span>
                     </div>
+                  </div>
+                )}
+
+                {mode === 'request' && emailChecked && !emailError && (
+                  <div className="p-3 bg-muted border border-border rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>Nenhum convite encontrado para este email.</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Você pode solicitar acesso ao sistema preenchendo o formulário abaixo.
+                    </p>
                   </div>
                 )}
                 
@@ -341,43 +453,84 @@ export default function AuthRegister() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
-                  />
+              {/* Company name field - only for request mode */}
+              {mode === 'request' && (
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">Empresa (opcional)</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="companyName"
+                      type="text"
+                      placeholder="Nome da sua empresa"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Mínimo de 6 caracteres
-                </p>
-              </div>
+              )}
 
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                disabled={loading || !canSubmit}
-              >
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    Criar conta
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </Button>
-              
-              {!canSubmit && emailChecked && !emailError && (
+              {/* Password field - only for invite mode */}
+              {mode === 'invite' && (
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Mínimo de 6 caracteres
+                  </p>
+                </div>
+              )}
+
+              {mode === 'invite' && (
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={loading || !canSubmit}
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      Criar conta
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {mode === 'request' && (
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={createAccessRequest.isPending || !email || !fullName}
+                >
+                  {createAccessRequest.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      Enviar Solicitação
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {mode === 'checking' && !tokenFromUrl && (
                 <p className="text-xs text-muted-foreground text-center">
-                  Digite seu email e aguarde a validação do convite
+                  Digite seu email para verificar se você possui um convite
                 </p>
               )}
             </form>
