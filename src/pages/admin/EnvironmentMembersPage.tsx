@@ -35,6 +35,7 @@ import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Clock, Mail, User } fr
 import { useEnvironmentPermissions, PermissionLevel, EnvironmentSection, EnvironmentMember } from '@/hooks/useEnvironmentPermissions';
 import { usePendingInvites } from '@/hooks/usePendingInvites';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
+import { useAuth } from '@/hooks/useAuth';
 import { InviteMemberDialog } from '@/components/admin/InviteMemberDialog';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -59,6 +60,9 @@ const MEMBER_PERMISSION_OPTIONS: { value: PermissionLevel; label: string; icon: 
 type MemberRole = 'admin' | 'member';
 
 export default function EnvironmentMembersPage() {
+  const { user } = useAuth();
+  const currentUserId = user?.id;
+
   const {
     environmentMembers,
     memberCount,
@@ -69,6 +73,7 @@ export default function EnvironmentMembersPage() {
     isUpdating,
     isRemoving,
     canEdit: canEditPermissions,
+    isEnvironmentAdmin,
   } = useEnvironmentPermissions();
 
   const { userEnvironments, currentEnvironmentId } = useEnvironment();
@@ -158,7 +163,8 @@ export default function EnvironmentMembersPage() {
   };
 
   const totalSlots = memberCount + pendingInviteCount;
-  const canInvite = totalSlots < 30 && canEditPermissions;
+  // Only admins can invite members
+  const canInvite = totalSlots < 30 && isEnvironmentAdmin;
 
   // Sort members: admins first, then regular members
   const displayMembers = [...environmentMembers].sort((a, b) => {
@@ -191,7 +197,7 @@ export default function EnvironmentMembersPage() {
             <Badge variant="outline" className="text-sm py-1 px-3">
               {displayMembers.length} membros {pendingInviteCount > 0 && `+ ${pendingInviteCount} pendentes`} / 30
             </Badge>
-            {canEditPermissions && (
+            {isEnvironmentAdmin && (
               <Button 
                 onClick={() => setInviteDialogOpen(true)}
                 disabled={!canInvite}
@@ -241,7 +247,7 @@ export default function EnvironmentMembersPage() {
                         {format(new Date(invite.expires_at), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell className="text-right">
-                        {canEditPermissions && (
+                        {isEnvironmentAdmin && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -289,7 +295,7 @@ export default function EnvironmentMembersPage() {
                 <p className="text-muted-foreground mt-2">
                   Convide até 30 pessoas para colaborar neste ambiente
                 </p>
-                {canEditPermissions && (
+                {isEnvironmentAdmin && (
                   <Button 
                     className="mt-4"
                     onClick={() => setInviteDialogOpen(true)}
@@ -317,6 +323,7 @@ export default function EnvironmentMembersPage() {
                   <TableBody>
                     {displayMembers.map(member => {
                       const isAdmin = member.is_environment_admin;
+                      const isSelf = member.user_id === currentUserId;
                       
                       return (
                         <TableRow key={member.user_id} className={isAdmin ? 'bg-primary/5' : undefined}>
@@ -325,6 +332,9 @@ export default function EnvironmentMembersPage() {
                               <div className="min-w-0">
                                 <p className="font-medium truncate flex items-center gap-2">
                                   {member.full_name || 'Usuário'}
+                                  {isSelf && (
+                                    <Badge variant="outline" className="text-xs ml-1">Você</Badge>
+                                  )}
                                 </p>
                                 <p className="text-sm text-muted-foreground truncate">
                                   {member.email || 'Email não disponível'}
@@ -338,7 +348,7 @@ export default function EnvironmentMembersPage() {
                             <Select
                               value={isAdmin ? 'admin' : 'member'}
                               onValueChange={(value) => handleRoleChange(member, value as MemberRole)}
-                              disabled={isUpdating || !canEditPermissions}
+                              disabled={isUpdating || !isEnvironmentAdmin || isSelf}
                             >
                               <SelectTrigger className="w-[130px]">
                                 <SelectValue />
@@ -380,7 +390,7 @@ export default function EnvironmentMembersPage() {
                                     onValueChange={(value) => 
                                       handlePermissionChange(member.user_id, section.key, value as PermissionLevel)
                                     }
-                                    disabled={isUpdating || !canEditPermissions}
+                                    disabled={isUpdating || !isEnvironmentAdmin || isSelf}
                                   >
                                     <SelectTrigger className="w-[105px] mx-auto">
                                       <SelectValue />
@@ -404,7 +414,7 @@ export default function EnvironmentMembersPage() {
                           
                           
                           <TableCell>
-                            {canEditPermissions && (
+                            {isEnvironmentAdmin && !isSelf && (
                               <Button
                                 variant="ghost"
                                 size="icon"
