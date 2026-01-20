@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
@@ -35,9 +35,13 @@ const getAuthErrorMessage = (error: Error): string => {
 interface InviteInfo {
   environmentName: string;
   environmentOwnerId: string;
+  email?: string;
 }
 
 export default function AuthRegister() {
+  const [searchParams] = useSearchParams();
+  const tokenFromUrl = searchParams.get('token');
+  
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,6 +50,7 @@ export default function AuthRegister() {
   const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailChecked, setEmailChecked] = useState(false);
+  const [tokenValidated, setTokenValidated] = useState(false);
   const { signUp, user } = useAuth();
   const navigate = useNavigate();
 
@@ -55,8 +60,91 @@ export default function AuthRegister() {
     }
   }, [user, navigate]);
 
-  // Validate email against pending invites
+  // Validate token from URL on mount
+  useEffect(() => {
+    if (tokenFromUrl) {
+      validateInviteToken(tokenFromUrl);
+    }
+  }, [tokenFromUrl]);
+
+  // Validate invite token from URL
+  const validateInviteToken = async (token: string) => {
+    setCheckingEmail(true);
+    setEmailError(null);
+    setInviteInfo(null);
+    
+    try {
+      const { data: invite, error } = await supabase
+        .from('pending_environment_invites')
+        .select('email, environment_owner_id, environment_id, expires_at, status')
+        .eq('invite_token', token)
+        .eq('status', 'invited')
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error validating token:', error);
+        setEmailError('Erro ao validar convite. Tente novamente.');
+        setEmailChecked(true);
+        return;
+      }
+
+      if (!invite) {
+        setEmailError('Convite inválido, expirado ou já utilizado. Solicite um novo convite ao administrador.');
+        setEmailChecked(true);
+        return;
+      }
+
+      // Pre-fill email from invite
+      setEmail(invite.email);
+      setTokenValidated(true);
+
+      // Get environment name
+      let environmentName = 'Ambiente';
+      
+      if (invite.environment_id) {
+        const { data: env } = await supabase
+          .from('environments')
+          .select('name')
+          .eq('id', invite.environment_id)
+          .maybeSingle();
+        
+        if (env?.name) {
+          environmentName = env.name;
+        }
+      }
+      
+      // Fallback to owner profile
+      if (environmentName === 'Ambiente') {
+        const { data: ownerProfile } = await supabase
+          .from('profiles')
+          .select('company, full_name')
+          .eq('user_id', invite.environment_owner_id)
+          .maybeSingle();
+        
+        environmentName = ownerProfile?.company || ownerProfile?.full_name || 'Ambiente';
+      }
+
+      setInviteInfo({
+        environmentName,
+        environmentOwnerId: invite.environment_owner_id,
+        email: invite.email,
+      });
+      setEmailChecked(true);
+    } catch (err) {
+      console.error('Error validating token:', err);
+      setEmailError('Erro ao validar convite. Tente novamente.');
+      setEmailChecked(true);
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
+
+  // Validate email against pending invites (only if no token in URL)
   const checkEmailInvite = async (emailToCheck: string) => {
+    // Skip if already validated via token
+    if (tokenValidated) return;
+    
     if (!emailToCheck || !emailToCheck.includes('@')) {
       setInviteInfo(null);
       setEmailError(null);
@@ -73,8 +161,9 @@ export default function AuthRegister() {
       // Check if there's a pending invite for this email
       const { data: invite, error } = await supabase
         .from('pending_environment_invites')
-        .select('environment_owner_id, expires_at')
+        .select('environment_owner_id, environment_id, expires_at, status')
         .eq('email', emailToCheck.toLowerCase())
+        .eq('status', 'invited')
         .gt('expires_at', new Date().toISOString())
         .maybeSingle();
 
@@ -113,7 +202,7 @@ export default function AuthRegister() {
   };
 
   const handleEmailBlur = () => {
-    if (email.trim()) {
+    if (email.trim() && !tokenValidated) {
       checkEmailInvite(email.trim());
     }
   };

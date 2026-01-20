@@ -6,6 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Generate a secure random token
+function generateInviteToken(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -69,7 +76,7 @@ serve(async (req) => {
     // Check if current user is the environment owner
     const { data: envData } = await adminClient
       .from('environments')
-      .select('owner_user_id')
+      .select('owner_user_id, name')
       .eq('id', environment_id)
       .single();
 
@@ -97,6 +104,15 @@ serve(async (req) => {
     if ((memberCount || 0) >= 30) {
       throw new Error("Limite de 30 membros atingido neste ambiente");
     }
+
+    // Get inviter's profile name
+    const { data: inviterProfile } = await adminClient
+      .from('profiles')
+      .select('full_name, company')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const inviterName = inviterProfile?.full_name || inviterProfile?.company || 'Um administrador';
 
     // Find user by email using admin client
     const { data: usersData, error: listError } = await adminClient.auth.admin.listUsers();
@@ -171,29 +187,39 @@ serve(async (req) => {
       );
 
     } else {
-      // ===== USER DOES NOT EXIST - Create pending invite =====
+      // ===== USER DOES NOT EXIST - Create pending invite with token and send email =====
       
       // Check if there's already a pending invite for this email in this environment
       const { data: existingInvite } = await adminClient
         .from('pending_environment_invites')
-        .select('id')
+        .select('id, status')
         .eq('email', email.toLowerCase())
-        .eq('environment_owner_id', envData?.owner_user_id || user.id)
+        .eq('environment_id', environment_id)
+        .eq('status', 'invited')
         .maybeSingle();
 
       if (existingInvite) {
-        throw new Error("Já existe um convite pendente para este email");
+        throw new Error("Já existe um convite pendente para este email neste ambiente");
       }
 
-      // Create pending invite record
-      // Note: We store environment_owner_id to later create environment_roles entry
-      // The trigger on user registration will need to create the environment_roles entry
-      const { error: pendingError } = await adminClient
+      // Generate unique invite token
+      const inviteToken = generateInviteToken();
+
+      // Get environment name for email
+      const environmentName = envData?.name || 
+        (await adminClient.from('profiles').select('company').eq('user_id', envData?.owner_user_id).maybeSingle())?.data?.company ||
+        'Ambiente';
+
+      // Create pending invite record with token and environment_id
+      const { data: inviteData, error: pendingError } = await adminClient
         .from('pending_environment_invites')
         .insert({
           email: email.toLowerCase(),
           environment_owner_id: envData?.owner_user_id || user.id,
+          environment_id: environment_id,
           invited_by: user.id,
+          invite_token: inviteToken,
+          status: 'invited',
           environment_role: normalizedRole,
           perm_executive_dashboard: isAdminRole ? 'admin' : (permissions?.executive_dashboard || 'view'),
           perm_reports: isAdminRole ? 'admin' : (permissions?.reports || 'view'),
@@ -202,20 +228,53 @@ serve(async (req) => {
           perm_media_resources: isAdminRole ? 'admin' : (permissions?.media_resources || 'view'),
           perm_taxonomy: isAdminRole ? 'admin' : (permissions?.taxonomy || 'view'),
           perm_library: isAdminRole ? 'admin' : (permissions?.library || 'view'),
-        });
+        })
+        .select()
+        .single();
 
       if (pendingError) {
         console.error("Pending invite error:", pendingError);
         throw new Error(pendingError.message || "Erro ao criar convite pendente");
       }
 
-      console.log(`Invite created for email: ${email.toLowerCase()} with role ${normalizedRole}`);
+      console.log(`Invite created for email: ${email.toLowerCase()} with role ${normalizedRole} and token ${inviteToken.substring(0, 8)}...`);
+
+      // Send invite email
+      let emailSent = false;
+      try {
+        const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-invite-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            email: email.toLowerCase(),
+            inviteToken: inviteToken,
+            environmentName: environmentName,
+            inviterName: inviterName,
+          }),
+        });
+
+        if (emailResponse.ok) {
+          emailSent = true;
+          console.log(`Invite email sent to ${email}`);
+        } else {
+          const errorData = await emailResponse.json();
+          console.error("Email send error:", errorData);
+        }
+      } catch (emailError) {
+        console.error("Failed to send invite email:", emailError);
+      }
 
       return new Response(
         JSON.stringify({ 
           success: true, 
           type: 'invite_sent',
-          message: 'Convite criado! O usuário pode criar conta em /auth/register'
+          emailSent: emailSent,
+          message: emailSent 
+            ? 'Convite enviado por email! O usuário receberá um link para criar a conta.'
+            : 'Convite criado! O usuário pode criar conta em /auth/register com o email convidado.'
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

@@ -2882,6 +2882,7 @@ export type Database = {
         Row: {
           created_at: string | null
           email: string
+          environment_id: string | null
           environment_owner_id: string
           environment_role: Database["public"]["Enums"]["environment_role"]
           expires_at: string | null
@@ -2910,10 +2911,12 @@ export type Database = {
           perm_taxonomy:
             | Database["public"]["Enums"]["environment_permission_level"]
             | null
+          status: string
         }
         Insert: {
           created_at?: string | null
           email: string
+          environment_id?: string | null
           environment_owner_id: string
           environment_role?: Database["public"]["Enums"]["environment_role"]
           expires_at?: string | null
@@ -2942,10 +2945,12 @@ export type Database = {
           perm_taxonomy?:
             | Database["public"]["Enums"]["environment_permission_level"]
             | null
+          status?: string
         }
         Update: {
           created_at?: string | null
           email?: string
+          environment_id?: string | null
           environment_owner_id?: string
           environment_role?: Database["public"]["Enums"]["environment_role"]
           expires_at?: string | null
@@ -2974,8 +2979,17 @@ export type Database = {
           perm_taxonomy?:
             | Database["public"]["Enums"]["environment_permission_level"]
             | null
+          status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pending_environment_invites_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       performance_alerts: {
         Row: {
@@ -4144,6 +4158,7 @@ export type Database = {
         Args: { _change_log?: string; _plan_id: string; _user_id: string }
         Returns: string
       }
+      expire_pending_invites: { Args: never; Returns: number }
       generate_creative_id: { Args: never; Returns: string }
       generate_slug: { Args: { input_text: string }; Returns: string }
       generate_unique_plan_slug: {
