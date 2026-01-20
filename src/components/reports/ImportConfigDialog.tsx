@@ -158,7 +158,6 @@ export function ImportConfigDialog({
         media_plan_id: planId,
         source_url: sourceUrl,
         source_name: sourceName || 'Google Sheets',
-        user_id: user.id,
       });
 
       setImportId(result.id);
@@ -191,7 +190,6 @@ export function ImportConfigDialog({
 
       await saveMappings.mutateAsync({
         import_id: importId,
-        user_id: user.id,
         mappings: mappingArray,
       });
 
