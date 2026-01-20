@@ -12,7 +12,7 @@ import {
   Download,
   Calendar,
   AlertTriangle,
-  Users,
+  Shield,
   History,
   BarChart3,
   ChevronDown,
@@ -72,8 +72,8 @@ import {
 } from '@/components/ui/animated-collapsible';
 import { motion } from 'framer-motion';
 import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization';
-import { RoleBadge } from '@/components/media-plan/RoleBadge';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
+import { PlanPermissionsDialog } from '@/components/media-plan/PlanPermissionsDialog';
 import { SaveVersionDropdownItem } from '@/components/media-plan/SaveVersionDropdownItem';
 import { VersionHistoryDialog } from '@/components/media-plan/VersionHistoryDialog';
 import { usePlanAlerts } from '@/hooks/usePlanAlerts';
@@ -122,6 +122,7 @@ export default function MediaPlanDetail() {
   const [lineToDelete, setLineToDelete] = useState<MediaLine | null>(null);
   // Team dialog removed - managed at environment level now
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
   const [filteredLines, setFilteredLines] = useState<MediaLine[]>([]);
   const [filterByAlerts, setFilterByAlerts] = useState(false);
   const [alertsVisible, setAlertsVisible] = useState(false);
@@ -690,7 +691,6 @@ export default function MediaPlanDetail() {
                   onStatusChange={handleStatusChange}
                   disabled={!canEdit}
                 />
-                <RoleBadge planId={planId!} />
               </div>
               <p className="text-muted-foreground">
                 {plan.client || 'Sem cliente'} • {plan.campaign || 'Sem campanha'}
@@ -764,6 +764,15 @@ export default function MediaPlanDetail() {
                   Histórico de Versões
                 </DropdownMenuItem>
                 <SaveVersionDropdownItem planId={planId!} disabled={!canEdit} />
+                {isEnvironmentAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setPermissionsDialogOpen(true)}>
+                      <Shield className="w-4 h-4 mr-2" />
+                      Gerenciar Acessos
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => exportMediaPlanToXlsx({
@@ -1232,6 +1241,16 @@ export default function MediaPlanDetail() {
         onOpenChange={setVersionHistoryOpen}
         onRestored={fetchData}
       />
+
+      {/* Plan Permissions Dialog */}
+      {planId && (
+        <PlanPermissionsDialog
+          open={permissionsDialogOpen}
+          onOpenChange={setPermissionsDialogOpen}
+          planId={planId}
+          planName={plan?.name || ''}
+        />
+      )}
     </DashboardLayout>
   );
 }

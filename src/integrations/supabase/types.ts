@@ -3232,40 +3232,37 @@ export type Database = {
           },
         ]
       }
-      plan_roles: {
+      plan_permissions: {
         Row: {
-          accepted_at: string | null
-          created_at: string | null
+          created_at: string
+          created_by: string | null
           id: string
-          invited_at: string | null
-          invited_by: string | null
           media_plan_id: string
-          role: Database["public"]["Enums"]["app_role"]
+          permission_level: Database["public"]["Enums"]["plan_permission_level"]
+          updated_at: string
           user_id: string
         }
         Insert: {
-          accepted_at?: string | null
-          created_at?: string | null
+          created_at?: string
+          created_by?: string | null
           id?: string
-          invited_at?: string | null
-          invited_by?: string | null
           media_plan_id: string
-          role: Database["public"]["Enums"]["app_role"]
+          permission_level?: Database["public"]["Enums"]["plan_permission_level"]
+          updated_at?: string
           user_id: string
         }
         Update: {
-          accepted_at?: string | null
-          created_at?: string | null
+          created_at?: string
+          created_by?: string | null
           id?: string
-          invited_at?: string | null
-          invited_by?: string | null
           media_plan_id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          permission_level?: Database["public"]["Enums"]["plan_permission_level"]
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "plan_roles_media_plan_id_fkey"
+            foreignKeyName: "plan_permissions_media_plan_id_fkey"
             columns: ["media_plan_id"]
             isOneToOne: false
             referencedRelation: "media_plans"
@@ -3899,7 +3896,6 @@ export type Database = {
           from_status_id: string | null
           id: string
           is_system: boolean | null
-          required_roles: Database["public"]["Enums"]["app_role"][]
           requires_comment: boolean | null
           to_status_id: string
           user_id: string
@@ -3910,7 +3906,6 @@ export type Database = {
           from_status_id?: string | null
           id?: string
           is_system?: boolean | null
-          required_roles?: Database["public"]["Enums"]["app_role"][]
           requires_comment?: boolean | null
           to_status_id: string
           user_id: string
@@ -3921,7 +3916,6 @@ export type Database = {
           from_status_id?: string | null
           id?: string
           is_system?: boolean | null
-          required_roles?: Database["public"]["Enums"]["app_role"][]
           requires_comment?: boolean | null
           to_status_id?: string
           user_id?: string
@@ -4202,6 +4196,7 @@ export type Database = {
         Args: { _owner_user_id: string }
         Returns: boolean
       }
+      can_edit_plan: { Args: { _plan_id: string }; Returns: boolean }
       can_invite_environment_member: {
         Args: { _environment_owner_id: string }
         Returns: boolean
@@ -4239,6 +4234,7 @@ export type Database = {
         Args: { _environment_id: string }
         Returns: boolean
       }
+      can_view_plan: { Args: { _plan_id: string }; Returns: boolean }
       cleanup_old_auto_backups: { Args: never; Returns: number }
       count_environment_members: {
         Args: { _environment_owner_id: string }
@@ -4261,6 +4257,10 @@ export type Database = {
       generate_slug: { Args: { input_text: string }; Returns: string }
       generate_unique_plan_slug: {
         Args: { p_current_id?: string; p_name: string; p_user_id: string }
+        Returns: string
+      }
+      get_effective_plan_permission: {
+        Args: { _plan_id: string; _user_id?: string }
         Returns: string
       }
       get_environment_id_for_user: {
@@ -4330,15 +4330,6 @@ export type Database = {
           role_read: boolean
         }[]
       }
-      get_valid_transitions: {
-        Args: { _from_status: string; _plan_id: string; _user_id: string }
-        Returns: {
-          required_roles: Database["public"]["Enums"]["app_role"][]
-          requires_comment: boolean
-          to_status: string
-          to_status_id: string
-        }[]
-      }
       has_environment_access: {
         Args: { _environment_id: string; _permission?: string }
         Returns: boolean
@@ -4364,14 +4355,6 @@ export type Database = {
         Args: { check_user_id: string; required_roles?: string[] }
         Returns: boolean
       }
-      has_plan_role: {
-        Args: {
-          _plan_id: string
-          _roles?: Database["public"]["Enums"]["app_role"][]
-          _user_id: string
-        }
-        Returns: boolean
-      }
       is_environment_admin: {
         Args: { _environment_owner_id: string; _user_id: string }
         Returns: boolean
@@ -4388,7 +4371,6 @@ export type Database = {
       is_system_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "owner" | "editor" | "viewer" | "approver"
       environment_permission_level: "none" | "view" | "edit" | "admin"
       environment_role: "owner" | "admin" | "user"
       environment_section:
@@ -4399,6 +4381,7 @@ export type Database = {
         | "media_resources"
         | "taxonomy"
         | "library"
+      plan_permission_level: "none" | "view" | "edit"
       system_role: "system_admin" | "user"
     }
     CompositeTypes: {
@@ -4527,7 +4510,6 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["owner", "editor", "viewer", "approver"],
       environment_permission_level: ["none", "view", "edit", "admin"],
       environment_role: ["owner", "admin", "user"],
       environment_section: [
@@ -4539,6 +4521,7 @@ export const Constants = {
         "taxonomy",
         "library",
       ],
+      plan_permission_level: ["none", "view", "edit"],
       system_role: ["system_admin", "user"],
     },
   },

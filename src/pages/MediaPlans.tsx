@@ -24,7 +24,7 @@ import {
 import { LoadingPage } from '@/components/ui/loading-dots';
 import { MediaPlan } from '@/types/media';
 import { StatusSelector } from '@/components/media-plan/StatusSelector';
-import { RoleBadgeCompact } from '@/components/media-plan/RoleBadge';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -328,7 +328,6 @@ export default function MediaPlans() {
                         <h3 className="font-display font-semibold text-lg group-hover:text-primary transition-colors">
                           {plan.name}
                         </h3>
-                        <RoleBadgeCompact planId={plan.id} />
                       </div>
                       <p className="text-sm text-muted-foreground mb-4">
                         {plan.client || 'Sem cliente'} • {plan.campaign || 'Sem campanha'}
