@@ -165,8 +165,16 @@ export default function EnvironmentMembersPage() {
   const totalSlots = memberCount + pendingInviteCount;
   const canInvite = totalSlots < 30 && canEditPermissions;
 
-  // Filter out the environment owner from the members list (they have implicit full access)
-  const displayMembers = environmentMembers.filter(m => m.user_id !== environmentOwnerUserId);
+  // Sort members: owner first, then admins, then regular members
+  const displayMembers = [...environmentMembers].sort((a, b) => {
+    const aIsOwner = a.user_id === environmentOwnerUserId;
+    const bIsOwner = b.user_id === environmentOwnerUserId;
+    if (aIsOwner && !bIsOwner) return -1;
+    if (!aIsOwner && bIsOwner) return 1;
+    if (a.is_environment_admin && !b.is_environment_admin) return -1;
+    if (!a.is_environment_admin && b.is_environment_admin) return 1;
+    return (a.full_name || '').localeCompare(b.full_name || '');
+  });
 
   return (
     <DashboardLayout>
@@ -318,15 +326,18 @@ export default function EnvironmentMembersPage() {
                       const isAdmin = member.is_environment_admin;
                       
                       return (
-                        <TableRow key={member.user_id} className={isAdmin ? 'bg-primary/5' : undefined}>
+                        <TableRow key={member.user_id} className={isOwner ? 'bg-amber-500/5' : isAdmin ? 'bg-primary/5' : undefined}>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              {isOwner && (
-                                <Crown className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                              )}
                               <div className="min-w-0">
-                                <p className="font-medium truncate">
+                                <p className="font-medium truncate flex items-center gap-2">
                                   {member.full_name || 'Usuário'}
+                                  {isOwner && (
+                                    <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
+                                      <Crown className="h-3 w-3 mr-1" />
+                                      Proprietário
+                                    </Badge>
+                                  )}
                                 </p>
                                 <p className="text-sm text-muted-foreground truncate">
                                   {member.email || 'Email não disponível'}
@@ -337,29 +348,36 @@ export default function EnvironmentMembersPage() {
                           
                           {/* Role Selector */}
                           <TableCell>
-                            <Select
-                              value={isAdmin ? 'admin' : 'member'}
-                              onValueChange={(value) => handleRoleChange(member, value as MemberRole)}
-                              disabled={isUpdating || !canEditPermissions || isOwner}
-                            >
-                              <SelectTrigger className="w-[130px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="admin">
-                                  <div className="flex items-center gap-2">
-                                    <Shield className="h-3 w-3 text-primary" />
-                                    Administrador
-                                  </div>
-                                </SelectItem>
-                                <SelectItem value="member">
-                                  <div className="flex items-center gap-2">
-                                    <User className="h-3 w-3" />
-                                    Membro
-                                  </div>
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
+                            {isOwner ? (
+                              <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
+                                <Crown className="h-3 w-3 mr-1" />
+                                Proprietário
+                              </Badge>
+                            ) : (
+                              <Select
+                                value={isAdmin ? 'admin' : 'member'}
+                                onValueChange={(value) => handleRoleChange(member, value as MemberRole)}
+                                disabled={isUpdating || !canEditPermissions}
+                              >
+                                <SelectTrigger className="w-[130px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="admin">
+                                    <div className="flex items-center gap-2">
+                                      <Shield className="h-3 w-3 text-primary" />
+                                      Administrador
+                                    </div>
+                                  </SelectItem>
+                                  <SelectItem value="member">
+                                    <div className="flex items-center gap-2">
+                                      <User className="h-3 w-3" />
+                                      Membro
+                                    </div>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
                           </TableCell>
                           
                           {/* Section Permissions */}
@@ -369,7 +387,12 @@ export default function EnvironmentMembersPage() {
                             
                             return (
                               <TableCell key={section.key} className="text-center">
-                                {isAdmin ? (
+                                {isOwner ? (
+                                  <Badge variant="outline" className="opacity-60 text-amber-600 border-amber-300">
+                                    <Crown className="h-3 w-3 mr-1" />
+                                    Total
+                                  </Badge>
+                                ) : isAdmin ? (
                                   // Admin has full access - show disabled badge
                                   <Badge variant="default" className="opacity-60">
                                     <Shield className="h-3 w-3 mr-1" />
@@ -382,7 +405,7 @@ export default function EnvironmentMembersPage() {
                                     onValueChange={(value) => 
                                       handlePermissionChange(member.user_id, section.key, value as PermissionLevel)
                                     }
-                                    disabled={isUpdating || !canEditPermissions || isOwner}
+                                    disabled={isUpdating || !canEditPermissions}
                                   >
                                     <SelectTrigger className="w-[105px] mx-auto">
                                       <SelectValue />
