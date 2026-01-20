@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { useEffectiveUserId } from './useEffectiveUserId';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { toast } from 'sonner';
 import { useSoftDeleteMutations, filterSoftDeleteItems } from './useSoftDelete';
 
@@ -11,6 +11,7 @@ export interface Format {
   name: string;
   is_system: boolean;
   user_id: string;
+  environment_id?: string;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
@@ -22,6 +23,7 @@ export interface FormatCreativeType {
   format_id: string;
   name: string;
   user_id: string;
+  environment_id?: string;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
@@ -39,6 +41,7 @@ export interface CreativeTypeSpecification {
   max_weight: number | null;
   weight_unit: string | null;
   user_id: string;
+  environment_id?: string;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
@@ -92,31 +95,35 @@ export interface FormatWithHierarchy extends Format {
 // Hook for Formats
 export function useFormats() {
   const { user } = useAuth();
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
   const { softDelete, restore, permanentDelete } = useSoftDeleteMutations('formats', 'formats', 'Formato');
 
   const query = useQuery({
-    queryKey: ['formats', effectiveUserId],
+    queryKey: ['formats', currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('formats')
         .select('*')
-        .or(`user_id.eq.${effectiveUserId},is_system.eq.true`)
+        .or(`environment_id.eq.${currentEnvironmentId},is_system.eq.true`)
         .is('deleted_at', null)
         .order('is_system', { ascending: false })
         .order('name', { ascending: true });
       if (error) throw error;
       return data as Format[];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 
   const create = useMutation({
     mutationFn: async (name: string) => {
       const { data, error } = await supabase
         .from('formats')
-        .insert({ name: name.trim(), user_id: effectiveUserId! })
+        .insert({ 
+          name: name.trim(), 
+          user_id: user!.id,
+          environment_id: currentEnvironmentId!
+        })
         .select()
         .single();
       if (error) throw error;
@@ -170,7 +177,8 @@ export function useFormats() {
         .from('formats')
         .insert({ 
           name: `${sourceFormat.name} (cópia)`, 
-          user_id: effectiveUserId!,
+          user_id: user!.id,
+          environment_id: currentEnvironmentId!,
           is_system: false
         })
         .select()
@@ -194,7 +202,8 @@ export function useFormats() {
           .insert({
             format_id: newFormat.id,
             name: ct.name,
-            user_id: effectiveUserId!
+            user_id: user!.id,
+            environment_id: currentEnvironmentId!
           })
           .select()
           .single();
@@ -222,7 +231,8 @@ export function useFormats() {
               duration_unit: spec.duration_unit,
               max_weight: spec.max_weight,
               weight_unit: spec.weight_unit,
-              user_id: effectiveUserId!
+              user_id: user!.id,
+              environment_id: currentEnvironmentId!
             })
             .select()
             .single();
@@ -242,7 +252,7 @@ export function useFormats() {
               name: cf.name,
               max_characters: cf.max_characters,
               observation: cf.observation,
-              user_id: effectiveUserId!
+              user_id: user!.id
             });
           }
 
@@ -261,7 +271,7 @@ export function useFormats() {
               unit: dim.unit,
               description: dim.description,
               observation: dim.observation,
-              user_id: effectiveUserId!
+              user_id: user!.id
             });
           }
 
@@ -275,7 +285,7 @@ export function useFormats() {
             await supabase.from('specification_extensions').insert({
               specification_id: newSpec.id,
               extension_id: ext.extension_id,
-              user_id: effectiveUserId!
+              user_id: user!.id
             });
           }
         }
@@ -312,7 +322,7 @@ export function useFormats() {
 // Hook for Creative Types (within a format)
 export function useFormatCreativeTypes(formatId?: string) {
   const { user } = useAuth();
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -338,7 +348,12 @@ export function useFormatCreativeTypes(formatId?: string) {
     mutationFn: async ({ formatId, name }: { formatId: string; name: string }) => {
       const { data, error } = await supabase
         .from('format_creative_types')
-        .insert({ format_id: formatId, name: name.trim(), user_id: effectiveUserId! })
+        .insert({ 
+          format_id: formatId, 
+          name: name.trim(), 
+          user_id: user!.id,
+          environment_id: currentEnvironmentId!
+        })
         .select()
         .single();
       if (error) throw error;
@@ -384,7 +399,7 @@ export function useFormatCreativeTypes(formatId?: string) {
 // Hook for Specifications
 export function useCreativeTypeSpecifications(creativeTypeId?: string) {
   const { user } = useAuth();
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -426,7 +441,8 @@ export function useCreativeTypeSpecifications(creativeTypeId?: string) {
           duration_unit: params.durationUnit || null,
           max_weight: params.maxWeight || null,
           weight_unit: params.weightUnit || null,
-          user_id: effectiveUserId!,
+          user_id: user!.id,
+          environment_id: currentEnvironmentId!,
         })
         .select()
         .single();
@@ -489,7 +505,6 @@ export function useCreativeTypeSpecifications(creativeTypeId?: string) {
 // Hook for Copy Fields
 export function useSpecificationCopyFields(specificationId?: string) {
   const { user } = useAuth();
-  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -520,7 +535,7 @@ export function useSpecificationCopyFields(specificationId?: string) {
           name: params.name.trim(),
           max_characters: params.maxCharacters || null,
           observation: params.observation?.trim() || null,
-          user_id: effectiveUserId!,
+          user_id: user!.id,
         })
         .select()
         .single();
@@ -574,7 +589,6 @@ export function useSpecificationCopyFields(specificationId?: string) {
 // Hook for Dimensions
 export function useSpecificationDimensions(specificationId?: string) {
   const { user } = useAuth();
-  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -605,7 +619,7 @@ export function useSpecificationDimensions(specificationId?: string) {
           width: params.width,
           height: params.height,
           unit: params.unit,
-          user_id: effectiveUserId!,
+          user_id: user!.id,
         })
         .select()
         .single();
@@ -679,7 +693,6 @@ export function useFileExtensions() {
 // Hook for Specification Extensions
 export function useSpecificationExtensions(specificationId?: string) {
   const { user } = useAuth();
-  const effectiveUserId = useEffectiveUserId();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -702,7 +715,7 @@ export function useSpecificationExtensions(specificationId?: string) {
         .insert({
           specification_id: specificationId,
           extension_id: extensionId,
-          user_id: effectiveUserId!,
+          user_id: user!.id,
         })
         .select()
         .single();
@@ -732,16 +745,16 @@ export function useSpecificationExtensions(specificationId?: string) {
 // Hook for full hierarchy view
 export function useFormatsHierarchy() {
   const { user } = useAuth();
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
 
   return useQuery({
-    queryKey: ['formats_hierarchy', effectiveUserId],
+    queryKey: ['formats_hierarchy', currentEnvironmentId],
     queryFn: async () => {
-      // Get all formats (user's own + system) - exclude soft-deleted
+      // Get all formats (environment's own + system) - exclude soft-deleted
       const { data: formats, error: formatsError } = await supabase
         .from('formats')
         .select('*')
-        .or(`user_id.eq.${effectiveUserId},is_system.eq.true`)
+        .or(`environment_id.eq.${currentEnvironmentId},is_system.eq.true`)
         .is('deleted_at', null)
         .order('is_system', { ascending: false })
         .order('name', { ascending: true });
@@ -821,6 +834,6 @@ export function useFormatsHierarchy() {
 
       return result;
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 }

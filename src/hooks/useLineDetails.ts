@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { toast } from 'sonner';
 import { LineDetailType, FieldSchemaItem, MetadataSchemaItem } from './useLineDetailTypes';
 import { Json } from '@/integrations/supabase/types';
@@ -62,6 +63,7 @@ function parseMetadataSchema(data: Json | null): MetadataSchemaItem[] {
 
 export function useLineDetails(mediaLineId: string | undefined) {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -141,7 +143,7 @@ export function useLineDetails(mediaLineId: string | undefined) {
 
   const createDetailMutation = useMutation({
     mutationFn: async (data: { detail_type_id: string; name?: string; metadata?: Record<string, unknown> }) => {
-      if (!user?.id || !mediaLineId) throw new Error('User or line not found');
+      if (!user?.id || !mediaLineId || !currentEnvironmentId) throw new Error('User or line not found');
 
       const { data: result, error } = await supabase
         .from('line_details')
@@ -149,6 +151,7 @@ export function useLineDetails(mediaLineId: string | undefined) {
           media_line_id: mediaLineId,
           detail_type_id: data.detail_type_id,
           user_id: user.id,
+          environment_id: currentEnvironmentId,
           name: data.name || null,
           metadata: (data.metadata || {}) as Json,
         })
@@ -214,13 +217,14 @@ export function useLineDetails(mediaLineId: string | undefined) {
 
   const createItemMutation = useMutation({
     mutationFn: async (input: { line_detail_id: string; data: Record<string, unknown> }) => {
-      if (!user?.id) throw new Error('User not found');
+      if (!user?.id || !currentEnvironmentId) throw new Error('User not found');
 
       const { data: result, error } = await supabase
         .from('line_detail_items')
         .insert({
           line_detail_id: input.line_detail_id,
           user_id: user.id,
+          environment_id: currentEnvironmentId,
           data: input.data as Json,
         })
         .select()
@@ -284,7 +288,7 @@ export function useLineDetails(mediaLineId: string | undefined) {
 
   const upsertInsertionsMutation = useMutation({
     mutationFn: async (input: { item_id: string; insertions: { date: string; quantity: number }[] }) => {
-      if (!user?.id) throw new Error('User not found');
+      if (!user?.id || !currentEnvironmentId) throw new Error('User not found');
 
       // Delete existing insertions for this item
       await supabase
@@ -298,6 +302,7 @@ export function useLineDetails(mediaLineId: string | undefined) {
         .map(i => ({
           line_detail_item_id: input.item_id,
           user_id: user.id,
+          environment_id: currentEnvironmentId,
           insertion_date: i.date,
           quantity: i.quantity,
         }));

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
+import { useAuth } from "@/hooks/useAuth";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { toast } from "sonner";
 import type { DocumentStatus } from "@/types/finance";
 
@@ -38,32 +39,34 @@ interface CreateDocumentData {
 }
 
 export function useFinancialDocuments() {
-  const effectiveUserId = useEffectiveUserId();
+  const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
 
   const { data: documents = [], isLoading } = useQuery({
-    queryKey: ["financial-documents", effectiveUserId],
+    queryKey: ["financial-documents", currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("financial_documents")
         .select("*")
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .is("deleted_at", null)
         .order("due_date");
       if (error) throw error;
       return data;
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateDocumentData) => {
-      if (!effectiveUserId) throw new Error("User not authenticated");
+      if (!user?.id || !currentEnvironmentId) throw new Error("User not authenticated");
       const { error } = await supabase
         .from("financial_documents")
         .insert({
           ...data,
-          user_id: effectiveUserId,
+          user_id: user.id,
+          environment_id: currentEnvironmentId,
         });
       if (error) throw error;
     },
@@ -94,8 +97,8 @@ export function useFinancialDocuments() {
     mutationFn: async ({ id, status }: { id: string; status: DocumentStatus }) => {
       const updateData: Record<string, any> = { status };
       
-      if (status === 'approved' && effectiveUserId) {
-        updateData.approved_by = effectiveUserId;
+      if (status === 'approved' && user?.id) {
+        updateData.approved_by = user.id;
         updateData.approved_at = new Date().toISOString();
       }
       
