@@ -139,13 +139,13 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
       
       const { data, error } = await supabase
         .from('environment_roles')
-        .select('perm_executive_dashboard, perm_reports, perm_finance, perm_media_plans, perm_media_resources, perm_taxonomy, perm_library, role_read, role_edit, role_delete, role_invite')
+        .select('is_environment_admin, perm_executive_dashboard, perm_reports, perm_finance, perm_media_plans, perm_media_resources, perm_taxonomy, perm_library, role_read, role_edit, role_delete, role_invite')
         .eq('environment_id', currentEnvironmentId)
         .eq('user_id', currentUserId)
         .maybeSingle();
       
       if (error) return null;
-      return data as EnvironmentRole2 | null;
+      return data as (EnvironmentRole2 & { is_environment_admin?: boolean }) | null;
     },
     enabled: !!currentEnvironmentId && !!currentUserId,
     staleTime: 30 * 1000,
@@ -199,7 +199,8 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
   const isEnvironmentAdmin = useMemo(() => {
     if (isSystemAdmin || isEnvironmentOwner) return true;
     if (myRole) {
-      return myRole.role_edit && myRole.role_delete && myRole.role_invite;
+      // Use the explicit is_environment_admin flag from database
+      return myRole.is_environment_admin === true;
     }
     return false;
   }, [isSystemAdmin, isEnvironmentOwner, myRole]);

@@ -73,7 +73,7 @@ import {
 import { motion } from 'framer-motion';
 import { FunnelVisualization } from '@/components/media-plan/FunnelVisualization';
 import { RoleBadge } from '@/components/media-plan/RoleBadge';
-import { usePlanRoles } from '@/hooks/usePlanRoles';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { SaveVersionDropdownItem } from '@/components/media-plan/SaveVersionDropdownItem';
 import { VersionHistoryDialog } from '@/components/media-plan/VersionHistoryDialog';
 import { usePlanAlerts } from '@/hooks/usePlanAlerts';
@@ -137,8 +137,10 @@ export default function MediaPlanDetail() {
   const targets = useTargets();
   const statuses = useStatuses();
   
-  // Plan roles for permissions (use planId once resolved)
-  const { canEdit, canManageTeam, userRole, isLoadingRole } = usePlanRoles(planId);
+  // Environment-based permissions (replaces legacy usePlanRoles)
+  const { canEdit: environmentCanEdit, isEnvironmentAdmin } = useEnvironment();
+  const canEdit = environmentCanEdit('media_plans');
+  const canManageTeam = false; // Deprecated - managed at environment level
   
   // Element visibility
   const { elements, toggleVisibility, hideElement, isVisible } = usePlanElementsVisibility(planId);
@@ -686,7 +688,7 @@ export default function MediaPlanDetail() {
                 <StatusSelector
                   status={plan.status}
                   onStatusChange={handleStatusChange}
-                  disabled={isLoadingRole || !canEdit}
+                  disabled={!canEdit}
                 />
                 <RoleBadge planId={planId!} />
               </div>
@@ -731,13 +733,13 @@ export default function MediaPlanDetail() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="inline-flex">
-                    <Button onClick={() => setWizardOpen(true)} className="gap-2" disabled={isLoadingRole || !canEdit}>
+                    <Button onClick={() => setWizardOpen(true)} className="gap-2" disabled={!canEdit}>
                       <Plus className="w-4 h-4" />
                       Nova Linha
                     </Button>
                   </span>
                 </TooltipTrigger>
-                {!isLoadingRole && !canEdit && (
+                {!canEdit && (
                   <TooltipContent>
                     <p>Apenas proprietários e editores podem criar linhas</p>
                   </TooltipContent>
@@ -761,7 +763,7 @@ export default function MediaPlanDetail() {
                   <History className="w-4 h-4 mr-2" />
                   Histórico de Versões
                 </DropdownMenuItem>
-                <SaveVersionDropdownItem planId={planId!} disabled={isLoadingRole || !canEdit} />
+                <SaveVersionDropdownItem planId={planId!} disabled={!canEdit} />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => exportMediaPlanToXlsx({
@@ -785,7 +787,7 @@ export default function MediaPlanDetail() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => navigate(`/media-plans/${plan?.slug || planId}/edit`)}
-                  disabled={isLoadingRole || !canEdit}
+                  disabled={!canEdit}
                 >
                   <Settings2 className="w-4 h-4 mr-2" />
                   Editar Plano
