@@ -268,30 +268,40 @@ serve(async (req) => {
 
       // Send invite email
       let emailSent = false;
+      console.log(`Attempting to send invite email to ${email} via send-invite-email function...`);
       try {
+        const emailPayload = {
+          email: email.toLowerCase(),
+          inviteToken: inviteToken,
+          environmentName: environmentName,
+          inviterName: inviterName,
+          inviteType: 'environment_member',
+        };
+        console.log('Email payload:', JSON.stringify(emailPayload));
+        
         const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-invite-email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${supabaseServiceKey}`,
           },
-          body: JSON.stringify({
-            email: email.toLowerCase(),
-            inviteToken: inviteToken,
-            environmentName: environmentName,
-            inviterName: inviterName,
-          }),
+          body: JSON.stringify(emailPayload),
         });
 
         if (emailResponse.ok) {
           emailSent = true;
-          console.log(`Invite email sent to ${email}`);
+          const emailResult = await emailResponse.json();
+          console.log(`Invite email sent successfully to ${email}:`, emailResult);
         } else {
           const errorData = await emailResponse.json();
-          console.error("Email send error:", errorData);
+          console.error("Email send failed:", {
+            status: emailResponse.status,
+            statusText: emailResponse.statusText,
+            error: errorData
+          });
         }
       } catch (emailError) {
-        console.error("Failed to send invite email:", emailError);
+        console.error("Failed to send invite email (exception):", emailError);
       }
 
       return new Response(
