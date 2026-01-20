@@ -15,11 +15,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { User, Mail, Building2, Phone, Lock, Shield, Loader2, Save, KeyRound } from 'lucide-react';
+import { User, Mail, Phone, Lock, Shield, Loader2, Save, KeyRound } from 'lucide-react';
 
 const profileSchema = z.object({
   full_name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres').max(100),
-  company: z.string().max(100).optional().nullable(),
   phone: z.string().max(20).optional().nullable(),
 });
 
@@ -48,7 +47,6 @@ export default function AccountPage() {
     resolver: zodResolver(profileSchema),
     values: {
       full_name: profile?.full_name || '',
-      company: profile?.company || '',
       phone: (profile as any)?.phone || '',
     },
   });
@@ -71,7 +69,6 @@ export default function AccountPage() {
         .from('profiles')
         .update({
           full_name: values.full_name,
-          company: values.company || null,
           phone: values.phone || null,
         })
         .eq('user_id', user.id);
@@ -184,28 +181,6 @@ export default function AccountPage() {
                         <div className="relative">
                           <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input placeholder="Seu nome" className="pl-10" {...field} />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={profileForm.control}
-                  name="company"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Empresa</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            placeholder="Nome da empresa" 
-                            className="pl-10" 
-                            {...field} 
-                            value={field.value || ''} 
-                          />
                         </div>
                       </FormControl>
                       <FormMessage />

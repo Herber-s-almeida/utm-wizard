@@ -23,30 +23,39 @@ export default function EnvironmentSetup() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Check if user already has a company set
+  // Check if user's environment already has a name set
   useEffect(() => {
     if (!user) return;
 
-    const checkProfile = async () => {
+    const checkEnvironment = async () => {
+      // Get profile to check if system user
       const { data: profile } = await supabase
         .from('profiles')
-        .select('company, is_system_user')
+        .select('is_system_user')
         .eq('user_id', user.id)
         .single();
-
-      // If they already have a company, redirect to dashboard
-      if (profile?.company) {
-        navigate('/media-plan-dashboard');
-        return;
-      }
 
       // If they're not a system user, they shouldn't be here
       if (!profile?.is_system_user) {
         navigate('/awaiting-access');
+        return;
+      }
+
+      // Check if user owns an environment and if it has a name
+      const { data: env } = await supabase
+        .from('environments')
+        .select('id, name, company_name')
+        .eq('owner_user_id', user.id)
+        .maybeSingle();
+
+      // If they already have an environment with a name, redirect to dashboard
+      if (env?.name || env?.company_name) {
+        navigate('/media-plan-dashboard');
+        return;
       }
     };
 
-    checkProfile();
+    checkEnvironment();
   }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,14 +76,28 @@ export default function EnvironmentSetup() {
         return;
       }
 
-      // Update the profile with company name
+      // Get the user's environment (they are the owner)
+      const { data: env, error: envError } = await supabase
+        .from('environments')
+        .select('id')
+        .eq('owner_user_id', user.id)
+        .maybeSingle();
+
+      if (envError || !env?.id) {
+        toast.error('Erro ao encontrar ambiente do usuário');
+        console.error(envError);
+        setLoading(false);
+        return;
+      }
+
+      // Update the environment with the company name
       const { error } = await supabase
-        .from('profiles')
+        .from('environments')
         .update({ 
-          company: company.trim(),
-          updated_at: new Date().toISOString()
+          name: company.trim(),
+          company_name: company.trim(),
         })
-        .eq('user_id', user.id);
+        .eq('id', env.id);
 
       if (error) {
         toast.error('Erro ao configurar ambiente');
@@ -84,6 +107,7 @@ export default function EnvironmentSetup() {
         // Invalidate relevant queries
         queryClient.invalidateQueries({ queryKey: ['current-profile'] });
         queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+        queryClient.invalidateQueries({ queryKey: ['user-environments-v2'] });
         navigate('/media-plan-dashboard');
       }
     } finally {
