@@ -174,6 +174,18 @@ serve(async (req) => {
         throw new Error(insertError.message || "Erro ao adicionar membro");
       }
 
+      // Log audit entry for existing user invitation
+      await adminClient.from('invite_audit_log').insert({
+        action: 'accepted',
+        invite_type: 'environment_member',
+        email: email.toLowerCase(),
+        environment_id: environment_id,
+        environment_owner_id: envData?.owner_user_id,
+        invited_by: user.id,
+        target_user_id: targetUser.id,
+        metadata: { role: normalizedRole, auto_accepted: true },
+      });
+
       console.log(`Member ${email} added to environment ${environment_id} with role ${normalizedRole}`);
 
       return new Response(
@@ -220,6 +232,7 @@ serve(async (req) => {
           invited_by: user.id,
           invite_token: inviteToken,
           status: 'invited',
+          invite_type: 'environment_member',
           environment_role: normalizedRole,
           perm_executive_dashboard: isAdminRole ? 'admin' : (permissions?.executive_dashboard || 'view'),
           perm_reports: isAdminRole ? 'admin' : (permissions?.reports || 'view'),
@@ -236,6 +249,17 @@ serve(async (req) => {
         console.error("Pending invite error:", pendingError);
         throw new Error(pendingError.message || "Erro ao criar convite pendente");
       }
+
+      // Log audit entry for new invite
+      await adminClient.from('invite_audit_log').insert({
+        action: 'invited',
+        invite_type: 'environment_member',
+        email: email.toLowerCase(),
+        environment_id: environment_id,
+        environment_owner_id: envData?.owner_user_id,
+        invited_by: user.id,
+        metadata: { role: normalizedRole, invite_id: inviteData.id },
+      });
 
       console.log(`Invite created for email: ${email.toLowerCase()} with role ${normalizedRole} and token ${inviteToken.substring(0, 8)}...`);
 

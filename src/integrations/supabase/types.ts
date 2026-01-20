@@ -1929,6 +1929,53 @@ export type Database = {
           },
         ]
       }
+      invite_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          email: string
+          environment_id: string | null
+          environment_owner_id: string | null
+          id: string
+          invite_type: string
+          invited_by: string | null
+          metadata: Json | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          email: string
+          environment_id?: string | null
+          environment_owner_id?: string | null
+          id?: string
+          invite_type: string
+          invited_by?: string | null
+          metadata?: Json | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          email?: string
+          environment_id?: string | null
+          environment_owner_id?: string | null
+          id?: string
+          invite_type?: string
+          invited_by?: string | null
+          metadata?: Json | null
+          target_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invite_audit_log_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       line_detail_insertions: {
         Row: {
           created_at: string | null
@@ -2888,6 +2935,7 @@ export type Database = {
           expires_at: string | null
           id: string
           invite_token: string | null
+          invite_type: string | null
           invited_by: string
           notify_media_resources: boolean | null
           perm_executive_dashboard:
@@ -2922,6 +2970,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           invite_token?: string | null
+          invite_type?: string | null
           invited_by: string
           notify_media_resources?: boolean | null
           perm_executive_dashboard?:
@@ -2956,6 +3005,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           invite_token?: string | null
+          invite_type?: string | null
           invited_by?: string
           notify_media_resources?: boolean | null
           perm_executive_dashboard?:

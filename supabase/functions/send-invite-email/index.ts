@@ -13,6 +13,7 @@ interface InviteEmailRequest {
   environmentName: string;
   inviterName?: string;
   baseUrl?: string;
+  inviteType?: 'system_user' | 'environment_member';
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -31,7 +32,8 @@ const handler = async (req: Request): Promise<Response> => {
       inviteToken, 
       environmentName, 
       inviterName,
-      baseUrl = "https://mediaplab.lovable.app"
+      baseUrl = "https://mediaplab.lovable.app",
+      inviteType = 'environment_member'
     }: InviteEmailRequest = await req.json();
 
     if (!email || !inviteToken || !environmentName) {
@@ -41,7 +43,11 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const registerUrl = `${baseUrl}/auth/register?token=${inviteToken}`;
+    // Use different routes based on invite type
+    // - system_user: /auth/register (creates user + own environment)
+    // - environment_member: /auth/join (joins existing environment)
+    const registerPath = inviteType === 'system_user' ? '/auth/register' : '/auth/join';
+    const registerUrl = `${baseUrl}${registerPath}?token=${inviteToken}`;
 
     const emailHtml = `
       <!DOCTYPE html>
