@@ -14,62 +14,26 @@ const ROLE_LABELS: Record<AppRole, string> = {
 
 /**
  * @deprecated Plan-specific roles are deprecated. Use environment roles instead.
- * This hook now provides read-only access for informational purposes only.
- * All write permissions should be based on environment roles from useEnvironment().
+ * This hook provides read-only access for informational purposes only.
+ * All permissions should be based on environment roles from useEnvironment().
  */
 export function usePlanRoles(planId: string | undefined) {
-  const { user } = useAuth();
-  const { canEdit: environmentCanEdit, isEnvironmentAdmin } = useEnvironment();
-
-  // Get current user's role in the plan (read-only, for display purposes only)
-  const userRoleQuery = useQuery({
-    queryKey: ['plan_role_value', planId, user?.id],
-    queryFn: async () => {
-      if (!planId || !user) return null;
-
-      // Check if user is owner
-      const { data: plan } = await supabase
-        .from('media_plans')
-        .select('user_id')
-        .eq('id', planId)
-        .single();
-
-      if (plan?.user_id === user.id) return 'owner' as AppRole;
-
-      // Check role assignment (legacy - for display only)
-      const { data: role } = await supabase
-        .from('plan_roles')
-        .select('role')
-        .eq('media_plan_id', planId)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      return role?.role as AppRole | null;
-    },
-    enabled: !!planId && !!user,
-  });
+  const { canEdit: environmentCanEdit } = useEnvironment();
 
   // Permissions are now based on environment roles, NOT plan roles
-  const userRole = userRoleQuery.data;
-  
-  // Check if current user can edit (based on environment permissions)
   const canEdit = environmentCanEdit('media_plans');
-  
-  // Check if current user can manage team (deprecated - use environment settings instead)
-  const canManageTeam = false; // Disabled - managed at environment level now
-  
-  // Check if current user can change status (based on environment permissions)
+  const canManageTeam = false; // Deprecated - managed at environment level now
   const canChangeStatus = environmentCanEdit('media_plans');
 
   return {
     members: [], // Deprecated - use environment members
     isLoading: false,
-    userRole: userRoleQuery.data,
-    isLoadingRole: userRoleQuery.isLoading,
+    userRole: null as AppRole | null,
+    isLoadingRole: false,
     canEdit,
     canManageTeam,
     canChangeStatus,
-    // Deprecated mutations - kept for backwards compatibility but will not work
+    // Deprecated mutations - removed
     addMember: { mutateAsync: async () => { throw new Error('Deprecated: Use environment members instead'); } },
     updateRole: { mutateAsync: async () => { throw new Error('Deprecated: Use environment members instead'); } },
     removeMember: { mutateAsync: async () => { throw new Error('Deprecated: Use environment members instead'); } },
@@ -79,15 +43,20 @@ export function usePlanRoles(planId: string | undefined) {
   };
 }
 
-// Hook to get user's role badge info (read-only, for display purposes)
+/**
+ * Hook to get user's role information for a plan.
+ * Now uses environment-based roles instead of plan-specific roles.
+ */
 export function useUserPlanRole(planId: string | undefined) {
   const { user } = useAuth();
+  const { isEnvironmentOwner, isEnvironmentAdmin, canEdit, canView } = useEnvironment();
 
   return useQuery({
-    queryKey: ['plan_role_badge', planId, user?.id],
+    queryKey: ['plan_role_badge_v2', planId, user?.id, isEnvironmentOwner, isEnvironmentAdmin],
     queryFn: async () => {
       if (!planId || !user) return null;
 
+      // Check if user is owner of the plan
       const { data: plan } = await supabase
         .from('media_plans')
         .select('user_id')
@@ -98,16 +67,18 @@ export function useUserPlanRole(planId: string | undefined) {
         return { role: 'owner' as AppRole, label: ROLE_LABELS.owner };
       }
 
-      // Check legacy role assignment
-      const { data: role } = await supabase
-        .from('plan_roles')
-        .select('role')
-        .eq('media_plan_id', planId)
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Environment admins get editor role
+      if (isEnvironmentAdmin) {
+        return { role: 'editor' as AppRole, label: ROLE_LABELS.editor };
+      }
 
-      if (role?.role) {
-        return { role: role.role as AppRole, label: ROLE_LABELS[role.role as AppRole] };
+      // Check environment permissions
+      if (canEdit('media_plans')) {
+        return { role: 'editor' as AppRole, label: ROLE_LABELS.editor };
+      }
+
+      if (canView('media_plans')) {
+        return { role: 'viewer' as AppRole, label: ROLE_LABELS.viewer };
       }
 
       return null;

@@ -1,8 +1,9 @@
-import { Crown, Pencil, Eye, CheckCircle } from 'lucide-react';
+import { Crown, Pencil, Eye, CheckCircle, Shield } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUserPlanRole, AppRole } from '@/hooks/usePlanRoles';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 interface RoleBadgeProps {
   planId: string;
@@ -33,9 +34,33 @@ const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
 
 export function RoleBadge({ planId, showTooltip = true, className = '' }: RoleBadgeProps) {
   const { data: roleInfo, isLoading } = useUserPlanRole(planId);
+  const { isEnvironmentAdmin, isEnvironmentOwner } = useEnvironment();
 
   if (isLoading) {
     return <Skeleton className="h-5 w-24 rounded-full" />;
+  }
+
+  // Show admin badge if user is environment admin (not plan owner)
+  if (isEnvironmentAdmin && !isEnvironmentOwner && roleInfo?.role !== 'owner') {
+    const badge = (
+      <Badge variant="outline" className={`bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800 gap-1 text-xs ${className}`}>
+        <Shield className="h-3 w-3" />
+        Admin
+      </Badge>
+    );
+
+    if (!showTooltip) return badge;
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>{badge}</TooltipTrigger>
+          <TooltipContent>
+            <p>Você é administrador do ambiente</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
   }
 
   if (!roleInfo || !roleInfo.role) return null;
@@ -69,8 +94,29 @@ export function RoleBadge({ planId, showTooltip = true, className = '' }: RoleBa
 // Compact version for list views
 export function RoleBadgeCompact({ planId }: { planId: string }) {
   const { data: roleInfo, isLoading } = useUserPlanRole(planId);
+  const { isEnvironmentAdmin, isEnvironmentOwner } = useEnvironment();
 
-  if (isLoading || !roleInfo || !roleInfo.role || roleInfo.role === 'owner') return null;
+  if (isLoading) return null;
+
+  // Show admin badge for environment admins who are not plan owners
+  if (isEnvironmentAdmin && !isEnvironmentOwner && roleInfo?.role !== 'owner') {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800 h-5 w-5 p-0 justify-center">
+              <Shield className="h-3 w-3" />
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Administrador</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  if (!roleInfo || !roleInfo.role || roleInfo.role === 'owner') return null;
 
   const Icon = ROLE_ICONS[roleInfo.role];
   const colorClass = ROLE_COLORS[roleInfo.role];
