@@ -3944,6 +3944,51 @@ export type Database = {
           },
         ]
       }
+      system_access_requests: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          notes: string | null
+          rejection_reason: string | null
+          requested_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          notes?: string | null
+          rejection_reason?: string | null
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          notes?: string | null
+          rejection_reason?: string | null
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_roles: {
         Row: {
           created_at: string
