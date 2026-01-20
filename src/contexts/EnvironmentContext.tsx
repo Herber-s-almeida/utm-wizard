@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export type PermissionLevel = 'none' | 'view' | 'edit' | 'admin';
-export type EnvironmentRole = 'owner' | 'admin' | 'user';
+export type EnvironmentRole = 'admin' | 'user';
 
 export type EnvironmentSection = 
   | 'executive_dashboard' 
@@ -19,6 +19,7 @@ export interface UserEnvironment {
   environment_name: string;
   environment_owner_id: string;
   is_own_environment: boolean;
+  is_environment_admin: boolean;
   role_read: boolean;
   role_edit: boolean;
   role_delete: boolean;
@@ -58,9 +59,7 @@ interface EnvironmentContextType {
   effectiveUserId: string | null;
   
   // Permission-related
-  /** Whether current user is the owner of the viewed environment */
-  isEnvironmentOwner: boolean;
-  /** Whether current user has admin permission in any section */
+  /** Whether current user has admin permission in this environment */
   isEnvironmentAdmin: boolean;
   /** Whether current user is a system admin */
   isSystemAdmin: boolean;
@@ -158,8 +157,7 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
     return userEnvironments.find(env => env.environment_id === currentEnvironmentId);
   }, [userEnvironments, currentEnvironmentId]);
 
-  const isViewingOtherEnvironment = currentEnvDetails ? !currentEnvDetails.is_own_environment : false;
-  const isEnvironmentOwner = currentEnvDetails?.is_own_environment ?? false;
+  const isViewingOtherEnvironment = currentEnvDetails ? !currentEnvDetails.is_environment_admin : false;
 
   // For backwards compatibility
   const effectiveUserId = currentEnvDetails?.environment_owner_id ?? currentUserId;
@@ -173,7 +171,7 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
   // Get permission for a specific section
   const getPermission = useCallback((section: EnvironmentSection): PermissionLevel => {
     if (isSystemAdmin) return 'admin';
-    if (isEnvironmentOwner) return 'admin';
+    if (myRole?.is_environment_admin) return 'admin';
     
     if (myRole) {
       const columnName = SECTION_TO_COLUMN[section];
@@ -184,7 +182,7 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
     }
     
     return 'none';
-  }, [isSystemAdmin, isEnvironmentOwner, myRole]);
+  }, [isSystemAdmin, myRole]);
 
   const canView = useCallback((section: EnvironmentSection): boolean => {
     const level = getPermission(section);
@@ -197,13 +195,10 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
   }, [getPermission]);
 
   const isEnvironmentAdmin = useMemo(() => {
-    if (isSystemAdmin || isEnvironmentOwner) return true;
-    if (myRole) {
-      // Use the explicit is_environment_admin flag from database
-      return myRole.is_environment_admin === true;
-    }
-    return false;
-  }, [isSystemAdmin, isEnvironmentOwner, myRole]);
+    if (isSystemAdmin) return true;
+    // Use the explicit is_environment_admin flag from database
+    return myRole?.is_environment_admin === true;
+  }, [isSystemAdmin, myRole]);
 
   const canInviteMembers = useMemo(() => {
     if (isSystemAdmin) return true;
@@ -247,7 +242,6 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
     currentEnvironmentId,
     isViewingOtherEnvironment,
     effectiveUserId,
-    isEnvironmentOwner,
     isEnvironmentAdmin,
     isSystemAdmin,
     getPermission,
@@ -262,7 +256,6 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
     currentEnvironmentId,
     isViewingOtherEnvironment,
     effectiveUserId,
-    isEnvironmentOwner,
     isEnvironmentAdmin,
     isSystemAdmin,
     getPermission,

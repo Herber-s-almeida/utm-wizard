@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, ChevronDown, Building2, Crown, Shield, User } from 'lucide-react';
+import { Check, ChevronDown, Building2, Shield, User } from 'lucide-react';
 import { useEnvironment, EnvironmentRole, UserEnvironment } from '@/contexts/EnvironmentContext';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,9 +15,8 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const ROLE_CONFIG: Record<EnvironmentRole, { label: string; icon: React.ReactNode; color: string }> = {
-  owner: { label: 'Owner', icon: <Crown className="h-3 w-3" />, color: 'text-amber-500' },
-  admin: { label: 'Admin', icon: <Shield className="h-3 w-3" />, color: 'text-blue-500' },
-  user: { label: 'User', icon: <User className="h-3 w-3" />, color: 'text-muted-foreground' },
+  admin: { label: 'Administrador', icon: <Shield className="h-3 w-3" />, color: 'text-blue-500' },
+  user: { label: 'Membro', icon: <User className="h-3 w-3" />, color: 'text-muted-foreground' },
 };
 
 interface EnvironmentSwitcherProps {
@@ -30,7 +29,6 @@ export function EnvironmentSwitcher({ className }: EnvironmentSwitcherProps) {
     isLoadingEnvironments, 
     switchEnvironment,
     currentEnvironmentId,
-    isEnvironmentOwner,
   } = useEnvironment();
   
   const [isOpen, setIsOpen] = useState(false);
@@ -38,19 +36,15 @@ export function EnvironmentSwitcher({ className }: EnvironmentSwitcherProps) {
   // Find current environment
   const currentEnvironment = userEnvironments.find(
     env => env.environment_id === currentEnvironmentId
-  ) || userEnvironments.find(env => env.is_own_environment);
+  ) || userEnvironments.find(env => env.is_environment_admin);
 
-  // Separate own environment from others
-  const ownEnvironment = userEnvironments.find(env => env.is_own_environment);
-  const otherEnvironments = userEnvironments.filter(env => !env.is_own_environment);
+  // Separate admin environments from member environments
+  const adminEnvironments = userEnvironments.filter(env => env.is_environment_admin);
+  const memberEnvironments = userEnvironments.filter(env => !env.is_environment_admin);
 
   // Derive role from current environment
   const environmentRole: EnvironmentRole | null = currentEnvironment 
-    ? (currentEnvironment.is_own_environment 
-        ? 'owner' 
-        : (currentEnvironment.role_edit && currentEnvironment.role_delete && currentEnvironment.role_invite 
-            ? 'admin' 
-            : 'user'))
+    ? (currentEnvironment.is_environment_admin ? 'admin' : 'user')
     : null;
 
   const handleSelectEnvironment = (env: UserEnvironment) => {
@@ -110,43 +104,49 @@ export function EnvironmentSwitcher({ className }: EnvironmentSwitcherProps) {
       </DropdownMenuTrigger>
       
       <DropdownMenuContent align="start" className="w-[280px]" sideOffset={4}>
-        {/* Own environment section */}
-        {ownEnvironment && (
+        {/* Admin environments section */}
+        {adminEnvironments.length > 0 && (
           <>
             <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Meu Ambiente
+              Meus Ambientes
             </DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => handleSelectEnvironment(ownEnvironment)}
-              className="flex items-center justify-between cursor-pointer"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <Building2 className="h-4 w-4 shrink-0" />
-                <div className="min-w-0">
-                  <p className="font-medium truncate">{ownEnvironment.environment_name}</p>
-                  <div className={cn("flex items-center gap-1 text-xs", ROLE_CONFIG.owner.color)}>
-                    {ROLE_CONFIG.owner.icon}
-                    <span>{ROLE_CONFIG.owner.label}</span>
+            {adminEnvironments.map((env) => {
+              const isSelected = currentEnvironment?.environment_id === env.environment_id;
+              
+              return (
+                <DropdownMenuItem
+                  key={env.environment_id}
+                  onClick={() => handleSelectEnvironment(env)}
+                  className="flex items-center justify-between cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Building2 className="h-4 w-4 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{env.environment_name}</p>
+                      <div className={cn("flex items-center gap-1 text-xs", ROLE_CONFIG.admin.color)}>
+                        {ROLE_CONFIG.admin.icon}
+                        <span>{ROLE_CONFIG.admin.label}</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              {currentEnvironment?.environment_id === ownEnvironment.environment_id && (
-                <Check className="h-4 w-4 text-primary" />
-              )}
-            </DropdownMenuItem>
+                  {isSelected && (
+                    <Check className="h-4 w-4 text-primary" />
+                  )}
+                </DropdownMenuItem>
+              );
+            })}
           </>
         )}
 
-        {/* Other environments section */}
-        {otherEnvironments.length > 0 && (
+        {/* Member environments section */}
+        {memberEnvironments.length > 0 && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs text-muted-foreground">
               Ambientes Compartilhados
             </DropdownMenuLabel>
-            {otherEnvironments.map((env) => {
-              const envRole: EnvironmentRole = env.role_edit && env.role_delete && env.role_invite ? 'admin' : 'user';
-              const roleConfig = ROLE_CONFIG[envRole];
+            {memberEnvironments.map((env) => {
+              const roleConfig = ROLE_CONFIG.user;
               const isSelected = currentEnvironment?.environment_id === env.environment_id;
               
               return (

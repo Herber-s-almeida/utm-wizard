@@ -4329,6 +4329,7 @@ export type Database = {
           environment_id: string
           environment_name: string
           environment_owner_id: string
+          is_environment_admin: boolean
           is_own_environment: boolean
           role_delete: boolean
           role_edit: boolean

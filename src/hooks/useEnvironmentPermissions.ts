@@ -60,7 +60,6 @@ export function useEnvironmentPermissions() {
     getPermission,
     canView,
     canEdit,
-    isEnvironmentOwner,
     isEnvironmentAdmin,
     isSystemAdmin,
     isLoadingPermissions,

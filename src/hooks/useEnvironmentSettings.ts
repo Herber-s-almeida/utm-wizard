@@ -13,10 +13,10 @@ export interface EnvironmentSettings {
 }
 
 export function useEnvironmentSettings() {
-  const { currentEnvironmentId, isEnvironmentOwner, isEnvironmentAdmin, isSystemAdmin } = useEnvironment();
+  const { currentEnvironmentId, isEnvironmentAdmin, isSystemAdmin } = useEnvironment();
   const queryClient = useQueryClient();
 
-  const canEdit = isEnvironmentOwner || isEnvironmentAdmin || isSystemAdmin;
+  const canEdit = isEnvironmentAdmin || isSystemAdmin;
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['environment-settings', currentEnvironmentId],
