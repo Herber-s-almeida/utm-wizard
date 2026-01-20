@@ -563,6 +563,7 @@ export type Database = {
           id: string
           invited_at: string | null
           invited_by: string | null
+          is_environment_admin: boolean
           perm_executive_dashboard:
             | Database["public"]["Enums"]["environment_permission_level"]
             | null
@@ -598,6 +599,7 @@ export type Database = {
           id?: string
           invited_at?: string | null
           invited_by?: string | null
+          is_environment_admin?: boolean
           perm_executive_dashboard?:
             | Database["public"]["Enums"]["environment_permission_level"]
             | null
@@ -633,6 +635,7 @@ export type Database = {
           id?: string
           invited_at?: string | null
           invited_by?: string | null
+          is_environment_admin?: boolean
           perm_executive_dashboard?:
             | Database["public"]["Enums"]["environment_permission_level"]
             | null
@@ -4263,6 +4266,31 @@ export type Database = {
       get_environment_id_for_user: {
         Args: { _user_id: string }
         Returns: string
+      }
+      get_environment_members_with_details: {
+        Args: { p_environment_id: string }
+        Returns: {
+          accepted_at: string
+          created_at: string
+          email: string
+          environment_id: string
+          full_name: string
+          id: string
+          is_environment_admin: boolean
+          notify_media_resources: boolean
+          perm_executive_dashboard: string
+          perm_finance: string
+          perm_library: string
+          perm_media_plans: string
+          perm_media_resources: string
+          perm_reports: string
+          perm_taxonomy: string
+          role_delete: boolean
+          role_edit: boolean
+          role_invite: boolean
+          role_read: boolean
+          user_id: string
+        }[]
       }
       get_environment_permission: {
         Args: {

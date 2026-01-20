@@ -152,12 +152,14 @@ serve(async (req) => {
           invited_by: user.id,
           invited_at: new Date().toISOString(),
           accepted_at: new Date().toISOString(), // Auto-accept since user exists
+          // Admin flag
+          is_environment_admin: isAdminRole,
           // Role-based permissions
           role_read: true,
           role_edit: isAdminRole,
           role_delete: isAdminRole,
           role_invite: isAdminRole,
-          // Section permissions
+          // Section permissions (all 'admin' if admin, otherwise use granular)
           perm_executive_dashboard: isAdminRole ? 'admin' : (permissions?.executive_dashboard || 'view'),
           perm_reports: isAdminRole ? 'admin' : (permissions?.reports || 'view'),
           perm_finance: isAdminRole ? 'admin' : (permissions?.finance || 'none'),

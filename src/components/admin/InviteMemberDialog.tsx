@@ -45,11 +45,11 @@ const SECTIONS: { key: EnvironmentSection; label: string }[] = [
   { key: 'library', label: 'Biblioteca' },
 ];
 
+// Permission options for members (no 'admin' option - admins get full access automatically)
 const PERMISSION_OPTIONS: { value: PermissionLevel; label: string; icon: React.ReactNode }[] = [
   { value: 'none', label: 'Sem acesso', icon: <Ban className="h-3 w-3" /> },
   { value: 'view', label: 'Visualizar', icon: <Eye className="h-3 w-3" /> },
   { value: 'edit', label: 'Editar', icon: <Edit className="h-3 w-3" /> },
-  { value: 'admin', label: 'Admin', icon: <Shield className="h-3 w-3" /> },
 ];
 
 const ROLE_OPTIONS: { value: EnvironmentRole; label: string; description: string; icon: React.ReactNode }[] = [
@@ -109,15 +109,15 @@ const PRESETS = {
   },
   full_access: {
     label: 'Acesso Total',
-    description: 'Acesso completo a todas as seções',
+    description: 'Pode editar tudo em todas as seções',
     permissions: {
-      executive_dashboard: 'admin' as PermissionLevel,
-      reports: 'admin' as PermissionLevel,
-      finance: 'admin' as PermissionLevel,
-      media_plans: 'admin' as PermissionLevel,
-      media_resources: 'admin' as PermissionLevel,
-      taxonomy: 'admin' as PermissionLevel,
-      library: 'admin' as PermissionLevel,
+      executive_dashboard: 'edit' as PermissionLevel,
+      reports: 'edit' as PermissionLevel,
+      finance: 'edit' as PermissionLevel,
+      media_plans: 'edit' as PermissionLevel,
+      media_resources: 'edit' as PermissionLevel,
+      taxonomy: 'edit' as PermissionLevel,
+      library: 'edit' as PermissionLevel,
     },
   },
 };
@@ -263,7 +263,7 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
                 Instruções para o usuário:
               </p>
               <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                <li>Acesse <code className="bg-background px-1 rounded">mediaplab.lovable.app/auth/register</code></li>
+                <li>Acesse <code className="bg-background px-1 rounded">mediaplab.lovable.app/auth/join</code></li>
                 <li>Preencha o formulário com o email <strong>{successEmail}</strong></li>
                 <li>Complete o cadastro com nome e senha</li>
               </ol>
@@ -308,7 +308,7 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
               required
             />
             <p className="text-xs text-muted-foreground">
-              O usuário poderá criar conta em <code>/auth/register</code> usando este email
+              O usuário poderá criar conta em <code>/auth/join</code> usando este email
             </p>
           </div>
 
