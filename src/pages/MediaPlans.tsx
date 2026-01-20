@@ -17,7 +17,6 @@ import {
   MoreVertical,
   Settings2,
   List,
-  Users,
   Copy,
   Building2,
   X
@@ -330,12 +329,6 @@ export default function MediaPlans() {
                           {plan.name}
                         </h3>
                         <RoleBadgeCompact planId={plan.id} />
-                        {plan.user_id !== user?.id && (
-                          <Badge variant="outline" className="text-xs gap-1 bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400">
-                            <Users className="h-3 w-3" />
-                            Compartilhado
-                          </Badge>
-                        )}
                       </div>
                       <p className="text-sm text-muted-foreground mb-4">
                         {plan.client || 'Sem cliente'} • {plan.campaign || 'Sem campanha'}

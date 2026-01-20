@@ -26,10 +26,10 @@ const ROLE_COLORS: Record<AppRole, string> = {
 };
 
 const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
-  owner: 'Você é o proprietário deste plano',
-  editor: 'Você pode editar este plano',
-  viewer: 'Você pode apenas visualizar este plano',
-  approver: 'Você pode aprovar este plano',
+  owner: 'Você criou este plano',
+  editor: 'Você tem permissão de edição no ambiente',
+  viewer: 'Você tem permissão de visualização no ambiente',
+  approver: 'Você pode aprovar planos no ambiente',
 };
 
 export function RoleBadge({ planId, showTooltip = true, className = '' }: RoleBadgeProps) {
