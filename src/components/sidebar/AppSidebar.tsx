@@ -73,7 +73,7 @@ export function AppSidebar() {
   const { isAdmin } = useSystemAdmin();
   const { isViewingOtherEnvironment, userEnvironments, currentEnvironmentId } = useEnvironment();
   const { data: currentProfile } = useCurrentProfile();
-  const { canView } = useEnvironmentPermissions();
+  const { canView, isEnvironmentAdmin } = useEnvironmentPermissions();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -1803,17 +1803,31 @@ export function AppSidebar() {
                   </Collapsible>
                 )}
 
-                {/* Configurações do Ambiente (renomeado) */}
+                {/* Equipe do Ambiente - gerenciar membros */}
                 <Link to="/settings/team">
                   <Button
                     variant={location.pathname === '/settings/team' ? 'secondary' : 'ghost'}
                     size="sm"
                     className="w-full justify-start gap-2 h-7 text-xs"
                   >
-                    <Building2 className="h-3 w-3" />
-                    Configurações do Ambiente
+                    <Users className="h-3 w-3" />
+                    Equipe do Ambiente
                   </Button>
                 </Link>
+
+                {/* Informações do Ambiente - dados da empresa (apenas admins) */}
+                {isEnvironmentAdmin && (
+                  <Link to="/settings/environment">
+                    <Button
+                      variant={location.pathname === '/settings/environment' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="w-full justify-start gap-2 h-7 text-xs"
+                    >
+                      <Building2 className="h-3 w-3" />
+                      Informações do Ambiente
+                    </Button>
+                  </Link>
+                )}
 
                 {/* Minha Conta - com ícone de pessoa */}
                 <Link to="/account">
