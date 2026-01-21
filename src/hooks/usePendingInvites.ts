@@ -8,6 +8,7 @@ export interface PendingInvite {
   email: string;
   environment_owner_id: string;
   invited_by: string;
+  invite_token: string;
   perm_executive_dashboard: PermissionLevel;
   perm_reports: PermissionLevel;
   perm_finance: PermissionLevel;

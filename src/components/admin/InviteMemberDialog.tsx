@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, Eye, Edit, Ban, UserPlus, Wand2, CheckCircle, Info, User } from 'lucide-react';
+import { Shield, Eye, Edit, Ban, UserPlus, Wand2, CheckCircle, Info, User, Copy, AlertTriangle } from 'lucide-react';
 import { PermissionLevel, EnvironmentSection, useEnvironment } from '@/contexts/EnvironmentContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -132,6 +132,8 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [successEmail, setSuccessEmail] = useState('');
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [emailSentSuccess, setEmailSentSuccess] = useState(false);
   const [selectedRole, setSelectedRole] = useState<EnvironmentRole>('user');
   const [permissions, setPermissions] = useState<Record<EnvironmentSection, PermissionLevel>>({
     executive_dashboard: 'view',
@@ -209,6 +211,14 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
         // Show success message with instructions
         setSuccessEmail(email);
         setInviteSuccess(true);
+        setEmailSentSuccess(data?.emailSent ?? false);
+        
+        // If email failed, store the invite link for manual sharing
+        if (!data?.emailSent && data?.inviteToken) {
+          const link = `${window.location.origin}/auth/join?token=${data.inviteToken}`;
+          setInviteLink(link);
+        }
+        
         queryClient.invalidateQueries({ queryKey: ['pending-invites'] });
       } else {
         toast.success(data?.message || `Convite criado para ${email}`);
@@ -232,6 +242,8 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
   const resetForm = () => {
     setEmail('');
     setSelectedRole('user');
+    setInviteLink(null);
+    setEmailSentSuccess(false);
     setPermissions({
       executive_dashboard: 'view',
       reports: 'view',
@@ -241,6 +253,13 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
       taxonomy: 'view',
       library: 'view',
     });
+  };
+
+  const copyInviteLink = () => {
+    if (inviteLink) {
+      navigator.clipboard.writeText(inviteLink);
+      toast.success('Link de convite copiado!');
+    }
   };
 
   const handleClose = () => {
@@ -257,38 +276,90 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              Convite Criado
+              {emailSentSuccess ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+              )}
+              {emailSentSuccess ? 'Convite Enviado!' : 'Convite Criado'}
             </DialogTitle>
             <DialogDescription>
-              O convite foi registrado no sistema
+              {emailSentSuccess 
+                ? 'O email de convite foi enviado com sucesso'
+                : 'O convite foi criado, mas o email não pôde ser enviado'
+              }
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <Alert>
-              <Info className="h-4 w-4" />
+            <Alert variant={emailSentSuccess ? 'default' : 'destructive'}>
+              {emailSentSuccess ? <Info className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
               <AlertDescription className="text-sm">
                 <strong>Email convidado:</strong> {successEmail}
+                {!emailSentSuccess && (
+                  <p className="mt-1">
+                    O email não pôde ser enviado. Copie o link abaixo e envie manualmente.
+                  </p>
+                )}
               </AlertDescription>
             </Alert>
             
+            {/* Show copyable link when email failed */}
+            {inviteLink && !emailSentSuccess && (
+              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-3">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Copy className="h-4 w-4" />
+                  Link de Convite
+                </p>
+                <div className="flex gap-2">
+                  <Input 
+                    value={inviteLink} 
+                    readOnly 
+                    className="text-xs font-mono"
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                  />
+                  <Button onClick={copyInviteLink} size="sm">
+                    <Copy className="h-4 w-4 mr-1" />
+                    Copiar
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Envie este link por email, WhatsApp ou outro meio para o usuário criar a conta.
+                </p>
+              </div>
+            )}
+            
             <div className="p-4 bg-muted/50 rounded-lg space-y-3">
               <p className="text-sm font-medium">
-                Instruções para o usuário:
+                {emailSentSuccess ? 'O usuário receberá um email com:' : 'Instruções para o usuário:'}
               </p>
               <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                <li>Acesse <code className="bg-background px-1 rounded">mediaplab.lovable.app/auth/join</code></li>
-                <li>Preencha o formulário com o email <strong>{successEmail}</strong></li>
-                <li>Complete o cadastro com nome e senha</li>
+                {emailSentSuccess ? (
+                  <>
+                    <li>Link para criar conta na plataforma</li>
+                    <li>Instruções de acesso ao ambiente</li>
+                  </>
+                ) : (
+                  <>
+                    <li>Clique no link acima ou acesse <code className="bg-background px-1 rounded">mediaplab.lovable.app/auth/join</code></li>
+                    <li>Preencha o formulário com o email <strong>{successEmail}</strong></li>
+                    <li>Complete o cadastro com nome e senha</li>
+                  </>
+                )}
               </ol>
               <p className="text-xs text-muted-foreground mt-2">
-                O convite expira em 7 dias. Você pode enviar estas instruções por email ou WhatsApp.
+                O convite expira em 7 dias.
               </p>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
+            {inviteLink && !emailSentSuccess && (
+              <Button variant="outline" onClick={copyInviteLink}>
+                <Copy className="h-4 w-4 mr-1" />
+                Copiar Link
+              </Button>
+            )}
             <Button onClick={handleClose}>
               Fechar
             </Button>

@@ -309,9 +309,12 @@ serve(async (req) => {
           success: true, 
           type: 'invite_sent',
           emailSent: emailSent,
+          // Return token only when email fails so frontend can show copyable link
+          inviteToken: emailSent ? null : inviteToken,
+          inviteId: inviteData.id,
           message: emailSent 
             ? 'Convite enviado por email! O usuário receberá um link para criar a conta.'
-            : 'Convite criado! O usuário pode criar conta em /auth/register com o email convidado.'
+            : 'Convite criado! O email não pôde ser enviado, mas você pode compartilhar o link manualmente.'
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
