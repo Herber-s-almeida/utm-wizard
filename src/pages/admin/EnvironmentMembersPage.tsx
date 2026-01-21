@@ -31,7 +31,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Clock, Mail, User } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Users, UserPlus, Trash2, Shield, Eye, Edit, Ban, Clock, Mail, User, Copy, RefreshCw } from 'lucide-react';
 import { useEnvironmentPermissions, PermissionLevel, EnvironmentSection, EnvironmentMember } from '@/hooks/useEnvironmentPermissions';
 import { usePendingInvites } from '@/hooks/usePendingInvites';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
@@ -151,6 +152,31 @@ export default function EnvironmentMembersPage() {
     });
   };
 
+  const copyInviteLink = (inviteToken: string) => {
+    const link = `${window.location.origin}/auth/join?token=${inviteToken}`;
+    navigator.clipboard.writeText(link);
+    toast.success('Link de convite copiado!');
+  };
+
+  const resendInvite = async (invite: typeof pendingInvites[0]) => {
+    try {
+      const { error } = await supabase.functions.invoke('send-invite-email', {
+        body: {
+          email: invite.email,
+          inviteToken: invite.invite_token,
+          environmentName: currentEnv?.environment_name || 'Ambiente',
+          inviteType: 'environment_member',
+        },
+      });
+
+      if (error) throw error;
+      toast.success('Email de convite reenviado!');
+    } catch (error: any) {
+      console.error('Resend error:', error);
+      toast.error('Não foi possível reenviar o email. Copie o link manualmente.');
+    }
+  };
+
   // Notification toggle removed - column notify_media_resources no longer exists
 
   const getPermissionBadgeVariant = (level: PermissionLevel) => {
@@ -247,25 +273,61 @@ export default function EnvironmentMembersPage() {
                         {format(new Date(invite.expires_at), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell className="text-right">
-                        {isEnvironmentAdmin && (
+                        <div className="flex items-center justify-end gap-1">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="text-destructive hover:text-destructive"
-                                  onClick={() => setInviteToDelete(invite.id)}
+                                  onClick={() => copyInviteLink(invite.invite_token)}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Copy className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Cancelar convite</p>
+                                <p>Copiar link de convite</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                        )}
+                          
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => resendInvite(invite)}
+                                >
+                                  <RefreshCw className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Reenviar email</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          {isEnvironmentAdmin && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={() => setInviteToDelete(invite.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Cancelar convite</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
