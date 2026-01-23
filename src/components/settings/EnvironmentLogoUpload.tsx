@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react';
-import { Upload, X, Loader2, ImageIcon } from 'lucide-react';
+import { Upload, X, Loader2, ImageIcon, Crop } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { ImageCropDialog } from './ImageCropDialog';
 
 interface EnvironmentLogoUploadProps {
   currentLogoUrl?: string | null;
@@ -14,7 +14,7 @@ interface EnvironmentLogoUploadProps {
 }
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export function EnvironmentLogoUpload({
   currentLogoUrl,
@@ -24,6 +24,8 @@ export function EnvironmentLogoUpload({
 }: EnvironmentLogoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentLogoUrl || null);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [selectedImageSrc, setSelectedImageSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,7 +34,7 @@ export function EnvironmentLogoUpload({
 
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
-      toast.error('Formato de arquivo inválido. Use JPG, PNG, WebP ou SVG.');
+      toast.error('Formato de arquivo inválido. Use JPG, PNG ou WebP.');
       return;
     }
 
@@ -42,12 +44,26 @@ export function EnvironmentLogoUpload({
       return;
     }
 
+    // Create a preview URL for cropping
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedImageSrc(reader.result as string);
+      setCropDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCropComplete = async (croppedBlob: Blob) => {
     setIsUploading(true);
 
     try {
       // Create a unique file name
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${environmentId}/logo-${Date.now()}.${fileExt}`;
+      const fileName = `${environmentId}/logo-${Date.now()}.jpg`;
 
       // Delete old logo if exists
       if (currentLogoUrl) {
@@ -57,12 +73,13 @@ export function EnvironmentLogoUpload({
         }
       }
 
-      // Upload new logo
+      // Upload cropped logo
       const { data, error: uploadError } = await supabase.storage
         .from('environment-logos')
-        .upload(fileName, file, {
+        .upload(fileName, croppedBlob, {
           cacheControl: '3600',
           upsert: true,
+          contentType: 'image/jpeg',
         });
 
       if (uploadError) throw uploadError;
@@ -81,10 +98,7 @@ export function EnvironmentLogoUpload({
       toast.error('Erro ao carregar logo: ' + (error.message || 'Erro desconhecido'));
     } finally {
       setIsUploading(false);
-      // Reset input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      setSelectedImageSrc(null);
     }
   };
 
@@ -112,61 +126,76 @@ export function EnvironmentLogoUpload({
   };
 
   return (
-    <div className="flex items-center gap-4">
-      {/* Logo Preview */}
-      <Avatar className="h-20 w-20 border-2 border-border">
-        {previewUrl ? (
-          <AvatarImage src={previewUrl} alt="Logo do ambiente" className="object-cover" />
-        ) : null}
-        <AvatarFallback className="bg-muted text-muted-foreground">
-          <ImageIcon className="h-8 w-8" />
-        </AvatarFallback>
-      </Avatar>
+    <>
+      <div className="flex items-center gap-4">
+        {/* Logo Preview */}
+        <Avatar className="h-20 w-20 border-2 border-border">
+          {previewUrl ? (
+            <AvatarImage src={previewUrl} alt="Logo do ambiente" className="object-cover" />
+          ) : null}
+          <AvatarFallback className="bg-muted text-muted-foreground">
+            <ImageIcon className="h-8 w-8" />
+          </AvatarFallback>
+        </Avatar>
 
-      {/* Upload Controls */}
-      <div className="flex flex-col gap-2">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={ALLOWED_TYPES.join(',')}
-          onChange={handleFileSelect}
-          className="hidden"
-          disabled={disabled || isUploading}
-        />
-        
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || isUploading}
-        >
-          {isUploading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Upload className="h-4 w-4" />
-          )}
-          {previewUrl ? 'Trocar Logo' : 'Carregar Logo'}
-        </Button>
-
-        {previewUrl && (
+        {/* Upload Controls */}
+        <div className="flex flex-col gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ALLOWED_TYPES.join(',')}
+            onChange={handleFileSelect}
+            className="hidden"
+            disabled={disabled || isUploading}
+          />
+          
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
-            onClick={handleRemoveLogo}
+            onClick={() => fileInputRef.current?.click()}
             disabled={disabled || isUploading}
-            className="text-destructive hover:text-destructive"
           >
-            <X className="h-4 w-4" />
-            Remover
+            {isUploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Crop className="h-4 w-4" />
+            )}
+            {previewUrl ? 'Trocar Logo' : 'Carregar Logo'}
           </Button>
-        )}
 
-        <p className="text-xs text-muted-foreground">
-          JPG, PNG, WebP ou SVG. Máx 20MB.
-        </p>
+          {previewUrl && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleRemoveLogo}
+              disabled={disabled || isUploading}
+              className="text-destructive hover:text-destructive"
+            >
+              <X className="h-4 w-4" />
+              Remover
+            </Button>
+          )}
+
+          <p className="text-xs text-muted-foreground">
+            JPG, PNG ou WebP. Máx 20MB.
+          </p>
+        </div>
       </div>
-    </div>
+
+      {/* Crop Dialog */}
+      {selectedImageSrc && (
+        <ImageCropDialog
+          open={cropDialogOpen}
+          onOpenChange={(open) => {
+            setCropDialogOpen(open);
+            if (!open) setSelectedImageSrc(null);
+          }}
+          imageSrc={selectedImageSrc}
+          onCropComplete={handleCropComplete}
+        />
+      )}
+    </>
   );
 }
