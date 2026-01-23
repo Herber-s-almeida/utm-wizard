@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 interface CreateRevenueData {
@@ -20,31 +21,32 @@ interface UpdateRevenueData {
 }
 
 export function useFinancialRevenues(planId?: string) {
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: plans = [] } = useQuery({
-    queryKey: ["media-plans-for-finance", effectiveUserId],
+    queryKey: ["media-plans-for-finance", currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("media_plans")
         .select("id, name, total_budget")
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .is("deleted_at", null)
         .order("name");
       if (error) throw error;
       return data;
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 
   const { data: revenues = [], isLoading } = useQuery({
-    queryKey: ["financial-revenues", planId, effectiveUserId],
+    queryKey: ["financial-revenues", planId, currentEnvironmentId],
     queryFn: async () => {
       let query = supabase
         .from("financial_revenues")
         .select("*")
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .order("period_start");
       
       if (planId) {
@@ -55,17 +57,17 @@ export function useFinancialRevenues(planId?: string) {
       if (error) throw error;
       return data;
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 
   // Get total investment for ROI calculation
   const { data: totalInvestment = 0 } = useQuery({
-    queryKey: ["financial-investment", planId, effectiveUserId],
+    queryKey: ["financial-investment", planId, currentEnvironmentId],
     queryFn: async () => {
       let query = supabase
         .from("financial_actuals")
         .select("actual_amount")
-        .eq("user_id", effectiveUserId!);
+        .eq("environment_id", currentEnvironmentId!);
       
       if (planId) {
         query = query.eq("media_plan_id", planId);
@@ -75,25 +77,27 @@ export function useFinancialRevenues(planId?: string) {
       if (error) throw error;
       return data.reduce((sum, a) => sum + Number(a.actual_amount), 0);
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: CreateRevenueData) => {
-      if (!effectiveUserId) throw new Error("Usuário não autenticado");
+      if (!currentEnvironmentId) throw new Error("Ambiente não selecionado");
+      if (!user?.id) throw new Error("Usuário não autenticado");
       
       const { error } = await supabase
         .from("financial_revenues")
         .insert({
           ...data,
-          user_id: effectiveUserId,
+          environment_id: currentEnvironmentId,
+          user_id: user.id,
         });
       
       if (error) throw error;
 
       // Audit log
       await supabase.from("financial_audit_log").insert([{
-        user_id: effectiveUserId,
+        user_id: user.id,
         entity_type: "revenue",
         entity_id: data.media_plan_id || "global",
         action: "create",
@@ -113,7 +117,7 @@ export function useFinancialRevenues(planId?: string) {
 
   const updateMutation = useMutation({
     mutationFn: async (data: UpdateRevenueData) => {
-      if (!effectiveUserId) throw new Error("Usuário não autenticado");
+      if (!user?.id) throw new Error("Usuário não autenticado");
       
       const { id, ...updateData } = data;
       
@@ -126,7 +130,7 @@ export function useFinancialRevenues(planId?: string) {
 
       // Audit log
       await supabase.from("financial_audit_log").insert({
-        user_id: effectiveUserId,
+        user_id: user.id,
         entity_type: "revenue",
         entity_id: id,
         action: "update",
@@ -146,7 +150,7 @@ export function useFinancialRevenues(planId?: string) {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      if (!effectiveUserId) throw new Error("Usuário não autenticado");
+      if (!user?.id) throw new Error("Usuário não autenticado");
       
       const { error } = await supabase
         .from("financial_revenues")
@@ -157,7 +161,7 @@ export function useFinancialRevenues(planId?: string) {
 
       // Audit log
       await supabase.from("financial_audit_log").insert([{
-        user_id: effectiveUserId,
+        user_id: user.id,
         entity_type: "revenue",
         entity_id: id,
         action: "delete",

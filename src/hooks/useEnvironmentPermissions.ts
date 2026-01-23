@@ -161,10 +161,13 @@ export function useEnvironmentPermissions() {
         }
       }
       
+      if (!currentEnvironmentId) throw new Error('Ambiente não selecionado');
+      
       const { data, error } = await supabase
         .from('environment_roles')
         .update(updateData)
-        .eq('id', memberId)
+        .eq('user_id', memberId)
+        .eq('environment_id', currentEnvironmentId)
         .select()
         .single();
       
@@ -180,10 +183,13 @@ export function useEnvironmentPermissions() {
   // Remove member mutation (now uses environment_roles)
   const removeMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
+      if (!currentEnvironmentId) throw new Error('Ambiente não selecionado');
+      
       const { error } = await supabase
         .from('environment_roles')
         .delete()
-        .eq('id', memberId);
+        .eq('user_id', memberId)
+        .eq('environment_id', currentEnvironmentId);
       
       if (error) throw error;
     },

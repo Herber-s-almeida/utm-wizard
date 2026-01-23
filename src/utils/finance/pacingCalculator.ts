@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { differenceInDays, parseISO, isAfter, isBefore } from "date-fns";
+import { differenceInDays, parseISO, isAfter } from "date-fns";
 
 export interface PacingData {
   period_start: string;
@@ -35,7 +35,7 @@ interface AlertConfig {
  */
 export async function calculatePacing(
   planId: string,
-  userId: string
+  environmentId: string
 ): Promise<{ pacingData: PacingData[]; alerts: PacingAlert[] }> {
   try {
     // 1. Get locked forecasts
@@ -43,6 +43,7 @@ export async function calculatePacing(
       .from("financial_forecasts")
       .select("*")
       .eq("media_plan_id", planId)
+      .eq("environment_id", environmentId)
       .order("period_start");
 
     if (forecastError) {
@@ -54,7 +55,8 @@ export async function calculatePacing(
     const { data: actuals, error: actualsError } = await supabase
       .from("financial_actuals")
       .select("*")
-      .eq("media_plan_id", planId);
+      .eq("media_plan_id", planId)
+      .eq("environment_id", environmentId);
 
     if (actualsError) {
       console.error("Error fetching actuals:", actualsError);
@@ -65,7 +67,7 @@ export async function calculatePacing(
     const { data: alertConfigs } = await supabase
       .from("financial_alert_configs")
       .select("*")
-      .eq("user_id", userId)
+      .eq("environment_id", environmentId)
       .eq("is_active", true);
 
     const configs = alertConfigs || [];
@@ -155,7 +157,7 @@ export async function calculatePacing(
 /**
  * Check for overdue payments and generate alerts
  */
-export async function checkOverduePayments(userId: string): Promise<PacingAlert[]> {
+export async function checkOverduePayments(environmentId: string): Promise<PacingAlert[]> {
   const alerts: PacingAlert[] = [];
   const today = new Date().toISOString().split('T')[0];
 
@@ -163,6 +165,7 @@ export async function checkOverduePayments(userId: string): Promise<PacingAlert[
     const { data: overduePayments, error } = await supabase
       .from("financial_payments")
       .select("*, financial_documents(media_plan_id, vendor_name)")
+      .eq("environment_id", environmentId)
       .lt("planned_payment_date", today)
       .in("status", ["scheduled", "overdue"])
       .is("deleted_at", null);
@@ -195,7 +198,7 @@ export async function checkOverduePayments(userId: string): Promise<PacingAlert[
 /**
  * Get summary of pacing across all plans
  */
-export async function getPacingSummary(userId: string): Promise<{
+export async function getPacingSummary(environmentId: string): Promise<{
   totalPlanned: number;
   totalActual: number;
   totalVariance: number;
@@ -211,6 +214,7 @@ export async function getPacingSummary(userId: string): Promise<{
     const { data: forecasts } = await supabase
       .from("financial_forecasts")
       .select("planned_amount")
+      .eq("environment_id", environmentId)
       .gte("period_start", monthStart)
       .lte("period_end", monthEnd);
 
@@ -218,6 +222,7 @@ export async function getPacingSummary(userId: string): Promise<{
     const { data: actuals } = await supabase
       .from("financial_actuals")
       .select("actual_amount")
+      .eq("environment_id", environmentId)
       .gte("period_start", monthStart)
       .lte("period_end", monthEnd);
 

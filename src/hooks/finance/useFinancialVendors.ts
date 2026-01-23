@@ -1,33 +1,41 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 export function useFinancialVendors() {
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: vendors = [], isLoading } = useQuery({
-    queryKey: ["financial-vendors", effectiveUserId],
+    queryKey: ["financial-vendors", currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("financial_vendors")
         .select("*")
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .is("deleted_at", null)
         .order("name");
       if (error) throw error;
       return data;
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 
   const createMutation = useMutation({
     mutationFn: async ({ name }: { name: string }) => {
-      if (!effectiveUserId) throw new Error("User not authenticated");
+      if (!currentEnvironmentId) throw new Error("Ambiente não selecionado");
+      if (!user?.id) throw new Error("Usuário não autenticado");
+      
       const { error } = await supabase
         .from("financial_vendors")
-        .insert({ name, user_id: effectiveUserId });
+        .insert({ 
+          name, 
+          environment_id: currentEnvironmentId,
+          user_id: user.id,
+        });
       if (error) throw error;
     },
     onSuccess: () => {

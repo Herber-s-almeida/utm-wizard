@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { addDays, addWeeks, addMonths, differenceInDays, differenceInWeeks, differenceInMonths, startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth } from "date-fns";
+import { addDays, addWeeks, addMonths, startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth } from "date-fns";
 
 type Granularity = "day" | "week" | "month";
 
@@ -36,7 +36,8 @@ interface ForecastPeriod {
 export async function generateForecastFromPlan(
   planId: string,
   granularity: Granularity,
-  userId: string
+  userId: string,
+  environmentId: string
 ): Promise<{ success: boolean; message: string; periodsCreated: number }> {
   try {
     // 1. Fetch media plan
@@ -93,6 +94,7 @@ export async function generateForecastFromPlan(
     // 6. Insert new forecasts
     const forecastsToInsert = periods.map(period => ({
       user_id: userId,
+      environment_id: environmentId,
       media_plan_id: planId,
       version: nextVersion,
       granularity,

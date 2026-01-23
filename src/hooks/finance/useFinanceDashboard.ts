@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { getActiveAlerts } from "@/utils/finance/alertsChecker";
 import { startOfMonth, endOfMonth, subDays, addDays } from "date-fns";
 
@@ -17,12 +17,12 @@ interface DashboardData {
 }
 
 export function useFinanceDashboard() {
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
 
   return useQuery({
-    queryKey: ["finance-dashboard", effectiveUserId],
+    queryKey: ["finance-dashboard", currentEnvironmentId],
     queryFn: async (): Promise<DashboardData> => {
-      if (!effectiveUserId) throw new Error("User not authenticated");
+      if (!currentEnvironmentId) throw new Error("Ambiente não selecionado");
 
       const now = new Date();
       const monthStart = startOfMonth(now).toISOString().split('T')[0];
@@ -45,7 +45,7 @@ export function useFinanceDashboard() {
         supabase
           .from("financial_forecasts")
           .select("planned_amount")
-          .eq("user_id", effectiveUserId)
+          .eq("environment_id", currentEnvironmentId)
           .gte("period_start", monthStart)
           .lte("period_end", monthEnd),
         
@@ -53,7 +53,7 @@ export function useFinanceDashboard() {
         supabase
           .from("financial_actuals")
           .select("actual_amount")
-          .eq("user_id", effectiveUserId)
+          .eq("environment_id", currentEnvironmentId)
           .gte("period_start", monthStart)
           .lte("period_end", monthEnd),
         
@@ -61,7 +61,7 @@ export function useFinanceDashboard() {
         supabase
           .from("financial_payments")
           .select("planned_amount")
-          .eq("user_id", effectiveUserId)
+          .eq("environment_id", currentEnvironmentId)
           .gte("planned_payment_date", today)
           .lte("planned_payment_date", in30Days)
           .eq("status", "scheduled")
@@ -71,7 +71,7 @@ export function useFinanceDashboard() {
         supabase
           .from("financial_payments")
           .select("paid_amount")
-          .eq("user_id", effectiveUserId)
+          .eq("environment_id", currentEnvironmentId)
           .gte("actual_payment_date", thirtyDaysAgo)
           .eq("status", "paid")
           .is("deleted_at", null),
@@ -80,16 +80,16 @@ export function useFinanceDashboard() {
         supabase
           .from("financial_payments")
           .select("id", { count: "exact" })
-          .eq("user_id", effectiveUserId)
+          .eq("environment_id", currentEnvironmentId)
           .lt("planned_payment_date", today)
           .in("status", ["scheduled", "overdue"])
           .is("deleted_at", null),
         
         // Monthly pacing data (last 6 months)
-        getPacingDataForChart(effectiveUserId),
+        getPacingDataForChart(currentEnvironmentId),
         
         // Active alerts
-        getActiveAlerts(effectiveUserId),
+        getActiveAlerts(currentEnvironmentId),
       ]);
 
       const plannedThisMonth = (forecastsResult.data || []).reduce(
@@ -126,12 +126,12 @@ export function useFinanceDashboard() {
         })),
       };
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
     refetchInterval: 60000, // Refresh every minute
   });
 }
 
-async function getPacingDataForChart(userId: string): Promise<{ period: string; planned: number; actual: number }[]> {
+async function getPacingDataForChart(environmentId: string): Promise<{ period: string; planned: number; actual: number }[]> {
   const now = new Date();
   const results: { period: string; planned: number; actual: number }[] = [];
 
@@ -145,13 +145,13 @@ async function getPacingDataForChart(userId: string): Promise<{ period: string; 
       supabase
         .from("financial_forecasts")
         .select("planned_amount")
-        .eq("user_id", userId)
+        .eq("environment_id", environmentId)
         .gte("period_start", monthStart)
         .lte("period_end", monthEnd),
       supabase
         .from("financial_actuals")
         .select("actual_amount")
-        .eq("user_id", userId)
+        .eq("environment_id", environmentId)
         .gte("period_start", monthStart)
         .lte("period_end", monthEnd),
     ]);
