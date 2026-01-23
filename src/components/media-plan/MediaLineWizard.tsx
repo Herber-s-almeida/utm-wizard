@@ -535,7 +535,10 @@ export function MediaLineWizard({
         // Update existing line
         const { error } = await supabase
           .from('media_lines')
-          .update(lineData)
+          .update({
+            ...lineData,
+            environment_id: plan.environment_id,
+          })
           .eq('id', editingLine?.id || savedLineId);
 
         if (error) throw error;
@@ -555,6 +558,7 @@ export function MediaLineWizard({
             ...lineData,
             media_plan_id: plan.id,
             user_id: user.id,
+            environment_id: plan.environment_id,
           })
           .select()
           .single();
@@ -570,9 +574,19 @@ export function MediaLineWizard({
           onOpenChange(false);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving line:', error);
-      toast.error('Erro ao salvar linha de mídia');
+      
+      // Mensagens específicas por código de erro
+      if (error?.code === '42501') {
+        toast.error('Sem permissão para salvar. Verifique suas permissões no ambiente.');
+      } else if (error?.code === '23503') {
+        toast.error('Referência inválida. Verifique se todos os campos selecionados são válidos.');
+      } else if (error?.code === '23505') {
+        toast.error('Registro duplicado. Já existe uma linha com esses dados.');
+      } else {
+        toast.error(error?.message || 'Erro ao salvar linha de mídia');
+      }
     } finally {
       setSaving(false);
     }
