@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -18,7 +18,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Plus, 
   Trash2, 
@@ -27,12 +26,18 @@ import {
   Radio,
   Signpost,
   FileText,
-  Calendar,
+  Link2,
+  Users,
 } from 'lucide-react';
 import { useLineDetails, LineDetail } from '@/hooks/useLineDetails';
 import { useLineDetailTypes, LineDetailType } from '@/hooks/useLineDetailTypes';
+import { useLineDetailLinks } from '@/hooks/useLineDetailLinks';
 import { LineDetailTable } from './LineDetailTable';
+import { LinkedLinesTab } from './LinkedLinesTab';
+import { InheritedContextHeader } from './InheritedContextHeader';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   tv: Tv,
@@ -45,22 +50,39 @@ export interface LineDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mediaLineId: string;
+  planId?: string;
   startDate?: string | null;
   endDate?: string | null;
   lineBudget?: number;
   lineCode?: string;
   platform?: string;
+  // Additional context for inheritance
+  vehicleName?: string;
+  mediumName?: string;
+  channelName?: string;
+  subdivisionName?: string;
+  momentName?: string;
+  funnelStageName?: string;
+  formatName?: string;
 }
 
 export function LineDetailDialog({ 
   open, 
   onOpenChange, 
   mediaLineId,
+  planId,
   startDate,
   endDate,
   lineBudget = 0,
   lineCode,
   platform,
+  vehicleName,
+  mediumName,
+  channelName,
+  subdivisionName,
+  momentName,
+  funnelStageName,
+  formatName,
 }: LineDetailDialogProps) {
   const { 
     details, 
@@ -72,7 +94,7 @@ export function LineDetailDialog({
     updateItem,
     deleteItem,
     upsertInsertions,
-  } = useLineDetails(mediaLineId);
+  } = useLineDetails(mediaLineId, planId);
   
   const { types } = useLineDetailTypes();
   
@@ -82,8 +104,26 @@ export function LineDetailDialog({
   const [newDetailName, setNewDetailName] = useState('');
   const [newMetadata, setNewMetadata] = useState<Record<string, unknown>>({});
 
+  // Fetch plan lines for linking
+  const { data: planLines = [] } = useQuery({
+    queryKey: ['plan-lines-for-linking', planId],
+    queryFn: async () => {
+      if (!planId) return [];
+      const { data, error } = await supabase
+        .from('media_lines')
+        .select('id, line_code, platform, budget')
+        .eq('media_plan_id', planId)
+        .is('deleted_at', null)
+        .order('line_code');
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!planId && open,
+  });
+
   // Set first tab as active when details load
-  useMemo(() => {
+  useEffect(() => {
     if (details.length > 0 && !activeTab) {
       setActiveTab(details[0].id);
     }
@@ -99,6 +139,19 @@ export function LineDetailDialog({
     }).format(value);
   };
 
+  // Build inherited context from props
+  const buildInheritedContext = (): Record<string, unknown> => {
+    return {
+      vehicle_name: vehicleName,
+      medium_name: mediumName,
+      channel_name: channelName,
+      subdivision_name: subdivisionName,
+      moment_name: momentName,
+      funnel_stage_name: funnelStageName,
+      format_name: formatName,
+    };
+  };
+
   const handleCreateDetail = async () => {
     if (!newDetailTypeId) return;
     
@@ -107,6 +160,7 @@ export function LineDetailDialog({
         detail_type_id: newDetailTypeId,
         name: newDetailName || undefined,
         metadata: newMetadata,
+        inherited_context: buildInheritedContext(),
       });
       
       setShowNewDetailForm(false);
@@ -137,6 +191,12 @@ export function LineDetailDialog({
   const getIcon = (iconName: string | null | undefined) => {
     const Icon = iconName ? ICON_MAP[iconName] || FileText : FileText;
     return Icon;
+  };
+
+  // Check if active detail is shared
+  const isDetailShared = (detail: LineDetail) => {
+    // This will be checked via the links count
+    return false; // Will be updated with actual link count
   };
 
   if (!mediaLineId) return null;
@@ -210,6 +270,8 @@ export function LineDetailDialog({
               onValueChange={(v) => {
                 if (v === 'new') {
                   setShowNewDetailForm(true);
+                } else if (v === 'links') {
+                  // Links tab - do nothing special
                 } else {
                   setShowNewDetailForm(false);
                   setActiveTab(v);
@@ -298,6 +360,22 @@ export function LineDetailDialog({
                       </div>
                     ))}
 
+                    {/* Inherited context preview */}
+                    {(vehicleName || mediumName || formatName) && (
+                      <div className="p-3 bg-muted/50 rounded-lg border border-dashed">
+                        <p className="text-xs text-muted-foreground mb-2 font-medium">
+                          Contexto herdado da linha:
+                        </p>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          {vehicleName && <Badge variant="outline">{vehicleName}</Badge>}
+                          {mediumName && <Badge variant="outline">{mediumName}</Badge>}
+                          {channelName && <Badge variant="outline">{channelName}</Badge>}
+                          {formatName && <Badge variant="outline">{formatName}</Badge>}
+                          {subdivisionName && <Badge variant="outline">{subdivisionName}</Badge>}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex gap-2 pt-4">
                       <Button onClick={handleCreateDetail} disabled={!newDetailTypeId}>
                         Criar Detalhamento
@@ -325,44 +403,74 @@ export function LineDetailDialog({
                   value={detail.id} 
                   className="flex-1 flex flex-col min-h-0 m-0"
                 >
-                  {/* Metadata header */}
-                  {detail.metadata && Object.keys(detail.metadata as object).length > 0 && (
-                    <div className="px-6 py-2 bg-muted/50 border-b flex items-center gap-4 text-sm shrink-0">
-                      {Object.entries(detail.metadata as Record<string, unknown>).map(([key, value]) => {
-                        const fieldDef = detail.detail_type?.metadata_schema?.find(f => f.key === key);
-                        return (
-                          <div key={key} className="flex items-center gap-1">
-                            <span className="text-muted-foreground">{fieldDef?.label || key}:</span>
-                            <span className="font-medium">{String(value)}</span>
-                          </div>
-                        );
-                      })}
-                      <div className="ml-auto">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-destructive hover:text-destructive"
-                          onClick={() => handleDeleteDetail(detail.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Excluir
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                  {/* Inherited Context Header */}
+                  <InheritedContextHeader 
+                    context={detail.inherited_context}
+                  />
 
-                  {/* Table with horizontal scroll */}
-                  <div className="flex-1 overflow-auto">
-                    <LineDetailTable
-                      detail={detail}
-                      onCreateItem={(data) => createItem({ line_detail_id: detail.id, data })}
-                      onUpdateItem={updateItem}
-                      onDeleteItem={deleteItem}
-                      onUpdateInsertions={upsertInsertions}
-                      planStartDate={startDate}
-                      planEndDate={endDate}
-                    />
-                  </div>
+                  {/* Secondary tabs for items and links */}
+                  <Tabs defaultValue="items" className="flex-1 flex flex-col min-h-0">
+                    <div className="px-6 py-2 border-b bg-muted/30">
+                      <TabsList className="h-8">
+                        <TabsTrigger value="items" className="text-xs h-7">
+                          <FileText className="h-3 w-3 mr-1" />
+                          Itens
+                        </TabsTrigger>
+                        <TabsTrigger value="links" className="text-xs h-7">
+                          <Link2 className="h-3 w-3 mr-1" />
+                          Linhas Vinculadas
+                        </TabsTrigger>
+                      </TabsList>
+
+                      {/* Metadata header */}
+                      {detail.metadata && Object.keys(detail.metadata as object).length > 0 && (
+                        <div className="flex items-center gap-4 text-sm mt-2">
+                          {Object.entries(detail.metadata as Record<string, unknown>).map(([key, value]) => {
+                            const fieldDef = detail.detail_type?.metadata_schema?.find(f => f.key === key);
+                            return (
+                              <div key={key} className="flex items-center gap-1">
+                                <span className="text-muted-foreground">{fieldDef?.label || key}:</span>
+                                <span className="font-medium">{String(value)}</span>
+                              </div>
+                            );
+                          })}
+                          <div className="ml-auto">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteDetail(detail.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Excluir
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <TabsContent value="items" className="flex-1 overflow-auto m-0">
+                      <LineDetailTable
+                        detail={detail}
+                        onCreateItem={(data) => createItem({ line_detail_id: detail.id, data })}
+                        onUpdateItem={updateItem}
+                        onDeleteItem={deleteItem}
+                        onUpdateInsertions={upsertInsertions}
+                        planStartDate={startDate}
+                        planEndDate={endDate}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="links" className="flex-1 overflow-auto m-0">
+                      <LinkedLinesTab
+                        detailId={detail.id}
+                        detailTotalNet={
+                          (detail.items || []).reduce((sum, item) => sum + (item.total_net || 0), 0)
+                        }
+                        planLines={planLines}
+                      />
+                    </TabsContent>
+                  </Tabs>
                 </TabsContent>
               ))}
             </Tabs>
