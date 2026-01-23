@@ -7,8 +7,6 @@ import {
   Unlock,
   Download,
   RefreshCw,
-  ChevronDown,
-  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +28,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFinancialForecast } from "@/hooks/finance/useFinancialForecast";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -37,6 +36,9 @@ export default function ForecastPage() {
   const { planId: routePlanId } = useParams();
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
   const [granularity, setGranularity] = useState<"day" | "week" | "month">("month");
+  const { canEdit } = useEnvironment();
+  
+  const canEditFinance = canEdit('finance');
 
   // Set plan from route param
   useEffect(() => {
@@ -147,18 +149,20 @@ export default function ForecastPage() {
               </Select>
             </div>
 
-            <Button
-              onClick={handleGenerateForecast}
-              disabled={!selectedPlanId || isGenerating}
-              className="bg-emerald-600 hover:bg-emerald-700"
-            >
-              {isGenerating ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Plus className="w-4 h-4 mr-2" />
-              )}
-              Gerar Forecast
-            </Button>
+            {canEditFinance && (
+              <Button
+                onClick={handleGenerateForecast}
+                disabled={!selectedPlanId || isGenerating}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {isGenerating ? (
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4 mr-2" />
+                )}
+                Gerar Forecast
+              </Button>
+            )}
 
             <Button variant="outline" disabled={forecasts.length === 0}>
               <Download className="w-4 h-4 mr-2" />
@@ -218,7 +222,7 @@ export default function ForecastPage() {
                   <TableHead className="text-right">Acumulado</TableHead>
                   <TableHead>Fonte</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  {canEditFinance && <TableHead className="text-right">Ações</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -251,25 +255,27 @@ export default function ForecastPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleLockForecast(forecast.id, forecast.is_locked)}
-                      >
-                        {forecast.is_locked ? (
-                          <>
-                            <Unlock className="w-4 h-4 mr-1" />
-                            Destravar
-                          </>
-                        ) : (
-                          <>
-                            <Lock className="w-4 h-4 mr-1" />
-                            Travar
-                          </>
-                        )}
-                      </Button>
-                    </TableCell>
+                    {canEditFinance && (
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleLockForecast(forecast.id, forecast.is_locked)}
+                        >
+                          {forecast.is_locked ? (
+                            <>
+                              <Unlock className="w-4 h-4 mr-1" />
+                              Destravar
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-4 h-4 mr-1" />
+                              Travar
+                            </>
+                          )}
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

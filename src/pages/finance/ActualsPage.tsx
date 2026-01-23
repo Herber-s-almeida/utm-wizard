@@ -28,12 +28,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFinancialActuals } from "@/hooks/finance/useFinancialActuals";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function ActualsPage() {
   const { planId: routePlanId } = useParams();
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+  const { canEdit } = useEnvironment();
+  
+  const canEditFinance = canEdit('finance');
 
   // Set plan from route param
   useEffect(() => {
@@ -121,18 +125,22 @@ export default function ActualsPage() {
               </Select>
             </div>
 
-            <Button
-              disabled={!selectedPlanId}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Registrar Executado
-            </Button>
+            {canEditFinance && (
+              <>
+                <Button
+                  disabled={!selectedPlanId}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Registrar Executado
+                </Button>
 
-            <Button variant="outline" disabled={!selectedPlanId}>
-              <Upload className="w-4 h-4 mr-2" />
-              Importar
-            </Button>
+                <Button variant="outline" disabled={!selectedPlanId}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Importar
+                </Button>
+              </>
+            )}
 
             <Button variant="outline" disabled={pacingData.length === 0}>
               <Download className="w-4 h-4 mr-2" />

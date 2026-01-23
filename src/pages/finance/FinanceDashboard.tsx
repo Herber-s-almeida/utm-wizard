@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useFinanceDashboard } from "@/hooks/finance/useFinanceDashboard";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   LineChart, 
@@ -28,6 +29,9 @@ import { ptBR } from "date-fns/locale";
 
 export default function FinanceDashboard() {
   const { data, isLoading } = useFinanceDashboard();
+  const { canEdit } = useEnvironment();
+  
+  const canEditFinance = canEdit('finance');
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -91,12 +95,14 @@ export default function FinanceDashboard() {
               Forecast
             </Link>
           </Button>
-          <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
-            <Link to="/finance/documents/new">
-              <DollarSign className="w-4 h-4 mr-2" />
-              Novo Documento
-            </Link>
-          </Button>
+          {canEditFinance && (
+            <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
+              <Link to="/finance/documents/new">
+                <DollarSign className="w-4 h-4 mr-2" />
+                Novo Documento
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -261,9 +267,11 @@ export default function FinanceDashboard() {
                 <p className="text-sm mt-2">
                   Crie forecasts e registre executados para ver o gráfico
                 </p>
-                <Button asChild variant="outline" className="mt-4">
-                  <Link to="/finance/forecast">Criar Forecast</Link>
-                </Button>
+                {canEditFinance && (
+                  <Button asChild variant="outline" className="mt-4">
+                    <Link to="/finance/forecast">Criar Forecast</Link>
+                  </Button>
+                )}
               </div>
             </div>
           )}

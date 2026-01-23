@@ -5,17 +5,9 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  Filter,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -28,8 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFinancialPayments } from "@/hooks/finance/useFinancialPayments";
-import { format, isBefore, isAfter, addDays } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
+import { format, isBefore, isAfter } from "date-fns";
 import type { PaymentStatus } from "@/types/finance";
 
 const statusConfig: Record<PaymentStatus, { label: string; color: string; icon: React.ReactNode }> = {
@@ -52,6 +44,9 @@ export default function PaymentsPage() {
   const [activeTab, setActiveTab] = useState("upcoming");
   
   const { payments, isLoading, markAsPaid } = useFinancialPayments();
+  const { canEdit } = useEnvironment();
+  
+  const canEditFinance = canEdit('finance');
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -84,7 +79,7 @@ export default function PaymentsPage() {
           <TableHead className="text-right">Valor Pago</TableHead>
           <TableHead>Método</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead className="text-right">Ações</TableHead>
+          {canEditFinance && <TableHead className="text-right">Ações</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -126,18 +121,20 @@ export default function PaymentsPage() {
                   <span className="ml-1">{status.label}</span>
                 </Badge>
               </TableCell>
-              <TableCell className="text-right">
-                {payment.status !== 'paid' && payment.status !== 'cancelled' && (
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => markAsPaid(payment.id)}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    Pagar
-                  </Button>
-                )}
-              </TableCell>
+              {canEditFinance && (
+                <TableCell className="text-right">
+                  {payment.status !== 'paid' && payment.status !== 'cancelled' && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => markAsPaid(payment.id)}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Pagar
+                    </Button>
+                  )}
+                </TableCell>
+              )}
             </TableRow>
           );
         })}

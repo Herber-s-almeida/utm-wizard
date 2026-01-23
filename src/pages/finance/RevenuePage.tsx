@@ -53,11 +53,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useFinancialRevenues } from "@/hooks/finance/useFinancialRevenues";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 export default function RevenuePage() {
+  const { canEdit } = useEnvironment();
+  const canEditFinance = canEdit('finance');
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [periodDate, setPeriodDate] = useState<Date>(new Date());
@@ -116,13 +119,15 @@ export default function RevenuePage() {
             Acompanhamento de receitas e retorno sobre investimento
           </p>
         </div>
-        <Button 
-          className="bg-green-600 hover:bg-green-700"
-          onClick={() => setShowCreateDialog(true)}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Registrar Receita
-        </Button>
+        {canEditFinance && (
+          <Button 
+            className="bg-green-600 hover:bg-green-700"
+            onClick={() => setShowCreateDialog(true)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Registrar Receita
+          </Button>
+        )}
       </div>
 
       {/* Filter */}
@@ -262,7 +267,7 @@ export default function RevenuePage() {
                   <TableHead>Produto/Serviço</TableHead>
                   <TableHead>Fonte</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  {canEditFinance && <TableHead className="text-right">Ações</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -282,32 +287,34 @@ export default function RevenuePage() {
                     <TableCell className="text-right font-medium text-green-600">
                       {formatCurrency(Number(revenue.revenue_amount))}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Trash2 className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Excluir receita?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Esta ação não pode ser desfeita.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => deleteRevenue(revenue.id)}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
+                    {canEditFinance && (
+                      <TableCell className="text-right">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Trash2 className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir receita?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => deleteRevenue(revenue.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
