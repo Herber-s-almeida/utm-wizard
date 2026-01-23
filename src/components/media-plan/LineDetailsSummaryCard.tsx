@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { FileSpreadsheet, ChevronDown, ExternalLink, AlertTriangle, Check, X } from 'lucide-react';
+import { FileSpreadsheet, ChevronDown, ExternalLink, AlertTriangle, Check, X, Users, Link2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,24 +14,9 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { motion } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { LineDetailDialog } from './LineDetailDialog';
-
-interface DetailSummary {
-  id: string;
-  media_line_id: string;
-  line_code: string | null;
-  platform: string;
-  line_budget: number;
-  detail_type_name: string;
-  detail_type_icon: string | null;
-  detail_name: string | null;
-  items_count: number;
-  total_insertions: number;
-  total_net: number;
-}
+import { usePlanDetails, PlanDetail } from '@/hooks/usePlanDetails';
 
 interface LineDetailsSummaryCardProps {
   planId: string;
@@ -50,106 +35,41 @@ export function LineDetailsSummaryCard({ planId, lines, onHide }: LineDetailsSum
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Fetch all details for lines in this plan
-  const { data: detailsSummary, isLoading } = useQuery({
-    queryKey: ['plan-details-summary', planId, lines.map(l => l.id)],
-    queryFn: async () => {
-      if (lines.length === 0) return [];
+  const { 
+    details, 
+    detailsByType, 
+    isLoading, 
+    totalNet, 
+    sharedDetailsCount 
+  } = usePlanDetails(planId);
 
-      const lineIds = lines.map(l => l.id);
+  const totalDetails = details.length;
+  const totalItems = details.reduce((sum, d) => sum + d.items.length, 0);
 
-      const { data: details, error } = await supabase
-        .from('line_details')
-        .select(`
-          id,
-          media_line_id,
-          name,
-          detail_type_id,
-          line_detail_types!inner(name, icon)
-        `)
-        .in('media_line_id', lineIds);
-
-      if (error) throw error;
-      if (!details || details.length === 0) return [];
-
-      // Fetch items for all details
-      const detailIds = details.map(d => d.id);
-      const { data: items, error: itemsError } = await supabase
-        .from('line_detail_items')
-        .select('id, line_detail_id, total_insertions, total_net')
-        .in('line_detail_id', detailIds)
-        .eq('is_active', true);
-
-      if (itemsError) throw itemsError;
-
-      // Build summary
-      const summary: DetailSummary[] = details.map(detail => {
-        const line = lines.find(l => l.id === detail.media_line_id);
-        const detailItems = (items || []).filter(i => i.line_detail_id === detail.id);
-        const detailType = detail.line_detail_types as unknown as { name: string; icon: string | null };
-
-        return {
-          id: detail.id,
-          media_line_id: detail.media_line_id,
-          line_code: line?.line_code || null,
-          platform: line?.platform || 'Linha',
-          line_budget: Number(line?.budget) || 0,
-          detail_type_name: detailType?.name || 'Detalhamento',
-          detail_type_icon: detailType?.icon || null,
-          detail_name: detail.name,
-          items_count: detailItems.length,
-          total_insertions: detailItems.reduce((sum, i) => sum + (i.total_insertions || 0), 0),
-          total_net: detailItems.reduce((sum, i) => sum + (i.total_net || 0), 0),
-        };
-      });
-
-      return summary;
-    },
-    enabled: lines.length > 0,
-  });
-
-  // Group by type
-  const groupedByType = useMemo(() => {
-    if (!detailsSummary) return {};
-    
-    const grouped: Record<string, DetailSummary[]> = {};
-    detailsSummary.forEach(detail => {
-      if (!grouped[detail.detail_type_name]) {
-        grouped[detail.detail_type_name] = [];
-      }
-      grouped[detail.detail_type_name].push(detail);
-    });
-    
-    return grouped;
-  }, [detailsSummary]);
-
-  const totalDetails = detailsSummary?.length || 0;
-  const totalItems = detailsSummary?.reduce((sum, d) => sum + d.items_count, 0) || 0;
-  const totalNet = detailsSummary?.reduce((sum, d) => sum + d.total_net, 0) || 0;
-
-  // Lines with budget mismatch
+  // Lines with budget mismatch (considering allocation)
   const linesWithMismatch = useMemo(() => {
-    if (!detailsSummary) return [];
+    const lineAllocations: Record<string, { budget: number; allocated: number }> = {};
     
-    const lineDetails: Record<string, { budget: number; totalNet: number }> = {};
-    
-    detailsSummary.forEach(detail => {
-      if (!lineDetails[detail.media_line_id]) {
-        lineDetails[detail.media_line_id] = {
-          budget: detail.line_budget,
-          totalNet: 0,
-        };
-      }
-      lineDetails[detail.media_line_id].totalNet += detail.total_net;
+    details.forEach(detail => {
+      detail.links.forEach(link => {
+        if (!lineAllocations[link.media_line_id]) {
+          lineAllocations[link.media_line_id] = {
+            budget: link.media_line?.budget || 0,
+            allocated: 0,
+          };
+        }
+        const allocatedAmount = detail.total_net * (link.allocated_percentage / 100);
+        lineAllocations[link.media_line_id].allocated += allocatedAmount;
+      });
     });
 
-    return Object.entries(lineDetails)
-      .filter(([, data]) => Math.abs(data.budget - data.totalNet) > 0.01)
+    return Object.entries(lineAllocations)
+      .filter(([, data]) => Math.abs(data.budget - data.allocated) > 0.01)
       .map(([lineId, data]) => ({
         lineId,
-        difference: data.budget - data.totalNet,
+        difference: data.budget - data.allocated,
       }));
-  }, [detailsSummary]);
+  }, [details]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -181,6 +101,12 @@ export function LineDetailsSummaryCard({ planId, lines, onHide }: LineDetailsSum
                 <Badge variant="secondary" className="text-xs">
                   {totalDetails} detalhamento{totalDetails !== 1 ? 's' : ''}
                 </Badge>
+                {sharedDetailsCount > 0 && (
+                  <Badge variant="outline" className="text-xs gap-1">
+                    <Link2 className="h-3 w-3" />
+                    {sharedDetailsCount} compartilhado{sharedDetailsCount !== 1 ? 's' : ''}
+                  </Badge>
+                )}
                 {linesWithMismatch.length > 0 && (
                   <Badge variant="destructive" className="text-xs gap-1">
                     <AlertTriangle className="h-3 w-3" />
@@ -235,52 +161,89 @@ export function LineDetailsSummaryCard({ planId, lines, onHide }: LineDetailsSum
               </div>
             ) : (
               <div className="space-y-4">
-                {Object.entries(groupedByType).map(([typeName, typeDetails]) => (
-                  <div key={typeName} className="space-y-2">
+                {detailsByType.map((typeGroup) => (
+                  <div key={typeGroup.typeId} className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-sm">{typeName}</h4>
-                      <Badge variant="outline" className="text-xs">{typeDetails.length}</Badge>
+                      <h4 className="font-medium text-sm">{typeGroup.typeName}</h4>
+                      <Badge variant="outline" className="text-xs">{typeGroup.details.length}</Badge>
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        {formatCurrency(typeGroup.totalNet)}
+                      </span>
                     </div>
                     
                     <div className="rounded-lg border overflow-hidden">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="bg-muted/50">
-                            <th className="text-left px-3 py-2 font-medium">Linha</th>
                             <th className="text-left px-3 py-2 font-medium">Detalhamento</th>
+                            <th className="text-left px-3 py-2 font-medium">Linhas</th>
                             <th className="text-center px-3 py-2 font-medium">Itens</th>
                             <th className="text-center px-3 py-2 font-medium">Inserções</th>
-                            <th className="text-right px-3 py-2 font-medium">Orç. Linha</th>
-                            <th className="text-right px-3 py-2 font-medium">Total Det.</th>
+                            <th className="text-right px-3 py-2 font-medium">Total</th>
                             <th className="text-center px-3 py-2 font-medium">Status</th>
                             <th className="px-3 py-2"></th>
                           </tr>
                         </thead>
                         <tbody>
-                          {typeDetails.map(detail => {
-                            const diff = detail.line_budget - detail.total_net;
-                            const hasMismatch = Math.abs(diff) > 0.01;
-                            
+                          {typeGroup.details.map((detail) => {
+                            const primaryLink = detail.links.find(l => l.is_primary);
+                            const hasAllocationError = detail.links.reduce(
+                              (sum, l) => sum + (l.allocated_percentage || 0), 0
+                            ) !== 100;
+
                             return (
                               <tr key={detail.id} className="border-t hover:bg-muted/30">
                                 <td className="px-3 py-2">
-                                  <span className="font-mono text-xs">{detail.line_code || detail.platform}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{detail.name || '-'}</span>
+                                    {detail.is_shared && (
+                                      <Badge variant="secondary" className="text-xs gap-1">
+                                        <Users className="h-3 w-3" />
+                                        Compartilhado
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </td>
-                                <td className="px-3 py-2 text-muted-foreground">{detail.detail_name || '-'}</td>
-                                <td className="px-3 py-2 text-center">{detail.items_count}</td>
-                                <td className="px-3 py-2 text-center">{detail.total_insertions}</td>
-                                <td className="px-3 py-2 text-right font-medium">{formatCurrency(detail.line_budget)}</td>
-                                <td className={cn("px-3 py-2 text-right font-medium", hasMismatch && "text-destructive")}>
+                                <td className="px-3 py-2">
+                                  <div className="flex items-center gap-1">
+                                    {detail.links.slice(0, 3).map((link, idx) => (
+                                      <Badge 
+                                        key={link.id} 
+                                        variant={link.is_primary ? "default" : "outline"} 
+                                        className="text-xs font-mono"
+                                      >
+                                        {link.media_line?.line_code || 'S/C'}
+                                        {link.allocated_percentage < 100 && (
+                                          <span className="ml-1 text-muted-foreground">
+                                            {link.allocated_percentage}%
+                                          </span>
+                                        )}
+                                      </Badge>
+                                    ))}
+                                    {detail.links.length > 3 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        +{detail.links.length - 3}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2 text-center">{detail.items.length}</td>
+                                <td className="px-3 py-2 text-center">
+                                  {detail.items.reduce((sum, i) => sum + (i.total_insertions || 0), 0)}
+                                </td>
+                                <td className="px-3 py-2 text-right font-medium">
                                   {formatCurrency(detail.total_net)}
                                 </td>
                                 <td className="px-3 py-2 text-center">
-                                  {hasMismatch ? (
+                                  {hasAllocationError ? (
                                     <TooltipProvider>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
-                                          <span className="inline-flex"><AlertTriangle className="h-4 w-4 text-destructive" /></span>
+                                          <span className="inline-flex">
+                                            <AlertTriangle className="h-4 w-4 text-destructive" />
+                                          </span>
                                         </TooltipTrigger>
-                                        <TooltipContent>Diferença: {formatCurrency(diff)}</TooltipContent>
+                                        <TooltipContent>Alocação não soma 100%</TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
                                   ) : (
@@ -288,9 +251,16 @@ export function LineDetailsSummaryCard({ planId, lines, onHide }: LineDetailsSum
                                   )}
                                 </td>
                                 <td className="px-3 py-2">
-                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenDetail(detail.media_line_id)}>
-                                    <ExternalLink className="h-4 w-4" />
-                                  </Button>
+                                  {primaryLink && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-7 w-7" 
+                                      onClick={() => handleOpenDetail(primaryLink.media_line_id)}
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                    </Button>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -302,8 +272,14 @@ export function LineDetailsSummaryCard({ planId, lines, onHide }: LineDetailsSum
                 ))}
 
                 <div className="flex items-center justify-end gap-6 pt-2 border-t text-sm">
-                  <div><span className="text-muted-foreground">Total itens:</span><span className="font-semibold ml-2">{totalItems}</span></div>
-                  <div><span className="text-muted-foreground">Total detalhado:</span><span className="font-semibold ml-2">{formatCurrency(totalNet)}</span></div>
+                  <div>
+                    <span className="text-muted-foreground">Total itens:</span>
+                    <span className="font-semibold ml-2">{totalItems}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total detalhado:</span>
+                    <span className="font-semibold ml-2">{formatCurrency(totalNet)}</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -316,6 +292,7 @@ export function LineDetailsSummaryCard({ planId, lines, onHide }: LineDetailsSum
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           mediaLineId={selectedLine.id}
+          planId={planId}
           startDate={selectedLine.start_date}
           endDate={selectedLine.end_date}
           lineBudget={Number(selectedLine.budget) || 0}

@@ -109,7 +109,7 @@ export default function DetailTypesPage() {
 
         {/* Explanatory Card */}
         <Card className="bg-muted/30 border-dashed">
-          <CardContent className="py-4">
+          <CardContent className="py-4 space-y-3">
             <p className="text-sm text-muted-foreground leading-relaxed">
               Algumas entregas de mídia precisam de detalhamento diferente, como entregas semanais, 
               diárias ou ações pontuais que precisam ser destacadas no plano. Para isso, utiliza-se 
@@ -117,6 +117,15 @@ export default function DetailTypesPage() {
               do plano em suas entregas pormenores, organizando melhor a execução e o acompanhamento 
               das ações de mídia.
             </p>
+            <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+              <p className="text-sm font-medium text-primary mb-1">Campos herdados automaticamente</p>
+              <p className="text-xs text-muted-foreground">
+                Os seguintes campos são herdados da linha de mídia e <strong>não devem</strong> ser 
+                incluídos no schema do tipo de detalhamento: <span className="font-medium">Veículo, 
+                Meio, Canal, Praça/Subdivisão, Momento, Fase do Funil, Formato e Secundagem</span>. 
+                Estes campos são exibidos automaticamente como contexto no detalhamento.
+              </p>
+            </div>
           </CardContent>
         </Card>
 
