@@ -54,6 +54,415 @@ serve(async (req) => {
     const { action, payload } = await req.json();
 
     switch (action) {
+      // ==================== ENVIRONMENT MANAGEMENT ====================
+      
+      case "list_environments": {
+        // Get all environments with their members count
+        const { data: environments, error: envError } = await adminClient
+          .from("environments")
+          .select("id, name, company_name, cnpj, created_at, created_by")
+          .order("name");
+
+        if (envError) throw envError;
+
+        // For each environment, get member counts and members list
+        const environmentsWithMembers = await Promise.all(
+          (environments || []).map(async (env) => {
+            // Get members with their details
+            const { data: members } = await adminClient
+              .from("environment_roles")
+              .select("user_id, is_environment_admin, accepted_at")
+              .eq("environment_id", env.id)
+              .not("accepted_at", "is", null);
+
+            // Get profiles for these users
+            const userIds = members?.map(m => m.user_id) || [];
+            let profiles: any[] = [];
+            let emails: Record<string, string> = {};
+            
+            if (userIds.length > 0) {
+              const { data: profileData } = await adminClient
+                .from("profiles")
+                .select("user_id, full_name")
+                .in("user_id", userIds);
+              profiles = profileData || [];
+
+              // Get emails from auth.users
+              const { data: authUsers } = await adminClient.auth.admin.listUsers();
+              if (authUsers?.users) {
+                for (const au of authUsers.users) {
+                  if (userIds.includes(au.id)) {
+                    emails[au.id] = au.email || "";
+                  }
+                }
+              }
+            }
+
+            // Combine data
+            const membersWithDetails = (members || []).map(m => {
+              const profile = profiles.find(p => p.user_id === m.user_id);
+              return {
+                user_id: m.user_id,
+                is_environment_admin: m.is_environment_admin,
+                full_name: profile?.full_name || null,
+                email: emails[m.user_id] || null,
+              };
+            });
+
+            return {
+              ...env,
+              members: membersWithDetails,
+              admin_count: membersWithDetails.filter(m => m.is_environment_admin).length,
+              member_count: membersWithDetails.length,
+            };
+          })
+        );
+
+        return new Response(
+          JSON.stringify({ environments: environmentsWithMembers }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "create_environment": {
+        const { name, companyName, initialAdminEmail } = payload;
+
+        if (!name || typeof name !== "string" || name.trim().length < 2) {
+          return new Response(
+            JSON.stringify({ error: "Nome do ambiente é obrigatório (mínimo 2 caracteres)" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Create the environment
+        const { data: newEnv, error: createError } = await adminClient
+          .from("environments")
+          .insert({
+            name: name.trim(),
+            company_name: companyName?.trim() || null,
+            created_by: user.id,
+            owner_user_id: null, // No owner - environment is managed by admins
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+
+        // If initialAdminEmail is provided, either add existing user or create invite
+        if (initialAdminEmail && typeof initialAdminEmail === "string") {
+          // Check if user exists
+          const { data: authUsers } = await adminClient.auth.admin.listUsers();
+          const existingUser = authUsers?.users.find(
+            (u) => u.email?.toLowerCase() === initialAdminEmail.toLowerCase()
+          );
+
+          if (existingUser) {
+            // Add existing user as admin
+            const { error: roleError } = await adminClient
+              .from("environment_roles")
+              .insert({
+                environment_id: newEnv.id,
+                user_id: existingUser.id,
+                is_environment_admin: true,
+                role_read: true,
+                role_edit: true,
+                role_delete: true,
+                role_invite: true,
+                perm_executive_dashboard: "admin",
+                perm_reports: "admin",
+                perm_finance: "admin",
+                perm_media_plans: "admin",
+                perm_media_resources: "admin",
+                perm_taxonomy: "admin",
+                perm_library: "admin",
+                invited_by: user.id,
+                invited_at: new Date().toISOString(),
+                accepted_at: new Date().toISOString(),
+              });
+
+            if (roleError) {
+              console.error("Error adding admin to environment:", roleError);
+            }
+          } else {
+            // Create pending invite for new user
+            const inviteToken = crypto.randomUUID() + crypto.randomUUID();
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 7);
+
+            const { error: inviteError } = await adminClient
+              .from("pending_environment_invites")
+              .insert({
+                environment_id: newEnv.id,
+                email: initialAdminEmail.toLowerCase(),
+                environment_role: "admin",
+                invited_by: user.id,
+                invite_token: inviteToken,
+                expires_at: expiresAt.toISOString(),
+                perm_executive_dashboard: "admin",
+                perm_reports: "admin",
+                perm_finance: "admin",
+                perm_media_plans: "admin",
+                perm_media_resources: "admin",
+                perm_taxonomy: "admin",
+                perm_library: "admin",
+              });
+
+            if (inviteError) {
+              console.error("Error creating invite:", inviteError);
+            }
+          }
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, environment: newEnv }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "update_environment": {
+        const { environmentId, name, companyName, cnpj } = payload;
+
+        if (!environmentId) {
+          return new Response(
+            JSON.stringify({ error: "ID do ambiente é obrigatório" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (name !== undefined) updateData.name = name.trim();
+        if (companyName !== undefined) updateData.company_name = companyName?.trim() || null;
+        if (cnpj !== undefined) updateData.cnpj = cnpj?.trim() || null;
+
+        const { error } = await adminClient
+          .from("environments")
+          .update(updateData)
+          .eq("id", environmentId);
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "delete_environment": {
+        const { environmentId } = payload;
+
+        if (!environmentId) {
+          return new Response(
+            JSON.stringify({ error: "ID do ambiente é obrigatório" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Check if environment has data
+        const { count: planCount } = await adminClient
+          .from("media_plans")
+          .select("id", { count: "exact", head: true })
+          .eq("environment_id", environmentId);
+
+        if (planCount && planCount > 0) {
+          return new Response(
+            JSON.stringify({ error: `Ambiente possui ${planCount} plano(s) de mídia. Exclua os dados antes de remover o ambiente.` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Delete environment roles first
+        await adminClient
+          .from("environment_roles")
+          .delete()
+          .eq("environment_id", environmentId);
+
+        // Delete pending invites
+        await adminClient
+          .from("pending_environment_invites")
+          .delete()
+          .eq("environment_id", environmentId);
+
+        // Delete the environment
+        const { error } = await adminClient
+          .from("environments")
+          .delete()
+          .eq("id", environmentId);
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "add_environment_member": {
+        const { environmentId, email, isAdmin } = payload;
+
+        if (!environmentId || !email) {
+          return new Response(
+            JSON.stringify({ error: "ID do ambiente e email são obrigatórios" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Check if user exists
+        const { data: authUsers } = await adminClient.auth.admin.listUsers();
+        const existingUser = authUsers?.users.find(
+          (u) => u.email?.toLowerCase() === email.toLowerCase()
+        );
+
+        if (existingUser) {
+          // Check if already a member
+          const { data: existingRole } = await adminClient
+            .from("environment_roles")
+            .select("id")
+            .eq("environment_id", environmentId)
+            .eq("user_id", existingUser.id)
+            .maybeSingle();
+
+          if (existingRole) {
+            return new Response(
+              JSON.stringify({ error: "Este usuário já é membro do ambiente" }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          // Add as member
+          const permLevel = isAdmin ? "admin" : "view";
+          const { error: roleError } = await adminClient
+            .from("environment_roles")
+            .insert({
+              environment_id: environmentId,
+              user_id: existingUser.id,
+              is_environment_admin: isAdmin ?? false,
+              role_read: true,
+              role_edit: isAdmin ?? false,
+              role_delete: isAdmin ?? false,
+              role_invite: isAdmin ?? false,
+              perm_executive_dashboard: permLevel,
+              perm_reports: permLevel,
+              perm_finance: permLevel,
+              perm_media_plans: permLevel,
+              perm_media_resources: permLevel,
+              perm_taxonomy: permLevel,
+              perm_library: permLevel,
+              invited_by: user.id,
+              invited_at: new Date().toISOString(),
+              accepted_at: new Date().toISOString(),
+            });
+
+          if (roleError) throw roleError;
+
+          return new Response(
+            JSON.stringify({ success: true, type: "added" }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } else {
+          // Create pending invite
+          const inviteToken = crypto.randomUUID() + crypto.randomUUID();
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 7);
+
+          const permLevel = isAdmin ? "admin" : "view";
+          const { error: inviteError } = await adminClient
+            .from("pending_environment_invites")
+            .insert({
+              environment_id: environmentId,
+              email: email.toLowerCase(),
+              environment_role: isAdmin ? "admin" : "user",
+              invited_by: user.id,
+              invite_token: inviteToken,
+              expires_at: expiresAt.toISOString(),
+              perm_executive_dashboard: permLevel,
+              perm_reports: permLevel,
+              perm_finance: permLevel,
+              perm_media_plans: permLevel,
+              perm_media_resources: permLevel,
+              perm_taxonomy: permLevel,
+              perm_library: permLevel,
+            });
+
+          if (inviteError) throw inviteError;
+
+          return new Response(
+            JSON.stringify({ success: true, type: "invited", inviteToken }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+
+      case "update_environment_member": {
+        const { environmentId, userId, isAdmin } = payload;
+
+        if (!environmentId || !userId) {
+          return new Response(
+            JSON.stringify({ error: "ID do ambiente e do usuário são obrigatórios" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const permLevel = isAdmin ? "admin" : "view";
+        const { error } = await adminClient
+          .from("environment_roles")
+          .update({
+            is_environment_admin: isAdmin ?? false,
+            role_edit: isAdmin ?? false,
+            role_delete: isAdmin ?? false,
+            role_invite: isAdmin ?? false,
+            perm_executive_dashboard: permLevel,
+            perm_reports: permLevel,
+            perm_finance: permLevel,
+            perm_media_plans: permLevel,
+            perm_media_resources: permLevel,
+            perm_taxonomy: permLevel,
+            perm_library: permLevel,
+          })
+          .eq("environment_id", environmentId)
+          .eq("user_id", userId);
+
+        if (error) throw error;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      case "remove_environment_member": {
+        const { environmentId, userId } = payload;
+
+        if (!environmentId || !userId) {
+          return new Response(
+            JSON.stringify({ error: "ID do ambiente e do usuário são obrigatórios" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { error } = await adminClient
+          .from("environment_roles")
+          .delete()
+          .eq("environment_id", environmentId)
+          .eq("user_id", userId);
+
+        if (error) {
+          if (error.message?.includes("último administrador")) {
+            return new Response(
+              JSON.stringify({ error: "Não é possível remover o último administrador do ambiente" }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          throw error;
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // ==================== LEGACY USER MANAGEMENT ====================
+
       case "list_users": {
         // Get all users from auth.users with their profiles and system roles
         const { data: authUsers, error: authError } = await adminClient.auth.admin.listUsers();
