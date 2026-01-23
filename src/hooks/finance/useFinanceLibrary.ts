@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { toast } from "sonner";
 
 // Types
@@ -82,34 +82,35 @@ export interface FinanceRequestType {
 
 // Cost Centers
 export function useFinanceCostCenters() {
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   
   return useQuery({
-    queryKey: ["finance_cost_centers", effectiveUserId],
+    queryKey: ["finance_cost_centers", currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_cost_centers")
         .select("*")
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .is("deleted_at", null)
         .order("code");
       
       if (error) throw error;
       return data as FinanceCostCenter[];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 }
 
 export function useCreateCostCenter() {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (data: { code: string; name: string }) => {
       const { error } = await supabase
         .from("finance_cost_centers")
-        .insert({ ...data, user_id: user!.id });
+        .insert({ ...data, user_id: user!.id, environment_id: currentEnvironmentId! });
       
       if (error) throw error;
     },
@@ -169,34 +170,35 @@ export function useDeleteCostCenter() {
 
 // Teams
 export function useFinanceTeams() {
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   
   return useQuery({
-    queryKey: ["finance_teams", effectiveUserId],
+    queryKey: ["finance_teams", currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_teams")
         .select("*")
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .is("deleted_at", null)
         .order("name");
       
       if (error) throw error;
       return data as FinanceTeam[];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 }
 
 export function useCreateTeam() {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (data: { name: string }) => {
       const { error } = await supabase
         .from("finance_teams")
-        .insert({ ...data, user_id: user!.id });
+        .insert({ ...data, user_id: user!.id, environment_id: currentEnvironmentId! });
       
       if (error) throw error;
     },
@@ -256,34 +258,35 @@ export function useDeleteTeam() {
 
 // Financial Accounts
 export function useFinanceAccounts() {
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   
   return useQuery({
-    queryKey: ["finance_accounts", effectiveUserId],
+    queryKey: ["finance_accounts", currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_accounts")
         .select("*")
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .is("deleted_at", null)
         .order("name");
       
       if (error) throw error;
       return data as FinanceAccount[];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 }
 
 export function useCreateAccount() {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (data: { name: string; category?: string }) => {
       const { error } = await supabase
         .from("finance_accounts")
-        .insert({ ...data, user_id: user!.id });
+        .insert({ ...data, user_id: user!.id, environment_id: currentEnvironmentId! });
       
       if (error) throw error;
     },
@@ -343,34 +346,35 @@ export function useDeleteAccount() {
 
 // Packages
 export function useFinancePackages() {
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   
   return useQuery({
-    queryKey: ["finance_packages", effectiveUserId],
+    queryKey: ["finance_packages", currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_packages")
         .select("*")
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .is("deleted_at", null)
         .order("name");
       
       if (error) throw error;
       return data as FinancePackage[];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 }
 
 export function useCreatePackage() {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (data: { name: string }) => {
       const { error } = await supabase
         .from("finance_packages")
-        .insert({ ...data, user_id: user!.id });
+        .insert({ ...data, user_id: user!.id, environment_id: currentEnvironmentId! });
       
       if (error) throw error;
     },
@@ -430,34 +434,35 @@ export function useDeletePackage() {
 
 // Macro Classifications
 export function useFinanceMacroClassifications() {
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   
   return useQuery({
-    queryKey: ["finance_macro_classifications", effectiveUserId],
+    queryKey: ["finance_macro_classifications", currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_macro_classifications")
         .select("*")
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .is("deleted_at", null)
         .order("name");
       
       if (error) throw error;
       return data as FinanceMacroClassification[];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 }
 
 export function useCreateMacroClassification() {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (data: { name: string }) => {
       const { error } = await supabase
         .from("finance_macro_classifications")
-        .insert({ ...data, user_id: user!.id });
+        .insert({ ...data, user_id: user!.id, environment_id: currentEnvironmentId! });
       
       if (error) throw error;
     },
@@ -517,34 +522,35 @@ export function useDeleteMacroClassification() {
 
 // Expense Classifications
 export function useFinanceExpenseClassifications() {
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   
   return useQuery({
-    queryKey: ["finance_expense_classifications", effectiveUserId],
+    queryKey: ["finance_expense_classifications", currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_expense_classifications")
         .select("*, macro_classification:finance_macro_classifications(*)")
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .is("deleted_at", null)
         .order("name");
       
       if (error) throw error;
       return data as FinanceExpenseClassification[];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 }
 
 export function useCreateExpenseClassification() {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (data: { name: string; macro_classification_id?: string }) => {
       const { error } = await supabase
         .from("finance_expense_classifications")
-        .insert({ ...data, user_id: user!.id });
+        .insert({ ...data, user_id: user!.id, environment_id: currentEnvironmentId! });
       
       if (error) throw error;
     },
@@ -604,34 +610,35 @@ export function useDeleteExpenseClassification() {
 
 // Request Types
 export function useFinanceRequestTypes() {
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   
   return useQuery({
-    queryKey: ["finance_request_types", effectiveUserId],
+    queryKey: ["finance_request_types", currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_request_types")
         .select("*")
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .is("deleted_at", null)
         .order("name");
       
       if (error) throw error;
       return data as FinanceRequestType[];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 }
 
 export function useCreateRequestType() {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (data: { name: string }) => {
       const { error } = await supabase
         .from("finance_request_types")
-        .insert({ ...data, user_id: user!.id });
+        .insert({ ...data, user_id: user!.id, environment_id: currentEnvironmentId! });
       
       if (error) throw error;
     },
