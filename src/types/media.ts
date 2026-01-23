@@ -3,6 +3,7 @@ import { HierarchyLevel } from './hierarchy';
 export interface MediaPlan {
   id: string;
   user_id: string;
+  environment_id: string | null;
   name: string;
   slug: string | null;
   client: string | null;
