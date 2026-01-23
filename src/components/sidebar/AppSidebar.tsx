@@ -1769,9 +1769,9 @@ export function AppSidebar() {
                     </CollapsibleTrigger>
 
                     <CollapsibleContent className="pl-4 space-y-0.5">
-                      <Link to="/admin/users">
+                      <Link to="/admin/environments">
                         <Button
-                          variant={location.pathname === '/admin/users' ? 'secondary' : 'ghost'}
+                          variant={location.pathname === '/admin/environments' ? 'secondary' : 'ghost'}
                           size="sm"
                           className="w-full justify-start gap-2 h-7 text-xs"
                         >

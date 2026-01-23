@@ -476,14 +476,14 @@ export function FinanceSidebar() {
                     </CollapsibleTrigger>
 
                     <CollapsibleContent className="pl-4 space-y-0.5">
-                      <Link to="/admin/users">
+                      <Link to="/admin/environments">
                         <Button
-                          variant={location.pathname === '/admin/users' ? 'secondary' : 'ghost'}
+                          variant={location.pathname === '/admin/environments' ? 'secondary' : 'ghost'}
                           size="sm"
                           className="w-full justify-start gap-2 h-7 text-xs"
                         >
-                          <Users className="h-3 w-3" />
-                          Usuários
+                          <Building2 className="h-3 w-3" />
+                          Ambientes do Sistema
                         </Button>
                       </Link>
                       <Link to="/admin/menu-visibility">
