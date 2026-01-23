@@ -42,7 +42,6 @@ import FormatsPage from "./pages/config/FormatsPage";
 import CreativeTypesPage from "./pages/config/CreativeTypesPage";
 import StatusesPage from "./pages/config/StatusesPage";
 import KpisPage from "./pages/config/KpisPage";
-import AdminUsers from "./pages/admin/AdminUsers";
 import AdminEnvironments from "./pages/admin/AdminEnvironments";
 import AdminMenuVisibility from "./pages/admin/AdminMenuVisibility";
 import EnvironmentMembersPage from "./pages/admin/EnvironmentMembersPage";
@@ -129,7 +128,6 @@ function AppWithEnvironment() {
           <Route path="/config/objectives" element={<ProtectedRoute><ObjectivesPage /></ProtectedRoute>} />
           <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
           <Route path="/trash" element={<ProtectedRoute><TrashPage /></ProtectedRoute>} />
-          <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="/admin/environments" element={<AdminRoute><AdminEnvironments /></AdminRoute>} />
           <Route path="/admin/menu-visibility" element={<AdminRoute><AdminMenuVisibility /></AdminRoute>} />
           <Route path="/admin/documentation" element={<AdminRoute><SystemDocumentationPage /></AdminRoute>} />
