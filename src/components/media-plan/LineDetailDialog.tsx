@@ -101,7 +101,6 @@ export function LineDetailDialog({
   const [activeTab, setActiveTab] = useState<string>('');
   const [showNewDetailForm, setShowNewDetailForm] = useState(false);
   const [newDetailTypeId, setNewDetailTypeId] = useState<string>('');
-  const [newDetailName, setNewDetailName] = useState('');
   const [newMetadata, setNewMetadata] = useState<Record<string, unknown>>({});
 
   // Fetch plan lines for linking
@@ -155,17 +154,21 @@ export function LineDetailDialog({
   const handleCreateDetail = async () => {
     if (!newDetailTypeId) return;
     
+    // Auto-generate name from type + line code
+    const autoName = selectedType 
+      ? `${selectedType.name}${lineCode ? ` - ${lineCode}` : ''}`
+      : undefined;
+    
     try {
       const result = await createDetail({
         detail_type_id: newDetailTypeId,
-        name: newDetailName || undefined,
+        name: autoName,
         metadata: newMetadata,
         inherited_context: buildInheritedContext(),
       });
       
       setShowNewDetailForm(false);
       setNewDetailTypeId('');
-      setNewDetailName('');
       setNewMetadata({});
       setActiveTab(result.id);
     } catch (error) {
@@ -310,7 +313,7 @@ export function LineDetailDialog({
               {/* New detail form */}
               {showNewDetailForm && (
                 <TabsContent value="new" className="flex-1 p-6 m-0">
-                  <div className="max-w-md space-y-4">
+                  <div className="max-w-lg space-y-4">
                     <div className="space-y-2">
                       <Label>Tipo de Detalhamento</Label>
                       <Select value={newDetailTypeId} onValueChange={setNewDetailTypeId}>
@@ -333,17 +336,65 @@ export function LineDetailDialog({
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label>Nome (opcional)</Label>
-                      <Input
-                        value={newDetailName}
-                        onChange={(e) => setNewDetailName(e.target.value)}
-                        placeholder={selectedType?.name || 'Nome do detalhamento'}
-                      />
+                    {/* Auto-generated name preview */}
+                    {selectedType && lineCode && (
+                      <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                        <p className="text-xs text-muted-foreground mb-1">Nome do detalhamento:</p>
+                        <p className="font-medium text-sm">
+                          {selectedType.name} - {lineCode}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Inherited context preview - always show when creating */}
+                    <div className="p-4 bg-muted/50 rounded-lg border border-dashed space-y-3">
+                      <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
+                        <FileText className="h-3.5 w-3.5" />
+                        Contexto herdado automaticamente da linha:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {vehicleName && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Tv className="h-3 w-3" />
+                            {vehicleName}
+                          </Badge>
+                        )}
+                        {mediumName && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Radio className="h-3 w-3" />
+                            {mediumName}
+                          </Badge>
+                        )}
+                        {channelName && (
+                          <Badge variant="outline">{channelName}</Badge>
+                        )}
+                        {subdivisionName && (
+                          <Badge variant="outline">{subdivisionName}</Badge>
+                        )}
+                        {momentName && (
+                          <Badge variant="outline">{momentName}</Badge>
+                        )}
+                        {funnelStageName && (
+                          <Badge variant="outline">{funnelStageName}</Badge>
+                        )}
+                        {formatName && (
+                          <Badge variant="outline">{formatName}</Badge>
+                        )}
+                        {!vehicleName && !mediumName && !subdivisionName && (
+                          <span className="text-xs text-muted-foreground italic">
+                            Nenhum contexto disponível na linha
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Estes campos são exibidos como referência e não precisam ser preenchidos novamente.
+                      </p>
                     </div>
 
-                    {/* Metadata fields based on type */}
-                    {selectedType?.metadata_schema?.map((field) => (
+                    {/* Metadata fields - only show non-redundant ones */}
+                    {selectedType?.metadata_schema?.filter(field => 
+                      !['praca', 'veiculo', 'meio', 'canal', 'formato'].includes(field.key.toLowerCase())
+                    ).map((field) => (
                       <div key={field.key} className="space-y-2">
                         <Label>{field.label}</Label>
                         <Input
@@ -359,22 +410,6 @@ export function LineDetailDialog({
                         />
                       </div>
                     ))}
-
-                    {/* Inherited context preview */}
-                    {(vehicleName || mediumName || formatName) && (
-                      <div className="p-3 bg-muted/50 rounded-lg border border-dashed">
-                        <p className="text-xs text-muted-foreground mb-2 font-medium">
-                          Contexto herdado da linha:
-                        </p>
-                        <div className="flex flex-wrap gap-2 text-xs">
-                          {vehicleName && <Badge variant="outline">{vehicleName}</Badge>}
-                          {mediumName && <Badge variant="outline">{mediumName}</Badge>}
-                          {channelName && <Badge variant="outline">{channelName}</Badge>}
-                          {formatName && <Badge variant="outline">{formatName}</Badge>}
-                          {subdivisionName && <Badge variant="outline">{subdivisionName}</Badge>}
-                        </div>
-                      </div>
-                    )}
 
                     <div className="flex gap-2 pt-4">
                       <Button onClick={handleCreateDetail} disabled={!newDetailTypeId}>
