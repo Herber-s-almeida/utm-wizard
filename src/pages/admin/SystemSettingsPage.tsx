@@ -10,6 +10,7 @@ import { Shield, User, Search, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,16 +68,19 @@ export default function SystemSettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4 max-w-5xl">
-        <Skeleton className="h-10 w-64 mb-2" />
-        <Skeleton className="h-5 w-96 mb-8" />
-        <Skeleton className="h-64 w-full" />
-      </div>
+      <DashboardLayout>
+        <div className="container mx-auto py-8 px-4 max-w-5xl">
+          <Skeleton className="h-10 w-64 mb-2" />
+          <Skeleton className="h-5 w-96 mb-8" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-5xl">
+    <DashboardLayout>
+      <div className="container mx-auto py-8 px-4 max-w-5xl">
       <div className="mb-8">
         <h1 className="text-2xl font-bold mb-2">Configurações do Sistema</h1>
         <p className="text-muted-foreground">
@@ -218,7 +222,8 @@ export default function SystemSettingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
 
