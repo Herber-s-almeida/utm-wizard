@@ -140,6 +140,8 @@ export function useAddEnvironmentMember() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["admin-environments"] });
+      // Also invalidate user environments to update the environment switcher
+      queryClient.invalidateQueries({ queryKey: ["user-environments-v2"] });
       if (data.type === "invited") {
         toast.success("Convite enviado com sucesso!");
       } else {

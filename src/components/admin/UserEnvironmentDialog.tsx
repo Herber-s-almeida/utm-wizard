@@ -55,8 +55,8 @@ export function UserEnvironmentDialog({
 
   const handleEnterEnvironment = () => {
     if (user) {
-      // Find the environment owned by this user
-      const userEnv = userEnvironments.find(env => env.environment_owner_id === user.id);
+      // Find an environment where this user is an admin
+      const userEnv = userEnvironments.find(env => env.is_environment_admin);
       if (userEnv) {
         switchEnvironment(userEnv.environment_id);
       }

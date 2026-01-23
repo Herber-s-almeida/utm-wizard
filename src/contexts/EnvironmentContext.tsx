@@ -17,8 +17,6 @@ export type EnvironmentSection =
 export interface UserEnvironment {
   environment_id: string;
   environment_name: string;
-  environment_owner_id: string;
-  is_own_environment: boolean;
   is_environment_admin: boolean;
   role_read: boolean;
   role_edit: boolean;
@@ -159,8 +157,8 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
 
   const isViewingOtherEnvironment = currentEnvDetails ? !currentEnvDetails.is_environment_admin : false;
 
-  // For backwards compatibility
-  const effectiveUserId = currentEnvDetails?.environment_owner_id ?? currentUserId;
+  // For backwards compatibility - now uses currentEnvironmentId since environments are independent
+  const effectiveUserId = currentUserId;
 
   // Switch environment function
   const switchEnvironment = useCallback((environmentId: string) => {
@@ -227,9 +225,9 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
       }
     }
     
-    // Prefer own environment, otherwise first available
-    const ownEnv = userEnvironments.find(env => env.is_own_environment);
-    const envToSelect = ownEnv || userEnvironments[0];
+    // Prefer environments where user is admin, otherwise first available
+    const adminEnv = userEnvironments.find(env => env.is_environment_admin);
+    const envToSelect = adminEnv || userEnvironments[0];
     
     if (envToSelect) {
       console.log('Auto-selecting environment:', envToSelect.environment_name);
