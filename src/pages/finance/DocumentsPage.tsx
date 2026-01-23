@@ -41,6 +41,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useFinancialDocuments } from "@/hooks/finance/useFinancialDocuments";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { exportPayablesToXlsx } from "@/utils/finance/exportPayables";
 import { format, isBefore, addDays } from "date-fns";
 import { Link } from "react-router-dom";
@@ -55,20 +56,15 @@ const statusConfig: Record<DocumentStatus, { label: string; color: string; icon:
   cancelled: { label: "Cancelado", color: "bg-red-100 text-red-700", icon: <AlertCircle className="w-3 h-3" /> },
 };
 
-const documentTypeLabels: Record<string, string> = {
-  invoice: "Nota Fiscal",
-  boleto: "Boleto",
-  receipt: "Recibo",
-  credit_note: "Nota de Crédito",
-  other: "Outro",
-};
-
 export default function DocumentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [classificationFilter, setClassificationFilter] = useState<string>("all");
   
   const { documents, isLoading, deleteDocument } = useFinancialDocuments();
+  const { canEdit } = useEnvironment();
+  
+  const canEditFinance = canEdit('finance');
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -133,12 +129,14 @@ export default function DocumentsPage() {
             <Download className="w-4 h-4 mr-2" />
             Exportar XLSX
           </Button>
-          <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
-            <Link to="/finance/documents/new">
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Documento
-            </Link>
-          </Button>
+          {canEditFinance && (
+            <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
+              <Link to="/finance/documents/new">
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Documento
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -208,9 +206,11 @@ export default function DocumentsPage() {
             <div className="text-center py-12 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Nenhum documento encontrado</p>
-              <p className="text-sm mt-2">
-                Clique em "Novo Documento" para adicionar
-              </p>
+              {canEditFinance && (
+                <p className="text-sm mt-2">
+                  Clique em "Novo Documento" para adicionar
+                </p>
+              )}
             </div>
           ) : (
             <ScrollArea className="w-full">
@@ -287,19 +287,23 @@ export default function DocumentsPage() {
                                   Ver Detalhes
                                 </Link>
                               </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link to={`/finance/documents/${doc.id}/edit`}>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Editar
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                className="text-red-600"
-                                onClick={() => deleteDocument(doc.id)}
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Excluir
-                              </DropdownMenuItem>
+                              {canEditFinance && (
+                                <>
+                                  <DropdownMenuItem asChild>
+                                    <Link to={`/finance/documents/${doc.id}/edit`}>
+                                      <Edit className="w-4 h-4 mr-2" />
+                                      Editar
+                                    </Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-red-600"
+                                    onClick={() => deleteDocument(doc.id)}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

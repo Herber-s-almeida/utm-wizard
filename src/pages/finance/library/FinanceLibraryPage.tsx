@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 
 interface LibraryItem {
   id: string;
@@ -40,6 +41,9 @@ export function FinanceLibraryPage<T extends LibraryItem>({
 }: FinanceLibraryPageProps<T>) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<T | null>(null);
+  const { canEdit } = useEnvironment();
+  
+  const canEditFinance = canEdit('finance');
 
   const handleEdit = (item: T) => {
     setEditingItem(item);
@@ -65,22 +69,24 @@ export function FinanceLibraryPage<T extends LibraryItem>({
             </div>
           </div>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditingItem(null)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingItem ? `Editar ${dialogTitle}` : `Novo(a) ${dialogTitle}`}
-              </DialogTitle>
-            </DialogHeader>
-            {renderDialog(editingItem, handleClose)}
-          </DialogContent>
-        </Dialog>
+        {canEditFinance && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => setEditingItem(null)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {editingItem ? `Editar ${dialogTitle}` : `Novo(a) ${dialogTitle}`}
+                </DialogTitle>
+              </DialogHeader>
+              {renderDialog(editingItem, handleClose)}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="border rounded-lg">
@@ -95,13 +101,13 @@ export function FinanceLibraryPage<T extends LibraryItem>({
                 {columns.map((col) => (
                   <TableHead key={String(col.key)}>{col.label}</TableHead>
                 ))}
-                <TableHead className="w-24">Ações</TableHead>
+                {canEditFinance && <TableHead className="w-24">Ações</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length + 1} className="text-center text-muted-foreground">
+                  <TableCell colSpan={columns.length + (canEditFinance ? 1 : 0)} className="text-center text-muted-foreground">
                     Nenhum item cadastrado
                   </TableCell>
                 </TableRow>
@@ -113,34 +119,36 @@ export function FinanceLibraryPage<T extends LibraryItem>({
                         {String(item[col.key] ?? "-")}
                       </TableCell>
                     ))}
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja excluir "{item.name}"?
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => onDelete(item.id)}>
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
+                    {canEditFinance && (
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir "{item.name}"?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => onDelete(item.id)}>
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
