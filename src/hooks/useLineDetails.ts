@@ -163,18 +163,63 @@ export function useLineDetails(mediaLineId: string | undefined, planId?: string)
     }) => {
       if (!user?.id || !mediaLineId || !currentEnvironmentId) throw new Error('User or line not found');
 
-      // Get plan_id from the media_line if not provided
-      let mediaPlanId = planId;
-      if (!mediaPlanId) {
-        const { data: line, error: lineError } = await supabase
-          .from('media_lines')
-          .select('media_plan_id')
-          .eq('id', mediaLineId)
-          .single();
-        
-        if (lineError || !line) throw new Error('Could not find media line');
-        mediaPlanId = line.media_plan_id;
-      }
+      // Fetch complete line data for inherited context
+      const { data: lineData, error: lineError } = await supabase
+        .from('media_lines')
+        .select(`
+          id,
+          media_plan_id,
+          line_code,
+          budget,
+          platform,
+          format,
+          vehicle_id,
+          medium_id,
+          channel_id,
+          subdivision_id,
+          moment_id,
+          funnel_stage_id,
+          target_id,
+          vehicles:vehicle_id(id, name),
+          mediums:medium_id(id, name),
+          channels:channel_id(id, name),
+          subdivisions:subdivision_id(id, name),
+          moments:moment_id(id, name),
+          funnel_stages:funnel_stage_id(id, name),
+          targets:target_id(id, name)
+        `)
+        .eq('id', mediaLineId)
+        .single();
+      
+      if (lineError || !lineData) throw new Error('Could not find media line');
+      
+      const mediaPlanId = planId || lineData.media_plan_id;
+      
+      // Build comprehensive inherited context from line data
+      const inheritedContext: Record<string, unknown> = {
+        // IDs for potential queries
+        vehicle_id: lineData.vehicle_id,
+        medium_id: lineData.medium_id,
+        channel_id: lineData.channel_id,
+        subdivision_id: lineData.subdivision_id,
+        moment_id: lineData.moment_id,
+        funnel_stage_id: lineData.funnel_stage_id,
+        target_id: lineData.target_id,
+        // Names for display
+        line_code: lineData.line_code,
+        line_budget: lineData.budget,
+        platform: lineData.platform,
+        format_name: lineData.format,
+        vehicle_name: (lineData.vehicles as any)?.name,
+        medium_name: (lineData.mediums as any)?.name,
+        channel_name: (lineData.channels as any)?.name,
+        subdivision_name: (lineData.subdivisions as any)?.name,
+        moment_name: (lineData.moments as any)?.name,
+        funnel_stage_name: (lineData.funnel_stages as any)?.name,
+        target_name: (lineData.targets as any)?.name,
+        // Merge any additional context passed in
+        ...data.inherited_context,
+      };
 
       // Create the detail
       const { data: result, error } = await supabase
@@ -187,7 +232,7 @@ export function useLineDetails(mediaLineId: string | undefined, planId?: string)
           environment_id: currentEnvironmentId,
           name: data.name || null,
           metadata: (data.metadata || {}) as Json,
-          inherited_context: (data.inherited_context || {}) as Json,
+          inherited_context: inheritedContext as Json,
         })
         .select()
         .single();

@@ -143,6 +143,25 @@ export function DetailTypeDialog({ open, onOpenChange, type, onSave }: DetailTyp
               />
             </div>
 
+            {/* Inherited fields warning */}
+            <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg">
+              <p className="text-sm font-medium text-warning mb-2">
+                ⚠️ Campos Herdados Automaticamente
+              </p>
+              <p className="text-xs text-muted-foreground mb-2">
+                Os seguintes campos <strong>NÃO devem ser incluídos</strong> no schema porque são 
+                herdados automaticamente da linha de mídia:
+              </p>
+              <ul className="text-xs text-muted-foreground list-disc list-inside space-y-0.5">
+                <li>Veículo / Emissora / Rádio (vem da linha)</li>
+                <li>Meio (vem da linha)</li>
+                <li>Canal (vem da linha)</li>
+                <li>Praça / Subdivisão (vem da linha)</li>
+                <li>Formato (selecionado da biblioteca)</li>
+                <li>Duração / Secundagem (vem das especificações do formato)</li>
+              </ul>
+            </div>
+
             <div className="space-y-4 pt-4 border-t">
               <div className="flex items-center justify-between">
                 <div>
@@ -175,6 +194,12 @@ export function DetailTypeDialog({ open, onOpenChange, type, onSave }: DetailTyp
           </TabsContent>
 
           <TabsContent value="fields" className="mt-4">
+            <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-dashed">
+              <p className="text-xs text-muted-foreground">
+                <strong>Dica:</strong> Configure apenas os campos específicos para este tipo de detalhamento. 
+                Veículo, Praça, Formato e Duração são exibidos automaticamente a partir da linha de mídia.
+              </p>
+            </div>
             <FieldSchemaEditor
               fields={fieldSchema}
               onChange={setFieldSchema}
