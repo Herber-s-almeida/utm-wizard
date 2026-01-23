@@ -33,12 +33,14 @@ export interface LineDetailItem {
 
 export interface LineDetail {
   id: string;
-  media_line_id: string;
+  media_line_id: string | null; // Deprecado - usar links
+  media_plan_id: string;
   detail_type_id: string;
   user_id: string;
   name: string | null;
   notes: string | null;
   metadata: Record<string, unknown>;
+  inherited_context: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   detail_type?: LineDetailType;
@@ -61,7 +63,7 @@ function parseMetadataSchema(data: Json | null): MetadataSchemaItem[] {
   return data as unknown as MetadataSchemaItem[];
 }
 
-export function useLineDetails(mediaLineId: string | undefined) {
+export function useLineDetails(mediaLineId: string | undefined, planId?: string) {
   const { user } = useAuth();
   const { currentEnvironmentId } = useEnvironment();
   const queryClient = useQueryClient();
@@ -71,11 +73,22 @@ export function useLineDetails(mediaLineId: string | undefined) {
     queryFn: async () => {
       if (!mediaLineId) return [];
 
-      // Fetch details
+      // First, get detail IDs linked to this line via the junction table
+      const { data: links, error: linksError } = await supabase
+        .from('line_detail_line_links')
+        .select('line_detail_id')
+        .eq('media_line_id', mediaLineId);
+
+      if (linksError) throw linksError;
+      
+      const detailIds = (links || []).map(l => l.line_detail_id);
+      if (detailIds.length === 0) return [];
+
+      // Fetch details by IDs
       const { data: details, error: detailsError } = await supabase
         .from('line_details')
         .select('*')
-        .eq('media_line_id', mediaLineId)
+        .in('id', detailIds)
         .order('created_at');
 
       if (detailsError) throw detailsError;
@@ -91,7 +104,6 @@ export function useLineDetails(mediaLineId: string | undefined) {
       if (typesError) throw typesError;
 
       // Fetch items for all details
-      const detailIds = details.map(d => d.id);
       const { data: items, error: itemsError } = await supabase
         .from('line_detail_items')
         .select('*')
@@ -129,6 +141,7 @@ export function useLineDetails(mediaLineId: string | undefined) {
         return {
           ...detail,
           metadata: parseJson(detail.metadata as Json),
+          inherited_context: parseJson(detail.inherited_context as Json),
           detail_type: detailType ? {
             ...detailType,
             field_schema: parseFieldSchema(detailType.field_schema as Json),
@@ -142,27 +155,69 @@ export function useLineDetails(mediaLineId: string | undefined) {
   });
 
   const createDetailMutation = useMutation({
-    mutationFn: async (data: { detail_type_id: string; name?: string; metadata?: Record<string, unknown> }) => {
+    mutationFn: async (data: { 
+      detail_type_id: string; 
+      name?: string; 
+      metadata?: Record<string, unknown>;
+      inherited_context?: Record<string, unknown>;
+    }) => {
       if (!user?.id || !mediaLineId || !currentEnvironmentId) throw new Error('User or line not found');
 
+      // Get plan_id from the media_line if not provided
+      let mediaPlanId = planId;
+      if (!mediaPlanId) {
+        const { data: line, error: lineError } = await supabase
+          .from('media_lines')
+          .select('media_plan_id')
+          .eq('id', mediaLineId)
+          .single();
+        
+        if (lineError || !line) throw new Error('Could not find media line');
+        mediaPlanId = line.media_plan_id;
+      }
+
+      // Create the detail
       const { data: result, error } = await supabase
         .from('line_details')
         .insert({
-          media_line_id: mediaLineId,
+          media_plan_id: mediaPlanId,
+          media_line_id: mediaLineId, // Keep for retrocompatibility
           detail_type_id: data.detail_type_id,
           user_id: user.id,
           environment_id: currentEnvironmentId,
           name: data.name || null,
           metadata: (data.metadata || {}) as Json,
+          inherited_context: (data.inherited_context || {}) as Json,
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      // Create the link with is_primary = true
+      const { error: linkError } = await supabase
+        .from('line_detail_line_links')
+        .insert({
+          line_detail_id: result.id,
+          media_line_id: mediaLineId,
+          is_primary: true,
+          allocated_percentage: 100.00,
+          user_id: user.id,
+          environment_id: currentEnvironmentId,
+        });
+
+      if (linkError) {
+        // Rollback - delete the detail
+        await supabase.from('line_details').delete().eq('id', result.id);
+        throw linkError;
+      }
+
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['line-details', mediaLineId] });
+      queryClient.invalidateQueries({ queryKey: ['plan-details'] });
+      queryClient.invalidateQueries({ queryKey: ['line-detail-links'] });
       toast.success('Detalhamento criado');
     },
     onError: (error) => {
@@ -172,13 +227,16 @@ export function useLineDetails(mediaLineId: string | undefined) {
   });
 
   const updateDetailMutation = useMutation({
-    mutationFn: async ({ id, metadata, ...rest }: Partial<LineDetail> & { id: string }) => {
+    mutationFn: async ({ id, metadata, inherited_context, ...rest }: Partial<LineDetail> & { id: string }) => {
       const updateData: Record<string, unknown> = {
         ...rest,
         updated_at: new Date().toISOString(),
       };
       if (metadata !== undefined) {
         updateData.metadata = metadata as Json;
+      }
+      if (inherited_context !== undefined) {
+        updateData.inherited_context = inherited_context as Json;
       }
       // Remove computed fields
       delete updateData.detail_type;
@@ -193,6 +251,7 @@ export function useLineDetails(mediaLineId: string | undefined) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['line-details', mediaLineId] });
+      queryClient.invalidateQueries({ queryKey: ['plan-details'] });
     },
   });
 
@@ -357,6 +416,7 @@ export function useLineDetails(mediaLineId: string | undefined) {
 }
 
 // Hook to count details for multiple lines (for table badges)
+// Now uses the junction table for N:N relationships
 export function useLineDetailsCount(lineIds: string[]) {
   const { user } = useAuth();
 
@@ -365,8 +425,9 @@ export function useLineDetailsCount(lineIds: string[]) {
     queryFn: async () => {
       if (lineIds.length === 0) return {};
 
+      // Query the junction table to count linked details per line
       const { data, error } = await supabase
-        .from('line_details')
+        .from('line_detail_line_links')
         .select('media_line_id')
         .in('media_line_id', lineIds);
 
