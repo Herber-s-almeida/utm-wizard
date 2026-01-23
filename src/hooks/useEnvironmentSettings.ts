@@ -9,6 +9,7 @@ export interface EnvironmentSettings {
   company_name: string | null;
   cnpj: string | null;
   address: string | null;
+  logo_url: string | null;
   owner_user_id: string;
 }
 
@@ -25,7 +26,7 @@ export function useEnvironmentSettings() {
 
       const { data, error } = await supabase
         .from('environments')
-        .select('id, name, company_name, cnpj, address, owner_user_id')
+        .select('id, name, company_name, cnpj, address, logo_url, owner_user_id')
         .eq('id', currentEnvironmentId)
         .single();
 
@@ -41,7 +42,7 @@ export function useEnvironmentSettings() {
   });
 
   const updateSettingsMutation = useMutation({
-    mutationFn: async (updates: Partial<Pick<EnvironmentSettings, 'name' | 'company_name' | 'cnpj' | 'address'>>) => {
+    mutationFn: async (updates: Partial<Pick<EnvironmentSettings, 'name' | 'company_name' | 'cnpj' | 'address' | 'logo_url'>>) => {
       if (!currentEnvironmentId) throw new Error('No environment selected');
 
       const { error } = await supabase

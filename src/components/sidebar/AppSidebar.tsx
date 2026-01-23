@@ -57,6 +57,8 @@ import { useSidebarCollapse } from '@/hooks/useSidebarCollapse';
 import { useSidebarSections, useSidebarSubsections } from '@/hooks/useSidebarSections';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useEnvironmentLogo } from '@/hooks/useEnvironmentLogo';
 
 // Dialogs
 import { SubdivisionDialog } from '@/components/config/SubdivisionDialog';
@@ -106,14 +108,10 @@ export function AppSidebar() {
   const mediaObjectives = useMediaObjectives();
   const { customKpis } = useCustomKpis();
   const { types: lineDetailTypes } = useLineDetailTypes();
+  const { logoUrl } = useEnvironmentLogo();
 
   // Get current environment details for display
   const currentEnv = userEnvironments.find(env => env.environment_id === currentEnvironmentId);
-
-  // Get environment display name - show for all users, not just when viewing other environments
-  const environmentName = isViewingOtherEnvironment 
-    ? currentEnv?.environment_name
-    : (currentProfile?.company || currentProfile?.full_name || user?.email);
 
   // Section open states - persisted in localStorage
   const { openSections, toggleSection } = useSidebarSections();
@@ -198,15 +196,29 @@ export function AppSidebar() {
         isCollapsed ? "p-2" : "p-3"
       )}>
         <div className={cn(
-          "flex items-center gap-2",
+          "flex items-center gap-3",
           isCollapsed ? "justify-center" : "justify-between"
         )}>
           {!isCollapsed && (
-            <Link to="/media-plan-dashboard" className="flex items-center gap-3 min-w-0">
-              <img src="/logo.png" alt="AdsPlanning Pro" className="h-8 w-auto shrink-0" />
+            <Link to="/media-plan-dashboard" className="flex items-center gap-3 min-w-0 flex-1">
+              {/* Logo Circle */}
+              <Avatar className="h-10 w-10 shrink-0 border-2 border-primary/30">
+                {logoUrl ? (
+                  <AvatarImage src={logoUrl} alt="Logo" className="object-cover" />
+                ) : null}
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
+                  Logo
+                </AvatarFallback>
+              </Avatar>
+              
+              {/* Title & Subtitle */}
               <div className="flex flex-col min-w-0">
-                <span className="font-display font-bold text-sm text-primary truncate">AdsPlanning</span>
-                <span className="text-[10px] font-semibold text-accent tracking-wider">PRO</span>
+                <span className="font-display font-bold text-sm text-primary truncate">
+                  MediaPlanning
+                </span>
+                <span className="text-[10px] font-medium text-muted-foreground tracking-wider">
+                  Gerenciador de Planos de Mídia
+                </span>
               </div>
             </Link>
           )}
