@@ -99,9 +99,12 @@ export function useSoftDeleteMutations(tableName: SoftDeleteTableName, queryKey:
         .select('id');
       
       if (error) {
-        // Handle foreign key constraint error
+        // Mensagens específicas por código de erro
+        if (error.code === '42501') {
+          throw new Error('Sem permissão de administrador para excluir este item.');
+        }
         if (error.code === '23503') {
-          throw new Error('Este item está em uso e não pode ser excluído permanentemente.');
+          throw new Error('Este item está em uso por outros registros e não pode ser excluído permanentemente.');
         }
         throw error;
       }
