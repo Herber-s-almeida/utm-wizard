@@ -14,33 +14,33 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isViewingOtherEnvironment, userEnvironments, switchEnvironment, currentEnvironmentId } = useEnvironment();
 
-  // Check if user has their own environment (is a System User)
-  const hasOwnEnvironment = userEnvironments.some(env => env.is_own_environment);
-  const ownEnvironment = userEnvironments.find(env => env.is_own_environment);
+  // Check if user is admin in any environment (to allow returning to their primary environment)
+  const hasAdminEnvironment = userEnvironments.some(env => env.is_environment_admin);
+  const adminEnvironment = userEnvironments.find(env => env.is_environment_admin);
   
   // Get current environment details for display
   const currentEnv = userEnvironments.find(env => env.environment_id === currentEnvironmentId);
 
-  const handleReturnToOwnEnvironment = () => {
-    if (ownEnvironment) {
-      switchEnvironment(ownEnvironment.environment_id);
+  const handleReturnToAdminEnvironment = () => {
+    if (adminEnvironment) {
+      switchEnvironment(adminEnvironment.environment_id);
     }
   };
 
   return (
     <SidebarCollapseProvider>
       <div className="min-h-screen flex flex-col w-full bg-background">
-        {/* Admin viewing banner - only show if user has their own environment to return to */}
-        {isViewingOtherEnvironment && hasOwnEnvironment && (
+        {/* Admin viewing banner - only show if user has another admin environment to return to */}
+        {isViewingOtherEnvironment && hasAdminEnvironment && (
           <div className="bg-destructive text-destructive-foreground px-4 py-2 flex items-center justify-between gap-4 z-50">
             <div className="flex items-center gap-2 text-sm font-medium">
-              <span>Visualizando ambiente de:</span>
+              <span>Visualizando ambiente:</span>
               <span className="font-bold">{currentEnv?.environment_name || 'Outro ambiente'}</span>
             </div>
             <Button
               variant="secondary"
               size="sm"
-              onClick={handleReturnToOwnEnvironment}
+              onClick={handleReturnToAdminEnvironment}
               className="gap-2"
             >
               <ArrowLeft className="h-4 w-4" />

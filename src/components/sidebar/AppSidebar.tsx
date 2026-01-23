@@ -1769,6 +1769,16 @@ export function AppSidebar() {
                     </CollapsibleTrigger>
 
                     <CollapsibleContent className="pl-4 space-y-0.5">
+                      <Link to="/admin/system-settings">
+                        <Button
+                          variant={location.pathname === '/admin/system-settings' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className="w-full justify-start gap-2 h-7 text-xs"
+                        >
+                          <Settings className="h-3 w-3" />
+                          Configurações do Sistema
+                        </Button>
+                      </Link>
                       <Link to="/admin/environments">
                         <Button
                           variant={location.pathname === '/admin/environments' ? 'secondary' : 'ghost'}
