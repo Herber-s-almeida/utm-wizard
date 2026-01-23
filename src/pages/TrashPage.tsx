@@ -4,10 +4,10 @@ import { ptBR } from 'date-fns/locale';
 import { Trash2, RotateCcw, FileText, Library, Layers, Search, AlertTriangle } from 'lucide-react';
 import { useMediaPlans } from '@/hooks/useConfigData';
 import { useTrashedMediaLines, useTrashedLibraryItems } from '@/hooks/useTrashedItems';
-import { useSoftDeleteMutations } from '@/hooks/useSoftDelete';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,10 @@ export default function TrashPage() {
   const trashedLines = useTrashedMediaLines();
   const trashedLibrary = useTrashedLibraryItems();
   const queryClient = useQueryClient();
+  const { canEdit } = useEnvironment();
+
+  // Verificar se o usuário pode excluir permanentemente
+  const canDeleteFromTrash = canEdit('library') || canEdit('media_plans');
 
   // Library item mutations
   const restoreLibraryItem = async (type: string, id: string) => {
@@ -55,14 +59,18 @@ export default function TrashPage() {
         .select('id');
       
       if (error) {
+        // Mensagens específicas por código de erro
+        if (error.code === '42501') {
+          throw new Error('Sem permissão de administrador para excluir este item.');
+        }
         if (error.code === '23503') {
-          throw new Error('Este item está em uso e não pode ser excluído.');
+          throw new Error('Este item está em uso por outros registros e não pode ser excluído.');
         }
         throw error;
       }
       
       if (!data || data.length === 0) {
-        throw new Error('Item não encontrado ou você não tem permissão.');
+        throw new Error('Item não encontrado ou sem permissão para excluir.');
       }
       
       queryClient.invalidateQueries({ queryKey: ['library_items', 'trashed'] });
