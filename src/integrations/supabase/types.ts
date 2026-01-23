@@ -2102,6 +2102,67 @@ export type Database = {
           },
         ]
       }
+      line_detail_line_links: {
+        Row: {
+          allocated_amount: number | null
+          allocated_percentage: number | null
+          created_at: string | null
+          environment_id: string | null
+          id: string
+          is_primary: boolean | null
+          line_detail_id: string
+          media_line_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          allocated_amount?: number | null
+          allocated_percentage?: number | null
+          created_at?: string | null
+          environment_id?: string | null
+          id?: string
+          is_primary?: boolean | null
+          line_detail_id: string
+          media_line_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          allocated_amount?: number | null
+          allocated_percentage?: number | null
+          created_at?: string | null
+          environment_id?: string | null
+          id?: string
+          is_primary?: boolean | null
+          line_detail_id?: string
+          media_line_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "line_detail_line_links_environment_id_fkey"
+            columns: ["environment_id"]
+            isOneToOne: false
+            referencedRelation: "environments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_detail_line_links_line_detail_id_fkey"
+            columns: ["line_detail_id"]
+            isOneToOne: false
+            referencedRelation: "line_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_detail_line_links_media_line_id_fkey"
+            columns: ["media_line_id"]
+            isOneToOne: false
+            referencedRelation: "media_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       line_detail_types: {
         Row: {
           created_at: string | null
@@ -2173,7 +2234,9 @@ export type Database = {
           detail_type_id: string
           environment_id: string | null
           id: string
-          media_line_id: string
+          inherited_context: Json | null
+          media_line_id: string | null
+          media_plan_id: string
           metadata: Json | null
           name: string | null
           notes: string | null
@@ -2185,7 +2248,9 @@ export type Database = {
           detail_type_id: string
           environment_id?: string | null
           id?: string
-          media_line_id: string
+          inherited_context?: Json | null
+          media_line_id?: string | null
+          media_plan_id: string
           metadata?: Json | null
           name?: string | null
           notes?: string | null
@@ -2197,7 +2262,9 @@ export type Database = {
           detail_type_id?: string
           environment_id?: string | null
           id?: string
-          media_line_id?: string
+          inherited_context?: Json | null
+          media_line_id?: string | null
+          media_plan_id?: string
           metadata?: Json | null
           name?: string | null
           notes?: string | null
@@ -2224,6 +2291,13 @@ export type Database = {
             columns: ["media_line_id"]
             isOneToOne: false
             referencedRelation: "media_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_details_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "media_plans"
             referencedColumns: ["id"]
           },
         ]
