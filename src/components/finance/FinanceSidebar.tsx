@@ -156,9 +156,8 @@ export function FinanceSidebar() {
   // Get current environment details for display
   const currentEnv = userEnvironments.find(env => env.environment_id === currentEnvironmentId);
 
-  const environmentName = isViewingOtherEnvironment 
-    ? currentEnv?.environment_name
-    : (currentProfile?.company || currentProfile?.full_name || user?.email);
+  // Sempre usar o nome do ambiente atual, nunca dados do perfil pessoal
+  const environmentName = currentEnv?.environment_name || 'Carregando...';
 
   const isActive = (url: string) => {
     if (url === "/finance") {
