@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,6 +19,7 @@ import {
   List,
   Copy,
   Building2,
+  CircleDot,
   X
 } from 'lucide-react';
 import { LoadingPage } from '@/components/ui/loading-dots';
@@ -58,15 +59,31 @@ export default function MediaPlans() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { activeItems: clients } = useClients();
   const [plans, setPlans] = useState<MediaPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(
+    searchParams.get('status')
+  );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<MediaPlan | null>(null);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [planToDuplicate, setPlanToDuplicate] = useState<MediaPlan | null>(null);
+
+  // Sincronizar mudanças no filtro de status com a URL
+  const handleStatusFilterChange = (status: string | null) => {
+    setSelectedStatus(status);
+    const newParams = new URLSearchParams(searchParams);
+    if (status) {
+      newParams.set('status', status);
+    } else {
+      newParams.delete('status');
+    }
+    setSearchParams(newParams);
+  };
 
   useEffect(() => {
     if (user) {
@@ -157,10 +174,11 @@ export default function MediaPlans() {
         plan.campaign?.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesClient = !selectedClientId || plan.client_id === selectedClientId;
+      const matchesStatus = !selectedStatus || plan.status === selectedStatus;
       
-      return matchesSearch && matchesClient;
+      return matchesSearch && matchesClient && matchesStatus;
     });
-  }, [plans, searchQuery, selectedClientId]);
+  }, [plans, searchQuery, selectedClientId, selectedStatus]);
 
   if (loading) {
     return (
@@ -220,12 +238,33 @@ export default function MediaPlans() {
               </SelectContent>
             </Select>
             
-            {selectedClientId && (
+            <Select
+              value={selectedStatus || "all"}
+              onValueChange={(value) => handleStatusFilterChange(value === "all" ? null : value)}
+            >
+              <SelectTrigger className="w-[160px]">
+                <CircleDot className="w-4 h-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Todos os status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="draft">Rascunho</SelectItem>
+                <SelectItem value="active">Ativo</SelectItem>
+                <SelectItem value="paused">Pausado</SelectItem>
+                <SelectItem value="completed">Finalizado</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {(selectedClientId || selectedStatus) && (
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setSelectedClientId(null)}
+                onClick={() => {
+                  setSelectedClientId(null);
+                  handleStatusFilterChange(null);
+                }}
                 className="h-9 w-9"
+                title="Limpar filtros"
               >
                 <X className="w-4 h-4" />
               </Button>
