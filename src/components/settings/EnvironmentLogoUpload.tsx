@@ -165,17 +165,32 @@ export function EnvironmentLogoUpload({
           </Button>
 
           {previewUrl && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleRemoveLogo}
-              disabled={disabled || isUploading}
-              className="text-destructive hover:text-destructive"
-            >
-              <X className="h-4 w-4" />
-              Remover
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedImageSrc(previewUrl);
+                  setCropDialogOpen(true);
+                }}
+                disabled={disabled || isUploading}
+              >
+                <Crop className="h-4 w-4" />
+                Editar Crop
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleRemoveLogo}
+                disabled={disabled || isUploading}
+                className="text-destructive hover:text-destructive"
+              >
+                <X className="h-4 w-4" />
+                Remover
+              </Button>
+            </>
           )}
 
           <p className="text-xs text-muted-foreground">
