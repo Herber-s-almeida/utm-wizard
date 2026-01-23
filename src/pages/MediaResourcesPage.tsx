@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Image, FileText, ExternalLink, ChevronDown, ChevronRight, Check, Plus, Calendar, Link as LinkIcon, X, Bell } from 'lucide-react';
+import { ArrowLeft, Image, FileText, ExternalLink, ChevronDown, ChevronRight, Check, Plus, Calendar, Link as LinkIcon, X, Users } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,7 +19,9 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { usePlanBySlug, getPlanUrl } from '@/hooks/usePlanBySlug';
-import { SendNotificationDialog } from '@/components/media-plan/SendNotificationDialog';
+import { FollowerNotificationDialog } from '@/components/media-plan/FollowerNotificationDialog';
+import { ManageFollowersDialog } from '@/components/media-plan/ManageFollowersDialog';
+import { usePlanFollowers } from '@/hooks/usePlanFollowers';
 
 const PRODUCTION_STATUSES = [
   { value: 'solicitado', label: 'Solicitado', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
@@ -562,6 +564,7 @@ export default function MediaResourcesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
+  const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
 
   // Fetch plan by slug or ID
   const { data: mediaPlan, isLoading: loadingPlan } = usePlanBySlug(identifier);
@@ -765,8 +768,8 @@ export default function MediaResourcesPage() {
             className="gap-2"
             onClick={() => setNotificationDialogOpen(true)}
           >
-            <Bell className="h-3.5 w-3.5" />
-            Notificar
+            <Users className="h-3.5 w-3.5" />
+            Notificar Seguidores
           </Button>
           <Link to={planUrl}>
             <Button variant="outline" size="sm" className="gap-2">
@@ -976,17 +979,26 @@ export default function MediaResourcesPage() {
 
         {/* Notification Dialog */}
         {mediaPlan && planId && (
-          <SendNotificationDialog
-            open={notificationDialogOpen}
-            onOpenChange={setNotificationDialogOpen}
-            planId={planId}
-            planName={mediaPlan.name}
-            recentChangeLogs={(creatives || [])
-              .flatMap(c => c.change_logs || [])
-              .sort((a, b) => new Date(b.change_date).getTime() - new Date(a.change_date).getTime())
-              .slice(0, 10)
-            }
-          />
+          <>
+            <FollowerNotificationDialog
+              open={notificationDialogOpen}
+              onOpenChange={setNotificationDialogOpen}
+              planId={planId}
+              planName={mediaPlan.name}
+              recentChangeLogs={(creatives || [])
+                .flatMap(c => c.change_logs || [])
+                .sort((a, b) => new Date(b.change_date).getTime() - new Date(a.change_date).getTime())
+                .slice(0, 20)
+              }
+              onManageFollowers={() => setFollowersDialogOpen(true)}
+            />
+            <ManageFollowersDialog
+              open={followersDialogOpen}
+              onOpenChange={setFollowersDialogOpen}
+              planId={planId}
+              planName={mediaPlan.name}
+            />
+          </>
         )}
       </div>
     </DashboardLayout>

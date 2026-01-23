@@ -2682,6 +2682,70 @@ export type Database = {
           },
         ]
       }
+      media_plan_followers: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          enabled: boolean | null
+          id: string
+          media_plan_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          enabled?: boolean | null
+          id?: string
+          media_plan_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          enabled?: boolean | null
+          id?: string
+          media_plan_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_plan_followers_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: false
+            referencedRelation: "media_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_plan_notification_state: {
+        Row: {
+          last_digest_sent_at: string | null
+          last_digest_sent_by: string | null
+          media_plan_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          last_digest_sent_at?: string | null
+          last_digest_sent_by?: string | null
+          media_plan_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          last_digest_sent_at?: string | null
+          last_digest_sent_by?: string | null
+          media_plan_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_plan_notification_state_media_plan_id_fkey"
+            columns: ["media_plan_id"]
+            isOneToOne: true
+            referencedRelation: "media_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_plan_versions: {
         Row: {
           change_log: string | null
