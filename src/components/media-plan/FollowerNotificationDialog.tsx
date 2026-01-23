@@ -59,6 +59,8 @@ export function FollowerNotificationDialog({
 
   const hasNewChanges = newChangeLogs.length > 0;
   const hasFollowers = followers.length > 0;
+  const hasCustomMessage = customMessage.trim().length > 0;
+  const canSend = hasFollowers && (hasNewChanges || hasCustomMessage);
 
   // Send notification mutation
   const sendNotificationMutation = useMutation({
@@ -67,8 +69,8 @@ export function FollowerNotificationDialog({
         throw new Error('Nenhum seguidor cadastrado');
       }
 
-      if (!hasNewChanges) {
-        throw new Error('Nenhuma mudança desde o último envio');
+      if (!hasNewChanges && !hasCustomMessage) {
+        throw new Error('Adicione uma mensagem ou aguarde mudanças');
       }
 
       const followerIds = followers.map(f => f.id || f.user_id);
@@ -230,11 +232,7 @@ export function FollowerNotificationDialog({
           </Button>
           <Button
             onClick={handleSend}
-            disabled={
-              !hasFollowers ||
-              !hasNewChanges ||
-              sendNotificationMutation.isPending
-            }
+            disabled={!canSend || sendNotificationMutation.isPending}
           >
             {sendNotificationMutation.isPending ? (
               <>
