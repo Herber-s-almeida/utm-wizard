@@ -680,9 +680,10 @@ export type Database = {
           cnpj: string | null
           company_name: string | null
           created_at: string
+          created_by: string | null
           id: string
           name: string
-          owner_user_id: string
+          owner_user_id: string | null
           updated_at: string
         }
         Insert: {
@@ -690,9 +691,10 @@ export type Database = {
           cnpj?: string | null
           company_name?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           name: string
-          owner_user_id: string
+          owner_user_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -700,9 +702,10 @@ export type Database = {
           cnpj?: string | null
           company_name?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           name?: string
-          owner_user_id?: string
+          owner_user_id?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -4275,12 +4278,12 @@ export type Database = {
         Returns: boolean
       }
       can_invite_to_environment: {
-        Args: { _environment_owner_id: string; _user_id: string }
+        Args: { _environment_id: string; _user_id: string }
         Returns: boolean
       }
       can_manage_member_role: {
         Args: {
-          _environment_owner_id: string
+          _environment_id: string
           _manager_user_id: string
           _target_user_id: string
         }
@@ -4288,7 +4291,7 @@ export type Database = {
       }
       can_remove_environment_member: {
         Args: {
-          _environment_owner_id: string
+          _environment_id: string
           _remover_user_id: string
           _target_user_id: string
         }
@@ -4340,6 +4343,17 @@ export type Database = {
         Args: { _user_id: string }
         Returns: string
       }
+      get_environment_members_admin: {
+        Args: { p_environment_id: string }
+        Returns: {
+          accepted_at: string
+          email: string
+          full_name: string
+          invited_at: string
+          is_environment_admin: boolean
+          user_id: string
+        }[]
+      }
       get_environment_members_with_details: {
         Args: { p_environment_id: string }
         Returns: {
@@ -4371,7 +4385,7 @@ export type Database = {
         Returns: Database["public"]["Enums"]["environment_permission_level"]
       }
       get_environment_role: {
-        Args: { _environment_owner_id: string; _user_id: string }
+        Args: { _environment_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["environment_role"]
       }
       get_plan_role: {
@@ -4440,6 +4454,19 @@ export type Database = {
         Returns: boolean
       }
       is_system_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_all_environments: {
+        Args: never
+        Returns: {
+          admin_count: number
+          cnpj: string
+          company_name: string
+          created_at: string
+          created_by: string
+          id: string
+          member_count: number
+          name: string
+        }[]
+      }
     }
     Enums: {
       environment_permission_level: "none" | "view" | "edit" | "admin"
