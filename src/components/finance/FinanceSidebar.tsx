@@ -38,10 +38,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
 import { useSystemAdmin } from "@/hooks/useSystemAdmin";
+import { useEnvironmentLogo } from "@/hooks/useEnvironmentLogo";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { EnvironmentSwitcher } from "@/components/sidebar/EnvironmentSwitcher";
 import { Cog } from "lucide-react";
 
 const menuItems = [
@@ -146,6 +149,7 @@ export function FinanceSidebar() {
   const { isViewingOtherEnvironment, userEnvironments, currentEnvironmentId } = useEnvironment();
   const { data: currentProfile } = useCurrentProfile();
   const { isAdmin } = useSystemAdmin();
+  const { logoUrl } = useEnvironmentLogo();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(
     location.pathname.includes("/finance/library")
@@ -184,17 +188,29 @@ export function FinanceSidebar() {
         isCollapsed ? "p-2" : "p-3"
       )}>
         <div className={cn(
-          "flex items-center gap-2",
+          "flex items-center gap-3",
           isCollapsed ? "justify-center" : "justify-between"
         )}>
           {!isCollapsed && (
-            <Link to="/finance" className="flex items-center gap-3 min-w-0">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white shrink-0">
-                <Wallet className="h-4 w-4" />
-              </div>
+            <Link to="/finance" className="flex items-center gap-3 min-w-0 flex-1">
+              {/* Logo Circle */}
+              <Avatar className="h-10 w-10 shrink-0 border-2 border-emerald-500/30">
+                {logoUrl ? (
+                  <AvatarImage src={logoUrl} alt="Logo" className="object-cover" />
+                ) : null}
+                <AvatarFallback className="bg-emerald-500/10 text-emerald-600 text-xs font-medium">
+                  Logo
+                </AvatarFallback>
+              </Avatar>
+              
+              {/* Title & Subtitle */}
               <div className="flex flex-col min-w-0">
-                <span className="font-display font-bold text-sm text-emerald-600 dark:text-emerald-400 truncate">Finance</span>
-                <span className="text-[10px] font-semibold text-muted-foreground tracking-wider">MANAGER</span>
+                <span className="font-display font-bold text-sm text-emerald-600 dark:text-emerald-400 truncate">
+                  FinanceManager
+                </span>
+                <span className="text-[10px] font-medium text-muted-foreground tracking-wider">
+                  Gerenciador Financeiro
+                </span>
               </div>
             </Link>
           )}
@@ -219,15 +235,8 @@ export function FinanceSidebar() {
           </Tooltip>
         </div>
         
-        {/* Environment name display */}
-        {!isCollapsed && environmentName && (
-          <div className="mt-2 px-2 py-1.5 bg-muted/50 rounded-md border border-border/50">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Building2 className="h-3 w-3 shrink-0" />
-              <span className="truncate font-medium">{environmentName}</span>
-            </div>
-          </div>
-        )}
+        {/* Environment Switcher */}
+        {!isCollapsed && <EnvironmentSwitcher className="mt-2" />}
       </div>
 
       {/* Collapsed state - show only icons */}

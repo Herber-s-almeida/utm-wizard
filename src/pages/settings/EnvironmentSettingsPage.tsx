@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
-import { Building2, Settings, Loader2, Save, FileText, MapPin } from 'lucide-react';
+import { Building2, Settings, Loader2, Save, FileText, MapPin, ImageIcon } from 'lucide-react';
 import { useEnvironmentSettings } from '@/hooks/useEnvironmentSettings';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
+import { EnvironmentLogoUpload } from '@/components/settings/EnvironmentLogoUpload';
 
 const settingsSchema = z.object({
   name: z.string().min(2, 'Nome do ambiente deve ter no mínimo 2 caracteres').max(100),
@@ -26,7 +27,7 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 export default function EnvironmentSettingsPage() {
   const navigate = useNavigate();
   const { settings, isLoading, canEdit, updateSettings, isUpdating } = useEnvironmentSettings();
-  const { isEnvironmentAdmin, isSystemAdmin } = useEnvironment();
+  const { isEnvironmentAdmin, isSystemAdmin, currentEnvironmentId } = useEnvironment();
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
@@ -121,6 +122,31 @@ export default function EnvironmentSettingsPage() {
                     </FormItem>
                   )}
                 />
+              </CardContent>
+            </Card>
+
+            {/* Environment Logo */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5 text-primary" />
+                  Logo do Ambiente
+                </CardTitle>
+                <CardDescription>
+                  O logo aparece no topo do menu lateral e ajuda a identificar o ambiente
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {currentEnvironmentId && (
+                  <EnvironmentLogoUpload
+                    currentLogoUrl={settings?.logo_url}
+                    environmentId={currentEnvironmentId}
+                    onUploadComplete={async (url) => {
+                      await updateSettings({ logo_url: url });
+                    }}
+                    disabled={!canEdit || isUpdating}
+                  />
+                )}
               </CardContent>
             </Card>
 
