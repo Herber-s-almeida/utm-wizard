@@ -1,52 +1,56 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffectiveUserId } from "@/hooks/useEffectiveUserId";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { generateForecastFromPlan } from "@/utils/finance/forecastGenerator";
 
 export function useFinancialForecast(planId?: string) {
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: plans = [] } = useQuery({
-    queryKey: ["media-plans-for-finance", effectiveUserId],
+    queryKey: ["media-plans-for-finance", currentEnvironmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("media_plans")
         .select("id, name, start_date, end_date, total_budget")
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .is("deleted_at", null)
         .order("name");
       if (error) throw error;
       return data;
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 
   const { data: forecasts = [], isLoading } = useQuery({
-    queryKey: ["financial-forecasts", planId, effectiveUserId],
+    queryKey: ["financial-forecasts", planId, currentEnvironmentId],
     queryFn: async () => {
       if (!planId) return [];
       const { data, error } = await supabase
         .from("financial_forecasts")
         .select("*")
         .eq("media_plan_id", planId)
-        .eq("user_id", effectiveUserId!)
+        .eq("environment_id", currentEnvironmentId!)
         .order("period_start");
       if (error) throw error;
       return data;
     },
-    enabled: !!effectiveUserId && !!planId,
+    enabled: !!currentEnvironmentId && !!planId,
   });
 
   const generateMutation = useMutation({
     mutationFn: async ({ planId, granularity }: { planId: string; granularity: string }) => {
-      if (!effectiveUserId) throw new Error("User not authenticated");
+      if (!currentEnvironmentId) throw new Error("Ambiente não selecionado");
+      if (!user?.id) throw new Error("Usuário não autenticado");
       
       const result = await generateForecastFromPlan(
         planId, 
         granularity as "day" | "week" | "month", 
-        effectiveUserId
+        user.id,
+        currentEnvironmentId
       );
       
       if (!result.success) {
@@ -73,9 +77,9 @@ export function useFinancialForecast(planId?: string) {
       if (error) throw error;
 
       // Audit log
-      if (effectiveUserId) {
+      if (user?.id) {
         await supabase.from("financial_audit_log").insert({
-          user_id: effectiveUserId,
+          user_id: user.id,
           entity_type: "forecast",
           entity_id: forecastId,
           action: lock ? "lock" : "unlock",

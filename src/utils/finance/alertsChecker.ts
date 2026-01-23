@@ -22,26 +22,26 @@ interface AlertConfig {
 }
 
 /**
- * Get all active alerts for the current user
+ * Get all active alerts for the current environment
  */
-export async function getActiveAlerts(userId: string): Promise<FinanceAlert[]> {
+export async function getActiveAlerts(environmentId: string): Promise<FinanceAlert[]> {
   const alerts: FinanceAlert[] = [];
 
   try {
-    // Get user's alert configs
+    // Get environment's alert configs
     const { data: configs } = await supabase
       .from("financial_alert_configs")
       .select("*")
-      .eq("user_id", userId)
+      .eq("environment_id", environmentId)
       .eq("is_active", true);
 
     const alertConfigs = configs || [];
 
     // Run all checks in parallel
     const [overdueAlerts, pacingAlerts, dueSoonAlerts] = await Promise.all([
-      checkOverduePayments(alertConfigs, userId),
-      checkPacingVariance(alertConfigs, userId),
-      checkDueSoonPayments(alertConfigs, userId),
+      checkOverduePayments(alertConfigs, environmentId),
+      checkPacingVariance(alertConfigs, environmentId),
+      checkDueSoonPayments(alertConfigs, environmentId),
     ]);
 
     alerts.push(...overdueAlerts, ...pacingAlerts, ...dueSoonAlerts);
@@ -59,7 +59,7 @@ export async function getActiveAlerts(userId: string): Promise<FinanceAlert[]> {
 /**
  * Check for overdue payments
  */
-async function checkOverduePayments(configs: AlertConfig[], userId: string): Promise<FinanceAlert[]> {
+async function checkOverduePayments(configs: AlertConfig[], environmentId: string): Promise<FinanceAlert[]> {
   const alerts: FinanceAlert[] = [];
   const today = new Date().toISOString().split('T')[0];
 
@@ -82,7 +82,7 @@ async function checkOverduePayments(configs: AlertConfig[], userId: string): Pro
           document_number
         )
       `)
-      .eq("user_id", userId)
+      .eq("environment_id", environmentId)
       .lt("planned_payment_date", today)
       .in("status", ["scheduled", "overdue"])
       .is("deleted_at", null);
@@ -120,7 +120,7 @@ async function checkOverduePayments(configs: AlertConfig[], userId: string): Pro
 /**
  * Check for pacing variance (overspend/underspend)
  */
-async function checkPacingVariance(configs: AlertConfig[], userId: string): Promise<FinanceAlert[]> {
+async function checkPacingVariance(configs: AlertConfig[], environmentId: string): Promise<FinanceAlert[]> {
   const alerts: FinanceAlert[] = [];
 
   const overspendConfig = configs.find(c => c.alert_type === "overspend");
@@ -144,13 +144,13 @@ async function checkPacingVariance(configs: AlertConfig[], userId: string): Prom
       supabase
         .from("financial_forecasts")
         .select("media_plan_id, planned_amount")
-        .eq("user_id", userId)
+        .eq("environment_id", environmentId)
         .gte("period_start", monthStart)
         .lte("period_end", monthEnd),
       supabase
         .from("financial_actuals")
         .select("media_plan_id, actual_amount")
-        .eq("user_id", userId)
+        .eq("environment_id", environmentId)
         .gte("period_start", monthStart)
         .lte("period_end", monthEnd),
     ]);
@@ -225,7 +225,7 @@ async function checkPacingVariance(configs: AlertConfig[], userId: string): Prom
 /**
  * Check for payments due soon (next 7 days)
  */
-async function checkDueSoonPayments(configs: AlertConfig[], userId: string): Promise<FinanceAlert[]> {
+async function checkDueSoonPayments(configs: AlertConfig[], environmentId: string): Promise<FinanceAlert[]> {
   const alerts: FinanceAlert[] = [];
   
   const today = new Date();
@@ -248,7 +248,7 @@ async function checkDueSoonPayments(configs: AlertConfig[], userId: string): Pro
           vendor_name
         )
       `)
-      .eq("user_id", userId)
+      .eq("environment_id", environmentId)
       .gte("planned_payment_date", todayStr)
       .lte("planned_payment_date", in7DaysStr)
       .eq("status", "scheduled")
