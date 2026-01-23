@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders, EMAIL_CONFIG } from "../_shared/email-config.ts";
 
 // Generate a secure random token
 function generateInviteToken(): string {
@@ -266,7 +262,7 @@ serve(async (req) => {
 
       console.log(`Invite created for email: ${email.toLowerCase()} with role ${normalizedRole} and token ${inviteToken.substring(0, 8)}...`);
 
-      // Send invite email
+      // Send invite email using centralized email function
       let emailSent = false;
       console.log(`Attempting to send invite email to ${email} via send-invite-email function...`);
       try {
@@ -275,6 +271,7 @@ serve(async (req) => {
           inviteToken: inviteToken,
           environmentName: environmentName,
           inviterName: inviterName,
+          baseUrl: EMAIL_CONFIG.baseUrl,
           inviteType: 'environment_member',
         };
         console.log('Email payload:', JSON.stringify(emailPayload));
