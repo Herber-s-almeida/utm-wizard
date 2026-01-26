@@ -26,6 +26,7 @@ interface UsePlanAlertsParams {
     percentage: number;
     parent_distribution_id?: string | null;
   }>;
+  monthlyBudgets?: Record<string, Array<{ amount: number }>>;
   planStartDate: string | null;
   planEndDate: string | null;
   moments?: Array<{ id: string; name: string }>;
@@ -65,6 +66,7 @@ export function usePlanAlerts({
   lines,
   creatives,
   budgetDistributions,
+  monthlyBudgets = {},
   planStartDate,
   planEndDate,
   moments = [],
@@ -295,10 +297,28 @@ export function usePlanAlerts({
           category: 'budget',
         });
       }
+
+      // 13. NEW: Budget allocation mismatch (line budget vs monthly allocated)
+      const lineBudget = Number(line.budget || 0);
+      const lineMonthlyBudgets = monthlyBudgets[line.id] || [];
+      const allocatedBudget = lineMonthlyBudgets.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+      
+      if (lineBudget > 0 && Math.abs(lineBudget - allocatedBudget) > 0.01) {
+        const diff = lineBudget - allocatedBudget;
+        result.push({
+          id: `budget-mismatch-${line.id}`,
+          level: 'error',
+          title: 'Orçamento alocado divergente',
+          description: `A linha "${line.line_code || line.platform}" tem orçamento de R$ ${lineBudget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} mas alocação mensal de R$ ${allocatedBudget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (diferença: R$ ${Math.abs(diff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`,
+          action: diff > 0 ? 'Distribua o orçamento restante nos meses' : 'Reduza a alocação mensal',
+          lineId: line.id,
+          category: 'budget',
+        });
+      }
     });
 
     return result;
-  }, [totalBudget, lines, creatives, budgetDistributions, planStartDate, planEndDate, moments, hierarchyOrder]);
+  }, [totalBudget, lines, creatives, budgetDistributions, monthlyBudgets, planStartDate, planEndDate, moments, hierarchyOrder]);
 
   // Group alerts by level
   const errorAlerts = alerts.filter(a => a.level === 'error');

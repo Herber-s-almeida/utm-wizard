@@ -642,12 +642,13 @@ export default function MediaPlanDetail() {
     });
   }, [budgetDistributions, subdivisions.data, moments.data]);
 
-  // Plan alerts - now with dynamic hierarchy order
+  // Plan alerts - now with dynamic hierarchy order and monthly budgets for allocation mismatch detection
   const planAlerts = usePlanAlerts({
     totalBudget: plan?.total_budget || 0,
     lines,
     creatives,
     budgetDistributions,
+    monthlyBudgets,
     planStartDate: plan?.start_date || null,
     planEndDate: plan?.end_date || null,
     moments: moments.data || [],
@@ -925,8 +926,8 @@ export default function MediaPlanDetail() {
           />
         )}
 
-        {/* Funnel Visualization - Show only if there are custom funnel stages */}
-        {(() => {
+        {/* Funnel Visualization - Show only if there are custom funnel stages and visibility enabled */}
+        {isVisible('funnel-visualization') && (() => {
           // Check if there are non-default funnel stages
           const funnelDists = budgetDistributions.filter(d => d.distribution_type === 'funnel_stage');
           const hasCustomFunnel = funnelDists.length > 0 && funnelDists.some(d => d.reference_id !== null);
