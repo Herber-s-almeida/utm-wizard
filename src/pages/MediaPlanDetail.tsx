@@ -1074,26 +1074,35 @@ export default function MediaPlanDetail() {
                         <span className="text-muted-foreground">Total Distribuído:</span>
                         <span className="font-semibold">{formatCurrency(totalDistributed)}</span>
                       </div>
-                      <div className="flex items-end gap-2 h-40">
+                      <div className="flex items-end gap-1 overflow-x-auto pb-2">
                         {monthlyTotals.map((month, idx) => {
-                          const heightPercent = (month.amount / maxAmount) * 100;
+                          const heightPercent = maxAmount > 0 ? (month.amount / maxAmount) * 100 : 0;
                           const percentOfTotal = totalDistributed > 0 
                             ? ((month.amount / totalDistributed) * 100).toFixed(1) 
-                            : '0';
+                            : '0.0';
                           
                           return (
                             <TooltipProvider key={idx}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="flex-1 flex flex-col items-center gap-1">
-                                    <div 
-                                      className="w-full bg-primary/80 rounded-t transition-all hover:bg-primary cursor-pointer"
-                                      style={{ height: `${Math.max(heightPercent, 2)}%` }}
-                                    />
-                                    <div className="text-[10px] text-muted-foreground text-center leading-tight">
+                                  <div className="flex-1 min-w-[60px] flex flex-col items-center">
+                                    <div className="text-[10px] font-medium text-primary mb-1">
+                                      {month.amount > 0 ? formatCurrency(month.amount) : ''}
+                                    </div>
+                                    <div className="w-full h-32 flex items-end justify-center">
+                                      <div 
+                                        className="w-full max-w-[40px] bg-primary/80 rounded-t transition-all hover:bg-primary cursor-pointer"
+                                        style={{ 
+                                          height: month.amount > 0 ? `${Math.max(heightPercent, 4)}%` : '2px',
+                                          minHeight: month.amount > 0 ? '8px' : '2px',
+                                          opacity: month.amount > 0 ? 1 : 0.3
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground text-center leading-tight mt-1">
                                       {month.month}
                                     </div>
-                                    <div className="text-[10px] font-medium text-center">
+                                    <div className="text-[10px] font-medium text-center text-primary">
                                       {percentOfTotal}%
                                     </div>
                                   </div>
@@ -1101,6 +1110,7 @@ export default function MediaPlanDetail() {
                                 <TooltipContent>
                                   <p className="font-semibold">{month.month}</p>
                                   <p>{formatCurrency(month.amount)}</p>
+                                  <p className="text-xs text-muted-foreground">{percentOfTotal}% do total</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
