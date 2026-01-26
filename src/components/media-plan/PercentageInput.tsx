@@ -23,7 +23,7 @@ function parsePercentage(value: string): number {
   cleaned = cleaned.replace(/[^\d.-]/g, '');
   
   const result = parseFloat(cleaned);
-  return isNaN(result) ? 0 : Math.round(result * 100) / 100;
+  return isNaN(result) ? 0 : Math.round(result * 10000) / 10000;
 }
 
 export function PercentageInput({ value, onChange, className, disabled }: PercentageInputProps) {
