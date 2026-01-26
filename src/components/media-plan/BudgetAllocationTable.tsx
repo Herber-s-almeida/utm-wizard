@@ -64,7 +64,7 @@ export function BudgetAllocationTable({
 
   const totalPercentage = items.reduce((sum, item) => sum + item.percentage, 0);
   const totalAmount = items.reduce((sum, item) => sum + (totalBudget * item.percentage) / 100, 0);
-  const isValid = Math.abs(totalPercentage - 100) < 0.01;
+  const isValid = Math.abs(totalPercentage - 100) < 0.0001;
   
   // Filter out "Geral" (system items with name "Geral") and already selected items
   const availableItems = existingItems.filter(
@@ -117,7 +117,7 @@ export function BudgetAllocationTable({
   const handleAbsoluteChange = (id: string, absoluteValue: number) => {
     // Calculate percentage from absolute value
     const percentage = totalBudget > 0 ? (absoluteValue / totalBudget) * 100 : 0;
-    onUpdate(id, Math.round(percentage * 100) / 100); // Round to 2 decimal places
+    onUpdate(id, Math.round(percentage * 10000) / 10000); // Round to 4 decimal places for precision
   };
 
   return (
