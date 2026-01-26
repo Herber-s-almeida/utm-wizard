@@ -60,7 +60,7 @@ import {
 } from '@/utils/hierarchyDataBuilder';
 
 // Columns that can be toggled (excludes: Código, Orçamento, Status, Início, Fim, Ações)
-type ToggleableColumn = 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target' | 'objective' | 'creatives';
+type ToggleableColumn = 'subdivision' | 'moment' | 'funnel_stage' | 'medium' | 'vehicle' | 'channel' | 'target' | 'objective' | 'notes' | 'creatives';
 
 // Build toggleable columns with dynamic labels from hierarchy config
 const getToggleableColumns = (): { key: ToggleableColumn; label: string }[] => [
@@ -72,6 +72,7 @@ const getToggleableColumns = (): { key: ToggleableColumn; label: string }[] => [
   { key: 'channel', label: 'Canal' },
   { key: 'target', label: 'Segmentação' },
   { key: 'objective', label: 'Objetivo' },
+  { key: 'notes', label: 'Observações' },
   { key: 'creatives', label: 'Criativos' },
 ];
 
@@ -338,6 +339,7 @@ export function HierarchicalMediaTable({
     channel: true,
     target: true,
     objective: true,
+    notes: true,
     creatives: true,
   });
 
@@ -2057,6 +2059,11 @@ export function HierarchicalMediaTable({
                 Objetivo
               </ResizableColumnHeader>
             )}
+            {visibleColumns.notes && (
+              <ResizableColumnHeader columnKey="notes" width={getWidth('notes')} onResize={handleResize} className="p-3 border-r">
+                Obs.
+              </ResizableColumnHeader>
+            )}
             <ResizableColumnHeader columnKey="budget" width={getWidth('budget')} onResize={handleResize} className="p-3 border-r">
               Orçamento
             </ResizableColumnHeader>
@@ -2162,6 +2169,23 @@ export function HierarchicalMediaTable({
                       <div className="p-2 border-r truncate shrink-0" style={{ width: getWidth('objective') }} title={getObjectiveName(line.objective_id)}>
                         {getObjectiveName(line.objective_id)}
                       </div>
+                    )}
+                    {visibleColumns.notes && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div 
+                            className="p-2 border-r truncate shrink-0 text-xs text-muted-foreground cursor-help" 
+                            style={{ width: getWidth('notes') }}
+                          >
+                            {line.notes ? (line.notes.length > 15 ? line.notes.substring(0, 15) + '...' : line.notes) : '-'}
+                          </div>
+                        </TooltipTrigger>
+                        {line.notes && (
+                          <TooltipContent className="max-w-xs whitespace-pre-wrap">
+                            {line.notes}
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
                     )}
                     
                     {/* Editable Budget */}

@@ -2885,11 +2885,13 @@ export type Database = {
           hierarchy_order: string[] | null
           id: string
           kpis: Json | null
+          moment_order: string[] | null
           name: string
           objectives: string[] | null
           slug: string | null
           start_date: string | null
           status: string | null
+          subdivision_order: string[] | null
           total_budget: number | null
           updated_at: string | null
           user_id: string
@@ -2909,11 +2911,13 @@ export type Database = {
           hierarchy_order?: string[] | null
           id?: string
           kpis?: Json | null
+          moment_order?: string[] | null
           name: string
           objectives?: string[] | null
           slug?: string | null
           start_date?: string | null
           status?: string | null
+          subdivision_order?: string[] | null
           total_budget?: number | null
           updated_at?: string | null
           user_id: string
@@ -2933,11 +2937,13 @@ export type Database = {
           hierarchy_order?: string[] | null
           id?: string
           kpis?: Json | null
+          moment_order?: string[] | null
           name?: string
           objectives?: string[] | null
           slug?: string | null
           start_date?: string | null
           status?: string | null
+          subdivision_order?: string[] | null
           total_budget?: number | null
           updated_at?: string | null
           user_id?: string
@@ -4217,6 +4223,7 @@ export type Database = {
         Row: {
           age_range: string | null
           behavior: string | null
+          client_id: string | null
           created_at: string
           deleted_at: string | null
           description: string | null
@@ -4232,6 +4239,7 @@ export type Database = {
         Insert: {
           age_range?: string | null
           behavior?: string | null
+          client_id?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -4247,6 +4255,7 @@ export type Database = {
         Update: {
           age_range?: string | null
           behavior?: string | null
+          client_id?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -4260,6 +4269,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "targets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "targets_environment_id_fkey"
             columns: ["environment_id"]

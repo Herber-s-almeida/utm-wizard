@@ -83,6 +83,7 @@ export interface Target {
   description: string | null;
   user_id: string;
   environment_id?: string;
+  client_id?: string | null; // Vínculo opcional com cliente específico
   deleted_at?: string | null;
   is_active?: boolean;
 }

@@ -15,6 +15,7 @@ interface AllocationItem {
   name: string;
   percentage: number;
   amount: number;
+  absoluteAmount?: number; // Valor absoluto quando editado diretamente (fonte de verdade no modo R$)
   start_date?: string;
   end_date?: string;
 }
@@ -31,7 +32,7 @@ interface BudgetAllocationTableProps {
   existingItems: ExistingItem[];
   totalBudget: number;
   onAdd: (item: AllocationItem) => void;
-  onUpdate: (id: string, percentage: number, dates?: { start_date?: string; end_date?: string }) => void;
+  onUpdate: (id: string, percentage: number, dates?: { start_date?: string; end_date?: string }, absoluteAmount?: number) => void;
   onRemove: (id: string) => void;
   onCreate?: (name: string) => Promise<ExistingItem>;
   label: string;
@@ -115,9 +116,10 @@ export function BudgetAllocationTable({
   };
 
   const handleAbsoluteChange = (id: string, absoluteValue: number) => {
-    // Calculate percentage from absolute value
+    // Calculate percentage from absolute value, but keep full precision internally
     const percentage = totalBudget > 0 ? (absoluteValue / totalBudget) * 100 : 0;
-    onUpdate(id, Math.round(percentage * 10000) / 10000); // Round to 4 decimal places for precision
+    // Pass the absolute value to be stored as source of truth
+    onUpdate(id, percentage, undefined, absoluteValue);
   };
 
   return (
@@ -238,7 +240,10 @@ export function BudgetAllocationTable({
             </TableHeader>
             <TableBody>
               {items.map(item => {
-                const itemAmount = (totalBudget * item.percentage) / 100;
+                // Usar absoluteAmount se definido, senão calcular a partir do percentual
+                const itemAmount = item.absoluteAmount !== undefined 
+                  ? item.absoluteAmount 
+                  : (totalBudget * item.percentage) / 100;
                 return (
                   <TableRow key={item.id} className="group">
                     <TableCell className="font-medium">{item.name}</TableCell>
