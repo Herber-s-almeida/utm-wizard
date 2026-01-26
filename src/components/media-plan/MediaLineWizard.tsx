@@ -27,6 +27,7 @@ import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 import { DuplicateLineDialog } from './DuplicateLineDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel } from '@/types/hierarchy';
+import { TargetDialog } from '@/components/config/TargetDialog';
 
 const STEP_TOOLTIPS: Record<string, string> = {
   subdivision: 'Agrupa linhas por região, produto ou objetivo. Define a primeira parte da estrutura do plano.',
@@ -125,6 +126,10 @@ export function MediaLineWizard({
   // Inline objective creation state
   const [newObjectiveName, setNewObjectiveName] = useState('');
   const [creatingObjective, setCreatingObjective] = useState(false);
+  
+  // Target dialog state for creating full segmentation
+  const [targetDialogOpen, setTargetDialogOpen] = useState(false);
+  const [pendingTargetName, setPendingTargetName] = useState('');
   
   // Details form
   const [lineDetails, setLineDetails] = useState({
@@ -550,6 +555,8 @@ export function MediaLineWizard({
           onComplete();
           onOpenChange(false);
         }
+        // If goToCreatives=false and not on creatives step, just save without navigating or closing
+        // This allows the user to stay on the current step after saving
       } else {
         // Create new line
         const { data, error } = await supabase
@@ -569,9 +576,10 @@ export function MediaLineWizard({
         if (goToCreatives && data) {
           setSavedLineId(data.id);
           setCurrentStep('creatives');
-        } else {
-          onComplete();
-          onOpenChange(false);
+        } else if (data) {
+          // For new lines, if not going to creatives, save the line ID so future saves are updates
+          setSavedLineId(data.id);
+          // Don't close the dialog - allow user to continue editing
         }
       }
     } catch (error: any) {
@@ -619,11 +627,19 @@ export function MediaLineWizard({
             description: c.description,
           }));
       case 'target':
-        return (targets.activeItems || []).map(t => ({
-          id: t.id,
-          name: t.name,
-          description: t.description,
-        }));
+        // Filter targets by plan's client_id: show targets with matching client_id OR null client_id
+        const planClientId = (plan as any).client_id;
+        return (targets.activeItems || [])
+          .filter(t => {
+            const targetClientId = (t as any).client_id;
+            // Show if: target has no client restriction, or matches plan's client
+            return !targetClientId || targetClientId === planClientId;
+          })
+          .map(t => ({
+            id: t.id,
+            name: t.name,
+            description: t.description,
+          }));
       default:
         return [];
     }
@@ -691,10 +707,39 @@ export function MediaLineWizard({
         const newChannel = await channels.create.mutateAsync({ name, vehicle_id: selectedVehicle });
         return { id: newChannel.id, name: newChannel.name };
       case 'target':
-        const newTarget = await targets.create.mutateAsync({ name });
-        return { id: newTarget.id, name: newTarget.name };
+        // Instead of creating directly, open the full TargetDialog
+        setPendingTargetName(name);
+        setTargetDialogOpen(true);
+        throw new Error('OPENING_DIALOG'); // This will prevent the HierarchyBlockSelector from selecting
       default:
         throw new Error('Invalid step');
+    }
+  };
+
+  // Handle target creation from dialog
+  const handleTargetDialogSave = async (data: {
+    name: string;
+    slug: string;
+    age_range: string;
+    geolocation: any[];
+    behavior: string;
+    description: string;
+    client_id?: string | null;
+  }) => {
+    try {
+      const newTarget = await targets.create.mutateAsync({
+        name: data.name,
+        slug: data.slug,
+        age_range: data.age_range,
+        geolocation: data.geolocation,
+        behavior: data.behavior,
+        description: data.description,
+        client_id: data.client_id,
+      });
+      setSelectedTarget(newTarget.id);
+      setPendingTargetName('');
+    } catch (error) {
+      console.error('Error creating target:', error);
     }
   };
 
@@ -1115,6 +1160,26 @@ export function MediaLineWizard({
           onCreateNew={handleCreateNewLineCode}
         />
       )}
+
+      {/* Target Dialog for full segmentation creation */}
+      <TargetDialog
+        open={targetDialogOpen}
+        onOpenChange={(open) => {
+          setTargetDialogOpen(open);
+          if (!open) setPendingTargetName('');
+        }}
+        onSave={handleTargetDialogSave}
+        existingNames={(targets.data || []).map(t => t.name)}
+        initialData={{
+          name: pendingTargetName,
+          age_range: '',
+          geolocation: [],
+          behavior: '',
+          description: '',
+          client_id: (plan as any).client_id || null,
+        }}
+        mode="create"
+      />
     </>
   );
 }

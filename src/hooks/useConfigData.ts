@@ -696,7 +696,7 @@ export function useTargets() {
   });
 
   const create = useMutation({
-    mutationFn: async (target: { name: string; slug?: string; age_range?: string; geolocation?: any; behavior?: string; description?: string }) => {
+    mutationFn: async (target: { name: string; slug?: string; age_range?: string; geolocation?: any; behavior?: string; description?: string; client_id?: string | null }) => {
       const { data, error } = await supabase
         .from('targets')
         .insert({ 
@@ -706,6 +706,7 @@ export function useTargets() {
           geolocation: target.geolocation || [], 
           behavior: target.behavior || null, 
           description: target.description || null, 
+          client_id: target.client_id || null,
           user_id: user!.id,
           environment_id: currentEnvironmentId!
         })
