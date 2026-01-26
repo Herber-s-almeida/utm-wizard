@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Save, Loader2, Layers, Clock, Filter, Calendar, FileText, Sparkles, Edit2, Settings2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -85,6 +86,7 @@ const LEVEL_DESCRIPTIONS: Record<HierarchyLevel, { title: string; description: s
 
 export default function NewMediaPlanBudget() {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const navigate = useNavigate();
   const wizard = useMediaPlanWizard();
   const [saving, setSaving] = useState(false);
@@ -323,6 +325,12 @@ export default function NewMediaPlanBudget() {
       return;
     }
 
+    // Validar ambiente antes de salvar
+    if (!currentEnvironmentId) {
+      toast.error('Ambiente não selecionado. Por favor, selecione um ambiente antes de salvar.');
+      return;
+    }
+
     setSaving(true);
     try {
       // 1. Create the media plan with hierarchy_order and funnel_order
@@ -330,6 +338,7 @@ export default function NewMediaPlanBudget() {
         .from('media_plans')
         .insert({
           user_id: user?.id,
+          environment_id: currentEnvironmentId,
           name: state.planData.name,
           client: state.planData.client || null,
           client_id: state.planData.client_id || null,
@@ -364,6 +373,7 @@ export default function NewMediaPlanBudget() {
           .from('plan_budget_distributions')
           .insert({
             user_id: user?.id,
+            environment_id: currentEnvironmentId,
             media_plan_id: plan.id,
             distribution_type: level,
             reference_id: allocation.id === 'geral' ? null : allocation.id,
@@ -426,9 +436,21 @@ export default function NewMediaPlanBudget() {
       clearDraft();
       toast.success('Plano salvo com sucesso!');
       navigate(`/media-plans/${plan.slug || plan.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating plan:', error);
-      toast.error('Erro ao salvar plano');
+      
+      // Mensagens específicas por código de erro
+      if (error?.code === '42501') {
+        toast.error('Sem permissão para criar plano. Verifique suas permissões no ambiente atual.');
+      } else if (error?.code === '23503') {
+        toast.error('Referência inválida. Verifique se o cliente e outros campos selecionados existem.');
+      } else if (error?.code === '23505') {
+        toast.error('Já existe um plano com este nome neste ambiente.');
+      } else if (error?.code === '23502') {
+        toast.error('Campo obrigatório não preenchido. Verifique todos os campos do formulário.');
+      } else {
+        toast.error(error?.message || 'Erro ao salvar plano. Tente novamente.');
+      }
     } finally {
       setSaving(false);
     }
