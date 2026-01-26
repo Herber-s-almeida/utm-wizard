@@ -1163,6 +1163,12 @@ export default function MediaPlanDetail() {
           funnelStages={funnelStages.data || []}
           statuses={statuses.activeItems || []}
           hierarchyOrder={hierarchyOrder}
+          levelOrder={{
+            funnel_stage: (plan as any).funnel_order || [],
+            subdivision: (plan as any).subdivision_order || [],
+            moment: (plan as any).moment_order || [],
+          }}
+          showNewLineButtons={isVisible('new-line-buttons') && canEdit}
           lineAlerts={planAlerts.getLineAlerts}
           onEditLine={(line, initialStep) => {
             setEditingLine(line);

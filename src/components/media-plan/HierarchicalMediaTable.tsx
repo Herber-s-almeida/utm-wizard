@@ -56,7 +56,8 @@ import {
   HierarchyNodeData,
   NameResolver,
   MediaLineRef,
-  BudgetDistribution as BuilderBudgetDistribution
+  BudgetDistribution as BuilderBudgetDistribution,
+  LevelOrderConfig
 } from '@/utils/hierarchyDataBuilder';
 
 // Columns that can be toggled (excludes: Código, Orçamento, Status, Início, Fim, Ações)
@@ -143,6 +144,8 @@ interface HierarchicalMediaTableProps {
   funnelStages?: FunnelStage[];
   statuses?: Status[];
   hierarchyOrder?: HierarchyLevel[];
+  levelOrder?: LevelOrderConfig; // Ordering for subdivision/moment/funnel_stage
+  showNewLineButtons?: boolean; // Control visibility of "New Line" buttons
   lineAlerts?: (lineId: string) => PlanAlert[];
   onEditLine: (line: MediaLine, initialStep?: string) => void;
   onDeleteLine: (line: MediaLine) => void;
@@ -210,6 +213,8 @@ export function HierarchicalMediaTable({
   funnelStages: funnelStagesList = [],
   statuses: statusesList = [],
   hierarchyOrder = DEFAULT_HIERARCHY_ORDER,
+  levelOrder,
+  showNewLineButtons = true,
   lineAlerts,
   onEditLine,
   onDeleteLine,
@@ -512,9 +517,10 @@ export function HierarchicalMediaTable({
       budgetDistributions as BuilderBudgetDistribution[],
       lineRefs,
       hierarchyOrder,
-      getNameForLevel
+      getNameForLevel,
+      levelOrder
     );
-  }, [lines, budgetDistributions, plan.total_budget, hierarchyOrder, getNameForLevel]);
+  }, [lines, budgetDistributions, plan.total_budget, hierarchyOrder, getNameForLevel, levelOrder]);
 
   // Helper to get line ref ID for a specific level
   const getLineRefIdForLevel = useCallback((line: MediaLine, level: HierarchyLevel): string | null => {
@@ -1205,17 +1211,21 @@ export function HierarchicalMediaTable({
     subdivisionId: string | undefined;
     momentId: string | undefined;
     funnelStageId: string | undefined;
-  }) => (
-    <Button
-      variant="outline"
-      size="sm"
-      className="w-full h-8 text-xs border-dashed border-primary text-primary hover:bg-primary/10 justify-start gap-1 pl-3"
-      onClick={() => onAddLine({ subdivisionId, momentId, funnelStageId })}
-    >
-      <Plus className="w-3 h-3 shrink-0" />
-      <span className="truncate">Criar nova Linha</span>
-    </Button>
-  );
+  }) => {
+    if (!showNewLineButtons) return null;
+    
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full h-8 text-xs border-dashed border-primary text-primary hover:bg-primary/10 justify-start gap-1 pl-3"
+        onClick={() => onAddLine({ subdivisionId, momentId, funnelStageId })}
+      >
+        <Plus className="w-3 h-3 shrink-0" />
+        <span className="truncate">Criar nova Linha</span>
+      </Button>
+    );
+  };
 
   const handleStatusChange = async (lineId: string, statusId: string) => {
     await onUpdateLine(lineId, { status_id: statusId === 'none' ? null : statusId });
@@ -1267,7 +1277,20 @@ export function HierarchicalMediaTable({
             {getObjectiveName(line.objective_id)}
           </div>
         )}
-        
+        {visibleColumns.notes && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="p-2 border-r truncate shrink-0 text-xs text-muted-foreground" style={{ width: getWidth('notes') }} title={line.notes || ''}>
+                {line.notes ? (line.notes.length > 20 ? line.notes.substring(0, 20) + '...' : line.notes) : '-'}
+              </div>
+            </TooltipTrigger>
+            {line.notes && (
+              <TooltipContent side="top" className="max-w-xs">
+                <p className="text-sm whitespace-pre-wrap">{line.notes}</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        )}
         {/* Editable Budget */}
         <EditableCell
           line={line}
@@ -1583,6 +1606,7 @@ export function HierarchicalMediaTable({
     if (visibleColumns.channel) width += getWidth('channel');
     if (visibleColumns.target) width += getWidth('target');
     if (visibleColumns.objective) width += getWidth('objective');
+    if (visibleColumns.notes) width += getWidth('notes');
     if (visibleColumns.creatives) width += getWidth('creatives');
     return width;
   };
@@ -2367,17 +2391,19 @@ export function HierarchicalMediaTable({
               })}
               
               {/* Add Line Button for flat view */}
-              <div className="p-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full h-8 text-xs border-dashed border-primary text-primary hover:bg-primary/10 justify-start gap-1 pl-3"
-                  onClick={() => onAddLine({})}
-                >
-                  <Plus className="w-3 h-3 shrink-0" />
-                  <span className="truncate">Criar nova Linha</span>
-                </Button>
-              </div>
+              {showNewLineButtons && (
+                <div className="p-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-8 text-xs border-dashed border-primary text-primary hover:bg-primary/10 justify-start gap-1 pl-3"
+                    onClick={() => onAddLine({})}
+                  >
+                    <Plus className="w-3 h-3 shrink-0" />
+                    <span className="truncate">Criar nova Linha</span>
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -2485,6 +2511,8 @@ export function HierarchicalMediaTable({
             {visibleColumns.vehicle && <div className="p-3 shrink-0" style={{ width: getWidth('vehicle') }}></div>}
             {visibleColumns.channel && <div className="p-3 shrink-0" style={{ width: getWidth('channel') }}></div>}
             {visibleColumns.target && <div className="p-3 shrink-0" style={{ width: getWidth('target') }}></div>}
+            {visibleColumns.objective && <div className="p-3 shrink-0" style={{ width: getWidth('objective') }}></div>}
+            {visibleColumns.notes && <div className="p-3 shrink-0" style={{ width: getWidth('notes') }}></div>}
             <div className="p-3 font-bold shrink-0" style={{ width: getWidth('budget') }}>{formatCurrency(totalBudget)}</div>
             {visibleColumns.creatives && <div className="p-3 shrink-0" style={{ width: getWidth('creatives') }}></div>}
             <div className="p-3 shrink-0" style={{ width: getWidth('status') }}></div>

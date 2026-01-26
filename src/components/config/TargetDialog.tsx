@@ -12,6 +12,7 @@ import { Plus, Trash2, Search, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBrazilianCities, BrazilianCity } from '@/hooks/useBrazilianCities';
 import { useBehavioralSegmentations, BehavioralSegmentation } from '@/hooks/useConfigData';
+import { useClients } from '@/hooks/useClients';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 
 interface Location {
@@ -34,6 +35,7 @@ interface TargetDialogProps {
     geolocation: Location[];
     behavior: string;
     description: string;
+    client_id?: string | null;
   }) => void;
   existingNames?: string[];
   initialData?: {
@@ -43,6 +45,7 @@ interface TargetDialogProps {
     geolocation: Location[];
     behavior: string;
     description?: string;
+    client_id?: string | null;
   };
   mode?: 'create' | 'edit';
 }
@@ -76,6 +79,7 @@ export function TargetDialog({
   const [noMaxAge, setNoMaxAge] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [description, setDescription] = useState('');
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   
   // Country selection
   const [countryType, setCountryType] = useState<'brasil' | 'outros'>('brasil');
@@ -95,6 +99,9 @@ export function TargetDialog({
   
   const { cities, searchCities, loading: loadingCities } = useBrazilianCities();
   const cityResults = cities.length > 0 ? searchCities(citySearch) : [];
+  
+  // Clients from database
+  const { data: clients = [] } = useClients();
   
   // Behavioral Segmentations from database - use activeItems to filter deleted ones
   const { activeItems: behavioralSegmentations = [], create: createBehavioral } = useBehavioralSegmentations();
@@ -148,6 +155,7 @@ export function TargetDialog({
       }
       
       setLocations(initialData?.geolocation || []);
+      setSelectedClientId(initialData?.client_id || null);
       
       // Load multiple behavioral segmentations
       const behaviorValue = initialData?.behavior || '';
@@ -346,7 +354,8 @@ export function TargetDialog({
       age_range: ageRange,
       geolocation: locations.filter(l => l.city.trim()),
       behavior: finalBehavior,
-      description: description.trim()
+      description: description.trim(),
+      client_id: selectedClientId
     });
 
     setName('');
@@ -358,6 +367,7 @@ export function TargetDialog({
     setLocations([]);
     setSelectedSegmentations([]);
     setDescription('');
+    setSelectedClientId(null);
     onOpenChange(false);
   };
 
