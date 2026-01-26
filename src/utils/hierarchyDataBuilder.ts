@@ -85,16 +85,43 @@ function calculateAllocatedBudget(
     .reduce((acc, line) => acc + (Number(line.budget) || 0), 0);
 }
 
+// Level order configuration for sorting nodes
+export interface LevelOrderConfig {
+  subdivision?: string[];
+  moment?: string[];
+  funnel_stage?: string[];
+}
+
 /**
  * Build hierarchical tree from budget distributions based on dynamic hierarchy order
+ * @param levelOrder - Optional ordering configuration: { funnel_stage: ['id1', 'id2'], subdivision: [...] }
  */
 export function buildHierarchyTree(
   distributions: BudgetDistribution[],
   lines: MediaLineRef[],
   hierarchyOrder: HierarchyLevel[],
-  getNameForLevel: NameResolver
+  getNameForLevel: NameResolver,
+  levelOrder?: LevelOrderConfig
 ): HierarchyTreeNode[] {
   if (hierarchyOrder.length === 0) return [];
+
+  // Helper function to sort nodes by order array
+  const sortByOrder = (nodes: HierarchyTreeNode[], level: HierarchyLevel): HierarchyTreeNode[] => {
+    const order = levelOrder?.[level];
+    if (!order || order.length === 0) return nodes;
+    
+    return [...nodes].sort((a, b) => {
+      const aIndex = a.data.id ? order.indexOf(a.data.id) : -1;
+      const bIndex = b.data.id ? order.indexOf(b.data.id) : -1;
+      
+      // Items not in order array go to the end
+      if (aIndex === -1 && bIndex === -1) return 0;
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      
+      return aIndex - bIndex;
+    });
+  };
 
   // Get distributions for the first level
   const firstLevel = hierarchyOrder[0];
@@ -146,7 +173,7 @@ export function buildHierarchyTree(
       return [geralNode];
     }
 
-    return levelDists.map(dist => {
+    const nodes = levelDists.map(dist => {
       const currentPathRefIds = [...pathRefIds, dist.reference_id];
       const allocated = calculateAllocatedBudget(lines, hierarchyOrder, currentPathRefIds, levelIndex);
 
@@ -166,10 +193,13 @@ export function buildHierarchyTree(
 
       return node;
     });
+
+    // Sort by order if provided
+    return sortByOrder(nodes, currentLevel);
   }
 
   // Start building from root level
-  return firstLevelDists.map(dist => {
+  const rootNodes = firstLevelDists.map(dist => {
     const pathRefIds = [dist.reference_id];
     const allocated = calculateAllocatedBudget(lines, hierarchyOrder, pathRefIds, 0);
 
@@ -189,6 +219,9 @@ export function buildHierarchyTree(
 
     return node;
   });
+
+  // Sort root nodes by order
+  return sortByOrder(rootNodes, firstLevel);
 }
 
 /**
