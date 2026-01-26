@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { useFormats } from '@/hooks/useFormatsHierarchy';
 import { FormatWizardDialog } from '@/components/config/FormatWizardDialog';
 import { toSlug } from '@/utils/utmGenerator';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 interface CreativesManagerProps {
   mediaLineId: string;
@@ -29,6 +30,7 @@ interface CreativeForm {
 }
 
 export function CreativesManager({ mediaLineId, userId, creatives, onUpdate }: CreativesManagerProps) {
+  const { currentEnvironmentId } = useEnvironment();
   const [step, setStep] = useState<CreativeStep>('idle');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showFormatWizard, setShowFormatWizard] = useState(false);
@@ -58,6 +60,11 @@ export function CreativesManager({ mediaLineId, userId, creatives, onUpdate }: C
   const handleSave = async () => {
     if (!form.format_id) {
       toast.error('Selecione um formato');
+      return;
+    }
+
+    if (!currentEnvironmentId) {
+      toast.error('Ambiente não selecionado');
       return;
     }
 
@@ -93,6 +100,7 @@ export function CreativesManager({ mediaLineId, userId, creatives, onUpdate }: C
             copy_text: form.message || null,
             message_slug: messageSlug,
             notes: form.notes || null,
+            environment_id: currentEnvironmentId,
           });
 
         if (error) throw error;

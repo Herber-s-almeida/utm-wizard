@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCreativeTypes } from '@/hooks/useCreativeTypes';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 interface FormatWizardDialogProps {
   open: boolean;
@@ -85,6 +86,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
   const creativeTypes = useCreativeTypes();
   const fileExtensions = useFileExtensions();
   const queryClient = useQueryClient();
+  const { currentEnvironmentId } = useEnvironment();
   
   // Created IDs for later use
   const [createdFormatId, setCreatedFormatId] = useState<string | null>(null);
@@ -329,10 +331,19 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
         return;
       }
 
+      if (!currentEnvironmentId) {
+        toast.error('Ambiente não selecionado');
+        return;
+      }
+
       // 1. Create the format
       const { data: format, error: formatError } = await supabase
         .from('formats')
-        .insert({ name: formatName.trim(), user_id: userId })
+        .insert({ 
+          name: formatName.trim(), 
+          user_id: userId,
+          environment_id: currentEnvironmentId
+        })
         .select()
         .single();
       
@@ -350,7 +361,8 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
         .insert({ 
           format_id: format.id, 
           name: creativeTypeName,
-          user_id: userId 
+          user_id: userId,
+          environment_id: currentEnvironmentId
         })
         .select()
         .single();
@@ -369,6 +381,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
           max_weight: hasWeight && weightValue ? parseFloat(weightValue) : null,
           weight_unit: hasWeight ? weightUnit : null,
           user_id: userId,
+          environment_id: currentEnvironmentId,
         })
         .select()
         .single();
@@ -383,6 +396,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
           max_characters: copy.maxCharacters,
           observation: copy.observation || null,
           user_id: userId,
+          environment_id: currentEnvironmentId,
         });
       }
       
@@ -396,6 +410,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
           description: dim.description,
           observation: dim.observation || null,
           user_id: userId,
+          environment_id: currentEnvironmentId,
         });
       }
       
@@ -405,6 +420,7 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
           specification_id: spec.id,
           extension_id: extId,
           user_id: userId,
+          environment_id: currentEnvironmentId,
         });
       }
       
