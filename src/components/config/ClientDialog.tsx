@@ -52,8 +52,9 @@ export function ClientDialog({
     }
 
     const normalizedName = trimmedName.toLowerCase();
+    const initialNameNormalized = initialData?.name?.toLowerCase();
     const isExisting = existingNames.some(
-      n => n.toLowerCase() === normalizedName && n !== initialData?.name?.toLowerCase()
+      n => n.toLowerCase() === normalizedName && n.toLowerCase() !== initialNameNormalized
     );
     
     if (isExisting) {
