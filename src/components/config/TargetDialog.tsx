@@ -756,6 +756,38 @@ export function TargetDialog({
             />
             <p className="text-xs text-muted-foreground">{description.length}/180 caracteres</p>
           </div>
+
+          {/* Client Restriction Field */}
+          <div className="space-y-2">
+            <LabelWithTooltip 
+              htmlFor="client" 
+              tooltip="Vincule esta segmentação a um cliente específico. Se selecionado, a segmentação só aparecerá em planos deste cliente."
+            >
+              Vincular a cliente (opcional)
+            </LabelWithTooltip>
+            <Select 
+              value={selectedClientId || 'none'} 
+              onValueChange={(value) => setSelectedClientId(value === 'none' ? null : value)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Sem restrição de cliente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem restrição de cliente</SelectItem>
+                {clients.map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {selectedClientId 
+                ? 'Esta segmentação só aparecerá em planos do cliente selecionado.'
+                : 'Disponível para todos os planos.'
+              }
+            </p>
+          </div>
         </div>
 
         <DialogFooter>
