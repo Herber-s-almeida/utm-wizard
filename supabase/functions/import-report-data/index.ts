@@ -229,6 +229,49 @@ serve(async (req) => {
         if (targetField === "line_code") continue;
 
         if (value !== undefined && value !== null && value !== "") {
+          // Handle date fields
+          if (targetField === "period_start" || targetField === "period_end") {
+            if (typeof value === "string") {
+              // Try to parse various date formats
+              let parsedDate: Date | null = null;
+              const trimmedValue = value.trim();
+              
+              // ISO format: 2025-11-21
+              if (/^\d{4}-\d{2}-\d{2}$/.test(trimmedValue)) {
+                parsedDate = new Date(trimmedValue + 'T00:00:00Z');
+              }
+              // BR format: 21/11/2025
+              else if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmedValue)) {
+                const [day, month, year] = trimmedValue.split('/');
+                parsedDate = new Date(`${year}-${month}-${day}T00:00:00Z`);
+              }
+              // US format: 11/21/2025
+              else if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmedValue)) {
+                // Already handled above, this is a fallback
+              }
+              // Try generic Date parse
+              else {
+                const attempt = new Date(trimmedValue);
+                if (!isNaN(attempt.getTime())) {
+                  parsedDate = attempt;
+                }
+              }
+              
+              if (parsedDate && !isNaN(parsedDate.getTime())) {
+                reportRow[targetField] = parsedDate.toISOString().split('T')[0];
+              }
+            } else if (typeof value === "number") {
+              // Excel serial date number
+              const excelEpoch = new Date(1899, 11, 30);
+              const msPerDay = 24 * 60 * 60 * 1000;
+              const parsedDate = new Date(excelEpoch.getTime() + value * msPerDay);
+              if (!isNaN(parsedDate.getTime())) {
+                reportRow[targetField] = parsedDate.toISOString().split('T')[0];
+              }
+            }
+            continue;
+          }
+
           if (typeof value === "string" && value.includes("%")) {
             // Percentage: "50,5%" -> 0.505
             value = parseFloat(value.replace("%", "").replace(",", ".").trim()) / 100;

@@ -93,6 +93,20 @@ export default function MediaPlanReports() {
     enabled: !!planId,
   });
 
+  // Fetch vehicles for distribution chart
+  const { data: vehicles = [] } = useQuery({
+    queryKey: ['vehicles-for-reports'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select('id, name')
+        .is('deleted_at', null);
+
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
+
   // Fetch report imports
   const { data: reportImports = [], isLoading: importsLoading, refetch: refetchImports } = useReportImports(planId || '');
 
@@ -328,6 +342,7 @@ export default function MediaPlanReports() {
                 reportData={reportData}
                 mediaLines={mediaLines}
                 totalBudget={Number(plan.total_budget || 0)}
+                vehicles={vehicles}
               />
             </TabsContent>
 
