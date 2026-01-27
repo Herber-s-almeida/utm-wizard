@@ -76,7 +76,7 @@ export function ImportConfigDialog({
 
   const handleFetchPreview = async () => {
     if (!sourceUrl) {
-      toast.error('Insira a URL do Google Sheets');
+      toast.error('Insira a URL da planilha');
       return;
     }
 
@@ -87,11 +87,27 @@ export function ImportConfigDialog({
         throw new Error('Não foi possível acessar a URL');
       }
 
+      const contentType = response.headers.get('content-type') || '';
+      const isCSV = contentType.includes('text/csv') || 
+                    contentType.includes('text/plain') || 
+                    sourceUrl.includes('output=csv') ||
+                    sourceUrl.includes('output=tsv');
+
       const arrayBuffer = await response.arrayBuffer();
-      const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+      
+      let workbook;
+      if (isCSV) {
+        // For CSV, decode as text first to preserve original values
+        const decoder = new TextDecoder('utf-8');
+        const csvText = decoder.decode(arrayBuffer);
+        workbook = XLSX.read(csvText, { type: 'string', raw: true });
+      } else {
+        workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+      }
+      
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true }) as any[][];
 
       if (jsonData.length < 2) {
         throw new Error('A planilha deve ter pelo menos cabeçalho e uma linha de dados');
@@ -111,7 +127,7 @@ export function ImportConfigDialog({
           autoMappings[header] = 'line_code';
         } else if (h.includes('impressões') || h.includes('impressoes') || h === 'impressions') {
           autoMappings[header] = 'impressions';
-        } else if (h.includes('cliques') || h === 'clicks') {
+        } else if (h.includes('cliques') || h === 'clicks' || h === 'link clicks') {
           autoMappings[header] = 'clicks';
         } else if (h.includes('custo') || h.includes('investimento') || h === 'cost') {
           autoMappings[header] = 'cost';
@@ -152,6 +168,11 @@ export function ImportConfigDialog({
   const handleCreateImportAndProceed = async () => {
     if (!user?.id) return;
 
+    // Preserve headers before async operation
+    const currentHeaders = [...headers];
+    const currentMappings = { ...mappings };
+    const currentPreviewRows = [...previewRows];
+
     setLoading(true);
     try {
       const result = await createImport.mutateAsync({
@@ -160,6 +181,10 @@ export function ImportConfigDialog({
         source_name: sourceName || 'Google Sheets',
       });
 
+      // Restore state after mutation to prevent any race condition
+      setHeaders(currentHeaders);
+      setMappings(currentMappings);
+      setPreviewRows(currentPreviewRows);
       setImportId(result.id);
       setStep('mapping');
     } catch (error: any) {
@@ -221,19 +246,22 @@ export function ImportConfigDialog({
               <div>
                 <p className="text-sm font-medium">Publique sua planilha</p>
                 <p className="text-xs text-muted-foreground">
-                  No Google Sheets: Arquivo → Compartilhar → Publicar na Web → XLSX
+                  No Google Sheets: Arquivo → Compartilhar → Publicar na Web → CSV ou XLSX
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="source-url">URL da Planilha (XLSX)</Label>
+              <Label htmlFor="source-url">URL da Planilha (CSV ou XLSX)</Label>
               <Input
                 id="source-url"
-                placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=xlsx"
+                placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"
                 value={sourceUrl}
                 onChange={(e) => setSourceUrl(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                Suporta formatos CSV e XLSX. Para números decimais, use vírgula (ex: 278,28)
+              </p>
             </div>
 
             <div className="space-y-2">
