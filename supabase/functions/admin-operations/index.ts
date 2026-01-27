@@ -784,10 +784,28 @@ serve(async (req) => {
     }
   } catch (error: unknown) {
     console.error("Admin operation error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
+    
+    // Handle Supabase/Postgres errors which have a message property
+    let message = "Unknown error";
+    let status = 500;
+    
+    if (error && typeof error === "object") {
+      const err = error as Record<string, unknown>;
+      // Supabase errors have a message property directly
+      if (typeof err.message === "string") {
+        message = err.message;
+        // Check for specific known errors
+        if (message.includes("último administrador")) {
+          status = 400;
+        }
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+    }
+    
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
