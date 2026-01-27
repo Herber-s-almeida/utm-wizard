@@ -111,31 +111,47 @@ serve(async (req) => {
       }
     }
 
-    // Fetch XLSX
-    console.log("Fetching XLSX file...");
-    const xlsxResponse = await fetch(source_url);
+    // Fetch file (XLSX or CSV)
+    console.log("Fetching file...");
+    const fileResponse = await fetch(source_url);
 
-    if (!xlsxResponse.ok) {
-      const ct = xlsxResponse.headers.get("content-type") ?? "unknown";
-      throw new Error(`Failed to fetch XLSX: ${xlsxResponse.status} ${xlsxResponse.statusText} (content-type: ${ct})`);
+    if (!fileResponse.ok) {
+      const ct = fileResponse.headers.get("content-type") ?? "unknown";
+      throw new Error(`Failed to fetch file: ${fileResponse.status} ${fileResponse.statusText} (content-type: ${ct})`);
     }
 
-    const arrayBuffer = await xlsxResponse.arrayBuffer();
-    console.log(`Downloaded ${arrayBuffer.byteLength} bytes`);
+    const contentType = fileResponse.headers.get("content-type") ?? "";
+    const isCSV = contentType.includes("text/csv") || 
+                  contentType.includes("text/plain") || 
+                  source_url.includes("output=csv") ||
+                  source_url.includes("output=tsv");
 
-    // Parse XLSX
-    // Use npm: specifier for better Deno compatibility
+    const arrayBuffer = await fileResponse.arrayBuffer();
+    console.log(`Downloaded ${arrayBuffer.byteLength} bytes, isCSV: ${isCSV}`);
+
+    // Parse file
     const XLSX = await import("npm:xlsx@0.18.5");
-    const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array" });
+    
+    let workbook;
+    if (isCSV) {
+      // For CSV, decode as text first to preserve original values
+      const decoder = new TextDecoder("utf-8");
+      const csvText = decoder.decode(arrayBuffer);
+      // Use raw: true to get strings as-is, avoiding locale number conversion
+      workbook = XLSX.read(csvText, { type: "string", raw: true });
+    } else {
+      workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array" });
+    }
 
     const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) throw new Error("XLSX has no sheets");
+    if (!firstSheetName) throw new Error("File has no sheets/data");
 
     const worksheet = workbook.Sheets[firstSheetName];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+    // Use raw: true to preserve string values as-is (prevents auto-conversion)
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true }) as any[][];
 
     if (jsonData.length < 2) {
-      throw new Error("XLSX file must have at least a header row and one data row");
+      throw new Error("File must have at least a header row and one data row");
     }
 
     const headers = (jsonData[0] as any[]).map((h) => (h ?? "").toString()) as string[];
@@ -214,8 +230,10 @@ serve(async (req) => {
 
         if (value !== undefined && value !== null && value !== "") {
           if (typeof value === "string" && value.includes("%")) {
-            value = parseFloat(value.replace("%", "").replace(",", ".")) / 100;
+            // Percentage: "50,5%" -> 0.505
+            value = parseFloat(value.replace("%", "").replace(",", ".").trim()) / 100;
           } else if (typeof value === "string" && (value.includes("R$") || value.includes("$"))) {
+            // Currency with thousand separators: "R$ 1.234,56" -> 1234.56
             value = parseFloat(
               value
                 .replace(/[R$\s]/g, "")
@@ -223,7 +241,43 @@ serve(async (req) => {
                 .replace(",", "."),
             );
           } else if (typeof value === "string") {
-            value = parseFloat(value.replace(/\./g, "").replace(",", "."));
+            // Smart number parsing for Brazilian/European format
+            const cleanValue = value.replace(/\s/g, "").trim();
+            
+            // Check if value has both dots and commas (e.g., "1.234,56" or "1,234.56")
+            const hasDot = cleanValue.includes(".");
+            const hasComma = cleanValue.includes(",");
+            
+            if (hasDot && hasComma) {
+              // Both present: determine which is decimal separator
+              const lastDotPos = cleanValue.lastIndexOf(".");
+              const lastCommaPos = cleanValue.lastIndexOf(",");
+              
+              if (lastCommaPos > lastDotPos) {
+                // Comma is decimal: "1.234,56" -> 1234.56
+                value = parseFloat(cleanValue.replace(/\./g, "").replace(",", "."));
+              } else {
+                // Dot is decimal: "1,234.56" -> 1234.56
+                value = parseFloat(cleanValue.replace(/,/g, ""));
+              }
+            } else if (hasComma && !hasDot) {
+              // Only comma: could be decimal "278,28" or thousand "1,234"
+              // If comma is followed by exactly 2 digits at end, treat as decimal
+              const commaMatch = cleanValue.match(/,(\d+)$/);
+              if (commaMatch && commaMatch[1].length <= 2) {
+                // Decimal separator: "278,28" -> 278.28
+                value = parseFloat(cleanValue.replace(",", "."));
+              } else {
+                // Thousand separator: "1,234" -> 1234
+                value = parseFloat(cleanValue.replace(/,/g, ""));
+              }
+            } else if (hasDot && !hasComma) {
+              // Only dot: standard float "278.28" -> 278.28
+              value = parseFloat(cleanValue);
+            } else {
+              // No separators: just parse
+              value = parseFloat(cleanValue);
+            }
           }
 
           if (typeof value === "number" && Number.isFinite(value)) {
