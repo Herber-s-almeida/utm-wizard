@@ -124,7 +124,8 @@ serve(async (req) => {
     console.log(`Downloaded ${arrayBuffer.byteLength} bytes`);
 
     // Parse XLSX
-    const XLSX = await import("https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs");
+    // Use npm: specifier for better Deno compatibility
+    const XLSX = await import("npm:xlsx@0.18.5");
     const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array" });
 
     const firstSheetName = workbook.SheetNames[0];
