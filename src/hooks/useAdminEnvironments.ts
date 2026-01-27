@@ -26,8 +26,24 @@ async function callAdminOperation(action: string, payload?: Record<string, unkno
     body: { action, payload },
   });
 
-  if (error) throw error;
-  if (data.error) throw new Error(data.error);
+  // Handle errors - Supabase SDK puts the response body in error.context.body for non-2xx
+  if (error) {
+    // Try to extract the error message from the response
+    const context = (error as unknown as { context?: { body?: string } }).context;
+    if (context?.body) {
+      try {
+        const parsed = JSON.parse(context.body);
+        if (parsed.error) {
+          throw new Error(parsed.error);
+        }
+      } catch {
+        // If parsing fails, fall through to default error
+      }
+    }
+    throw new Error(error.message || "Erro desconhecido");
+  }
+  
+  if (data?.error) throw new Error(data.error);
   return data;
 }
 
