@@ -28,10 +28,16 @@ import {
   BarChart3,
 } from 'lucide-react';
 
+interface Vehicle {
+  id: string;
+  name: string;
+}
+
 interface ReportsDashboardProps {
   reportData: ReportData[];
   mediaLines: MediaLine[];
   totalBudget: number;
+  vehicles?: Vehicle[];
 }
 
 const COLORS = [
@@ -41,9 +47,11 @@ const COLORS = [
   'hsl(0, 84%, 60%)',
   'hsl(200, 85%, 55%)',
   'hsl(280, 70%, 60%)',
+  'hsl(320, 70%, 55%)',
+  'hsl(45, 85%, 50%)',
 ];
 
-export function ReportsDashboard({ reportData, mediaLines, totalBudget }: ReportsDashboardProps) {
+export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles = [] }: ReportsDashboardProps) {
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
@@ -93,32 +101,106 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget }: Report
     };
   }, [reportData, mediaLines]);
 
-  // Budget comparison chart data
+  // Budget comparison chart data - aggregate by line_code and show ALL plan lines
   const budgetComparisonData = useMemo(() => {
-    const lineMap = new Map(mediaLines.map((l) => [l.id, l]));
-    
-    return reportData
-      .filter((r) => r.media_line_id)
-      .map((r) => {
-        const line = lineMap.get(r.media_line_id!);
-        return {
-          name: r.line_code,
-          planned: Number(line?.budget || 0),
-          actual: Number(r.cost || 0),
-        };
-      })
-      .slice(0, 10); // Show top 10
+    // Create a map of line_code -> media line data
+    const lineCodeToLine = new Map<string, MediaLine>();
+    for (const line of mediaLines) {
+      if (line.line_code) {
+        lineCodeToLine.set(line.line_code.toLowerCase().trim(), line);
+      }
+    }
+
+    // Aggregate report data by line_code
+    const actualByLineCode = new Map<string, number>();
+    for (const report of reportData) {
+      const lc = report.line_code?.toLowerCase().trim();
+      if (!lc) continue;
+      actualByLineCode.set(lc, (actualByLineCode.get(lc) || 0) + Number(report.cost || 0));
+    }
+
+    // Build comparison data for ALL media lines
+    const comparisonData = mediaLines.map((line) => {
+      const lc = line.line_code?.toLowerCase().trim() || '';
+      return {
+        name: line.line_code || '-',
+        planned: Number(line.budget || 0),
+        actual: actualByLineCode.get(lc) || 0,
+      };
+    });
+
+    // Sort by planned budget descending
+    return comparisonData.sort((a, b) => b.planned - a.planned);
   }, [reportData, mediaLines]);
 
-  // Cost distribution by match status
+  // Distribution by vehicle
   const distributionData = useMemo(() => {
-    const matched = reportData.filter((r) => r.match_status === 'matched' || r.match_status === 'manual');
-    const unmatched = reportData.filter((r) => r.match_status === 'unmatched');
+    // Build a map from vehicle_id to vehicle name
+    const vehicleMap = new Map<string, string>();
+    for (const v of vehicles) {
+      vehicleMap.set(v.id, v.name);
+    }
 
-    return [
-      { name: 'Casadas', value: matched.reduce((acc, r) => acc + Number(r.cost || 0), 0) },
-      { name: 'Não Casadas', value: unmatched.reduce((acc, r) => acc + Number(r.cost || 0), 0) },
-    ].filter((d) => d.value > 0);
+    // Build a map from media_line_id to vehicle_id
+    const lineToVehicle = new Map<string, string>();
+    for (const line of mediaLines) {
+      if (line.vehicle_id) {
+        lineToVehicle.set(line.id, line.vehicle_id);
+      }
+    }
+
+    // Build a map from line_code to vehicle_id
+    const lineCodeToVehicle = new Map<string, string>();
+    for (const line of mediaLines) {
+      if (line.line_code && line.vehicle_id) {
+        lineCodeToVehicle.set(line.line_code.toLowerCase().trim(), line.vehicle_id);
+      }
+    }
+
+    // Aggregate cost by vehicle
+    const costByVehicle = new Map<string, number>();
+    for (const report of reportData) {
+      let vehicleId: string | undefined;
+      
+      // Try to get vehicle from media_line_id
+      if (report.media_line_id) {
+        vehicleId = lineToVehicle.get(report.media_line_id);
+      }
+      
+      // Fallback: try to get from line_code
+      if (!vehicleId && report.line_code) {
+        vehicleId = lineCodeToVehicle.get(report.line_code.toLowerCase().trim());
+      }
+
+      const vehicleName = vehicleId ? (vehicleMap.get(vehicleId) || 'Outro') : 'Não identificado';
+      costByVehicle.set(vehicleName, (costByVehicle.get(vehicleName) || 0) + Number(report.cost || 0));
+    }
+
+    return Array.from(costByVehicle.entries())
+      .map(([name, value]) => ({ name, value }))
+      .filter((d) => d.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [reportData, mediaLines, vehicles]);
+
+  // Daily investment data
+  const dailyInvestmentData = useMemo(() => {
+    const costByDate = new Map<string, number>();
+    
+    for (const report of reportData) {
+      const date = report.period_start;
+      if (!date) continue;
+      
+      // Format date for grouping (YYYY-MM-DD)
+      const dateKey = date.split('T')[0];
+      costByDate.set(dateKey, (costByDate.get(dateKey) || 0) + Number(report.cost || 0));
+    }
+
+    return Array.from(costByDate.entries())
+      .map(([date, cost]) => ({
+        date,
+        cost,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
   }, [reportData]);
 
   if (reportData.length === 0) {
@@ -272,11 +354,11 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget }: Report
               <CardTitle className="text-base font-medium">Planejado vs Realizado</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={Math.max(300, budgetComparisonData.length * 35)}>
                 <BarChart data={budgetComparisonData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" tickFormatter={(v) => formatCurrency(v)} />
-                  <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10 }} />
+                  <YAxis dataKey="name" type="category" width={60} tick={{ fontSize: 10 }} />
                   <Tooltip
                     formatter={(value: number) => formatCurrency(value)}
                     labelStyle={{ fontWeight: 'bold' }}
@@ -290,11 +372,11 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget }: Report
           </Card>
         )}
 
-        {/* Distribution Pie Chart */}
+        {/* Distribution by Vehicle Pie Chart */}
         {distributionData.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base font-medium">Distribuição de Investimento</CardTitle>
+              <CardTitle className="text-base font-medium">Distribuição por Veículo</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -320,6 +402,39 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget }: Report
           </Card>
         )}
       </div>
+
+      {/* Daily Investment Chart */}
+      {dailyInvestmentData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-medium">Investimento por Data</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={dailyInvestmentData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 10 }} 
+                  tickFormatter={(v) => {
+                    const d = new Date(v + 'T00:00:00');
+                    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                  }}
+                />
+                <YAxis tickFormatter={(v) => formatCurrency(v)} />
+                <Tooltip
+                  formatter={(value: number) => formatCurrency(value)}
+                  labelFormatter={(label) => {
+                    const d = new Date(label + 'T00:00:00');
+                    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+                  }}
+                />
+                <Bar dataKey="cost" name="Investimento" fill="hsl(var(--primary))" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
