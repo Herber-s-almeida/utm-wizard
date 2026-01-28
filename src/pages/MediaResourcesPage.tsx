@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Image, FileText, ExternalLink, ChevronDown, ChevronRight, Check, Plus, Calendar, Link as LinkIcon, X, Users } from 'lucide-react';
+import { ArrowLeft, Image, FileText, ExternalLink, ChevronDown, ChevronRight, Check, Plus, Calendar, Link as LinkIcon, X, Users, LayoutGrid } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -771,6 +771,12 @@ export default function MediaResourcesPage() {
             <Users className="h-3.5 w-3.5" />
             Notificar Seguidores
           </Button>
+          <Link to={mediaPlan?.slug ? `/media-plans/${mediaPlan.slug}/resources-kanban` : `/media-plans/${planId}/resources-kanban`}>
+            <Button variant="outline" size="sm" className="gap-2">
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Ver Kanban
+            </Button>
+          </Link>
           <Link to={planUrl}>
             <Button variant="outline" size="sm" className="gap-2">
               <ExternalLink className="h-3.5 w-3.5" />

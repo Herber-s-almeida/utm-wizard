@@ -31,6 +31,7 @@ import TaxonomyListPage from "./pages/TaxonomyListPage";
 import MediaResourcesListPage from "./pages/MediaResourcesListPage";
 import MediaPlanReports from "./pages/MediaPlanReports";
 import ReportsPage from "./pages/ReportsPage";
+import MediaResourcesKanbanPage from "./pages/MediaResourcesKanbanPage";
 import NotFound from "./pages/NotFound";
 import SubdivisionsPage from "./pages/config/SubdivisionsPage";
 import MomentsPage from "./pages/config/MomentsPage";
@@ -107,6 +108,7 @@ function AppWithEnvironment() {
           <Route path="/media-plans/:id" element={<ProtectedRoute><SectionProtectedRoute section="media_plans"><MediaPlanDetail /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans/:id/edit" element={<ProtectedRoute><SectionProtectedRoute section="media_plans" minLevel="edit"><EditMediaPlan /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans/:id/resources" element={<ProtectedRoute><SectionProtectedRoute section="media_resources"><MediaResourcesPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/media-plans/:id/resources-kanban" element={<ProtectedRoute><SectionProtectedRoute section="media_resources"><MediaResourcesKanbanPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans/:id/taxonomy" element={<ProtectedRoute><SectionProtectedRoute section="taxonomy"><TaxonomyPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/taxonomy" element={<ProtectedRoute><SectionProtectedRoute section="taxonomy"><TaxonomyListPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/resources" element={<ProtectedRoute><SectionProtectedRoute section="media_resources"><MediaResourcesListPage /></SectionProtectedRoute></ProtectedRoute>} />
