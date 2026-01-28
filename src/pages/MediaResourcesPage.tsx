@@ -678,13 +678,15 @@ export default function MediaResourcesPage() {
           const { data: specs } = await supabase
             .from('creative_type_specifications')
             .select(`id, name, creative_type_id, has_duration, duration_value, duration_unit, max_weight, weight_unit`)
-            .in('creative_type_id', typeIds);
+            .in('creative_type_id', typeIds)
+            .is('deleted_at', null);
 
           const specIds = specs?.map(s => s.id) || [];
           const { data: dimensions } = await supabase
             .from('specification_dimensions')
             .select('id, specification_id, width, height, unit, description')
-            .in('specification_id', specIds);
+            .in('specification_id', specIds)
+            .is('deleted_at', null);
 
           const { data: extensionsData } = await supabase
             .from('specification_extensions')
@@ -694,7 +696,8 @@ export default function MediaResourcesPage() {
           const { data: copyFields } = await supabase
             .from('specification_copy_fields')
             .select('id, specification_id, name, max_characters, observation')
-            .in('specification_id', specIds);
+            .in('specification_id', specIds)
+            .is('deleted_at', null);
 
           creativeTypes.forEach(type => {
             const formatId = type.format_id;
