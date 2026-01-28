@@ -7,6 +7,7 @@ import { Plus, Trash2, ArrowLeft, ChevronDown, ChevronRight, Layers, Type, Image
 import { useFormatsHierarchy, useFormats, FormatWithHierarchy, FormatCreativeType, CreativeTypeSpecification } from '@/hooks/useFormatsHierarchy';
 import { FormatWizardDialog } from '@/components/config/FormatWizardDialog';
 import { FormatDialog } from '@/components/config/FormatDialog';
+import { SpecificationEditDialog } from '@/components/config/SpecificationEditDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +34,10 @@ export default function FormatsPage() {
   
   // Delete states
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  
+  // Specification edit state
+  const [editingSpec, setEditingSpec] = useState<CreativeTypeSpecification | null>(null);
+  const [specEditDialogOpen, setSpecEditDialogOpen] = useState(false);
   
   // Collapse states
   const [openFormats, setOpenFormats] = useState<Record<string, boolean>>({});
@@ -78,6 +83,11 @@ export default function FormatsPage() {
 
   const handleDuplicate = (formatId: string) => {
     duplicateFormat.mutate(formatId);
+  };
+
+  const handleEditSpecification = (spec: CreativeTypeSpecification) => {
+    setEditingSpec(spec);
+    setSpecEditDialogOpen(true);
   };
 
   const handleDelete = () => {
@@ -141,6 +151,7 @@ export default function FormatsPage() {
                 onToggleCopySection={toggleCopySection}
                 openDimSection={openDimSection}
                 onToggleDimSection={toggleDimSection}
+                onEditSpecification={handleEditSpecification}
               />
             ))}
           </div>
@@ -185,6 +196,16 @@ export default function FormatsPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Specification Edit Dialog */}
+        <SpecificationEditDialog
+          open={specEditDialogOpen}
+          onOpenChange={(open) => {
+            setSpecEditDialogOpen(open);
+            if (!open) setEditingSpec(null);
+          }}
+          specification={editingSpec}
+        />
       </div>
     </DashboardLayout>
   );
@@ -206,6 +227,7 @@ interface FormatCardProps {
   onToggleCopySection: (id: string) => void;
   openDimSection: Record<string, boolean>;
   onToggleDimSection: (id: string) => void;
+  onEditSpecification: (spec: CreativeTypeSpecification) => void;
 }
 
 function FormatCard({
@@ -223,6 +245,7 @@ function FormatCard({
   onToggleCopySection,
   openDimSection,
   onToggleDimSection,
+  onEditSpecification,
 }: FormatCardProps) {
   return (
     <Card>
@@ -305,6 +328,7 @@ function FormatCard({
                     onToggleCopySection={onToggleCopySection}
                     openDimSection={openDimSection}
                     onToggleDimSection={onToggleDimSection}
+                    onEditSpecification={onEditSpecification}
                   />
                 ))}
               </div>
@@ -327,6 +351,7 @@ interface CreativeTypeItemProps {
   onToggleCopySection: (id: string) => void;
   openDimSection: Record<string, boolean>;
   onToggleDimSection: (id: string) => void;
+  onEditSpecification: (spec: CreativeTypeSpecification) => void;
 }
 
 function CreativeTypeItem({
@@ -339,6 +364,7 @@ function CreativeTypeItem({
   onToggleCopySection,
   openDimSection,
   onToggleDimSection,
+  onEditSpecification,
 }: CreativeTypeItemProps) {
   return (
     <Collapsible open={isOpen} onOpenChange={onToggle}>
@@ -384,6 +410,7 @@ function CreativeTypeItem({
                     onToggleCopySection={onToggleCopySection}
                     openDimSection={openDimSection}
                     onToggleDimSection={onToggleDimSection}
+                    onEdit={() => onEditSpecification(spec)}
                   />
                 ))}
               </div>
@@ -404,6 +431,7 @@ interface SpecificationItemProps {
   onToggleCopySection: (id: string) => void;
   openDimSection: Record<string, boolean>;
   onToggleDimSection: (id: string) => void;
+  onEdit: () => void;
 }
 
 function SpecificationItem({
@@ -414,6 +442,7 @@ function SpecificationItem({
   onToggleCopySection,
   openDimSection,
   onToggleDimSection,
+  onEdit,
 }: SpecificationItemProps) {
   const copyFields = spec.copy_fields || [];
   const dimensions = spec.dimensions || [];
@@ -442,6 +471,15 @@ function SpecificationItem({
             <Layers className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-sm">{spec.name}</span>
           </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6" 
+            onClick={onEdit}
+            title="Editar especificação"
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
         </div>
 
         {hasChildren && (
