@@ -39,6 +39,7 @@ interface Dimension {
 
 export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWizardDialogProps) {
   const [step, setStep] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Step 1: Format Name
   const [formatName, setFormatName] = useState('');
@@ -322,6 +323,10 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
   };
 
   const handleFinish = async () => {
+    // Prevenir duplo clique
+    if (isSaving) return;
+    
+    setIsSaving(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
@@ -336,6 +341,8 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
         return;
       }
 
+      console.log('Iniciando criação do formato:', formatName);
+
       // 1. Create the format
       const { data: format, error: formatError } = await supabase
         .from('formats')
@@ -347,7 +354,11 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
         .select()
         .single();
       
-      if (formatError) throw formatError;
+      if (formatError) {
+        console.error('Erro ao criar formato:', formatError);
+        throw formatError;
+      }
+      console.log('Formato criado:', format.id);
       setCreatedFormatId(format.id);
 
       // 2. Create format_creative_type association
@@ -367,7 +378,11 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
         .select()
         .single();
       
-      if (fctError) throw fctError;
+      if (fctError) {
+        console.error('Erro ao criar tipo de criativo:', fctError);
+        throw fctError;
+      }
+      console.log('Tipo de criativo associado:', formatCreativeType.id);
 
       // 3. Create specification
       const { data: spec, error: specError } = await supabase
@@ -386,11 +401,16 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
         .select()
         .single();
       
-      if (specError) throw specError;
+      if (specError) {
+        console.error('Erro ao criar especificação:', specError);
+        throw specError;
+      }
+      console.log('Especificação criada:', spec.id);
       
-      // 4. Create copy fields
+      // 4. Create copy fields COM tratamento de erro
+      console.log('Salvando campos de copy:', copyFields.length);
       for (const copy of copyFields) {
-        await supabase.from('specification_copy_fields').insert({
+        const { error: copyError } = await supabase.from('specification_copy_fields').insert({
           specification_id: spec.id,
           name: copy.name,
           max_characters: copy.maxCharacters,
@@ -398,11 +418,17 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
           user_id: userId,
           environment_id: currentEnvironmentId,
         });
+        if (copyError) {
+          console.error('Erro ao salvar campo de copy:', copyError);
+          throw copyError;
+        }
       }
+      console.log('Campos de copy salvos com sucesso');
       
-      // 5. Create dimensions
+      // 5. Create dimensions COM tratamento de erro
+      console.log('Salvando dimensões:', dimensions.length);
       for (const dim of dimensions) {
-        await supabase.from('specification_dimensions').insert({
+        const { error: dimError } = await supabase.from('specification_dimensions').insert({
           specification_id: spec.id,
           width: dim.width,
           height: dim.height,
@@ -412,17 +438,28 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
           user_id: userId,
           environment_id: currentEnvironmentId,
         });
+        if (dimError) {
+          console.error('Erro ao salvar dimensão:', dimError);
+          throw dimError;
+        }
       }
+      console.log('Dimensões salvas com sucesso');
       
-      // 6. Create extension associations
+      // 6. Create extension associations COM tratamento de erro
+      console.log('Salvando extensões:', selectedExtensions.length);
       for (const extId of selectedExtensions) {
-        await supabase.from('specification_extensions').insert({
+        const { error: extError } = await supabase.from('specification_extensions').insert({
           specification_id: spec.id,
           extension_id: extId,
           user_id: userId,
           environment_id: currentEnvironmentId,
         });
+        if (extError) {
+          console.error('Erro ao salvar extensão:', extError);
+          throw extError;
+        }
       }
+      console.log('Extensões salvas com sucesso');
       
       // Invalidate queries to refresh the list
       queryClient.invalidateQueries({ queryKey: ['formats'] });
@@ -432,8 +469,10 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
       onComplete?.();
       onOpenChange(false);
     } catch (err) {
-      console.error(err);
-      toast.error('Erro ao criar formato');
+      console.error('Erro ao criar formato:', err);
+      toast.error('Erro ao criar formato. Verifique os dados e tente novamente.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -828,8 +867,8 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
-            <Button type="button" onClick={handleFinish}>
-              Concluir
+            <Button type="button" onClick={handleFinish} disabled={isSaving}>
+              {isSaving ? 'Salvando...' : 'Concluir'}
             </Button>
           )}
         </DialogFooter>
