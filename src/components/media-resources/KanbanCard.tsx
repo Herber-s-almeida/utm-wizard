@@ -190,6 +190,7 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, i
       .from("media_creatives")
       .update({ production_status: newStatus })
       .eq("id", creative.id);
+
     if (error) toast.error("Erro ao atualizar status");
     else {
       toast.success("Status atualizado");
@@ -216,7 +217,9 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, i
       .from("media_creatives")
       .update({ piece_link: trimmed ? trimmed : null })
       .eq("id", creative.id);
+
     if (error) return toast.error("Erro ao salvar link");
+
     toast.success("Link salvo");
     setEditingLink(false);
     onUpdate();
@@ -227,7 +230,10 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, i
     setLinkValue(creative.piece_link || "");
   };
 
-const logs = creative.change_logs || [];
+  // =========================
+  // ✅ Alterações (logs)
+  // =========================
+  const logs = creative.change_logs || [];
   const [logsExpanded, setLogsExpanded] = useState(false);
   const [addingLog, setAddingLog] = useState(false);
   const [newLogNotes, setNewLogNotes] = useState("");
@@ -235,31 +241,24 @@ const logs = creative.change_logs || [];
   const handleAddLog = async () => {
     const notes = newLogNotes.trim();
 
-    // 🔧 mesma validação usada implicitamente na tabela
     if (!userId) {
       toast.error("Usuário não autenticado");
       return;
     }
 
-    // 🔧 INSERT idêntico ao MediaResourcesPage
-    const { error } = await supabase
-      .from("creative_change_logs")
-      .insert({
-        creative_id: creative.id,
-        user_id: userId,
-        notes: notes || null,
-      });
+    const { error } = await supabase.from("creative_change_logs").insert({
+      creative_id: creative.id,
+      user_id: userId,
+      notes: notes || null,
+    });
 
     if (error) {
       toast.error("Erro ao adicionar alteração");
       return;
     }
 
-    // 🔧 mesmo comportamento da tabela: status vira "alteracao"
-    await supabase
-      .from("media_creatives")
-      .update({ production_status: "alteracao" })
-      .eq("id", creative.id);
+    // mesmo comportamento da tabela: status vira "alteracao"
+    await supabase.from("media_creatives").update({ production_status: "alteracao" }).eq("id", creative.id);
 
     toast.success("Alteração registrada");
 
@@ -268,21 +267,6 @@ const logs = creative.change_logs || [];
     setLogsExpanded(true);
     onUpdate();
   };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "touch-none",
-        (isDragging || isSortableDragging) && "opacity-50"
-      )}
-    >
-      {/* ⬇️ TODO O RESTO DO JSX PERMANECE IGUAL AO SEU CÓDIGO ⬇️ */}
-      {/* Nenhuma alteração visual ou estrutural foi necessária */}
-    </div>
-  );
-}
 
   const handleDeleteLog = async (logId: string) => {
     const { error } = await supabase.from("creative_change_logs").delete().eq("id", logId);
@@ -490,6 +474,19 @@ const logs = creative.change_logs || [];
                         </span>
                         {log.notes && <span className="text-muted-foreground ml-2 break-words">{log.notes}</span>}
                       </div>
+
+                      {/* Se quiser habilitar deletar, descomenta esse botão */}
+                      {/*
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                        onClick={() => handleDeleteLog(log.id)}
+                        title="Remover"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                      */}
                     </div>
                   ))
                 )}
