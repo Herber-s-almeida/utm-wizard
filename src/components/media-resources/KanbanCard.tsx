@@ -238,40 +238,52 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, i
   const handleAddLog = async () => {
     const notes = newLogNotes.trim();
 
+    // 🔧 mesma validação usada implicitamente na tabela
     if (!userId) {
-      toast.error("Usuário não identificado para registrar alteração");
+      toast.error("Usuário não autenticado");
       return;
     }
 
-    const { error: insertError } = await supabase.from("creative_change_logs").insert({
-      creative_id: creative.id,
-      user_id: userId,
-      notes: notes || null,
-    });
+    // 🔧 INSERT idêntico ao MediaResourcesPage
+    const { error } = await supabase
+      .from("creative_change_logs")
+      .insert({
+        creative_id: creative.id,
+        user_id: userId,
+        notes: notes || null,
+      });
 
-    if (insertError) {
+    if (error) {
       toast.error("Erro ao adicionar alteração");
       return;
     }
 
-    // Igual ao MediaResourcesPage: ao registrar alteração, muda status para "alteracao"
-    const { error: statusError } = await supabase
+    // 🔧 mesmo comportamento da tabela: status vira "alteracao"
+    await supabase
       .from("media_creatives")
       .update({ production_status: "alteracao" })
       .eq("id", creative.id);
 
-    if (statusError) {
-      // Não bloqueia UX: o log foi gravado; só avisa que status falhou.
-      toast.error("Alteração registrada, mas falhou ao atualizar status");
-    } else {
-      toast.success("Alteração registrada");
-    }
+    toast.success("Alteração registrada");
 
     setNewLogNotes("");
     setAddingLog(false);
     setLogsExpanded(true);
     onUpdate();
   };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "touch-none",
+        (isDragging || isSortableDragging) && "opacity-50"
+      )}
+    >
+    </div>
+  );
+}
 
   const handleDeleteLog = async (logId: string) => {
     const { error } = await supabase.from("creative_change_logs").delete().eq("id", logId);
