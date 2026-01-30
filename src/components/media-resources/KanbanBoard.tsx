@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -10,30 +10,30 @@ import {
   DragStartEvent,
   DragEndEvent,
   DragOverEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { KanbanColumn } from './KanbanColumn';
-import { KanbanCard } from './KanbanCard';
+} from "@dnd-kit/core";
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { KanbanColumn } from "./KanbanColumn";
+import { KanbanCard } from "./KanbanCard";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // Status mapping to columns
-const STATUS_TO_COLUMN: Record<string, 'fazer' | 'fazendo' | 'feito'> = {
-  solicitado: 'fazer',
-  enviado: 'fazendo',
-  em_andamento: 'fazendo',
-  entregue: 'fazendo',
-  alteracao: 'fazendo',
-  finalizado: 'feito',
-  aprovado: 'feito',
+const STATUS_TO_COLUMN: Record<string, "fazer" | "fazendo" | "feito"> = {
+  solicitado: "fazer",
+  enviado: "fazendo",
+  em_andamento: "fazendo",
+  entregue: "fazendo",
+  alteracao: "fazendo",
+  finalizado: "feito",
+  aprovado: "feito",
 };
 
-const COLUMN_TO_STATUSES: Record<string, string[]> = {
-  fazer: ['solicitado'],
-  fazendo: ['enviado', 'em_andamento', 'entregue', 'alteracao'],
-  feito: ['finalizado', 'aprovado'],
+// Qual status aplicar quando soltar em uma coluna.
+// (Você pode mudar esses defaults conforme sua regra de negócio)
+const COLUMN_DEFAULT_STATUS: Record<ColumnId, string> = {
+  fazer: "solicitado",
+  fazendo: "em_andamento",
+  feito: "finalizado",
 };
 
 interface ChangeLog {
@@ -74,6 +74,9 @@ interface MediaCreativeWithDetails {
     funnel_stage_ref: { name: string } | null;
   } | null;
   change_logs?: ChangeLog[];
+
+  // Se você já adicionou format_details no Kanban, mantém aqui também
+  format_details?: any[];
 }
 
 interface KanbanBoardProps {
@@ -81,7 +84,7 @@ interface KanbanBoardProps {
   onUpdate: () => void;
 }
 
-export type ColumnId = 'fazer' | 'fazendo' | 'feito';
+export type ColumnId = "fazer" | "fazendo" | "feito";
 
 export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -89,13 +92,11 @@ export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
+      activationConstraint: { distance: 8 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // Group creatives by column
@@ -106,9 +107,9 @@ export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
       feito: [],
     };
 
-    creatives.forEach(creative => {
-      const status = creative.production_status || 'solicitado';
-      const column = STATUS_TO_COLUMN[status] || 'fazer';
+    creatives.forEach((creative) => {
+      const status = creative.production_status || "solicitado";
+      const column = STATUS_TO_COLUMN[status] || "fazer";
       result[column].push(creative);
     });
 
@@ -117,13 +118,18 @@ export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
 
   const activeCreative = useMemo(() => {
     if (!activeId) return null;
-    return creatives.find(c => c.id === activeId) || null;
+    return creatives.find((c) => c.id === activeId) || null;
   }, [activeId, creatives]);
+
+  const getColumnForCreative = (creative: MediaCreativeWithDetails): ColumnId => {
+    const status = creative.production_status || "solicitado";
+    return STATUS_TO_COLUMN[status] || "fazer";
+  };
 
   // Check if a creative is in the wrong column based on status
   const isInWrongColumn = (creative: MediaCreativeWithDetails, columnId: ColumnId): boolean => {
-    const status = creative.production_status || 'solicitado';
-    const expectedColumn = STATUS_TO_COLUMN[status] || 'fazer';
+    const status = creative.production_status || "solicitado";
+    const expectedColumn = STATUS_TO_COLUMN[status] || "fazer";
     return expectedColumn !== columnId;
   };
 
@@ -133,28 +139,76 @@ export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
 
   const handleDragOver = (event: DragOverEvent) => {
     const { over } = event;
-    if (over) {
-      // Check if hovering over a column or a card in a column
-      const overId = over.id as string;
-      if (['fazer', 'fazendo', 'feito'].includes(overId)) {
-        setOverColumnId(overId as ColumnId);
-      } else {
-        // Find which column the card belongs to
-        for (const [columnId, columnCreatives] of Object.entries(columns)) {
-          if (columnCreatives.some(c => c.id === overId)) {
-            setOverColumnId(columnId as ColumnId);
-            break;
-          }
-        }
+    if (!over) return;
+
+    const overId = over.id as string;
+
+    // Se estiver sobre a própria coluna (droppable id = coluna)
+    if (["fazer", "fazendo", "feito"].includes(overId)) {
+      setOverColumnId(overId as ColumnId);
+      return;
+    }
+
+    // Se estiver sobre um card, descobrir qual coluna contém esse card
+    for (const [columnId, columnCreatives] of Object.entries(columns)) {
+      if (columnCreatives.some((c) => c.id === overId)) {
+        setOverColumnId(columnId as ColumnId);
+        return;
       }
     }
+
+    setOverColumnId(null);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const resolveDestinationColumn = (overId: string): ColumnId | null => {
+    if (["fazer", "fazendo", "feito"].includes(overId)) {
+      return overId as ColumnId;
+    }
+
+    for (const [columnId, columnCreatives] of Object.entries(columns)) {
+      if (columnCreatives.some((c) => c.id === overId)) {
+        return columnId as ColumnId;
+      }
+    }
+
+    return null;
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
     setActiveId(null);
     setOverColumnId(null);
-    // Note: Dragging between columns does NOT change status
-    // Status can only be changed via the status selector on the card
+
+    if (!over) return;
+
+    const activeCreativeId = active.id as string;
+    const overId = over.id as string;
+
+    const destinationColumn = resolveDestinationColumn(overId);
+    if (!destinationColumn) return;
+
+    // Se caiu na mesma coluna, não faz nada
+    const activeCreative = creatives.find((c) => c.id === activeCreativeId);
+    if (!activeCreative) return;
+
+    const originColumn = getColumnForCreative(activeCreative);
+    if (originColumn === destinationColumn) return;
+
+    const newStatus = COLUMN_DEFAULT_STATUS[destinationColumn];
+
+    const { error } = await supabase
+      .from("media_creatives")
+      .update({ production_status: newStatus })
+      .eq("id", activeCreativeId);
+
+    if (error) {
+      toast.error("Erro ao mover card");
+      return;
+    }
+
+    toast.success("Status atualizado pelo Kanban");
+    onUpdate(); // refetch no pai
   };
 
   return (
@@ -167,22 +221,14 @@ export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
     >
       <div className="flex gap-4 overflow-x-auto pb-4">
         {/* Fazer Column */}
-        <SortableContext
-          items={columns.fazer.map(c => c.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <KanbanColumn
-            id="fazer"
-            title="Fazer"
-            count={columns.fazer.length}
-            isOver={overColumnId === 'fazer'}
-          >
-            {columns.fazer.map(creative => (
+        <SortableContext items={columns.fazer.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+          <KanbanColumn id="fazer" title="Fazer" count={columns.fazer.length} isOver={overColumnId === "fazer"}>
+            {columns.fazer.map((creative) => (
               <KanbanCard
                 key={creative.id}
                 creative={creative}
                 columnId="fazer"
-                hasWarning={isInWrongColumn(creative, 'fazer')}
+                hasWarning={isInWrongColumn(creative, "fazer")}
                 onUpdate={onUpdate}
               />
             ))}
@@ -190,22 +236,14 @@ export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
         </SortableContext>
 
         {/* Fazendo Column */}
-        <SortableContext
-          items={columns.fazendo.map(c => c.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <KanbanColumn
-            id="fazendo"
-            title="Fazendo"
-            count={columns.fazendo.length}
-            isOver={overColumnId === 'fazendo'}
-          >
-            {columns.fazendo.map(creative => (
+        <SortableContext items={columns.fazendo.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+          <KanbanColumn id="fazendo" title="Fazendo" count={columns.fazendo.length} isOver={overColumnId === "fazendo"}>
+            {columns.fazendo.map((creative) => (
               <KanbanCard
                 key={creative.id}
                 creative={creative}
                 columnId="fazendo"
-                hasWarning={isInWrongColumn(creative, 'fazendo')}
+                hasWarning={isInWrongColumn(creative, "fazendo")}
                 onUpdate={onUpdate}
               />
             ))}
@@ -213,22 +251,14 @@ export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
         </SortableContext>
 
         {/* Feito Column */}
-        <SortableContext
-          items={columns.feito.map(c => c.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <KanbanColumn
-            id="feito"
-            title="Feito"
-            count={columns.feito.length}
-            isOver={overColumnId === 'feito'}
-          >
-            {columns.feito.map(creative => (
+        <SortableContext items={columns.feito.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+          <KanbanColumn id="feito" title="Feito" count={columns.feito.length} isOver={overColumnId === "feito"}>
+            {columns.feito.map((creative) => (
               <KanbanCard
                 key={creative.id}
                 creative={creative}
                 columnId="feito"
-                hasWarning={isInWrongColumn(creative, 'feito')}
+                hasWarning={isInWrongColumn(creative, "feito")}
                 onUpdate={onUpdate}
               />
             ))}
@@ -241,7 +271,7 @@ export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
         {activeCreative && (
           <KanbanCard
             creative={activeCreative}
-            columnId="fazer"
+            columnId={getColumnForCreative(activeCreative)}
             hasWarning={false}
             onUpdate={() => {}}
             isDragging
