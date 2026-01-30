@@ -25,6 +25,7 @@ import {
   Check,
   X,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -77,18 +78,9 @@ interface FormatCreativeType {
     duration_unit: string | null;
     max_weight: number | null;
     weight_unit: string | null;
-    dimensions: {
-      width: number;
-      height: number;
-      unit: string;
-      description: string | null;
-    }[];
+    dimensions: { width: number; height: number; unit: string; description: string | null }[];
     extensions: { name: string }[];
-    copy_fields: {
-      name: string;
-      max_characters: number | null;
-      observation: string | null;
-    }[];
+    copy_fields: { name: string; max_characters: number | null; observation: string | null }[];
   }[];
 }
 
@@ -106,10 +98,7 @@ interface MediaCreativeWithDetails {
   received_date: string | null;
   approved_date: string | null;
   piece_link: string | null;
-  format: {
-    id: string;
-    name: string;
-  } | null;
+  format: { id: string; name: string } | null;
   media_line: {
     id: string;
     platform: string;
@@ -132,12 +121,10 @@ interface KanbanCardProps {
   columnId: ColumnId;
   hasWarning: boolean;
   onUpdate: () => void;
+  userId: string; // ✅ NOVO: necessário para inserir logs
   isDragging?: boolean;
 }
 
-/**
- * ✅ Specs: retorna listas (dimensões e copy) e valores agregados (ext, peso, duração) com deduplicação.
- */
 function buildSpecsSummary(formatDetails?: FormatCreativeType[]) {
   if (!formatDetails?.length) return null;
 
@@ -149,28 +136,23 @@ function buildSpecsSummary(formatDetails?: FormatCreativeType[]) {
 
   formatDetails.forEach((type) => {
     type.specifications.forEach((spec) => {
-      // Dimensões (lista)
       spec.dimensions?.forEach((d) => {
         const label = `${d.width}x${d.height}${d.unit}${d.description ? ` (${d.description})` : ""}`;
         if (label.trim()) dimensionsSet.add(label);
       });
 
-      // Extensões (agregado)
       spec.extensions?.forEach((e) => {
         if (e?.name?.trim()) extensionsSet.add(e.name.trim());
       });
 
-      // Duração (agregado)
       if (spec.has_duration && spec.duration_value) {
         durationSet.add(`${spec.duration_value}${spec.duration_unit || "s"}`);
       }
 
-      // Peso (agregado)
       if (spec.max_weight) {
         weightSet.add(`${spec.max_weight}${spec.weight_unit || "KB"}`);
       }
 
-      // Copy fields (lista)
       spec.copy_fields?.forEach((cf) => {
         const label = `${cf.name}${cf.max_characters ? ` (${cf.max_characters} chars)` : ""}`;
         if (label.trim()) copySet.add(label);
@@ -178,17 +160,16 @@ function buildSpecsSummary(formatDetails?: FormatCreativeType[]) {
     });
   });
 
-  const dimensions = Array.from(dimensionsSet);
-  const copyFields = Array.from(copySet);
-
-  const extensions = Array.from(extensionsSet).join(", ") || "—";
-  const duration = Array.from(durationSet).join(", ") || "—";
-  const weight = Array.from(weightSet).join(", ") || "—";
-
-  return { dimensions, copyFields, extensions, duration, weight };
+  return {
+    dimensions: Array.from(dimensionsSet),
+    copyFields: Array.from(copySet),
+    extensions: Array.from(extensionsSet).join(", ") || "—",
+    duration: Array.from(durationSet).join(", ") || "—",
+    weight: Array.from(weightSet).join(", ") || "—",
+  };
 }
 
-export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDragging }: KanbanCardProps) {
+export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, isDragging }: KanbanCardProps) {
   const {
     attributes,
     listeners,
@@ -196,12 +177,11 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
     transform,
     transition,
     isDragging: isSortableDragging,
-  } = useSortable({ id: creative.id });
+  } = useSortable({
+    id: creative.id,
+  });
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+  const style = { transform: CSS.Transform.toString(transform), transition };
 
   const status = PRODUCTION_STATUSES.find((s) => s.value === creative.production_status) || PRODUCTION_STATUSES[0];
 
@@ -210,25 +190,22 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
       .from("media_creatives")
       .update({ production_status: newStatus })
       .eq("id", creative.id);
-
-    if (error) {
-      toast.error("Erro ao atualizar status");
-    } else {
+    if (error) toast.error("Erro ao atualizar status");
+    else {
       toast.success("Status atualizado");
       onUpdate();
     }
   };
 
   const mediaLine = creative.media_line;
-
-  /** ✅ Specs summary (listas + agregados) */
   const specsSummary = useMemo(() => buildSpecsSummary(creative.format_details), [creative.format_details]);
 
-  /** ✅ NOVO: edição do link da peça (igual ao PieceLinkCell da tabela) */
+  // =========================
+  // ✅ Link da peça (editável)
+  // =========================
   const [editingLink, setEditingLink] = useState(false);
   const [linkValue, setLinkValue] = useState(creative.piece_link || "");
 
-  // Mantém o input sincronizado caso o backend atualize via refetch
   useEffect(() => {
     if (!editingLink) setLinkValue(creative.piece_link || "");
   }, [creative.piece_link, editingLink]);
@@ -239,12 +216,7 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
       .from("media_creatives")
       .update({ piece_link: trimmed ? trimmed : null })
       .eq("id", creative.id);
-
-    if (error) {
-      toast.error("Erro ao salvar link");
-      return;
-    }
-
+    if (error) return toast.error("Erro ao salvar link");
     toast.success("Link salvo");
     setEditingLink(false);
     onUpdate();
@@ -253,6 +225,58 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
   const cancelEditPieceLink = () => {
     setEditingLink(false);
     setLinkValue(creative.piece_link || "");
+  };
+
+  // =========================
+  // ✅ Alterações (logs) no card
+  // =========================
+  const logs = creative.change_logs || [];
+  const [logsExpanded, setLogsExpanded] = useState(false);
+  const [addingLog, setAddingLog] = useState(false);
+  const [newLogNotes, setNewLogNotes] = useState("");
+
+  const handleAddLog = async () => {
+    const notes = newLogNotes.trim();
+
+    if (!userId) {
+      toast.error("Usuário não identificado para registrar alteração");
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("creative_change_logs").insert({
+      creative_id: creative.id,
+      user_id: userId,
+      notes: notes || null,
+    });
+
+    if (insertError) {
+      toast.error("Erro ao adicionar alteração");
+      return;
+    }
+
+    // Igual ao MediaResourcesPage: ao registrar alteração, muda status para "alteracao"
+    const { error: statusError } = await supabase
+      .from("media_creatives")
+      .update({ production_status: "alteracao" })
+      .eq("id", creative.id);
+
+    if (statusError) {
+      // Não bloqueia UX: o log foi gravado; só avisa que status falhou.
+      toast.error("Alteração registrada, mas falhou ao atualizar status");
+    } else {
+      toast.success("Alteração registrada");
+    }
+
+    setNewLogNotes("");
+    setAddingLog(false);
+    setLogsExpanded(true);
+    onUpdate();
+  };
+
+  const handleDeleteLog = async (logId: string) => {
+    const { error } = await supabase.from("creative_change_logs").delete().eq("id", logId);
+    if (error) toast.error("Erro ao remover alteração");
+    else onUpdate();
   };
 
   return (
@@ -306,7 +330,7 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
             </div>
           </div>
 
-          {/* Line Information */}
+          {/* Line Info */}
           {mediaLine && (
             <div className="text-xs space-y-1 text-muted-foreground">
               {mediaLine.subdivision?.name && (
@@ -335,13 +359,11 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
           {/* Specs */}
           {specsSummary && (
             <div className="text-xs p-2 bg-muted/50 rounded space-y-2 text-muted-foreground">
-              {/* Dimensões (lista) */}
               <div className="space-y-1">
                 <div className="flex items-center gap-1 text-foreground font-medium">
                   <Ruler className="h-3 w-3" />
                   Dimensões:
                 </div>
-
                 {specsSummary.dimensions.length > 0 ? (
                   <ul className="pl-4 list-disc space-y-0.5">
                     {specsSummary.dimensions.map((d) => (
@@ -355,13 +377,11 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
                 )}
               </div>
 
-              {/* Copy (lista) */}
               <div className="space-y-1">
                 <div className="flex items-center gap-1 text-foreground font-medium">
                   <Type className="h-3 w-3" />
                   Copy:
                 </div>
-
                 {specsSummary.copyFields.length > 0 ? (
                   <ul className="pl-4 list-disc space-y-0.5">
                     {specsSummary.copyFields.map((c) => (
@@ -375,18 +395,15 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
                 )}
               </div>
 
-              {/* Abaixo: Extensões / Peso / Duração */}
               <div className="pt-1 border-t space-y-1">
                 <div className="flex items-center gap-1">
                   <Paperclip className="h-3 w-3" />
                   <span className="text-foreground font-medium">Extensões:</span> {specsSummary.extensions}
                 </div>
-
                 <div className="flex items-center gap-1">
                   <Weight className="h-3 w-3" />
                   <span className="text-foreground font-medium">Peso:</span> {specsSummary.weight}
                 </div>
-
                 <div className="flex items-center gap-1">
                   <Timer className="h-3 w-3" />
                   <span className="text-foreground font-medium">Duração:</span> {specsSummary.duration}
@@ -395,10 +412,88 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
             </div>
           )}
 
-          {/* Copy Text (do criativo) */}
+          {/* Copy text do criativo */}
           {creative.copy_text && (
             <p className="text-xs text-muted-foreground line-clamp-2 italic">"{creative.copy_text}"</p>
           )}
+
+          {/* ✅ Alterações */}
+          <div className="pt-1 border-t" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1"
+                onClick={() => setLogsExpanded((v) => !v)}
+              >
+                {logsExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                {logs.length} alteração(ões)
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+                title="Adicionar alteração"
+                onClick={() => {
+                  setLogsExpanded(true);
+                  setAddingLog(true);
+                }}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+
+            {logsExpanded && (
+              <div className="mt-2 space-y-2">
+                {addingLog && (
+                  <div className="flex items-center gap-1 p-2 bg-muted/50 rounded">
+                    <Input
+                      value={newLogNotes}
+                      onChange={(e) => setNewLogNotes(e.target.value)}
+                      placeholder="Observação..."
+                      className="h-7 text-xs flex-1"
+                    />
+                    <Button size="sm" className="h-7 w-7 p-0" onClick={handleAddLog}>
+                      <Check className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setAddingLog(false)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+
+                {logs.length === 0 ? (
+                  <div className="text-xs text-muted-foreground p-2 bg-muted/30 rounded">
+                    Nenhuma alteração registrada
+                  </div>
+                ) : (
+                  logs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="flex items-center justify-between text-xs p-2 bg-muted/50 rounded group"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-medium">
+                          {format(new Date(log.change_date), "dd/MM/yy HH:mm", { locale: ptBR })}
+                        </span>
+                        {log.notes && <span className="text-muted-foreground ml-2 break-words">{log.notes}</span>}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                        onClick={() => handleDeleteLog(log.id)}
+                        title="Remover"
+                      >
+                        <X className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Dates */}
           <div className="flex flex-wrap gap-2 text-xs">
@@ -416,7 +511,7 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
             )}
           </div>
 
-          {/* ✅ Link da Peça (editável no card) */}
+          {/* Link da peça (editável) */}
           <div onClick={(e) => e.stopPropagation()}>
             {editingLink ? (
               <div className="flex items-center gap-1">
