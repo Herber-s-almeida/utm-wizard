@@ -416,7 +416,6 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
           max_characters: copy.maxCharacters,
           observation: copy.observation || null,
           user_id: userId,
-          environment_id: currentEnvironmentId,
         });
         if (copyError) {
           console.error('Erro ao salvar campo de copy:', copyError);
@@ -436,7 +435,6 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
           description: dim.description,
           observation: dim.observation || null,
           user_id: userId,
-          environment_id: currentEnvironmentId,
         });
         if (dimError) {
           console.error('Erro ao salvar dimensão:', dimError);
@@ -452,7 +450,6 @@ export function FormatWizardDialog({ open, onOpenChange, onComplete }: FormatWiz
           specification_id: spec.id,
           extension_id: extId,
           user_id: userId,
-          environment_id: currentEnvironmentId,
         });
         if (extError) {
           console.error('Erro ao salvar extensão:', extError);
