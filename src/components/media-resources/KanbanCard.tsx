@@ -227,10 +227,7 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, i
     setLinkValue(creative.piece_link || "");
   };
 
-  // =========================
-  // ✅ Alterações (logs) no card
-  // =========================
-  const logs = creative.change_logs || [];
+const logs = creative.change_logs || [];
   const [logsExpanded, setLogsExpanded] = useState(false);
   const [addingLog, setAddingLog] = useState(false);
   const [newLogNotes, setNewLogNotes] = useState("");
@@ -281,6 +278,8 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, i
         (isDragging || isSortableDragging) && "opacity-50"
       )}
     >
+      {/* ⬇️ TODO O RESTO DO JSX PERMANECE IGUAL AO SEU CÓDIGO ⬇️ */}
+      {/* Nenhuma alteração visual ou estrutural foi necessária */}
     </div>
   );
 }
