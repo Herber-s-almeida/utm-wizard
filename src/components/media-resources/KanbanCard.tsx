@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
@@ -19,6 +21,10 @@ import {
   Timer,
   Weight,
   Type,
+  Plus,
+  Check,
+  X,
+  ChevronRight,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -130,8 +136,7 @@ interface KanbanCardProps {
 }
 
 /**
- * ✅ NOVO: ao invés de "juntar tudo em string", retorna listas (dimensões e copy)
- * e valores agregados (ext, peso, duração) com deduplicação.
+ * ✅ Specs: retorna listas (dimensões e copy) e valores agregados (ext, peso, duração) com deduplicação.
  */
 function buildSpecsSummary(formatDetails?: FormatCreativeType[]) {
   if (!formatDetails?.length) return null;
@@ -180,13 +185,7 @@ function buildSpecsSummary(formatDetails?: FormatCreativeType[]) {
   const duration = Array.from(durationSet).join(", ") || "—";
   const weight = Array.from(weightSet).join(", ") || "—";
 
-  return {
-    dimensions,
-    copyFields,
-    extensions,
-    duration,
-    weight,
-  };
+  return { dimensions, copyFields, extensions, duration, weight };
 }
 
 export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDragging }: KanbanCardProps) {
@@ -222,8 +221,39 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
 
   const mediaLine = creative.media_line;
 
-  /** ✅ NOVO: summary em formato amigável para render (listas + agregados) */
+  /** ✅ Specs summary (listas + agregados) */
   const specsSummary = useMemo(() => buildSpecsSummary(creative.format_details), [creative.format_details]);
+
+  /** ✅ NOVO: edição do link da peça (igual ao PieceLinkCell da tabela) */
+  const [editingLink, setEditingLink] = useState(false);
+  const [linkValue, setLinkValue] = useState(creative.piece_link || "");
+
+  // Mantém o input sincronizado caso o backend atualize via refetch
+  useEffect(() => {
+    if (!editingLink) setLinkValue(creative.piece_link || "");
+  }, [creative.piece_link, editingLink]);
+
+  const handleSavePieceLink = async () => {
+    const trimmed = linkValue.trim();
+    const { error } = await supabase
+      .from("media_creatives")
+      .update({ piece_link: trimmed ? trimmed : null })
+      .eq("id", creative.id);
+
+    if (error) {
+      toast.error("Erro ao salvar link");
+      return;
+    }
+
+    toast.success("Link salvo");
+    setEditingLink(false);
+    onUpdate();
+  };
+
+  const cancelEditPieceLink = () => {
+    setEditingLink(false);
+    setLinkValue(creative.piece_link || "");
+  };
 
   return (
     <div
@@ -302,7 +332,7 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
             </div>
           )}
 
-          {/* ✅ NOVO: Specs com leitura melhor */}
+          {/* Specs */}
           {specsSummary && (
             <div className="text-xs p-2 bg-muted/50 rounded space-y-2 text-muted-foreground">
               {/* Dimensões (lista) */}
@@ -386,20 +416,57 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
             )}
           </div>
 
-          {/* Piece Link */}
-          {creative.piece_link && (
-            <a
-              href={creative.piece_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-primary hover:underline flex items-center gap-1"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <LinkIcon className="h-3 w-3" />
-              Ver peça
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          )}
+          {/* ✅ Link da Peça (editável no card) */}
+          <div onClick={(e) => e.stopPropagation()}>
+            {editingLink ? (
+              <div className="flex items-center gap-1">
+                <Input
+                  value={linkValue}
+                  onChange={(e) => setLinkValue(e.target.value)}
+                  placeholder="https://..."
+                  className="h-7 text-xs flex-1"
+                />
+                <Button size="sm" className="h-7 w-7 p-0" onClick={handleSavePieceLink}>
+                  <Check className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={cancelEditPieceLink}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : creative.piece_link ? (
+              <div className="flex items-center gap-1">
+                <a
+                  href={creative.piece_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline flex items-center gap-1 min-w-0 flex-1"
+                >
+                  <LinkIcon className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{creative.piece_link}</span>
+                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                </a>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => setEditingLink(true)}
+                  title="Editar link"
+                >
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs gap-1 text-muted-foreground"
+                onClick={() => setEditingLink(true)}
+              >
+                <Plus className="h-3 w-3" />
+                Adicionar link da peça
+              </Button>
+            )}
+          </div>
 
           {/* Status Selector */}
           <div className="pt-1 border-t">
