@@ -60,11 +60,6 @@ interface ChangeLog {
   notes: string | null;
 }
 
-/**
- * ✅ Tipos mínimos necessários para o card renderizar specs.
- * IMPORTANTE: seu backend/fetch do Kanban precisa preencher `creative.format_details`
- * no mesmo formato que você já monta na página de tabela.
- */
 interface FormatCreativeType {
   id: string;
   name: string;
@@ -123,8 +118,6 @@ interface MediaCreativeWithDetails {
     funnel_stage_ref: { name: string } | null;
   } | null;
   change_logs?: ChangeLog[];
-
-  /** ✅ NOVO: detalhes do formato com especificações (mesmo shape da tabela) */
   format_details?: FormatCreativeType[];
 }
 
@@ -136,40 +129,64 @@ interface KanbanCardProps {
   isDragging?: boolean;
 }
 
-/** Helper: pega as specs do format_details e transforma em uma lista "flat" renderizável */
-function buildSpecs(formatDetails?: FormatCreativeType[]) {
-  if (!formatDetails?.length) return [];
+/**
+ * ✅ NOVO: ao invés de "juntar tudo em string", retorna listas (dimensões e copy)
+ * e valores agregados (ext, peso, duração) com deduplicação.
+ */
+function buildSpecsSummary(formatDetails?: FormatCreativeType[]) {
+  if (!formatDetails?.length) return null;
 
-  return formatDetails.flatMap((type) =>
-    type.specifications.map((spec) => {
-      const dimensions =
-        spec.dimensions
-          .map((d) => `${d.width}x${d.height}${d.unit}${d.description ? ` (${d.description})` : ""}`)
-          .join(", ") || "—";
+  const dimensionsSet = new Set<string>();
+  const extensionsSet = new Set<string>();
+  const durationSet = new Set<string>();
+  const weightSet = new Set<string>();
+  const copySet = new Set<string>();
 
-      const extensions = spec.extensions?.map((e) => e.name).join(", ") || "—";
+  formatDetails.forEach((type) => {
+    type.specifications.forEach((spec) => {
+      // Dimensões (lista)
+      spec.dimensions?.forEach((d) => {
+        const label = `${d.width}x${d.height}${d.unit}${d.description ? ` (${d.description})` : ""}`;
+        if (label.trim()) dimensionsSet.add(label);
+      });
 
-      const duration =
-        spec.has_duration && spec.duration_value ? `${spec.duration_value}${spec.duration_unit || "s"}` : "—";
+      // Extensões (agregado)
+      spec.extensions?.forEach((e) => {
+        if (e?.name?.trim()) extensionsSet.add(e.name.trim());
+      });
 
-      const weight = spec.max_weight ? `${spec.max_weight}${spec.weight_unit || "KB"}` : "—";
+      // Duração (agregado)
+      if (spec.has_duration && spec.duration_value) {
+        durationSet.add(`${spec.duration_value}${spec.duration_unit || "s"}`);
+      }
 
-      const copyFields =
-        spec.copy_fields
-          ?.map((cf) => `${cf.name}${cf.max_characters ? ` (${cf.max_characters} chars)` : ""}`)
-          .join(", ") || "—";
+      // Peso (agregado)
+      if (spec.max_weight) {
+        weightSet.add(`${spec.max_weight}${spec.weight_unit || "KB"}`);
+      }
 
-      return {
-        typeName: type.name,
-        specName: spec.name,
-        dimensions,
-        extensions,
-        duration,
-        weight,
-        copyFields,
-      };
-    }),
-  );
+      // Copy fields (lista)
+      spec.copy_fields?.forEach((cf) => {
+        const label = `${cf.name}${cf.max_characters ? ` (${cf.max_characters} chars)` : ""}`;
+        if (label.trim()) copySet.add(label);
+      });
+    });
+  });
+
+  const dimensions = Array.from(dimensionsSet);
+  const copyFields = Array.from(copySet);
+
+  const extensions = Array.from(extensionsSet).join(", ") || "—";
+  const duration = Array.from(durationSet).join(", ") || "—";
+  const weight = Array.from(weightSet).join(", ") || "—";
+
+  return {
+    dimensions,
+    copyFields,
+    extensions,
+    duration,
+    weight,
+  };
 }
 
 export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDragging }: KanbanCardProps) {
@@ -205,28 +222,8 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
 
   const mediaLine = creative.media_line;
 
-  /** ✅ NOVO: calcula specs uma vez por render */
-  const specs = useMemo(() => buildSpecs(creative.format_details), [creative.format_details]);
-
-  /** ✅ NOVO: agrega por campo para mostrar no card (sem collapsible) */
-  const specsSummary = useMemo(() => {
-    if (!specs.length) return null;
-
-    const joinUnique = (items: string[]) => {
-      const set = new Set(items.flatMap((t) => t.split(",").map((x) => x.trim())).filter(Boolean));
-      return set.size ? Array.from(set).join(", ") : "—";
-    };
-
-    const dimensions = joinUnique(specs.map((s) => s.dimensions).filter((v) => v && v !== "—"));
-    const extensions = joinUnique(specs.map((s) => s.extensions).filter((v) => v && v !== "—"));
-
-    const duration = joinUnique(specs.map((s) => s.duration).filter((v) => v && v !== "—"));
-    const weight = joinUnique(specs.map((s) => s.weight).filter((v) => v && v !== "—"));
-
-    const copyFields = joinUnique(specs.map((s) => s.copyFields).filter((v) => v && v !== "—"));
-
-    return { dimensions, extensions, duration, weight, copyFields };
-  }, [specs]);
+  /** ✅ NOVO: summary em formato amigável para render (listas + agregados) */
+  const specsSummary = useMemo(() => buildSpecsSummary(creative.format_details), [creative.format_details]);
 
   return (
     <div
@@ -241,7 +238,6 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
           isDragging && "shadow-lg",
         )}
       >
-        {/* Warning Badge */}
         {hasWarning && (
           <div className="absolute -top-2 -right-2 z-10">
             <div
@@ -254,7 +250,7 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
         )}
 
         <CardContent className="p-3 space-y-2">
-          {/* Header with drag handle and ID */}
+          {/* Header */}
           <div className="flex items-start gap-2">
             <div
               {...attributes}
@@ -263,11 +259,13 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
             >
               <GripVertical className="h-4 w-4" />
             </div>
+
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs font-mono shrink-0">
                   {creative.creative_id || mediaLine?.line_code || "N/A"}
                 </Badge>
+
                 {creative.format?.name && (
                   <span className="text-xs text-muted-foreground truncate flex items-center gap-1">
                     <FileType className="h-3 w-3" />
@@ -304,37 +302,70 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, isDraggin
             </div>
           )}
 
-          {/* ✅ NOVO: Specs no card */}
+          {/* ✅ NOVO: Specs com leitura melhor */}
           {specsSummary && (
-            <div className="text-xs p-2 bg-muted/50 rounded space-y-1 text-muted-foreground">
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                <span className="flex items-center gap-1 min-w-0">
-                  <Ruler className="h-3 w-3 shrink-0" />
-                  <span className="truncate">Dim: {specsSummary.dimensions}</span>
-                </span>
-                <span className="flex items-center gap-1 min-w-0">
-                  <Paperclip className="h-3 w-3 shrink-0" />
-                  <span className="truncate">Ext: {specsSummary.extensions}</span>
-                </span>
-                <span className="flex items-center gap-1 min-w-0">
-                  <Timer className="h-3 w-3 shrink-0" />
-                  <span className="truncate">Dur: {specsSummary.duration}</span>
-                </span>
-                <span className="flex items-center gap-1 min-w-0">
-                  <Weight className="h-3 w-3 shrink-0" />
-                  <span className="truncate">Peso: {specsSummary.weight}</span>
-                </span>
-                {specsSummary.copyFields !== "—" && (
-                  <span className="col-span-2 flex items-center gap-1 min-w-0">
-                    <Type className="h-3 w-3 shrink-0" />
-                    <span className="truncate">Copy: {specsSummary.copyFields}</span>
-                  </span>
+            <div className="text-xs p-2 bg-muted/50 rounded space-y-2 text-muted-foreground">
+              {/* Dimensões (lista) */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-1 text-foreground font-medium">
+                  <Ruler className="h-3 w-3" />
+                  Dimensões:
+                </div>
+
+                {specsSummary.dimensions.length > 0 ? (
+                  <ul className="pl-4 list-disc space-y-0.5">
+                    {specsSummary.dimensions.map((d) => (
+                      <li key={d} className="leading-snug">
+                        {d}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div>—</div>
                 )}
+              </div>
+
+              {/* Copy (lista) */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-1 text-foreground font-medium">
+                  <Type className="h-3 w-3" />
+                  Copy:
+                </div>
+
+                {specsSummary.copyFields.length > 0 ? (
+                  <ul className="pl-4 list-disc space-y-0.5">
+                    {specsSummary.copyFields.map((c) => (
+                      <li key={c} className="leading-snug">
+                        {c}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div>—</div>
+                )}
+              </div>
+
+              {/* Abaixo: Extensões / Peso / Duração */}
+              <div className="pt-1 border-t space-y-1">
+                <div className="flex items-center gap-1">
+                  <Paperclip className="h-3 w-3" />
+                  <span className="text-foreground font-medium">Extensões:</span> {specsSummary.extensions}
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Weight className="h-3 w-3" />
+                  <span className="text-foreground font-medium">Peso:</span> {specsSummary.weight}
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Timer className="h-3 w-3" />
+                  <span className="text-foreground font-medium">Duração:</span> {specsSummary.duration}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Copy Text */}
+          {/* Copy Text (do criativo) */}
           {creative.copy_text && (
             <p className="text-xs text-muted-foreground line-clamp-2 italic">"{creative.copy_text}"</p>
           )}
