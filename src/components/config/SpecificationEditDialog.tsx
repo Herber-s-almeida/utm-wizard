@@ -13,7 +13,6 @@ import { Plus, X, Check, Pencil, Trash2 } from 'lucide-react';
 import { useFileExtensions, CreativeTypeSpecification, SpecificationCopyField, SpecificationDimension } from '@/hooks/useFormatsHierarchy';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 interface SpecificationEditDialogProps {
   open: boolean;
@@ -40,7 +39,6 @@ interface Dimension {
 
 export function SpecificationEditDialog({ open, onOpenChange, specification, onComplete }: SpecificationEditDialogProps) {
   const queryClient = useQueryClient();
-  const { currentEnvironmentId } = useEnvironment();
   const fileExtensions = useFileExtensions();
   
   // Specification name
@@ -303,6 +301,13 @@ export function SpecificationEditDialog({ open, onOpenChange, specification, onC
         return;
       }
 
+      const throwIfError = (error: any, context: string) => {
+        if (error) {
+          console.error(context, error);
+          throw error;
+        }
+      };
+
       // 1. Update specification
       const { error: specError } = await supabase
         .from('creative_type_specifications')
@@ -316,7 +321,7 @@ export function SpecificationEditDialog({ open, onOpenChange, specification, onC
         })
         .eq('id', specification.id);
       
-      if (specError) throw specError;
+      throwIfError(specError, 'Erro ao atualizar especificação');
       
       // 2. Handle copy fields - delete removed, update existing, add new
       const existingCopyIds = (specification.copy_fields || []).map(cf => cf.id);
@@ -325,30 +330,32 @@ export function SpecificationEditDialog({ open, onOpenChange, specification, onC
       
       // Soft delete removed copy fields
       for (const id of deletedCopyIds) {
-        await supabase.from('specification_copy_fields')
+        const { error } = await supabase.from('specification_copy_fields')
           .update({ deleted_at: new Date().toISOString() })
           .eq('id', id);
+        throwIfError(error, 'Erro ao remover campo de copy');
       }
       
       // Update/create copy fields
       for (const cf of copyFields) {
         if (cf.id) {
-          await supabase.from('specification_copy_fields')
+          const { error } = await supabase.from('specification_copy_fields')
             .update({
               name: cf.name,
               max_characters: cf.maxCharacters,
               observation: cf.observation || null,
             })
             .eq('id', cf.id);
+          throwIfError(error, 'Erro ao atualizar campo de copy');
         } else {
-          await supabase.from('specification_copy_fields').insert({
+          const { error } = await supabase.from('specification_copy_fields').insert({
             specification_id: specification.id,
             name: cf.name,
             max_characters: cf.maxCharacters,
             observation: cf.observation || null,
             user_id: userId,
-            environment_id: currentEnvironmentId,
           });
+          throwIfError(error, 'Erro ao criar campo de copy');
         }
       }
       
@@ -359,15 +366,16 @@ export function SpecificationEditDialog({ open, onOpenChange, specification, onC
       
       // Soft delete removed dimensions
       for (const id of deletedDimIds) {
-        await supabase.from('specification_dimensions')
+        const { error } = await supabase.from('specification_dimensions')
           .update({ deleted_at: new Date().toISOString() })
           .eq('id', id);
+        throwIfError(error, 'Erro ao remover dimensão');
       }
       
       // Update/create dimensions
       for (const dim of dimensions) {
         if (dim.id) {
-          await supabase.from('specification_dimensions')
+          const { error } = await supabase.from('specification_dimensions')
             .update({
               width: dim.width,
               height: dim.height,
@@ -376,8 +384,9 @@ export function SpecificationEditDialog({ open, onOpenChange, specification, onC
               observation: dim.observation || null,
             })
             .eq('id', dim.id);
+          throwIfError(error, 'Erro ao atualizar dimensão');
         } else {
-          await supabase.from('specification_dimensions').insert({
+          const { error } = await supabase.from('specification_dimensions').insert({
             specification_id: specification.id,
             width: dim.width,
             height: dim.height,
@@ -385,8 +394,8 @@ export function SpecificationEditDialog({ open, onOpenChange, specification, onC
             description: dim.description,
             observation: dim.observation || null,
             user_id: userId,
-            environment_id: currentEnvironmentId,
           });
+          throwIfError(error, 'Erro ao criar dimensão');
         }
       }
       
@@ -395,19 +404,20 @@ export function SpecificationEditDialog({ open, onOpenChange, specification, onC
       const removedExtensions = existingExtensionIds.filter(id => !selectedExtensions.includes(id));
       
       for (const extId of addedExtensions) {
-        await supabase.from('specification_extensions').insert({
+        const { error } = await supabase.from('specification_extensions').insert({
           specification_id: specification.id,
           extension_id: extId,
           user_id: userId,
-          environment_id: currentEnvironmentId,
         });
+        throwIfError(error, 'Erro ao adicionar extensão');
       }
       
       for (const extId of removedExtensions) {
-        await supabase.from('specification_extensions')
+        const { error } = await supabase.from('specification_extensions')
           .delete()
           .eq('specification_id', specification.id)
           .eq('extension_id', extId);
+        throwIfError(error, 'Erro ao remover extensão');
       }
       
       // Invalidate queries
