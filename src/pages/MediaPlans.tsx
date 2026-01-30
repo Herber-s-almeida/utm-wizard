@@ -3,13 +3,14 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
-  Plus, 
+  Plus,
   Search, 
   FileText,
   Calendar,
@@ -57,6 +58,7 @@ import {
 
 export default function MediaPlans() {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -86,18 +88,20 @@ export default function MediaPlans() {
   };
 
   useEffect(() => {
-    if (user) {
+    if (user && currentEnvironmentId) {
       fetchPlans();
     }
-  }, [user]);
+  }, [user, currentEnvironmentId]);
 
   const fetchPlans = async () => {
+    if (!currentEnvironmentId) return;
+    
     try {
-      // Fetch plans where user is owner OR has a role assigned
-      // The RLS policy already handles this, so we just need to query
+      // Fetch plans filtered by the current environment
       const { data, error } = await supabase
         .from('media_plans')
         .select('*')
+        .eq('environment_id', currentEnvironmentId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
 

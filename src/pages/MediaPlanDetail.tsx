@@ -139,7 +139,7 @@ export default function MediaPlanDetail() {
   const statuses = useStatuses();
   
   // Environment-based permissions (replaces legacy usePlanRoles)
-  const { canEdit: environmentCanEdit, isEnvironmentAdmin } = useEnvironment();
+  const { canEdit: environmentCanEdit, isEnvironmentAdmin, currentEnvironmentId } = useEnvironment();
   const canEdit = environmentCanEdit('media_plans');
   const canManageTeam = false; // Deprecated - managed at environment level
   
@@ -186,7 +186,7 @@ export default function MediaPlanDetail() {
   }, [searchParams, setSearchParams]);
 
   const fetchData = async () => {
-    if (!user?.id || !identifier) return;
+    if (!user?.id || !identifier || !currentEnvironmentId) return;
     
     try {
       // Check if identifier is a UUID or a slug
@@ -204,6 +204,13 @@ export default function MediaPlanDetail() {
       if (planError) throw planError;
       if (!planData) {
         toast.error('Plano não encontrado');
+        navigate('/media-plans');
+        return;
+      }
+      
+      // Verify the plan belongs to the current environment
+      if (planData.environment_id !== currentEnvironmentId) {
+        toast.error('Este plano pertence a outro ambiente');
         navigate('/media-plans');
         return;
       }

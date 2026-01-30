@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +25,7 @@ import { DuplicatePlanDialog } from '@/components/media-plan/DuplicatePlanDialog
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [plans, setPlans] = useState<MediaPlan[]>([]);
@@ -40,37 +40,37 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    if (effectiveUserId) {
+    if (currentEnvironmentId) {
       fetchData();
     }
-  }, [effectiveUserId]);
+  }, [currentEnvironmentId]);
 
   const fetchData = async () => {
-    if (!effectiveUserId) return;
+    if (!currentEnvironmentId) return;
     
     try {
-      // Fetch media plans for the effective user
+      // Fetch media plans for the current environment
       const { data: plansData, error: plansError } = await supabase
         .from('media_plans')
         .select('*')
-        .eq('user_id', effectiveUserId)
+        .eq('environment_id', currentEnvironmentId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(5);
 
       if (plansError) throw plansError;
 
-      // Fetch stats for the effective user
+      // Fetch stats for the current environment
       const { data: allPlans } = await supabase
         .from('media_plans')
         .select('id, status, total_budget')
-        .eq('user_id', effectiveUserId)
+        .eq('environment_id', currentEnvironmentId)
         .is('deleted_at', null);
 
       const { count: linesCount } = await supabase
         .from('media_lines')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', effectiveUserId);
+        .eq('environment_id', currentEnvironmentId);
 
       const typedPlans = (plansData || []) as MediaPlan[];
       setPlans(typedPlans);

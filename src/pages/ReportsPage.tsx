@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,23 +27,27 @@ interface PlanWithReportStats extends MediaPlan {
 
 export default function ReportsPage() {
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<PlanWithReportStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    if (user) {
+    if (user && currentEnvironmentId) {
       fetchPlansWithReportStats();
     }
-  }, [user]);
+  }, [user, currentEnvironmentId]);
 
   const fetchPlansWithReportStats = async () => {
+    if (!currentEnvironmentId) return;
+    
     try {
-      // Fetch active plans
+      // Fetch active plans for the current environment
       const { data: plansData, error: plansError } = await supabase
         .from('media_plans')
         .select('*')
+        .eq('environment_id', currentEnvironmentId)
         .is('deleted_at', null)
         .in('status', ['active', 'completed'])
         .order('updated_at', { ascending: false });
