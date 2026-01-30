@@ -479,15 +479,6 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, i
                         </span>
                         {log.notes && <span className="text-muted-foreground ml-2 break-words">{log.notes}</span>}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                        onClick={() => handleDeleteLog(log.id)}
-                        title="Remover"
-                      >
-                        <X className="h-3 w-3 text-destructive" />
-                      </Button>
                     </div>
                   ))
                 )}
