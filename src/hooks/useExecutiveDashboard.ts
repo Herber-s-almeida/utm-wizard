@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { useCurrentEnvironmentId } from '@/hooks/useEffectiveUserId';
 import { format, parseISO } from 'date-fns';
 
 interface MediaLine {
@@ -179,21 +179,20 @@ export interface DashboardFilters {
 
 export function useExecutiveDashboard(filters: DashboardFilters = {}) {
   const { statusFilter = 'active', startDate, endDate } = filters;
-  const effectiveUserId = useEffectiveUserId();
+  const currentEnvironmentId = useCurrentEnvironmentId();
 
   return useQuery({
-    queryKey: ['executive-dashboard', effectiveUserId, statusFilter, startDate?.toISOString(), endDate?.toISOString()],
+    queryKey: ['executive-dashboard', currentEnvironmentId, statusFilter, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async (): Promise<DashboardData> => {
-      if (!effectiveUserId) {
-        throw new Error('User not authenticated');
+      if (!currentEnvironmentId) {
+        throw new Error('Environment not selected');
       }
 
-      // Fetch plans owned by the effective user (environment owner)
-      // Access is now controlled by environment roles, not plan_roles
+      // Fetch plans for the current environment
       let plansQuery = supabase
         .from('media_plans')
         .select('*')
-        .eq('user_id', effectiveUserId)
+        .eq('environment_id', currentEnvironmentId)
         .is('deleted_at', null);
 
       if (statusFilter === 'active') {
@@ -258,9 +257,9 @@ export function useExecutiveDashboard(filters: DashboardFilters = {}) {
         { data: vehicles },
         { data: funnelStages },
       ] = await Promise.all([
-        supabase.from('mediums').select('id, name').eq('user_id', effectiveUserId).is('deleted_at', null),
-        supabase.from('vehicles').select('id, name, medium_id').eq('user_id', effectiveUserId).is('deleted_at', null),
-        supabase.from('funnel_stages').select('id, name, slug, order_index').eq('user_id', effectiveUserId).is('deleted_at', null),
+        supabase.from('mediums').select('id, name').eq('environment_id', currentEnvironmentId).is('deleted_at', null),
+        supabase.from('vehicles').select('id, name, medium_id').eq('environment_id', currentEnvironmentId).is('deleted_at', null),
+        supabase.from('funnel_stages').select('id, name, slug, order_index').eq('environment_id', currentEnvironmentId).is('deleted_at', null),
       ]);
 
       // Calculate metrics
@@ -287,6 +286,6 @@ export function useExecutiveDashboard(filters: DashboardFilters = {}) {
         planSummaries,
       };
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 }

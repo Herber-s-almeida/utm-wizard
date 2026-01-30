@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Save, Loader2, Layers, Clock, Filter, Calendar, FileText, Sparkles, AlertTriangle, LogOut, Info, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -110,6 +111,7 @@ interface ParentItem {
 export default function EditMediaPlan() {
   const { id: identifier } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const { currentEnvironmentId } = useEnvironment();
   const navigate = useNavigate();
   const wizard = useMediaPlanWizard();
   const [saving, setSaving] = useState(false);
@@ -159,12 +161,14 @@ export default function EditMediaPlan() {
 
   // Load existing plan data
   useEffect(() => {
-    if (user && identifier) {
+    if (user && identifier && currentEnvironmentId) {
       loadPlanData();
     }
-  }, [user, identifier]);
+  }, [user, identifier, currentEnvironmentId]);
 
   const loadPlanData = async () => {
+    if (!currentEnvironmentId) return;
+    
     try {
       // Check if identifier is a UUID or a slug
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier || '');
@@ -175,13 +179,19 @@ export default function EditMediaPlan() {
       } else {
         query = query.eq('slug', identifier);
       }
-      query = query.eq('user_id', user?.id);
       
       const { data: plan, error: planError } = await query.maybeSingle();
 
       if (planError) throw planError;
       if (!plan) {
         toast.error('Plano não encontrado');
+        navigate('/media-plans');
+        return;
+      }
+      
+      // Verify the plan belongs to the current environment
+      if (plan.environment_id !== currentEnvironmentId) {
+        toast.error('Este plano pertence a outro ambiente');
         navigate('/media-plans');
         return;
       }
