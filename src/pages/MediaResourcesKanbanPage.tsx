@@ -17,6 +17,7 @@ interface ChangeLog {
   change_date: string;
   notes: string | null;
   user_name?: string | null;
+  change_type?: string | null;
 }
 
 /** ✅ NOVO: tipos de formato/specs iguais ao da página de lista */
@@ -173,7 +174,7 @@ export default function MediaResourcesKanbanPage() {
       if (creativeIds.length > 0) {
         const { data: changeLogs } = await supabase
           .from("creative_change_logs")
-          .select("id, creative_id, change_date, notes, user_id")
+          .select("id, creative_id, change_date, notes, user_id, change_type")
           .in("creative_id", creativeIds)
           .order("change_date", { ascending: false });
 
@@ -199,6 +200,7 @@ export default function MediaResourcesKanbanPage() {
             change_date: log.change_date,
             notes: log.notes,
             user_name: userNamesMap[log.user_id] || null,
+            change_type: log.change_type || 'comment',
           });
         });
       }

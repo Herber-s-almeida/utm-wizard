@@ -41,6 +41,7 @@ interface ChangeLog {
   change_date: string;
   notes: string | null;
   user_name?: string | null;
+  change_type?: string | null;
 }
 
 interface MediaCreativeWithDetails {

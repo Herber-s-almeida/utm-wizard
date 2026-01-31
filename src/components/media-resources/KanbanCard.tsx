@@ -26,6 +26,8 @@ import {
   X,
   ChevronRight,
   ChevronDown,
+  MessageCircle,
+  RefreshCw,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -66,6 +68,7 @@ interface ChangeLog {
   change_date: string;
   notes: string | null;
   user_name?: string | null;
+  change_type?: string | null;
 }
 
 interface FormatCreativeType {
@@ -464,35 +467,35 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, i
                     Nenhuma alteração registrada
                   </div>
                 ) : (
-                  logs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="flex items-center justify-between text-xs p-2 bg-muted/50 rounded group"
-                    >
-                      <div className="min-w-0">
-                        <span className="font-medium">
-                          {format(new Date(log.change_date), "dd/MM/yy HH:mm", { locale: ptBR })}
-                        </span>
-                        {log.user_name && (
-                          <span className="text-primary ml-1">por {log.user_name}</span>
+                  logs.map((log) => {
+                    const isStatusChange = log.change_type === 'status';
+                    return (
+                      <div
+                        key={log.id}
+                        className={cn(
+                          "flex items-center justify-between text-xs p-2 rounded group",
+                          isStatusChange 
+                            ? "bg-muted/70" 
+                            : "bg-green-50 dark:bg-green-950/30"
                         )}
-                        {log.notes && <span className="text-muted-foreground ml-2 break-words">{log.notes}</span>}
-                      </div>
-
-                      {/* Se quiser habilitar deletar, descomenta esse botão */}
-                      {/*
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                        onClick={() => handleDeleteLog(log.id)}
-                        title="Remover"
                       >
-                        <X className="h-3 w-3" />
-                      </Button>
-                      */}
-                    </div>
-                  ))
+                        <div className="min-w-0 flex items-start gap-1.5">
+                          {!isStatusChange && (
+                            <MessageCircle className="h-3 w-3 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+                          )}
+                          <div>
+                            <span className="font-medium">
+                              {format(new Date(log.change_date), "dd/MM/yy HH:mm", { locale: ptBR })}
+                            </span>
+                            {log.user_name && (
+                              <span className="text-primary ml-1">por {log.user_name}</span>
+                            )}
+                            {log.notes && <span className="text-muted-foreground ml-2 break-words">{log.notes}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             )}
