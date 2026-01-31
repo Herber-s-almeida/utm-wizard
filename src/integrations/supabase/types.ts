@@ -168,6 +168,7 @@ export type Database = {
       creative_change_logs: {
         Row: {
           change_date: string
+          change_type: string | null
           created_at: string
           creative_id: string
           id: string
@@ -176,6 +177,7 @@ export type Database = {
         }
         Insert: {
           change_date?: string
+          change_type?: string | null
           created_at?: string
           creative_id: string
           id?: string
@@ -184,6 +186,7 @@ export type Database = {
         }
         Update: {
           change_date?: string
+          change_type?: string | null
           created_at?: string
           creative_id?: string
           id?: string

@@ -22,6 +22,7 @@ import {
   X,
   Users,
   LayoutGrid,
+  MessageCircle,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -36,6 +37,7 @@ import { usePlanBySlug, getPlanUrl } from "@/hooks/usePlanBySlug";
 import { FollowerNotificationDialog } from "@/components/media-plan/FollowerNotificationDialog";
 import { ManageFollowersDialog } from "@/components/media-plan/ManageFollowersDialog";
 import { usePlanFollowers } from "@/hooks/usePlanFollowers";
+import { cn } from "@/lib/utils";
 
 const PRODUCTION_STATUSES = [
   { value: "solicitado", label: "Solicitado", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
@@ -72,6 +74,7 @@ interface ChangeLog {
   change_date: string;
   notes: string | null;
   user_name?: string | null;
+  change_type?: string | null;
 }
 
 interface FormatCreativeType {
@@ -398,19 +401,35 @@ function ChangeLogsCell({
               </Button>
             </div>
           )}
-          {logs.map((log) => (
-            <div key={log.id} className="flex items-center justify-between text-xs p-2 bg-muted/50 rounded group">
-              <div>
-                <span className="font-medium">
-                  {format(new Date(log.change_date), "dd/MM/yy HH:mm", { locale: ptBR })}
-                </span>
-                {log.user_name && (
-                  <span className="text-primary ml-1">por {log.user_name}</span>
+          {logs.map((log) => {
+            const isStatusChange = log.change_type === 'status';
+            return (
+              <div 
+                key={log.id} 
+                className={cn(
+                  "flex items-center justify-between text-xs p-2 rounded group",
+                  isStatusChange 
+                    ? "bg-muted/70" 
+                    : "bg-green-50 dark:bg-green-950/30"
                 )}
-                {log.notes && <span className="text-muted-foreground ml-2">{log.notes}</span>}
+              >
+                <div className="flex items-start gap-1.5">
+                  {!isStatusChange && (
+                    <MessageCircle className="h-3 w-3 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+                  )}
+                  <div>
+                    <span className="font-medium">
+                      {format(new Date(log.change_date), "dd/MM/yy HH:mm", { locale: ptBR })}
+                    </span>
+                    {log.user_name && (
+                      <span className="text-primary ml-1">por {log.user_name}</span>
+                    )}
+                    {log.notes && <span className="text-muted-foreground ml-2">{log.notes}</span>}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </CollapsibleContent>
       </Collapsible>
     </div>
@@ -660,7 +679,7 @@ export default function MediaResourcesPage() {
       if (creativeIds.length > 0) {
         const { data: changeLogs } = await supabase
           .from("creative_change_logs")
-          .select("id, creative_id, change_date, notes, user_id")
+          .select("id, creative_id, change_date, notes, user_id, change_type")
           .in("creative_id", creativeIds)
           .order("change_date", { ascending: false });
 
@@ -688,6 +707,7 @@ export default function MediaResourcesPage() {
             change_date: log.change_date,
             notes: log.notes,
             user_name: userNamesMap[log.user_id] || null,
+            change_type: log.change_type || 'comment',
           });
         });
       }
