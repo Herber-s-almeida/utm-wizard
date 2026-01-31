@@ -65,6 +65,7 @@ interface ChangeLog {
   id: string;
   change_date: string;
   notes: string | null;
+  user_name?: string | null;
 }
 
 interface FormatCreativeType {
@@ -472,6 +473,9 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, i
                         <span className="font-medium">
                           {format(new Date(log.change_date), "dd/MM/yy HH:mm", { locale: ptBR })}
                         </span>
+                        {log.user_name && (
+                          <span className="text-primary ml-1">por {log.user_name}</span>
+                        )}
                         {log.notes && <span className="text-muted-foreground ml-2 break-words">{log.notes}</span>}
                       </div>
 

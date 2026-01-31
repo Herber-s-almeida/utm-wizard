@@ -71,6 +71,7 @@ interface ChangeLog {
   id: string;
   change_date: string;
   notes: string | null;
+  user_name?: string | null;
 }
 
 interface FormatCreativeType {
@@ -403,6 +404,9 @@ function ChangeLogsCell({
                 <span className="font-medium">
                   {format(new Date(log.change_date), "dd/MM/yy HH:mm", { locale: ptBR })}
                 </span>
+                {log.user_name && (
+                  <span className="text-primary ml-1">por {log.user_name}</span>
+                )}
                 {log.notes && <span className="text-muted-foreground ml-2">{log.notes}</span>}
               </div>
             </div>
@@ -656,9 +660,24 @@ export default function MediaResourcesPage() {
       if (creativeIds.length > 0) {
         const { data: changeLogs } = await supabase
           .from("creative_change_logs")
-          .select("id, creative_id, change_date, notes")
+          .select("id, creative_id, change_date, notes, user_id")
           .in("creative_id", creativeIds)
           .order("change_date", { ascending: false });
+
+        // Buscar nomes dos usuários
+        const userIds = [...new Set((changeLogs || []).map(l => l.user_id).filter(Boolean))];
+        let userNamesMap: Record<string, string> = {};
+        
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("user_id, full_name")
+            .in("user_id", userIds);
+          
+          (profiles || []).forEach(p => {
+            if (p.user_id) userNamesMap[p.user_id] = p.full_name || "Usuário";
+          });
+        }
 
         (changeLogs || []).forEach((log) => {
           if (!changeLogsMap[log.creative_id]) {
@@ -668,6 +687,7 @@ export default function MediaResourcesPage() {
             id: log.id,
             change_date: log.change_date,
             notes: log.notes,
+            user_name: userNamesMap[log.user_id] || null,
           });
         });
       }

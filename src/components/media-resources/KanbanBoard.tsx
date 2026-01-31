@@ -40,6 +40,7 @@ interface ChangeLog {
   id: string;
   change_date: string;
   notes: string | null;
+  user_name?: string | null;
 }
 
 interface MediaCreativeWithDetails {
@@ -82,11 +83,12 @@ interface MediaCreativeWithDetails {
 interface KanbanBoardProps {
   creatives: MediaCreativeWithDetails[];
   onUpdate: () => void;
+  userId: string;
 }
 
 export type ColumnId = "fazer" | "fazendo" | "feito";
 
-export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
+export function KanbanBoard({ creatives, onUpdate, userId }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overColumnId, setOverColumnId] = useState<ColumnId | null>(null);
 
@@ -230,6 +232,7 @@ export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
                 columnId="fazer"
                 hasWarning={isInWrongColumn(creative, "fazer")}
                 onUpdate={onUpdate}
+                userId={userId}
               />
             ))}
           </KanbanColumn>
@@ -245,6 +248,7 @@ export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
                 columnId="fazendo"
                 hasWarning={isInWrongColumn(creative, "fazendo")}
                 onUpdate={onUpdate}
+                userId={userId}
               />
             ))}
           </KanbanColumn>
@@ -260,6 +264,7 @@ export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
                 columnId="feito"
                 hasWarning={isInWrongColumn(creative, "feito")}
                 onUpdate={onUpdate}
+                userId={userId}
               />
             ))}
           </KanbanColumn>
@@ -274,6 +279,7 @@ export function KanbanBoard({ creatives, onUpdate }: KanbanBoardProps) {
             columnId={getColumnForCreative(activeCreative)}
             hasWarning={false}
             onUpdate={() => {}}
+            userId={userId}
             isDragging
           />
         )}
