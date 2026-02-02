@@ -648,33 +648,32 @@ export function AppSidebar() {
         {canView('media_resources') && !isMenuHidden('media_resources') && (
         <div className="mb-4">
           <Collapsible open={openSections.mediaResourcesSection} onOpenChange={() => toggleSection('mediaResourcesSection')}>
-            <CollapsibleTrigger asChild>
-              <button className="w-full px-3 py-1.5 flex items-center justify-between hover:bg-muted/50 rounded-md transition-colors">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                  <Palette className="h-3 w-3" />
-                  Recursos de Mídia
-                </span>
-                {openSections.mediaResourcesSection ? (
-                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                )}
-              </button>
-            </CollapsibleTrigger>
+            <div className="flex items-center justify-between px-3 py-1.5 hover:bg-muted/50 rounded-md transition-colors">
+              <CollapsibleTrigger asChild>
+                <button className="flex-1 flex items-center justify-between">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <Palette className="h-3 w-3" />
+                    Recursos de Mídia
+                  </span>
+                  {openSections.mediaResourcesSection ? (
+                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/media-resources">
+                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-1 shrink-0">
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Ver todos os Recursos</TooltipContent>
+              </Tooltip>
+            </div>
             <CollapsibleContent>
-          {/* Ver Todos os Recursos */}
-          <div className="flex items-center">
-            <Link to="/media-resources" className="flex-1">
-              <Button 
-                variant={location.pathname === '/media-resources' || location.pathname === '/resources' ? 'secondary' : 'ghost'} 
-                size="sm" 
-                className="w-full justify-start gap-2 h-8 text-xs"
-              >
-                <Eye className="h-3.5 w-3.5" />
-                <span>Ver todos os Recursos</span>
-              </Button>
-            </Link>
-          </div>
 
           {/* Planos de Mídia para recursos */}
           <Collapsible open={openSections.mediaResources} onOpenChange={() => toggleSection('mediaResources')}>
