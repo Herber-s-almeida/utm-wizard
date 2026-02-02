@@ -662,6 +662,20 @@ export function AppSidebar() {
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent>
+          {/* Ver Todos os Recursos */}
+          <div className="flex items-center">
+            <Link to="/media-resources" className="flex-1">
+              <Button 
+                variant={location.pathname === '/media-resources' || location.pathname === '/resources' ? 'secondary' : 'ghost'} 
+                size="sm" 
+                className="w-full justify-start gap-2 h-8 text-xs"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                <span>Ver todos os Recursos</span>
+              </Button>
+            </Link>
+          </div>
+
           {/* Planos de Mídia para recursos */}
           <Collapsible open={openSections.mediaResources} onOpenChange={() => toggleSection('mediaResources')}>
             <CollapsibleTrigger asChild>
