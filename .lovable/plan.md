@@ -1,171 +1,115 @@
+# Plano: Redesign do Sistema de Detalhamentos de Mídia
 
-# Plano de Correção: Wizard de Formatos e Especificações
+## Status: Em Planejamento
 
-## Problemas Identificados
+## Resumo
+Substituir o sistema atual de detalhamentos (baseado em `field_schema` dinâmico) por um sistema de **blocos estruturados** com 3 tipos pré-definidos: **OOH**, **Rádio** e **TV**.
 
-### 1. Dimensões Não Estão Sendo Salvas
-**Causa raiz**: O loop que salva dimensões no `FormatWizardDialog.tsx` não trata erros de inserção individual. Se uma dimensão falha, as demais podem não ser salvas e o erro é silenciado.
+## Decisões
+- ✅ Substituir os 3 tipos existentes pelos novos
+- ✅ Campos herdados: somente leitura
+- ✅ Implementar com e sem grade simultaneamente
+- ✅ Começar com OOH, Rádio e TV
 
-**Evidência**: Consulta no banco retornou 0 registros em `specification_dimensions` para especificações recentes, enquanto `creative_type_specifications` tem os registros.
+## Análise Comparativa dos 3 Tipos
 
-### 2. Duplicatas Sendo Criadas
-**Causa raiz**: O botão "Concluir" no wizard pode ser clicado múltiplas vezes antes da primeira requisição terminar. Foram criados 7 formatos idênticos em milissegundos.
+### Blocos Compartilhados (idênticos nos 3 tipos)
 
-**Evidência**: Múltiplos registros com nome "Criar novo Formato para Anúncios Teste" criados entre 16:31:47 e 16:31:51.
+#### Bloco Campanha
+| Coluna | Tipo | Comportamento |
+|--------|------|---------------|
+| Subdivisão | readonly | Herdado do plano (ordem configurável) |
+| Momento | readonly | Herdado do plano (ordem configurável) |
+| Fase | readonly | Herdado do plano (ordem configurável) |
+| Status | select | Da biblioteca de status |
+| COD | readonly | Herdado da linha de mídia |
+| Veículo | readonly | Herdado da linha de mídia |
+| Meio | readonly | Herdado da linha de mídia |
 
----
+#### Bloco Financeiro (colapsável, quando recolhido mostra: Total Inserções + $ Total Líquido)
+| Coluna | Tipo | Fórmula |
+|--------|------|---------|
+| Tipo de contratação | text | — |
+| Total de inserções (qtd) | number/calc | Sem grade: input manual. Com grade: soma da grade |
+| $ Unitário (tabela) | currency | Input |
+| $ Total (tabela) | calc | unitário_tabela × total_inserções |
+| % Desconto Negociado | percentage | Input (pode ser vazio/zero) |
+| $ Unitário (bruto) | calc | unitário_tabela × (1 - desconto%) |
+| $ Total Negociado (bruto) | calc | unitário_bruto × total_inserções |
+| % Fee de Mídia | percentage | Input (pode ser vazio/zero) |
+| $ Fee de Mídia | calc | total_negociado_bruto × fee_midia% |
+| $ Total (Líquido) | calc | total_negociado_bruto + fee_midia |
+| Produção Estimada (qtd) | number | Input |
+| $ Produção Unitária Estimada | currency | Input |
+| $ Produção Total Estimada | calc | prod_unitária × prod_qtd |
+| % Fee de Produção | percentage | Input (pode ser vazio/zero) |
+| $ Fee de Produção | calc | prod_total × fee_prod% |
+| $ Total de Produção (líquido) | calc | prod_total + fee_prod |
+| $ Total Mídia + Produção | calc | total_líquido + total_prod_líquido |
 
-## Correções Propostas
+#### Bloco Período (fixo, sempre visível)
+| Coluna | Tipo | Regra |
+|--------|------|-------|
+| Início | date | Dentro do período do plano |
+| Fim | date | Dentro do período do plano, > Início |
+| Dias | calc | Fim - Início + 1 |
 
-### Correção 1: Prevenir Duplo Clique no Wizard
+#### Bloco Grade (quando habilitada) - Meses do Período
+- Cada mês é um bloco colapsável (+/-)
+- Colunas: dias do mês com dia da semana no header (SEG, TER, QUA...)
+- Células: input de inserções por dia
+- Dias da semana do item pintam as células correspondentes
+- Totais por dia na linha de rodapé
 
-Adicionar estado de `isSaving` para desabilitar o botão durante o salvamento:
+### Campos Específicos no Bloco "Formato e Mensagem" (colapsável, recolhido mostra só Criativo)
 
-```text
-┌─────────────────────────────────────────┐
-│ FormatWizardDialog                      │
-├─────────────────────────────────────────┤
-│ + isSaving: boolean (estado)            │
-│                                         │
-│ handleFinish():                         │
-│   ├─ Verificar se já está salvando      │
-│   ├─ Setar isSaving = true              │
-│   ├─ [operações de banco]               │
-│   └─ Setar isSaving = false no finally  │
-│                                         │
-│ Botão "Concluir":                       │
-│   disabled={isSaving}                   │
-│   {isSaving ? "Salvando..." : "Concluir"}│
-└─────────────────────────────────────────┘
-```
+#### Campos Compartilhados (todos os tipos)
+| Coluna | Tipo | Comportamento |
+|--------|------|---------------|
+| Formato | select+wizard | Dropdown da biblioteca + wizard de criação |
+| Tipo de Criativo | readonly | Herdado do Formato selecionado |
+| Dimensão | readonly | Herdado do Formato |
+| Tempo de Duração | readonly | Herdado do Formato |
+| Criativo – ID | select+wizard | Escolher existente ou criar novo |
+| Mensagem | readonly | Herdado do Criativo selecionado |
+| Obs. Mensagem | text | Input livre |
+| Dias da semana | multi-select | SEG,TER,QUA,QUI,SEX,SAB,DOM |
 
-### Correção 2: Adicionar Tratamento de Erro nas Inserções
+#### Campos Exclusivos por Tipo
+| Campo | OOH | Rádio | TV |
+|-------|-----|-------|-----|
+| Ponto de OOH | ✅ text | — | — |
+| Tipo de ponto OOH | ✅ text | — | — |
+| Localização (link) | ✅ url | — | — |
+| Programa | — | ✅ text | ✅ text |
+| Faixa Horária | — | ✅ text | ✅ text |
 
-Modificar o loop de inserção de dimensões para capturar e reportar erros:
+### Rodapé de Totais (ambos com/sem grade)
+Colunas somadas: Total inserções, $ Total (tabela), $ Total Negociado (bruto), $ Fee Mídia, $ Prod Estimada, $ Fee Produção, $ Total Produção (líq), $ Total Mídia+Produção
+Datas: Início = menor data, Fim = maior data, Dias = Fim - Início + 1
+Com grade: + Inserções do dia por coluna
 
-**Antes:**
-```typescript
-for (const dim of dimensions) {
-  await supabase.from('specification_dimensions').insert({...});
-}
-```
+## Arquitetura Técnica
 
-**Depois:**
-```typescript
-for (const dim of dimensions) {
-  const { error: dimError } = await supabase.from('specification_dimensions').insert({...});
-  if (dimError) {
-    console.error('Erro ao salvar dimensão:', dimError);
-    throw dimError;
-  }
-}
-```
+### Banco de Dados
+- Manter tabelas existentes (`line_detail_types`, `line_details`, `line_detail_items`, `line_detail_insertions`, `line_detail_line_links`)
+- Adicionar coluna `detail_category` em `line_detail_types` ('ooh' | 'radio' | 'tv' | 'custom')
+- O `field_schema` passa a ser gerado pelo código (não mais configurável pelo usuário para tipos pré-definidos)
+- `line_detail_items.data` continua JSONB, mas agora segue o schema do tipo
 
-O mesmo tratamento será aplicado para:
-- `specification_copy_fields`
-- `specification_extensions`
+### Componentes Novos
+1. **`src/utils/detailSchemas.ts`** - Definição dos schemas de blocos por tipo
+2. **`src/utils/financialCalculations.ts`** - Engine de cálculos financeiros
+3. **`src/components/media-plan/detail-blocks/CampaignBlock.tsx`** - Bloco Campanha
+4. **`src/components/media-plan/detail-blocks/FormatMessageBlock.tsx`** - Bloco Formato e Mensagem
+5. **`src/components/media-plan/detail-blocks/FinancialBlock.tsx`** - Bloco Financeiro
+6. **`src/components/media-plan/detail-blocks/PeriodBlock.tsx`** - Bloco Período
+7. **`src/components/media-plan/detail-blocks/GridBlock.tsx`** - Grade mensal inline
+8. **`src/components/media-plan/DetailBlockTable.tsx`** - Tabela principal com blocos
 
-### Correção 3: Adicionar Logs de Debug para Diagnóstico
-
-Adicionar console.log antes e depois de cada operação de salvamento para facilitar diagnóstico de problemas futuros:
-
-```typescript
-console.log('Salvando dimensões:', dimensions);
-// ... insert
-console.log('Dimensões salvas com sucesso');
-```
-
----
-
-## Arquivos a Modificar
-
-| Arquivo | Modificação |
-|---------|-------------|
-| `src/components/config/FormatWizardDialog.tsx` | Adicionar estado `isSaving`, tratar erros em cada inserção, logs de debug |
-
----
-
-## Detalhes Técnicos
-
-### FormatWizardDialog.tsx - handleFinish()
-
-```typescript
-// Adicionar estado no início do componente
-const [isSaving, setIsSaving] = useState(false);
-
-// Modificar handleFinish
-const handleFinish = async () => {
-  if (isSaving) return; // Prevenir duplo clique
-  
-  setIsSaving(true);
-  try {
-    // ... código existente ...
-    
-    // 4. Create copy fields COM tratamento de erro
-    for (const copy of copyFields) {
-      const { error: copyError } = await supabase.from('specification_copy_fields').insert({
-        specification_id: spec.id,
-        name: copy.name,
-        max_characters: copy.maxCharacters,
-        observation: copy.observation || null,
-        user_id: userId,
-        environment_id: currentEnvironmentId,
-      });
-      if (copyError) throw copyError;
-    }
-    
-    // 5. Create dimensions COM tratamento de erro
-    for (const dim of dimensions) {
-      const { error: dimError } = await supabase.from('specification_dimensions').insert({
-        specification_id: spec.id,
-        width: dim.width,
-        height: dim.height,
-        unit: dim.unit,
-        description: dim.description,
-        observation: dim.observation || null,
-        user_id: userId,
-        environment_id: currentEnvironmentId,
-      });
-      if (dimError) throw dimError;
-    }
-    
-    // 6. Create extensions COM tratamento de erro
-    for (const extId of selectedExtensions) {
-      const { error: extError } = await supabase.from('specification_extensions').insert({
-        specification_id: spec.id,
-        extension_id: extId,
-        user_id: userId,
-        environment_id: currentEnvironmentId,
-      });
-      if (extError) throw extError;
-    }
-    
-    // ... sucesso ...
-  } catch (err) {
-    console.error('Erro ao criar formato:', err);
-    toast.error('Erro ao criar formato. Verifique os dados e tente novamente.');
-  } finally {
-    setIsSaving(false);
-  }
-};
-```
-
-### Botão no DialogFooter (linha ~600)
-
-```typescript
-<Button 
-  onClick={handleFinish} 
-  disabled={isSaving}
->
-  {isSaving ? 'Salvando...' : 'Concluir'}
-</Button>
-```
-
----
-
-## Resumo das Mudanças
-
-1. **Prevenção de duplicatas**: Estado `isSaving` + verificação no início de `handleFinish`
-2. **Tratamento de erros**: Cada inserção agora verifica e propaga erros
-3. **Feedback visual**: Botão mostra "Salvando..." enquanto processa
-4. **Bloco finally**: Garante que `isSaving` volte a `false` mesmo em caso de erro
+### Fases de Implementação
+1. **Fase 1**: Migration DB + schemas + engine de cálculos
+2. **Fase 2**: Componentes de bloco sem grade
+3. **Fase 3**: Grade inline com meses colapsáveis
+4. **Fase 4**: Integração wizards (formatos/criativos)
+5. **Fase 5**: Página de configuração atualizada
