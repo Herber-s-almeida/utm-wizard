@@ -2048,12 +2048,18 @@ export type Database = {
       line_detail_items: {
         Row: {
           created_at: string | null
+          creative_id: string | null
           data: Json
+          days_of_week: string[] | null
           environment_id: string | null
+          format_id: string | null
           id: string
           is_active: boolean | null
           line_detail_id: string
+          period_end: string | null
+          period_start: string | null
           sort_order: number | null
+          status_id: string | null
           total_gross: number | null
           total_insertions: number | null
           total_net: number | null
@@ -2062,12 +2068,18 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          creative_id?: string | null
           data?: Json
+          days_of_week?: string[] | null
           environment_id?: string | null
+          format_id?: string | null
           id?: string
           is_active?: boolean | null
           line_detail_id: string
+          period_end?: string | null
+          period_start?: string | null
           sort_order?: number | null
+          status_id?: string | null
           total_gross?: number | null
           total_insertions?: number | null
           total_net?: number | null
@@ -2076,12 +2088,18 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          creative_id?: string | null
           data?: Json
+          days_of_week?: string[] | null
           environment_id?: string | null
+          format_id?: string | null
           id?: string
           is_active?: boolean | null
           line_detail_id?: string
+          period_end?: string | null
+          period_start?: string | null
           sort_order?: number | null
+          status_id?: string | null
           total_gross?: number | null
           total_insertions?: number | null
           total_net?: number | null
@@ -2090,6 +2108,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "line_detail_items_creative_id_fkey"
+            columns: ["creative_id"]
+            isOneToOne: false
+            referencedRelation: "media_creatives"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "line_detail_items_environment_id_fkey"
             columns: ["environment_id"]
             isOneToOne: false
@@ -2097,10 +2122,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "line_detail_items_format_id_fkey"
+            columns: ["format_id"]
+            isOneToOne: false
+            referencedRelation: "formats"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "line_detail_items_line_detail_id_fkey"
             columns: ["line_detail_id"]
             isOneToOne: false
             referencedRelation: "line_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "line_detail_items_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "statuses"
             referencedColumns: ["id"]
           },
         ]
@@ -2171,6 +2210,7 @@ export type Database = {
           created_at: string | null
           deleted_at: string | null
           description: string | null
+          detail_category: Database["public"]["Enums"]["detail_category"] | null
           environment_id: string | null
           field_schema: Json
           has_insertion_grid: boolean | null
@@ -2189,6 +2229,9 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          detail_category?:
+            | Database["public"]["Enums"]["detail_category"]
+            | null
           environment_id?: string | null
           field_schema?: Json
           has_insertion_grid?: boolean | null
@@ -2207,6 +2250,9 @@ export type Database = {
           created_at?: string | null
           deleted_at?: string | null
           description?: string | null
+          detail_category?:
+            | Database["public"]["Enums"]["detail_category"]
+            | null
           environment_id?: string | null
           field_schema?: Json
           has_insertion_grid?: boolean | null
@@ -4565,6 +4611,7 @@ export type Database = {
       }
     }
     Enums: {
+      detail_category: "ooh" | "radio" | "tv" | "custom"
       environment_permission_level: "none" | "view" | "edit" | "admin"
       environment_role: "owner" | "admin" | "user"
       environment_section:
@@ -4704,6 +4751,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      detail_category: ["ooh", "radio", "tv", "custom"],
       environment_permission_level: ["none", "view", "edit", "admin"],
       environment_role: ["owner", "admin", "user"],
       environment_section: [
