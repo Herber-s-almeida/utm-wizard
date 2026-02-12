@@ -18,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { 
   Plus, 
   Trash2, 
@@ -28,16 +29,21 @@ import {
   FileText,
   Link2,
   Users,
+  Grid3X3,
 } from 'lucide-react';
 import { useLineDetails, LineDetail } from '@/hooks/useLineDetails';
 import { useLineDetailTypes, LineDetailType } from '@/hooks/useLineDetailTypes';
 import { useLineDetailLinks } from '@/hooks/useLineDetailLinks';
 import { LineDetailTable } from './LineDetailTable';
+import { DetailBlockTable } from './detail-blocks/DetailBlockTable';
 import { LinkedLinesTab } from './LinkedLinesTab';
 import { InheritedContextHeader } from './InheritedContextHeader';
+import { type DetailCategory, detailTypeSchemas } from '@/utils/detailSchemas';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { useStatuses } from '@/hooks/useStatuses';
+import { useFormats } from '@/hooks/useFormatsHierarchy';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   tv: Tv,
@@ -97,10 +103,13 @@ export function LineDetailDialog({
   } = useLineDetails(mediaLineId, planId);
   
   const { types } = useLineDetailTypes();
+  const { activeItems: statusOptions } = useStatuses();
+  const { activeItems: formatOptions } = useFormats();
   
   const [activeTab, setActiveTab] = useState<string>('');
   const [showNewDetailForm, setShowNewDetailForm] = useState(false);
   const [newDetailTypeId, setNewDetailTypeId] = useState<string>('');
+  const [newDetailHasGrid, setNewDetailHasGrid] = useState(false);
   const [newMetadata, setNewMetadata] = useState<Record<string, unknown>>({});
 
   // Fetch plan lines for linking
@@ -190,6 +199,19 @@ export function LineDetailDialog({
 
   const selectedType = types.find(t => t.id === newDetailTypeId);
   const activeDetail = details.find(d => d.id === activeTab);
+
+  // Check if a detail type is block-based (OOH/Radio/TV)
+  const BLOCK_CATEGORIES: DetailCategory[] = ['ooh', 'radio', 'tv'];
+  const isBlockBasedType = (type: LineDetailType): boolean => {
+    return BLOCK_CATEGORIES.includes((type as any).detail_category as DetailCategory);
+  };
+  const getDetailCategory = (detail: LineDetail): DetailCategory | null => {
+    const dt = detail.detail_type;
+    if (!dt) return null;
+    const cat = (dt as any).detail_category as string;
+    if (BLOCK_CATEGORIES.includes(cat as DetailCategory)) return cat as DetailCategory;
+    return null;
+  };
 
   const getIcon = (iconName: string | null | undefined) => {
     const Icon = iconName ? ICON_MAP[iconName] || FileText : FileText;
@@ -391,8 +413,27 @@ export function LineDetailDialog({
                       </p>
                     </div>
 
+                    {/* Grid toggle for block-based types */}
+                    {selectedType && isBlockBasedType(selectedType) && (
+                      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                        <div className="flex items-center gap-2">
+                          <Grid3X3 className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">Grade de Inserções</p>
+                            <p className="text-xs text-muted-foreground">
+                              Habilitar calendário mensal para controle diário de inserções
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={newDetailHasGrid}
+                          onCheckedChange={setNewDetailHasGrid}
+                        />
+                      </div>
+                    )}
+
                     {/* Metadata fields - only show non-redundant ones */}
-                    {selectedType?.metadata_schema?.filter(field => 
+                    {selectedType && !isBlockBasedType(selectedType) && selectedType.metadata_schema?.filter(field => 
                       !['praca', 'veiculo', 'meio', 'canal', 'formato'].includes(field.key.toLowerCase())
                     ).map((field) => (
                       <div key={field.key} className="space-y-2">
@@ -485,15 +526,57 @@ export function LineDetailDialog({
                     </div>
 
                     <TabsContent value="items" className="flex-1 overflow-auto m-0">
-                      <LineDetailTable
-                        detail={detail}
-                        onCreateItem={(data) => createItem({ line_detail_id: detail.id, data })}
-                        onUpdateItem={updateItem}
-                        onDeleteItem={deleteItem}
-                        onUpdateInsertions={upsertInsertions}
-                        planStartDate={startDate}
-                        planEndDate={endDate}
-                      />
+                      {(() => {
+                        const detailCategory = getDetailCategory(detail);
+                        if (detailCategory) {
+                          return (
+                            <DetailBlockTable
+                              category={detailCategory}
+                              items={(detail.items || []).map(item => ({
+                                id: item.id,
+                                data: item.data as Record<string, unknown>,
+                                total_insertions: item.total_insertions,
+                                days_of_week: (item as any).days_of_week,
+                                period_start: (item as any).period_start,
+                                period_end: (item as any).period_end,
+                                format_id: (item as any).format_id,
+                                creative_id: (item as any).creative_id,
+                                status_id: (item as any).status_id,
+                                insertions: item.insertions?.map(ins => ({
+                                  insertion_date: ins.insertion_date,
+                                  quantity: ins.quantity,
+                                  line_detail_item_id: ins.line_detail_item_id,
+                                })),
+                              }))}
+                              inheritedContext={detail.inherited_context}
+                              hasGrid={detail.detail_type?.has_insertion_grid ?? false}
+                              planStartDate={startDate}
+                              planEndDate={endDate}
+                              onCreateItem={(data) => createItem({ line_detail_id: detail.id, data })}
+                              onUpdateItem={async (id, data, extras) => {
+                                await updateItem({ id, data: { ...data, ...extras } as any });
+                              }}
+                              onDeleteItem={deleteItem}
+                              onInsertionChange={(itemId, date, qty) => {
+                                // Will be handled via upsertInsertions in a future iteration
+                              }}
+                              formats={(formatOptions || []).map(f => ({ id: f.id, name: f.name }))}
+                              statuses={(statusOptions || []).map(s => ({ id: s.id, name: s.name }))}
+                            />
+                          );
+                        }
+                        return (
+                          <LineDetailTable
+                            detail={detail}
+                            onCreateItem={(data) => createItem({ line_detail_id: detail.id, data })}
+                            onUpdateItem={updateItem}
+                            onDeleteItem={deleteItem}
+                            onUpdateInsertions={upsertInsertions}
+                            planStartDate={startDate}
+                            planEndDate={endDate}
+                          />
+                        );
+                      })()}
                     </TabsContent>
 
                     <TabsContent value="links" className="flex-1 overflow-auto m-0">
