@@ -104,13 +104,97 @@ export function LineDetailDialog({
   
   const { types } = useLineDetailTypes();
   const { activeItems: statusOptions } = useStatuses();
-  const { activeItems: formatOptions } = useFormats();
+  const formats = useFormats();
+  const formatOptions = formats.activeItems;
   
   const [activeTab, setActiveTab] = useState<string>('');
   const [showNewDetailForm, setShowNewDetailForm] = useState(false);
   const [newDetailTypeId, setNewDetailTypeId] = useState<string>('');
   const [newDetailHasGrid, setNewDetailHasGrid] = useState(false);
   const [newMetadata, setNewMetadata] = useState<Record<string, unknown>>({});
+
+  // Fetch format hierarchy details for enrichment (creative_type, dimension, duration)
+  const { data: formatHierarchy } = useQuery({
+    queryKey: ['format-hierarchy-details', formatOptions?.map(f => f.id)],
+    queryFn: async () => {
+      if (!formatOptions || formatOptions.length === 0) return {};
+      const formatIds = formatOptions.map(f => f.id);
+      
+      // Fetch format_creative_types with specifications
+      const { data: fcts, error } = await supabase
+        .from('format_creative_types')
+        .select(`
+          id, name, format_id,
+          creative_type_specifications (
+            id, name, has_duration, duration_value, duration_unit
+          )
+        `)
+        .in('format_id', formatIds)
+        .is('deleted_at', null);
+      
+      if (error) throw error;
+
+      // Also fetch dimensions for specs
+      const specIds = (fcts || []).flatMap(fct => 
+        ((fct as any).creative_type_specifications || []).map((s: any) => s.id)
+      );
+      
+      let dimMap: Record<string, string> = {};
+      if (specIds.length > 0) {
+        const { data: dims } = await supabase
+          .from('specification_dimensions')
+          .select('specification_id, width, height, unit')
+          .in('specification_id', specIds)
+          .is('deleted_at', null);
+        
+        (dims || []).forEach(d => {
+          dimMap[d.specification_id] = `${d.width}x${d.height}${d.unit}`;
+        });
+      }
+
+      // Build map: formatId -> { creative_type_name, dimension, duration }
+      const result: Record<string, { creative_type_name?: string; dimension?: string; duration?: string }> = {};
+      (fcts || []).forEach((fct: any) => {
+        const specs = fct.creative_type_specifications || [];
+        const firstSpec = specs[0];
+        const dim = firstSpec ? dimMap[firstSpec.id] : undefined;
+        const dur = firstSpec?.has_duration && firstSpec?.duration_value
+          ? `${firstSpec.duration_value}${firstSpec.duration_unit || 's'}`
+          : undefined;
+        
+        result[fct.format_id] = {
+          creative_type_name: fct.name,
+          dimension: dim,
+          duration: dur,
+        };
+      });
+      
+      return result;
+    },
+    enabled: (formatOptions?.length || 0) > 0 && open,
+  });
+
+  // Fetch creatives for the media line
+  const { data: lineCreatives = [], refetch: refetchCreatives } = useQuery({
+    queryKey: ['line-creatives-for-detail', mediaLineId],
+    queryFn: async () => {
+      if (!mediaLineId) return [];
+      const { data, error } = await supabase
+        .from('media_creatives')
+        .select('id, creative_id, copy_text, name')
+        .eq('media_line_id', mediaLineId)
+        .order('created_at');
+      
+      if (error) throw error;
+      return (data || []).map(c => ({
+        id: c.id,
+        creative_id: c.creative_id || c.name,
+        message: c.copy_text,
+        copy_text: c.copy_text,
+      }));
+    },
+    enabled: !!mediaLineId && open,
+  });
 
   // Fetch plan lines for linking
   const { data: planLines = [] } = useQuery({
@@ -565,6 +649,11 @@ export function LineDetailDialog({
                               }}
                               formats={(formatOptions || []).map(f => ({ id: f.id, name: f.name }))}
                               statuses={(statusOptions || []).map(s => ({ id: s.id, name: s.name }))}
+                              creatives={lineCreatives}
+                              formatDetails={formatHierarchy || {}}
+                              mediaLineId={mediaLineId}
+                              onFormatCreated={() => formats.refetch()}
+                              onCreativeCreated={() => refetchCreatives()}
                             />
                           );
                         }

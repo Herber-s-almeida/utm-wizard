@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -7,6 +8,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 import { type ColumnDef } from '@/utils/detailSchemas';
 import { formatBRL, formatPercentage } from '@/utils/financialCalculations';
 import { format, parseISO, isValid } from 'date-fns';
@@ -21,15 +24,26 @@ interface CellRendererProps {
   readOnly?: boolean;
   /** Options for select fields */
   selectOptions?: Array<{ id: string; name: string; label?: string }>;
+  /** Callback to open a create wizard for select+create fields */
+  onCreateNew?: () => void;
 }
 
-export function CellRenderer({ column, value, isEditing, onChange, readOnly, selectOptions }: CellRendererProps) {
+export function CellRenderer({ column, value, isEditing, onChange, readOnly, selectOptions, onCreateNew }: CellRendererProps) {
   // Read-only / inherited / calculated cells always display
   if (column.inherited || column.type === 'calculated' || column.type === 'readonly' || readOnly) {
     return <span className="text-xs whitespace-nowrap">{formatDisplayValue(column, value)}</span>;
   }
 
   if (!isEditing) {
+    // For selects, show the resolved name
+    if (column.type === 'select' && selectOptions) {
+      const opt = selectOptions.find(o => o.id === value);
+      return (
+        <span className="text-xs whitespace-nowrap cursor-pointer hover:bg-muted/50 px-1 py-0.5 rounded">
+          {opt ? (opt.name || opt.label) : (value ? String(value) : '—')}
+        </span>
+      );
+    }
     return (
       <span className="text-xs whitespace-nowrap cursor-pointer hover:bg-muted/50 px-1 py-0.5 rounded">
         {formatDisplayValue(column, value)}
@@ -41,18 +55,31 @@ export function CellRenderer({ column, value, isEditing, onChange, readOnly, sel
   switch (column.type) {
     case 'select':
       return (
-        <Select value={String(value || '')} onValueChange={(v) => onChange?.(v)}>
-          <SelectTrigger className="h-7 text-xs min-w-[100px]">
-            <SelectValue placeholder="Selecione..." />
-          </SelectTrigger>
-          <SelectContent>
-            {(selectOptions || []).map((opt) => (
-              <SelectItem key={opt.id} value={opt.id}>
-                {opt.name || opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-0.5">
+          <Select value={String(value || '')} onValueChange={(v) => onChange?.(v)}>
+            <SelectTrigger className="h-7 text-xs min-w-[100px]">
+              <SelectValue placeholder="Selecione..." />
+            </SelectTrigger>
+            <SelectContent>
+              {(selectOptions || []).map((opt) => (
+                <SelectItem key={opt.id} value={opt.id}>
+                  {opt.name || opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {onCreateNew && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              title="Criar novo"
+              onClick={onCreateNew}
+            >
+              <Plus className="h-3.5 w-3.5 text-primary" />
+            </Button>
+          )}
+        </div>
       );
 
     case 'multi-select': {
