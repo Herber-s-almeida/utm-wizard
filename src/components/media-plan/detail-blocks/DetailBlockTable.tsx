@@ -1,10 +1,11 @@
 /**
  * DetailBlockTable - Main table component for block-based detail types.
  * Renders all blocks (Campaign, Format & Message, Financial, Period) as column groups,
- * supports inline editing, calculated fields, totals row, and optional grid.
+ * supports inline editing, calculated fields, totals row, optional grid,
+ * and wizard dialogs for creating new formats and creatives.
  */
 import { useState, useMemo, useCallback } from 'react';
-import { Plus, Trash2, Save, X } from 'lucide-react';
+import { Plus, Trash2, Save, X, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -21,6 +22,8 @@ import { BlockHeader } from './BlockHeader';
 import { CellRenderer } from './CellRenderer';
 import { GridBlock } from './GridBlock';
 import { type DetailItemRow, getDisplayValue, isColumnEditable } from './blockUtils';
+import { FormatWizardDialog } from '@/components/config/FormatWizardDialog';
+import { CreativeDialog } from '@/components/config/CreativeDialog';
 import { cn } from '@/lib/utils';
 import { format as fnsFormat, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -55,7 +58,14 @@ export interface DetailBlockTableProps {
   /** Reference data for select fields */
   formats?: Array<{ id: string; name: string }>;
   statuses?: Array<{ id: string; name: string }>;
-  creatives?: Array<{ id: string; creative_id: string; message: string | null }>;
+  creatives?: Array<{ id: string; creative_id: string; message: string | null; copy_text?: string | null }>;
+  /** Format detail data for enrichment (creative_type_name, dimension, duration) */
+  formatDetails?: Record<string, { creative_type_name?: string; dimension?: string; duration?: string }>;
+  /** Callbacks for wizard completion */
+  onFormatCreated?: () => void;
+  onCreativeCreated?: () => void;
+  /** Media line ID needed for creative creation */
+  mediaLineId?: string;
   readOnly?: boolean;
 }
 
@@ -74,6 +84,10 @@ export function DetailBlockTable({
   formats = [],
   statuses = [],
   creatives = [],
+  formatDetails = {},
+  onFormatCreated,
+  onCreativeCreated,
+  mediaLineId,
   readOnly = false,
 }: DetailBlockTableProps) {
   const schema = detailTypeSchemas[category];
@@ -88,6 +102,10 @@ export function DetailBlockTable({
   const [editingData, setEditingData] = useState<Record<string, unknown>>({});
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newItemData, setNewItemData] = useState<Record<string, unknown>>({});
+
+  // Wizard dialog states
+  const [showFormatWizard, setShowFormatWizard] = useState(false);
+  const [showCreativeDialog, setShowCreativeDialog] = useState(false);
 
   const toggleBlock = (key: string) => {
     setCollapsedBlocks(prev => {
@@ -143,11 +161,29 @@ export function DetailBlockTable({
       mergedData.creative_id = item.creative_id || item.data.creative_id;
       mergedData.days_of_week = item.days_of_week || item.data.days_of_week;
 
+      // Enrich format-inherited fields from formatDetails
+      const fmtId = mergedData.format_id as string;
+      if (fmtId && formatDetails[fmtId]) {
+        const fd = formatDetails[fmtId];
+        mergedData.creative_type = fd.creative_type_name || mergedData.creative_type;
+        mergedData.dimension = fd.dimension || mergedData.dimension;
+        mergedData.duration = fd.duration || mergedData.duration;
+      }
+
+      // Enrich creative-inherited fields
+      const crtId = mergedData.creative_id as string;
+      if (crtId) {
+        const crt = creatives.find(c => c.id === crtId);
+        if (crt) {
+          mergedData.message = crt.message || crt.copy_text || mergedData.message;
+        }
+      }
+
       const calculated = calculateFinancials(mergedData as DetailItemData);
 
       return { id: item.id, data: mergedData, calculated };
     });
-  }, [items, inheritedContext, hasGrid]);
+  }, [items, inheritedContext, hasGrid, formatDetails, creatives]);
 
   // Totals
   const totals = useMemo(() => {
@@ -160,6 +196,13 @@ export function DetailBlockTable({
     if (col.optionsSource === 'formats') return formats.map(f => ({ id: f.id, name: f.name }));
     if (col.optionsSource === 'creatives') return creatives.map(c => ({ id: c.id, name: c.creative_id || c.id }));
     return [];
+  };
+
+  const getCreateNewHandler = (col: ColumnDef): (() => void) | undefined => {
+    if (readOnly) return undefined;
+    if (col.key === 'format_id') return () => setShowFormatWizard(true);
+    if (col.key === 'creative_id') return () => setShowCreativeDialog(true);
+    return undefined;
   };
 
   const startEditing = (item: DetailItemRow) => {
@@ -333,6 +376,7 @@ export function DetailBlockTable({
                           readOnly={readOnly}
                           onChange={(val) => setEditingData(prev => ({ ...prev, [col.key]: val }))}
                           selectOptions={selectOptionsForColumn(col)}
+                          onCreateNew={isEditing ? getCreateNewHandler(col) : undefined}
                         />
                       </TableCell>
                     ))}
@@ -384,6 +428,7 @@ export function DetailBlockTable({
                         isEditing={isColumnEditable(col)}
                         onChange={(val) => setNewItemData(prev => ({ ...prev, [col.key]: val }))}
                         selectOptions={selectOptionsForColumn(col)}
+                        onCreateNew={getCreateNewHandler(col)}
                       />
                     </TableCell>
                   ))}
@@ -447,6 +492,25 @@ export function DetailBlockTable({
             Adicionar Item
           </Button>
         </div>
+      )}
+
+      {/* Wizard Dialogs */}
+      <FormatWizardDialog
+        open={showFormatWizard}
+        onOpenChange={setShowFormatWizard}
+        onComplete={() => onFormatCreated?.()}
+      />
+
+      {showCreativeDialog && mediaLineId && (
+        <CreativeDialog
+          open={showCreativeDialog}
+          onOpenChange={setShowCreativeDialog}
+          existingNames={creatives.map(c => c.creative_id || '')}
+          onSave={() => {
+            onCreativeCreated?.();
+            setShowCreativeDialog(false);
+          }}
+        />
       )}
     </div>
   );
