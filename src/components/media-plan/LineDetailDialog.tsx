@@ -558,7 +558,10 @@ export function LineDetailDialog({
                               }}
                               onDeleteItem={deleteItem}
                               onInsertionChange={(itemId, date, qty) => {
-                                // Will be handled via upsertInsertions in a future iteration
+                                // Local state managed inside DetailBlockTable/GridBlock
+                              }}
+                              onSaveInsertions={async (itemId, ins) => {
+                                await upsertInsertions({ item_id: itemId, insertions: ins });
                               }}
                               formats={(formatOptions || []).map(f => ({ id: f.id, name: f.name }))}
                               statuses={(statusOptions || []).map(s => ({ id: s.id, name: s.name }))}

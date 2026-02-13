@@ -51,7 +51,7 @@ export interface DetailBlockTableProps {
   onUpdateItem: (id: string, data: Record<string, unknown>, extras?: Record<string, unknown>) => Promise<void>;
   onDeleteItem: (id: string) => Promise<void>;
   onInsertionChange?: (itemId: string, date: string, quantity: number) => void;
-  onSaveInsertions?: () => Promise<void>;
+  onSaveInsertions?: (itemId: string, insertions: { date: string; quantity: number }[]) => Promise<void>;
   /** Reference data for select fields */
   formats?: Array<{ id: string; name: string }>;
   statuses?: Array<{ id: string; name: string }>;
@@ -195,7 +195,10 @@ export function DetailBlockTable({
     }
   };
 
-  // Grid insertions data
+  // Grid insertions data – mutable local state for pending changes
+  const [localInsertions, setLocalInsertions] = useState<Record<string, Record<string, number>>>({});
+
+  // Seed from server data
   const gridInsertions = useMemo(() => {
     const map: Record<string, Record<string, number>> = {};
     items.forEach(item => {
@@ -203,10 +206,30 @@ export function DetailBlockTable({
       (item.insertions || []).forEach(ins => {
         itemIns[ins.insertion_date] = ins.quantity;
       });
-      map[item.id] = itemIns;
+      map[item.id] = { ...itemIns, ...(localInsertions[item.id] || {}) };
     });
     return map;
-  }, [items]);
+  }, [items, localInsertions]);
+
+  const handleGridInsertionChange = useCallback((itemId: string, date: string, qty: number) => {
+    setLocalInsertions(prev => ({
+      ...prev,
+      [itemId]: { ...(prev[itemId] || {}), [date]: qty },
+    }));
+    onInsertionChange?.(itemId, date, qty);
+  }, [onInsertionChange]);
+
+  const handleSaveAllInsertions = useCallback(async () => {
+    if (!onSaveInsertions) return;
+    // For each item with local changes, build full insertion list and save
+    const itemIds = Object.keys(gridInsertions);
+    for (const itemId of itemIds) {
+      const all = gridInsertions[itemId];
+      const list = Object.entries(all).map(([date, quantity]) => ({ date, quantity }));
+      await onSaveInsertions(itemId, list);
+    }
+    setLocalInsertions({});
+  }, [gridInsertions, onSaveInsertions]);
 
   const formatTotalValue = (col: ColumnDef): string => {
     if (!col.showInTotals) return '';
@@ -398,19 +421,21 @@ export function DetailBlockTable({
 
         {/* Grid Block */}
         {hasGrid && enrichedItems.length > 0 && (
-          <div className="mt-2">
-            <GridBlock
-              items={enrichedItems.map(i => ({
-                id: i.id,
-                daysOfWeek: i.data.days_of_week as string[] | undefined,
-              }))}
-              insertions={gridInsertions}
-              periodStart={planStartDate || null}
-              periodEnd={planEndDate || null}
-              onInsertionChange={(itemId, date, qty) => onInsertionChange?.(itemId, date, qty)}
-              readOnly={readOnly}
-            />
-          </div>
+          <GridBlock
+            items={enrichedItems.map((i, idx) => ({
+              id: i.id,
+              label: (i.data.line_code as string) || `#${idx + 1}`,
+              daysOfWeek: i.data.days_of_week as string[] | undefined,
+              periodStart: i.data.period_start as string | undefined,
+              periodEnd: i.data.period_end as string | undefined,
+            }))}
+            insertions={gridInsertions}
+            planPeriodStart={planStartDate || null}
+            planPeriodEnd={planEndDate || null}
+            onInsertionChange={handleGridInsertionChange}
+            onSaveAll={onSaveInsertions ? handleSaveAllInsertions : undefined}
+            readOnly={readOnly}
+          />
         )}
       </div>
 
