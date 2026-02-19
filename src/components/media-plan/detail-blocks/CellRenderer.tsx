@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo } from 'react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -31,7 +31,7 @@ interface CellRendererProps {
   maxDate?: string | null;
 }
 
-export function CellRenderer({ column, value, isEditing, onChange, readOnly, selectOptions, onCreateNew, minDate, maxDate }: CellRendererProps) {
+export const CellRenderer = memo(function CellRenderer({ column, value, isEditing, onChange, readOnly, selectOptions, onCreateNew, minDate, maxDate }: CellRendererProps) {
   // Read-only / inherited / calculated cells always display
   if (column.inherited || column.type === 'calculated' || column.type === 'readonly' || readOnly) {
     return <span className="text-xs whitespace-nowrap">{formatDisplayValue(column, value)}</span>;
@@ -185,7 +185,7 @@ export function CellRenderer({ column, value, isEditing, onChange, readOnly, sel
         />
       );
   }
-}
+});
 
 function formatDisplayValue(column: ColumnDef, value: unknown): string {
   if (value === null || value === undefined || value === '') return '—';

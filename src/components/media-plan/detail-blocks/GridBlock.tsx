@@ -4,8 +4,7 @@
  * Supports auto-paint: selecting days_of_week fills matching cells with a default qty.
  * Footer shows daily totals across all items.
  */
-import { useState, useMemo, useCallback, useRef } from 'react';
-import { Input } from '@/components/ui/input';
+import { useState, useMemo, useCallback, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronRight, ChevronDown, Paintbrush, Save } from 'lucide-react';
@@ -71,7 +70,7 @@ function isDateInItemPeriod(day: Date, item: GridItem, planStart: string | null,
          (isSameDay(day, period.end) || isBefore(day, period.end));
 }
 
-export function GridBlock({
+export const GridBlock = memo(function GridBlock({
   items,
   insertions,
   planPeriodStart,
@@ -356,11 +355,11 @@ export function GridBlock({
                               {qty || ''}
                             </div>
                           ) : (
-                            <Input
+                            <input
                               type="number"
-                              min="0"
+                              min={0}
                               className={cn(
-                                "h-6 text-[10px] text-center border-0 p-0 bg-transparent focus-visible:ring-1 focus-visible:ring-primary/30 rounded-none w-full",
+                                "h-6 text-[10px] text-center border-0 p-0 bg-transparent w-full outline-none focus:ring-1 focus:ring-primary/30",
                                 isHighlighted && qty > 0 && "bg-primary/10 font-medium"
                               )}
                               value={qty || ''}
@@ -419,4 +418,4 @@ export function GridBlock({
       </div>
     </div>
   );
-}
+});
