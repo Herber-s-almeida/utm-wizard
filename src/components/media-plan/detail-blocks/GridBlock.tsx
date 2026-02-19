@@ -199,10 +199,10 @@ export const GridBlock = memo(function GridBlock({
   }
 
   return (
-    <div>
-      {/* Save bar */}
+    <div className="flex flex-col h-full">
+      {/* Save bar - outside scroll so always visible */}
       {!readOnly && (
-        <div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b sticky top-0 z-30">
+        <div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b shrink-0 z-30">
           <span className="text-[10px] font-medium text-muted-foreground">
             Grade de Inserções
             {hasChanges && (
@@ -226,9 +226,10 @@ export const GridBlock = memo(function GridBlock({
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      {/* Single scroll container for both axes */}
+      <div className="flex-1 min-h-0 overflow-auto">
         <table className="min-w-max text-[11px]">
-          <thead className="sticky top-[33px] z-20">
+          <thead className="sticky top-0 z-20">
             {/* Month headers row */}
             <tr className="bg-muted/80 backdrop-blur-sm">
               <th className="sticky left-0 z-30 bg-muted/80 border-r border-b px-2 py-1 text-left text-[10px] font-semibold min-w-[80px]">
@@ -379,9 +380,11 @@ export const GridBlock = memo(function GridBlock({
               );
             })}
 
-            {/* Day totals row */}
+          </tbody>
+          {/* Sticky totals footer */}
+          <tfoot className="sticky bottom-0 z-10">
             <tr className="bg-muted font-medium">
-              <td className="sticky left-0 z-10 bg-muted border-r border-b px-2 py-0.5 text-[10px] font-bold">
+              <td className="sticky left-0 z-20 bg-muted border-r border-t px-2 py-1 text-[10px] font-bold">
                 Inserções/dia
               </td>
               {months.map(month => {
@@ -391,7 +394,7 @@ export const GridBlock = memo(function GridBlock({
                     return sum + (dayTotals[dateStr] || 0);
                   }, 0);
                   return (
-                    <td key={`t-${month.key}`} className="border-r border-b text-center text-[10px] font-bold px-1">
+                    <td key={`t-${month.key}`} className="border-r border-t text-center text-[10px] font-bold px-1">
                       {monthTotal || ''}
                     </td>
                   );
@@ -402,18 +405,18 @@ export const GridBlock = memo(function GridBlock({
                   return (
                     <td
                       key={`t-${dateStr}`}
-                      className="border-r border-b text-center text-[10px] font-bold px-0.5 py-0.5"
+                      className="border-r border-t text-center text-[10px] font-bold px-0.5 py-1"
                     >
                       {total || ''}
                     </td>
                   );
                 });
               })}
-              <td className="border-b text-center text-[10px] font-bold px-2">
+              <td className="border-t text-center text-[10px] font-bold px-2">
                 {Object.values(dayTotals).reduce((s, q) => s + q, 0) || ''}
               </td>
             </tr>
-          </tbody>
+          </tfoot>
         </table>
       </div>
     </div>

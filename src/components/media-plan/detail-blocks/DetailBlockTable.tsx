@@ -484,11 +484,11 @@ export const DetailBlockTable = memo(function DetailBlockTable({
 
       {/* ── Bottom panel: insertion grid with its own scroll ── */}
       {hasGrid && enrichedItems.length > 0 && (
-        <div className="flex-1 min-h-[250px] overflow-auto border-t">
+        <div className="flex-1 min-h-[250px] overflow-hidden border-t">
           <GridBlock
             items={enrichedItems.map((i, idx) => ({
               id: i.id,
-              label: (i.data.line_code as string) || `#${idx + 1}`,
+              label: (i.data.detail_code as string) || (i.data.line_code as string) || `#${idx + 1}`,
               daysOfWeek: i.data.days_of_week as string[] | undefined,
               periodStart: i.data.period_start as string | undefined,
               periodEnd: i.data.period_end as string | undefined,
