@@ -1,51 +1,52 @@
 
-# Correcao do Loop Infinito de Renderizacao na Pagina do Plano de Midia
+# Ativar o Sistema de Detalhamento por Blocos (OOH, Radio, TV)
 
-## Diagnostico
+## Problema Identificado
 
-O problema raiz foi identificado: existem **5 componentes React definidos DENTRO** da funcao `HierarchicalMediaTable`. Isso faz com que, a cada re-render do componente pai, React trate cada componente interno como um **tipo novo**, causando unmount/remount completo de toda a arvore de componentes.
+Toda a infraestrutura de detalhamento por blocos ja esta construida no codigo (schemas, motor financeiro, grade de insercoes, renderizadores de celula). Porem, os tipos de detalhamento no banco de dados estao com `detail_category = 'custom'` em vez de `'ooh'`, `'radio'`, `'tv'`. Isso faz com que o sistema ignore a tabela de blocos e use a tabela antiga (generica).
 
-O ciclo de loop funciona assim:
-1. `HierarchicalMediaTable` renderiza e cria novos tipos para `DynamicHierarchyRenderer`, `MonthBudgetCell`, `BudgetCard`, `AddLineButton` e `EditableCell`
-2. React desmonta toda a arvore anterior e monta uma nova
-3. Cada `LineDetailButton` (que esta dentro das linhas) remonta e dispara queries `useLineDetails` e `useLineLinksForLine`
-4. As queries completam, causam state updates no react-query, que disparam um novo render
-5. Volta ao passo 1 -- loop infinito
-
-Os logs de rede confirmam: as mesmas queries `line_detail_line_links` repetem-se para os mesmos IDs de linha a cada ~2 segundos.
+Alem disso, o hook `useLineDetailTypes` nao envia o campo `detail_category` ao criar/atualizar tipos, impedindo que novos tipos sejam criados com a categoria correta.
 
 ## Solucao
 
-### 1. Extrair componentes internos para fora de `HierarchicalMediaTable`
+### Passo 1 - Corrigir dados existentes no banco
 
-Mover os 5 componentes definidos dentro do corpo da funcao para o escopo do modulo (fora da funcao), recebendo os dados necessarios via props:
+Atualizar os 3 tipos de detalhamento existentes para usar as categorias corretas:
 
-- **`MonthBudgetCell`** (linha ~901): usa `useAuth()`, `supabase`, `formatCurrency`. Extrair como componente externo com props para `lineId`, `month`, `value`, `onUpdate`, `isEditable`, `formatCurrency`
-- **`EditableCell`** (linha ~1026): usa `isEditingField`, `saveFieldEdit`, `cancelFieldEdit`, `startEditingField`, `setEditValue`, `editValue`. Extrair com props
-- **`BudgetCard`** (linha ~1128): componente puro de apresentacao. Extrair com props `label`, `planned`, `allocated`, `percentageLabel`
-- **`AddLineButton`** (linha ~1206): usa `showNewLineButtons`, `onAddLine`. Extrair com props
-- **`DynamicHierarchyRenderer`** (linha ~1494): componente recursivo. Extrair com props para todas as dependencias (ja recebe via props interface)
+- "OOH / Midia Exterior" (id: c681d3ef...) -> `detail_category = 'ooh'`
+- "Radio" (id: 4f37a7cc...) -> `detail_category = 'radio'`
+- "TV Aberta" (id: fc318b33...) -> `detail_category = 'tv'`
 
-### 2. Adicionar `staleTime` aos hooks de detalhamento
+### Passo 2 - Corrigir o hook useLineDetailTypes
 
-Para evitar refetches desnecessarios quando os componentes re-renderizam:
+Incluir o campo `detail_category` nas operacoes de insert e update, para que futuros tipos possam ser criados com a categoria correta.
 
-- `useLineDetails` (queryKey `line-details`): adicionar `staleTime: 30000` (30s)
-- `useLineLinksForLine` (queryKey `line-links-for-line`): adicionar `staleTime: 30000` (30s)
+### Passo 3 - Corrigir o BlockHeader para blocos nao collapsiveis
 
-### 3. Estabilizar referencia de `linesWithAlerts` em `usePlanAlerts`
+O componente `BlockHeader` retorna `null` quando o bloco nao e collapsible (ex: Campanha, Periodo). Isso faz com que esses blocos nao exibam seu titulo na linha de cabecalho. Precisa renderizar um `<th>` simples com o label mesmo quando nao e collapsible.
 
-O `Set` criado na linha 341 do `usePlanAlerts.ts` e recriado a cada chamada sem `useMemo`. Envolver com `useMemo` dependendo de `alerts`.
+### Passo 4 - Validar fluxo de criacao no LineDetailDialog
+
+Garantir que ao criar um novo detalhamento com tipo OOH/Radio/TV, o campo `has_insertion_grid` do detalhamento seja salvo corretamente (ja existe o toggle de grade no formulario de criacao, que precisa ser persistido no `metadata` ou diretamente no campo do banco).
 
 ## Detalhes Tecnicos
 
 ### Arquivos a serem editados:
-- `src/components/media-plan/HierarchicalMediaTable.tsx` -- extrair 5 componentes para fora da funcao principal
-- `src/hooks/useLineDetails.ts` -- adicionar `staleTime: 30000` na query
-- `src/hooks/useLineDetailLinks.ts` -- adicionar `staleTime: 30000` na query `useLineLinksForLine`
-- `src/hooks/usePlanAlerts.ts` -- envolver `linesWithAlerts` com `useMemo`
+
+1. **`src/hooks/useLineDetailTypes.ts`** - Adicionar `detail_category` ao payload de `createMutation` e `updateMutation`
+2. **`src/components/media-plan/detail-blocks/BlockHeader.tsx`** - Renderizar cabecalho para blocos nao collapsiveis (Campanha, Periodo)
+3. **`src/components/media-plan/LineDetailDialog.tsx`** - Persistir `has_insertion_grid` do toggle na criacao do detalhamento (passar para `createDetail`)
+
+### Dados a serem atualizados no banco:
+
+- UPDATE em 3 registros da tabela `line_detail_types` para corrigir `detail_category`
 
 ### Impacto:
-- Os componentes extraidos manterao exatamente o mesmo comportamento visual
-- As queries de detalhamento continuarao funcionando, mas sem refetches desnecessarios
-- O loop infinito sera eliminado porque React reconhecera os componentes como o mesmo tipo entre renders
+
+- Ao abrir o dialog de detalhamento de uma linha, os tipos OOH/Radio/TV passarao a usar o `DetailBlockTable` com:
+  - Blocos collapsiveis (Formato e Mensagem, Financeiro)
+  - Campos herdados automaticamente (subdivisao, momento, fase, veiculo, meio, COD)
+  - Motor financeiro com calculos automaticos (bruto, liquido, fees, producao)
+  - Grade de insercoes mensal com auto-paint por dias da semana
+  - Rodape com totalizadores
+- Tipos personalizados continuarao usando a tabela generica existente
