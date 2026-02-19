@@ -23,6 +23,8 @@ export interface DetailItemRow {
   data: Record<string, unknown>;
   calculated: CalculatedValues;
   isNew?: boolean;
+  readOnly?: boolean;
+  sourceLineCode?: string;
 }
 
 /**
