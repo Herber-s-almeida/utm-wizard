@@ -266,12 +266,19 @@ export default function LineDetailPage() {
 
   const handleCreateDetail = useCallback(async () => {
     if (!newDetailTypeId) return;
+
+    // Generate sequential detail code: lineCode_001, lineCode_002, ...
+    const existingCount = details.filter(d => d.detail_type_id === newDetailTypeId).length;
+    const seqNumber = String(existingCount + 1).padStart(3, '0');
+    const detailCode = lineCode ? `${lineCode}_${seqNumber}` : `DET_${seqNumber}`;
+
     const autoName = selectedType
-      ? `${selectedType.name}${lineCode ? ` - ${lineCode}` : ''}`
-      : undefined;
+      ? `${selectedType.name} - ${detailCode}`
+      : detailCode;
     try {
       const metadata: Record<string, unknown> = {
         ...newMetadata,
+        detail_code: detailCode,
         ...(selectedType && isBlockBasedType(selectedType) ? { has_insertion_grid: newDetailHasGrid } : {}),
       };
       const result = await createDetail({
@@ -287,7 +294,7 @@ export default function LineDetailPage() {
     } catch (error) {
       console.error('Error creating detail:', error);
     }
-  }, [newDetailTypeId, selectedType, lineCode, newMetadata, newDetailHasGrid, createDetail, inheritedContext]);
+  }, [newDetailTypeId, selectedType, lineCode, newMetadata, newDetailHasGrid, createDetail, inheritedContext, details]);
 
   const handleDeleteDetail = useCallback(async (detailId: string) => {
     try {
@@ -469,8 +476,10 @@ export default function LineDetailPage() {
 
                     {selectedType && lineCode && (
                       <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-                        <p className="text-xs text-muted-foreground mb-1">Nome do detalhamento:</p>
-                        <p className="font-medium text-sm">{selectedType.name} - {lineCode}</p>
+                        <p className="text-xs text-muted-foreground mb-1">Código do detalhamento:</p>
+                        <p className="font-mono font-medium text-sm">
+                          {lineCode}_{String(details.filter(d => d.detail_type_id === newDetailTypeId).length + 1).padStart(3, '0')}
+                        </p>
                       </div>
                     )}
 
