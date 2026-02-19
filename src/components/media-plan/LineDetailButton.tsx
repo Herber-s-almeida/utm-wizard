@@ -8,7 +8,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { useLineDetails } from '@/hooks/useLineDetails';
 import { useLineLinksForLine } from '@/hooks/useLineDetailLinks';
 import { LineDetailDialog } from './LineDetailDialog';
 
@@ -21,7 +20,6 @@ export interface LineDetailButtonProps {
   lineCode?: string;
   platform?: string;
   className?: string;
-  // Context for inheritance
   vehicleName?: string;
   mediumName?: string;
   channelName?: string;
@@ -49,21 +47,11 @@ export function LineDetailButton({
   formatName,
 }: LineDetailButtonProps) {
   const [open, setOpen] = useState(false);
-  const { details } = useLineDetails(mediaLineId);
+  // Only use the lightweight links query for badge count — no heavy detail fetching
   const { data: lineLinks } = useLineLinksForLine(mediaLineId);
   
-  const detailsCount = details?.length || 0;
   const linksCount = lineLinks?.length || 0;
-
-  // Check if any linked detail is shared (has multiple links)
-  const hasSharedDetails = lineLinks?.some(link => {
-    // This would require additional data, for now just check if we have links
-    return linksCount > 0;
-  });
-
-  // Determine icon state
-  const hasDetails = detailsCount > 0 || linksCount > 0;
-  const totalCount = Math.max(detailsCount, linksCount);
+  const hasDetails = linksCount > 0;
 
   return (
     <>
@@ -82,55 +70,49 @@ export function LineDetailButton({
               setOpen(true);
             }}
           >
-            {hasSharedDetails ? (
+            {hasDetails ? (
               <Link2 className="h-3 w-3" />
             ) : (
-              <FileSpreadsheet className={cn(
-                "h-3 w-3",
-                hasDetails && "fill-primary/20"
-              )} />
+              <FileSpreadsheet className="h-3 w-3" />
             )}
-            {totalCount > 0 && (
+            {linksCount > 0 && (
               <Badge 
-                variant={hasSharedDetails ? "default" : "secondary"}
-                className={cn(
-                  "absolute -top-1 -right-1 h-3.5 min-w-3.5 px-0.5 text-[9px] font-medium",
-                  hasSharedDetails && "bg-primary"
-                )}
+                variant="secondary"
+                className="absolute -top-1 -right-1 h-3.5 min-w-3.5 px-0.5 text-[9px] font-medium"
               >
-                {totalCount}
+                {linksCount}
               </Badge>
             )}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          {totalCount > 0 
-            ? hasSharedDetails
-              ? `${totalCount} detalhamento${totalCount > 1 ? 's' : ''} (compartilhado)`
-              : `${totalCount} detalhamento${totalCount > 1 ? 's' : ''}`
+          {linksCount > 0 
+            ? `${linksCount} detalhamento${linksCount > 1 ? 's' : ''}`
             : 'Adicionar detalhamento'
           }
         </TooltipContent>
       </Tooltip>
 
-      <LineDetailDialog
-        open={open}
-        onOpenChange={setOpen}
-        mediaLineId={mediaLineId}
-        planId={planId}
-        startDate={startDate}
-        endDate={endDate}
-        lineBudget={lineBudget}
-        lineCode={lineCode}
-        platform={platform}
-        vehicleName={vehicleName}
-        mediumName={mediumName}
-        channelName={channelName}
-        subdivisionName={subdivisionName}
-        momentName={momentName}
-        funnelStageName={funnelStageName}
-        formatName={formatName}
-      />
+      {open && (
+        <LineDetailDialog
+          open={open}
+          onOpenChange={setOpen}
+          mediaLineId={mediaLineId}
+          planId={planId}
+          startDate={startDate}
+          endDate={endDate}
+          lineBudget={lineBudget}
+          lineCode={lineCode}
+          platform={platform}
+          vehicleName={vehicleName}
+          mediumName={mediumName}
+          channelName={channelName}
+          subdivisionName={subdivisionName}
+          momentName={momentName}
+          funnelStageName={funnelStageName}
+          formatName={formatName}
+        />
+      )}
     </>
   );
 }
