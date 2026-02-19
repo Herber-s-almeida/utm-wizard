@@ -338,7 +338,7 @@ export function usePlanAlerts({
   }, [alerts]);
 
   // Get lines with alerts
-  const linesWithAlerts = new Set(alerts.filter(a => a.lineId).map(a => a.lineId));
+  const linesWithAlerts = useMemo(() => new Set(alerts.filter(a => a.lineId).map(a => a.lineId)), [alerts]);
 
   return {
     alerts,
