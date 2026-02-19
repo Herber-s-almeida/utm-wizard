@@ -26,9 +26,12 @@ interface CellRendererProps {
   selectOptions?: Array<{ id: string; name: string; label?: string }>;
   /** Callback to open a create wizard for select+create fields */
   onCreateNew?: () => void;
+  /** Date constraints for period validation */
+  minDate?: string | null;
+  maxDate?: string | null;
 }
 
-export function CellRenderer({ column, value, isEditing, onChange, readOnly, selectOptions, onCreateNew }: CellRendererProps) {
+export function CellRenderer({ column, value, isEditing, onChange, readOnly, selectOptions, onCreateNew, minDate, maxDate }: CellRendererProps) {
   // Read-only / inherited / calculated cells always display
   if (column.inherited || column.type === 'calculated' || column.type === 'readonly' || readOnly) {
     return <span className="text-xs whitespace-nowrap">{formatDisplayValue(column, value)}</span>;
@@ -155,6 +158,8 @@ export function CellRenderer({ column, value, isEditing, onChange, readOnly, sel
           type="date"
           className="h-7 text-xs w-[120px]"
           value={String(value || '')}
+          min={minDate || undefined}
+          max={maxDate || undefined}
           onChange={(e) => onChange?.(e.target.value || null)}
         />
       );

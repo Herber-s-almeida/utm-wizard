@@ -324,13 +324,22 @@ export function useLineDetails(mediaLineId: string | undefined, planId?: string)
     mutationFn: async (input: { line_detail_id: string; data: Record<string, unknown> }) => {
       if (!user?.id || !currentEnvironmentId) throw new Error('User not found');
 
+      // Extract actual DB columns from data
+      const { status_id, format_id, creative_id, days_of_week, period_start, period_end, ...jsonData } = input.data;
+
       const { data: result, error } = await supabase
         .from('line_detail_items')
         .insert({
           line_detail_id: input.line_detail_id,
           user_id: user.id,
           environment_id: currentEnvironmentId,
-          data: input.data as Json,
+          data: jsonData as Json,
+          status_id: (status_id as string) || null,
+          format_id: (format_id as string) || null,
+          creative_id: (creative_id as string) || null,
+          days_of_week: (days_of_week as string[]) || null,
+          period_start: (period_start as string) || null,
+          period_end: (period_end as string) || null,
         })
         .select()
         .single();
@@ -354,9 +363,20 @@ export function useLineDetails(mediaLineId: string | undefined, planId?: string)
         ...rest,
         updated_at: new Date().toISOString(),
       };
+
+      // Extract actual DB columns from data if present
       if (data !== undefined) {
-        updateData.data = data as Json;
+        const { status_id, format_id, creative_id, days_of_week, period_start, period_end, ...jsonData } = data;
+        updateData.data = jsonData as Json;
+        // Only set actual columns if they were provided
+        if (status_id !== undefined) updateData.status_id = (status_id as string) || null;
+        if (format_id !== undefined) updateData.format_id = (format_id as string) || null;
+        if (creative_id !== undefined) updateData.creative_id = (creative_id as string) || null;
+        if (days_of_week !== undefined) updateData.days_of_week = (days_of_week as string[]) || null;
+        if (period_start !== undefined) updateData.period_start = (period_start as string) || null;
+        if (period_end !== undefined) updateData.period_end = (period_end as string) || null;
       }
+
       // Remove computed fields
       delete updateData.insertions;
       

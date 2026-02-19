@@ -643,7 +643,9 @@ export function LineDetailDialog({
                               planEndDate={endDate}
                               onCreateItem={(data) => createItem({ line_detail_id: detail.id, data })}
                               onUpdateItem={async (id, data, extras) => {
-                                await updateItem({ id, data: { ...data, ...extras } as any });
+                                // Merge extras (status_id, format_id, etc.) into data so useLineDetails can extract them as actual DB columns
+                                const mergedData = { ...data, ...(extras || {}) };
+                                await updateItem({ id, data: mergedData as any });
                               }}
                               onDeleteItem={deleteItem}
                               onInsertionChange={(itemId, date, qty) => {
