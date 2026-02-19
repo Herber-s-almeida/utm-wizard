@@ -198,6 +198,475 @@ interface HierarchyNode {
 
 type EditingField = 'budget' | 'start_date' | 'end_date' | 'line_code' | null;
 
+// =====================================================
+// Components extracted to module scope to prevent
+// infinite render loops (React treats inner components
+// as new types on every render)
+// =====================================================
+
+const MonthBudgetCell = ({
+  lineId,
+  line,
+  month,
+  value,
+  onUpdate,
+  isEditable,
+  formatCurrency: formatCurrencyFn,
+}: {
+  lineId: string;
+  line: MediaLine;
+  month: Date;
+  value: number;
+  onUpdate: () => void;
+  isEditable: boolean;
+  formatCurrency: (v: number) => string;
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editVal, setEditVal] = useState(String(value));
+  const { user } = useAuth();
+
+  const handleSave = async () => {
+    if (!user?.id) return;
+    
+    const newAmount = parseFloat(editVal) || 0;
+    const monthStr = format(month, 'yyyy-MM-01');
+    
+    try {
+      const { data: existing } = await supabase
+        .from('media_line_monthly_budgets')
+        .select('id')
+        .eq('media_line_id', lineId)
+        .eq('month_date', monthStr)
+        .maybeSingle();
+      
+      if (existing) {
+        await supabase
+          .from('media_line_monthly_budgets')
+          .update({ amount: newAmount })
+          .eq('id', existing.id);
+      } else if (newAmount > 0) {
+        await supabase
+          .from('media_line_monthly_budgets')
+          .insert({
+            media_line_id: lineId,
+            user_id: user.id,
+            month_date: monthStr,
+            amount: newAmount,
+          });
+      }
+      
+      onUpdate();
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error saving monthly budget:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar o orçamento mensal.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    const sanitized = rawValue.replace(/[^\d.,]/g, '').replace(',', '.');
+    setEditVal(sanitized);
+  };
+
+  if (!isEditable) {
+    return (
+      <div className="w-[90px] p-2 border-r shrink-0 bg-muted/50 text-xs text-muted-foreground">
+        <span>{value > 0 ? formatCurrencyFn(value) : '-'}</span>
+      </div>
+    );
+  }
+
+  if (isEditing) {
+    return (
+      <div className="w-[90px] p-1 border-r shrink-0 bg-primary/5">
+        <div className="flex items-center gap-0.5">
+          <Input
+            type="text"
+            inputMode="decimal"
+            value={editVal}
+            onChange={handleInputChange}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSave();
+              if (e.key === 'Escape') setIsEditing(false);
+            }}
+            className="h-6 text-xs px-1"
+            autoFocus
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 text-success hover:text-success shrink-0"
+            onClick={handleSave}
+          >
+            <Check className="w-3 h-3" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="w-[90px] p-2 border-r shrink-0 bg-primary/5 text-xs cursor-pointer hover:bg-primary/10 transition-colors group"
+      onClick={() => {
+        setEditVal(String(value));
+        setIsEditing(true);
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <span>{value > 0 ? formatCurrencyFn(value) : '-'}</span>
+        <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 text-muted-foreground" />
+      </div>
+    </div>
+  );
+};
+
+const EditableCell = ({ 
+  line, 
+  field, 
+  displayValue, 
+  inputType = 'text',
+  width,
+  duplicateMoments,
+  isEditing,
+  editValue,
+  onStartEditing,
+  onSave,
+  onCancel,
+  onChangeValue,
+}: { 
+  line: MediaLine; 
+  field: EditingField; 
+  displayValue: string;
+  inputType?: 'text' | 'number' | 'date';
+  width: number;
+  duplicateMoments?: string[];
+  isEditing: boolean;
+  editValue: string;
+  onStartEditing: (line: MediaLine, field: EditingField) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onChangeValue: (value: string) => void;
+}) => {
+  const hasDuplicates = duplicateMoments && duplicateMoments.length > 0;
+  
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    if (field === 'line_code') {
+      value = value.slice(0, 10);
+    }
+    if (inputType === 'number') {
+      value = value.replace(/[^\d.,]/g, '').replace(',', '.');
+    }
+    onChangeValue(value);
+  };
+
+  return (
+    <div className="p-2 border-r shrink-0 group relative" style={{ width }}>
+      {isEditing ? (
+        <div className="flex items-center gap-1">
+          <Input
+            type={inputType === 'number' ? 'text' : inputType}
+            inputMode={inputType === 'number' ? 'decimal' : undefined}
+            className="h-6 text-xs px-1 w-full"
+            value={editValue}
+            onChange={handleEditChange}
+            maxLength={field === 'line_code' ? 10 : undefined}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onSave();
+              if (e.key === 'Escape') onCancel();
+            }}
+            autoFocus
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 text-success hover:text-success shrink-0"
+            onClick={onSave}
+          >
+            <Check className="w-3 h-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 shrink-0"
+            onClick={onCancel}
+          >
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-1">
+          <div className="flex items-center gap-1 min-w-0">
+            <span className={cn(
+              field === 'budget' ? 'font-medium' : '',
+              'truncate'
+            )}>{displayValue}</span>
+            {field === 'line_code' && hasDuplicates && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center justify-center shrink-0">
+                    <Link2 className="w-3.5 h-3.5 text-primary" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="font-medium text-sm">Linha em múltiplos momentos</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Este código também existe em: {duplicateMoments.join(', ')}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            onClick={() => onStartEditing(line, field)}
+          >
+            <Pencil className="w-3 h-3" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const BudgetCard = ({ 
+  label, 
+  planned, 
+  allocated, 
+  percentageLabel,
+  description,
+  startDate,
+  endDate,
+  formatCurrency: formatCurrencyFn,
+  formatDate: formatDateFn,
+}: { 
+  label: string;
+  planned: number;
+  allocated: number;
+  percentageLabel?: string;
+  description?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  formatCurrency: (v: number) => string;
+  formatDate: (d: string | null) => string;
+}) => {
+  const isOverBudget = allocated > planned;
+  const overBudgetAmount = allocated - planned;
+  
+  const getDateRangeDisplay = () => {
+    if (!startDate && !endDate) return null;
+    const start = startDate ? formatDateFn(startDate) : '...';
+    const end = endDate ? formatDateFn(endDate) : '...';
+    return `${start} - ${end}`;
+  };
+  
+  return (
+    <div className="border rounded-lg p-2 h-full">
+      <div className="font-medium text-sm">{label}</div>
+      {getDateRangeDisplay() && (
+        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+          <span>📅</span>
+          <span>{getDateRangeDisplay()}</span>
+        </div>
+      )}
+      <div className="text-lg font-bold mt-1">{formatCurrencyFn(planned)}</div>
+      <div className={cn(
+        "text-sm font-medium mt-1 flex items-center gap-1",
+        isOverBudget ? "text-destructive" : "text-primary"
+      )}>
+        <span>{formatCurrencyFn(allocated)}</span>
+        <span className="text-xs font-normal">alocado</span>
+        {isOverBudget && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button 
+                type="button" 
+                className="inline-flex items-center justify-center focus:outline-none"
+                aria-label="Orçamento excedido"
+              >
+                <AlertTriangle className="w-4 h-4 text-destructive animate-pulse" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              <p className="text-sm font-medium">Orçamento excedido!</p>
+              <p className="text-xs text-muted-foreground">
+                O valor alocado está {formatCurrencyFn(overBudgetAmount)} acima do planejado.
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+      {percentageLabel && (
+        <div className="text-xs text-muted-foreground mt-1">
+          {percentageLabel}
+        </div>
+      )}
+      {description && (
+        <div className="text-xs text-muted-foreground mt-2 line-clamp-2">
+          ({description})
+        </div>
+      )}
+    </div>
+  );
+};
+
+const AddLineButton = ({ 
+  subdivisionId, 
+  momentId, 
+  funnelStageId,
+  showNewLineButtons,
+  onAddLine,
+}: { 
+  subdivisionId: string | undefined;
+  momentId: string | undefined;
+  funnelStageId: string | undefined;
+  showNewLineButtons: boolean;
+  onAddLine: (prefill?: { subdivisionId?: string; momentId?: string; funnelStageId?: string }) => void;
+}) => {
+  if (!showNewLineButtons) return null;
+  
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="w-full h-8 text-xs border-dashed border-primary text-primary hover:bg-primary/10 justify-start gap-1 pl-3"
+      onClick={() => onAddLine({ subdivisionId, momentId, funnelStageId })}
+    >
+      <Plus className="w-3 h-3 shrink-0" />
+      <span className="truncate">Criar nova Linha</span>
+    </Button>
+  );
+};
+
+interface DynamicHierarchyRendererProps {
+  nodes: HierarchyTreeNode[];
+  hierarchyOrder: HierarchyLevel[];
+  pathMap: Map<HierarchyLevel, string | null>;
+  levelIndex: number;
+  parentName: string;
+  visibleColumns: Record<ToggleableColumn, boolean>;
+  dynamicMinWidths: MinWidthOverrides;
+  getWidth: (key: ColumnKey) => number;
+  getFilteredLinesForPath: (pathMap: Map<HierarchyLevel, string | null>) => MediaLine[];
+  buildPrefillFromPath: (pathMap: Map<HierarchyLevel, string | null>) => { subdivisionId?: string; momentId?: string; funnelStageId?: string };
+  onAddLine: (prefill?: { subdivisionId?: string; momentId?: string; funnelStageId?: string }) => void;
+  renderLineRow: (line: MediaLine) => React.ReactNode;
+  showNewLineButtons: boolean;
+  formatCurrency: (v: number) => string;
+  formatDate: (d: string | null) => string;
+}
+
+const DynamicHierarchyRenderer = ({
+  nodes,
+  hierarchyOrder,
+  pathMap,
+  levelIndex,
+  parentName,
+  visibleColumns,
+  dynamicMinWidths,
+  getWidth,
+  getFilteredLinesForPath,
+  buildPrefillFromPath,
+  onAddLine,
+  renderLineRow,
+  showNewLineButtons,
+  formatCurrency: formatCurrencyFn,
+  formatDate: formatDateFn,
+}: DynamicHierarchyRendererProps) => {
+  const currentLevel = hierarchyOrder[levelIndex];
+  const isLastLevel = levelIndex === hierarchyOrder.length - 1;
+  
+  return (
+    <>
+      {nodes.map((node, nodeIdx) => {
+        const currentPath = new Map(pathMap);
+        currentPath.set(currentLevel, node.data.id);
+        
+        const nodeLines = isLastLevel ? getFilteredLinesForPath(currentPath) : [];
+        const prefill = buildPrefillFromPath(currentPath);
+        
+        return (
+          <div key={node.data.distId || `node-${nodeIdx}`} className="flex">
+            {visibleColumns[currentLevel] && (
+              <div 
+                className="p-2 border-r bg-background shrink-0" 
+                style={{ width: getWidth(currentLevel), minWidth: dynamicMinWidths[currentLevel] }}
+              >
+                <BudgetCard
+                  label={node.data.name}
+                  planned={node.data.planned}
+                  allocated={node.data.allocated}
+                  percentageLabel={`${node.data.percentage.toFixed(0)}% de ${parentName}`}
+                  formatCurrency={formatCurrencyFn}
+                  formatDate={formatDateFn}
+                />
+              </div>
+            )}
+            
+            <div className="flex-1 divide-y">
+              {isLastLevel ? (
+                <>
+                  {nodeLines.map(line => renderLineRow(line))}
+                  <div className="p-2">
+                    <AddLineButton
+                      subdivisionId={prefill.subdivisionId}
+                      momentId={prefill.momentId}
+                      funnelStageId={prefill.funnelStageId}
+                      showNewLineButtons={showNewLineButtons}
+                      onAddLine={onAddLine}
+                    />
+                  </div>
+                </>
+              ) : (
+                node.children.length > 0 ? (
+                  <DynamicHierarchyRenderer
+                    nodes={node.children}
+                    hierarchyOrder={hierarchyOrder}
+                    pathMap={currentPath}
+                    levelIndex={levelIndex + 1}
+                    parentName={node.data.name}
+                    visibleColumns={visibleColumns}
+                    dynamicMinWidths={dynamicMinWidths}
+                    getWidth={getWidth}
+                    getFilteredLinesForPath={getFilteredLinesForPath}
+                    buildPrefillFromPath={buildPrefillFromPath}
+                    onAddLine={onAddLine}
+                    renderLineRow={renderLineRow}
+                    showNewLineButtons={showNewLineButtons}
+                    formatCurrency={formatCurrencyFn}
+                    formatDate={formatDateFn}
+                  />
+                ) : (
+                  <>
+                    {getFilteredLinesForPath(currentPath).map(line => renderLineRow(line))}
+                    <div className="p-2">
+                      <AddLineButton
+                        subdivisionId={prefill.subdivisionId}
+                        momentId={prefill.momentId}
+                        funnelStageId={prefill.funnelStageId}
+                        showNewLineButtons={showNewLineButtons}
+                        onAddLine={onAddLine}
+                      />
+                    </div>
+                  </>
+                )
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+};
+
 export function HierarchicalMediaTable({
   plan,
   lines,
@@ -897,335 +1366,25 @@ export function HierarchicalMediaTable({
     return editingLineId === lineId && editingField === field;
   };
 
-  // Month Budget Cell Component for editing monthly budgets
-  const MonthBudgetCell = ({
-    lineId,
-    line,
-    month,
-    value,
-    onUpdate,
-    isEditable,
-  }: {
-    lineId: string;
-    line: MediaLine;
-    month: Date;
-    value: number;
-    onUpdate: () => void;
-    isEditable: boolean;
-  }) => {
-    const [isEditing, setIsEditing] = useState(false);
-    const [editVal, setEditVal] = useState(String(value));
-    const { user } = useAuth();
+  // MonthBudgetCell, EditableCell, BudgetCard, AddLineButton, DynamicHierarchyRenderer
+  // are now defined at module scope (above) to prevent React from treating them as new
+  // component types on every render, which was causing infinite render loops.
 
-    const handleSave = async () => {
-      if (!user?.id) return;
-      
-      const newAmount = parseFloat(editVal) || 0;
-      const monthStr = format(month, 'yyyy-MM-01');
-      
-      try {
-        // Check if record exists
-        const { data: existing } = await supabase
-          .from('media_line_monthly_budgets')
-          .select('id')
-          .eq('media_line_id', lineId)
-          .eq('month_date', monthStr)
-          .maybeSingle();
-        
-        if (existing) {
-          // Update existing
-          await supabase
-            .from('media_line_monthly_budgets')
-            .update({ amount: newAmount })
-            .eq('id', existing.id);
-        } else if (newAmount > 0) {
-          // Insert new
-          await supabase
-            .from('media_line_monthly_budgets')
-            .insert({
-              media_line_id: lineId,
-              user_id: user.id,
-              month_date: monthStr,
-              amount: newAmount,
-            });
-        }
-        
-        onUpdate();
-        setIsEditing(false);
-      } catch (error) {
-        console.error('Error saving monthly budget:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível salvar o orçamento mensal.",
-          variant: "destructive",
-        });
-      }
-    };
+  // EditableCell is now at module scope
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const rawValue = e.target.value;
-      // Allow empty, digits, comma and dot for decimal
-      const sanitized = rawValue.replace(/[^\d.,]/g, '').replace(',', '.');
-      setEditVal(sanitized);
-    };
+  // BudgetCard is now at module scope
 
-    // If not editable, show disabled cell with gray background
-    if (!isEditable) {
-      return (
-        <div className="w-[90px] p-2 border-r shrink-0 bg-muted/50 text-xs text-muted-foreground">
-          <span>{value > 0 ? formatCurrency(value) : '-'}</span>
-        </div>
-      );
-    }
+  // AddLineButton is now at module scope
 
-    if (isEditing) {
-      return (
-        <div className="w-[90px] p-1 border-r shrink-0 bg-primary/5">
-          <div className="flex items-center gap-0.5">
-            <Input
-              type="text"
-              inputMode="decimal"
-              value={editVal}
-              onChange={handleInputChange}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSave();
-                if (e.key === 'Escape') setIsEditing(false);
-              }}
-              className="h-6 text-xs px-1"
-              autoFocus
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 text-success hover:text-success shrink-0"
-              onClick={handleSave}
-            >
-              <Check className="w-3 h-3" />
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div 
-        className="w-[90px] p-2 border-r shrink-0 bg-primary/5 text-xs cursor-pointer hover:bg-primary/10 transition-colors group"
-        onClick={() => {
-          setEditVal(String(value));
-          setIsEditing(true);
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <span>{value > 0 ? formatCurrency(value) : '-'}</span>
-          <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 text-muted-foreground" />
-        </div>
-      </div>
-    );
-  };
-
-  const EditableCell = ({ 
-    line, 
-    field, 
-    displayValue, 
-    inputType = 'text',
-    width,
-    duplicateMoments,
-  }: { 
-    line: MediaLine; 
-    field: EditingField; 
-    displayValue: string;
-    inputType?: 'text' | 'number' | 'date';
-    width: number;
-    duplicateMoments?: string[];
-  }) => {
-    const isEditing = isEditingField(line.id, field);
-    const hasDuplicates = duplicateMoments && duplicateMoments.length > 0;
-    
-    const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      let value = e.target.value;
-      // Limit code field to 10 characters (allow paste, truncate if needed)
-      if (field === 'line_code') {
-        value = value.slice(0, 10);
-      }
-      // For budget fields, allow only numeric input with decimals
-      if (inputType === 'number') {
-        value = value.replace(/[^\d.,]/g, '').replace(',', '.');
-      }
-      setEditValue(value);
-    };
-
-    return (
-      <div className="p-2 border-r shrink-0 group relative" style={{ width }}>
-        {isEditing ? (
-          <div className="flex items-center gap-1">
-            <Input
-              type={inputType === 'number' ? 'text' : inputType}
-              inputMode={inputType === 'number' ? 'decimal' : undefined}
-              className="h-6 text-xs px-1 w-full"
-              value={editValue}
-              onChange={handleEditChange}
-              maxLength={field === 'line_code' ? 10 : undefined}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveFieldEdit();
-                if (e.key === 'Escape') cancelFieldEdit();
-              }}
-              autoFocus
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 text-success hover:text-success shrink-0"
-              onClick={saveFieldEdit}
-            >
-              <Check className="w-3 h-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 shrink-0"
-              onClick={cancelFieldEdit}
-            >
-              <X className="w-3 h-3" />
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-1">
-            <div className="flex items-center gap-1 min-w-0">
-              <span className={cn(
-                field === 'budget' ? 'font-medium' : '',
-                'truncate'
-              )}>{displayValue}</span>
-              {field === 'line_code' && hasDuplicates && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex items-center justify-center shrink-0">
-                      <Link2 className="w-3.5 h-3.5 text-primary" />
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs">
-                    <p className="font-medium text-sm">Linha em múltiplos momentos</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Este código também existe em: {duplicateMoments.join(', ')}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-              onClick={() => startEditingField(line, field)}
-            >
-              <Pencil className="w-3 h-3" />
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const BudgetCard = ({ 
-    label, 
-    planned, 
-    allocated, 
-    percentageLabel,
-    description,
-    startDate,
-    endDate,
-  }: { 
-    label: string;
-    planned: number;
-    allocated: number;
-    percentageLabel?: string;
-    description?: string;
-    startDate?: string | null;
-    endDate?: string | null;
-  }) => {
-    const isOverBudget = allocated > planned;
-    const overBudgetAmount = allocated - planned;
-    
-    // Format date range for display
-    const getDateRangeDisplay = () => {
-      if (!startDate && !endDate) return null;
-      const start = startDate ? formatDate(startDate) : '...';
-      const end = endDate ? formatDate(endDate) : '...';
-      return `${start} - ${end}`;
-    };
-    
-    return (
-      <div className="border rounded-lg p-2 h-full">
-        <div className="font-medium text-sm">{label}</div>
-        {getDateRangeDisplay() && (
-          <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-            <span>📅</span>
-            <span>{getDateRangeDisplay()}</span>
-          </div>
-        )}
-        <div className="text-lg font-bold mt-1">{formatCurrency(planned)}</div>
-        <div className={cn(
-          "text-sm font-medium mt-1 flex items-center gap-1",
-          isOverBudget ? "text-destructive" : "text-primary"
-        )}>
-          <span>{formatCurrency(allocated)}</span>
-          <span className="text-xs font-normal">alocado</span>
-          {isOverBudget && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button 
-                  type="button" 
-                  className="inline-flex items-center justify-center focus:outline-none"
-                  aria-label="Orçamento excedido"
-                >
-                  <AlertTriangle className="w-4 h-4 text-destructive animate-pulse" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs">
-                <p className="text-sm font-medium">Orçamento excedido!</p>
-                <p className="text-xs text-muted-foreground">
-                  O valor alocado está {formatCurrency(overBudgetAmount)} acima do planejado.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-        {percentageLabel && (
-          <div className="text-xs text-muted-foreground mt-1">
-            {percentageLabel}
-          </div>
-        )}
-        {description && (
-          <div className="text-xs text-muted-foreground mt-2 line-clamp-2">
-            ({description})
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const AddLineButton = ({ 
-    subdivisionId, 
-    momentId, 
-    funnelStageId 
-  }: { 
-    subdivisionId: string | undefined;
-    momentId: string | undefined;
-    funnelStageId: string | undefined;
-  }) => {
-    if (!showNewLineButtons) return null;
-    
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        className="w-full h-8 text-xs border-dashed border-primary text-primary hover:bg-primary/10 justify-start gap-1 pl-3"
-        onClick={() => onAddLine({ subdivisionId, momentId, funnelStageId })}
-      >
-        <Plus className="w-3 h-3 shrink-0" />
-        <span className="truncate">Criar nova Linha</span>
-      </Button>
-    );
-  };
+  // Helper to generate common EditableCell props
+  const editableCellProps = useCallback((line: MediaLine, field: EditingField) => ({
+    isEditing: isEditingField(line.id, field),
+    editValue,
+    onStartEditing: startEditingField,
+    onSave: saveFieldEdit,
+    onCancel: cancelFieldEdit,
+    onChangeValue: setEditValue,
+  }), [editingLineId, editingField, editValue]);
 
   const handleStatusChange = async (lineId: string, statusId: string) => {
     await onUpdateLine(lineId, { status_id: statusId === 'none' ? null : statusId });
@@ -1250,6 +1409,7 @@ export function HierarchicalMediaTable({
           inputType="text"
           width={getWidth('line_code')}
           duplicateMoments={getOtherMoments(line)}
+          {...editableCellProps(line, 'line_code')}
         />
         
         {visibleColumns.medium && (
@@ -1298,6 +1458,7 @@ export function HierarchicalMediaTable({
           displayValue={formatCurrency(Number(line.budget))}
           inputType="number"
           width={getWidth('budget')}
+          {...editableCellProps(line, 'budget')}
         />
         
         {/* Creatives with counter and quick add button */}
@@ -1372,6 +1533,7 @@ export function HierarchicalMediaTable({
           displayValue={formatDate(line.start_date)}
           inputType="date"
           width={getWidth('start_date')}
+          {...editableCellProps(line, 'start_date')}
         />
         
         {/* Editable End Date */}
@@ -1381,6 +1543,7 @@ export function HierarchicalMediaTable({
           displayValue={formatDate(line.end_date)}
           inputType="date"
           width={getWidth('end_date')}
+          {...editableCellProps(line, 'end_date')}
         />
         
         {/* Action buttons */}
@@ -1463,6 +1626,7 @@ export function HierarchicalMediaTable({
             value={getMonthBudget(line.id, month)}
             onUpdate={onUpdateMonthlyBudgets}
             isEditable={isMonthEditableForLine(line, month)}
+            formatCurrency={formatCurrency}
           />
         ))}
       </motion.div>
@@ -1472,121 +1636,10 @@ export function HierarchicalMediaTable({
     handleStatusChange, statusesList, lineAlerts, validatingLineId, onValidateUTM,
     onEditLine, onDeleteLine, getLineCampaignDays, getLineAllocatedBudget, planMonths,
     getMonthBudget, onUpdateMonthlyBudgets, isMonthEditableForLine, formatCurrency,
-    formatDate, generateLineCode
+    formatDate, generateLineCode, editableCellProps
   ]);
 
-  // Dynamic Hierarchy Renderer - renders hierarchy tree recursively based on hierarchyOrder
-  interface DynamicHierarchyRendererProps {
-    nodes: HierarchyTreeNode[];
-    hierarchyOrder: HierarchyLevel[];
-    pathMap: Map<HierarchyLevel, string | null>;
-    levelIndex: number;
-    parentName: string;
-    visibleColumns: Record<ToggleableColumn, boolean>;
-    dynamicMinWidths: MinWidthOverrides;
-    getWidth: (key: ColumnKey) => number;
-    getFilteredLinesForPath: (pathMap: Map<HierarchyLevel, string | null>) => MediaLine[];
-    buildPrefillFromPath: (pathMap: Map<HierarchyLevel, string | null>) => { subdivisionId?: string; momentId?: string; funnelStageId?: string };
-    onAddLine: (prefill?: { subdivisionId?: string; momentId?: string; funnelStageId?: string }) => void;
-    renderLineRow: (line: MediaLine) => React.ReactNode;
-  }
-
-  const DynamicHierarchyRenderer = ({
-    nodes,
-    hierarchyOrder,
-    pathMap,
-    levelIndex,
-    parentName,
-    visibleColumns,
-    dynamicMinWidths,
-    getWidth,
-    getFilteredLinesForPath,
-    buildPrefillFromPath,
-    onAddLine,
-    renderLineRow,
-  }: DynamicHierarchyRendererProps) => {
-    const currentLevel = hierarchyOrder[levelIndex];
-    const isLastLevel = levelIndex === hierarchyOrder.length - 1;
-    
-    return (
-      <>
-        {nodes.map((node, nodeIdx) => {
-          const currentPath = new Map(pathMap);
-          currentPath.set(currentLevel, node.data.id);
-          
-          // Get lines for this node path
-          const nodeLines = isLastLevel ? getFilteredLinesForPath(currentPath) : [];
-          const prefill = buildPrefillFromPath(currentPath);
-          
-          return (
-            <div key={node.data.distId || `node-${nodeIdx}`} className="flex">
-              {/* Budget Card Cell for this level */}
-              {visibleColumns[currentLevel] && (
-                <div 
-                  className="p-2 border-r bg-background shrink-0" 
-                  style={{ width: getWidth(currentLevel), minWidth: dynamicMinWidths[currentLevel] }}
-                >
-                  <BudgetCard
-                    label={node.data.name}
-                    planned={node.data.planned}
-                    allocated={node.data.allocated}
-                    percentageLabel={`${node.data.percentage.toFixed(0)}% de ${parentName}`}
-                  />
-                </div>
-              )}
-              
-              {/* Content area - either children or lines */}
-              <div className="flex-1 divide-y">
-                {isLastLevel ? (
-                  // Leaf level - render lines
-                  <>
-                    {nodeLines.map(line => renderLineRow(line))}
-                    <div className="p-2">
-                      <AddLineButton
-                        subdivisionId={prefill.subdivisionId}
-                        momentId={prefill.momentId}
-                        funnelStageId={prefill.funnelStageId}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  // Non-leaf level - recurse into children
-                  node.children.length > 0 ? (
-                    <DynamicHierarchyRenderer
-                      nodes={node.children}
-                      hierarchyOrder={hierarchyOrder}
-                      pathMap={currentPath}
-                      levelIndex={levelIndex + 1}
-                      parentName={node.data.name}
-                      visibleColumns={visibleColumns}
-                      dynamicMinWidths={dynamicMinWidths}
-                      getWidth={getWidth}
-                      getFilteredLinesForPath={getFilteredLinesForPath}
-                      buildPrefillFromPath={buildPrefillFromPath}
-                      onAddLine={onAddLine}
-                      renderLineRow={renderLineRow}
-                    />
-                  ) : (
-                    // No children but not last level - render lines directly
-                    <>
-                      {getFilteredLinesForPath(currentPath).map(line => renderLineRow(line))}
-                      <div className="p-2">
-                        <AddLineButton
-                          subdivisionId={prefill.subdivisionId}
-                          momentId={prefill.momentId}
-                          funnelStageId={prefill.funnelStageId}
-                        />
-                      </div>
-                    </>
-                  )
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </>
-    );
-  };
+  // DynamicHierarchyRenderer is now at module scope
 
   // Calculate dynamic column widths based on visible columns
   const getMinWidth = () => {
@@ -2167,6 +2220,7 @@ export function HierarchicalMediaTable({
                       inputType="text"
                       width={getWidth('line_code')}
                       duplicateMoments={getOtherMoments(line)}
+                      {...editableCellProps(line, 'line_code')}
                     />
                     
                     {visibleColumns.medium && (
@@ -2219,6 +2273,7 @@ export function HierarchicalMediaTable({
                       displayValue={formatCurrency(Number(line.budget))}
                       inputType="number"
                       width={getWidth('budget')}
+                      {...editableCellProps(line, 'budget')}
                     />
                     
                     {/* Creatives with counter and quick add button */}
@@ -2293,6 +2348,7 @@ export function HierarchicalMediaTable({
                       displayValue={formatDate(line.start_date)}
                       inputType="date"
                       width={getWidth('start_date')}
+                      {...editableCellProps(line, 'start_date')}
                     />
                     
                     {/* Editable End Date */}
@@ -2302,6 +2358,7 @@ export function HierarchicalMediaTable({
                       displayValue={formatDate(line.end_date)}
                       inputType="date"
                       width={getWidth('end_date')}
+                      {...editableCellProps(line, 'end_date')}
                     />
                     
                       {/* Action buttons */}
@@ -2384,6 +2441,7 @@ export function HierarchicalMediaTable({
                         value={getMonthBudget(line.id, month)}
                         onUpdate={onUpdateMonthlyBudgets}
                         isEditable={isMonthEditableForLine(line, month)}
+                        formatCurrency={formatCurrency}
                       />
                     ))}
                   </motion.div>
@@ -2424,6 +2482,9 @@ export function HierarchicalMediaTable({
                 buildPrefillFromPath={buildPrefillFromPath}
                 onAddLine={onAddLine}
                 renderLineRow={renderLineRow}
+                showNewLineButtons={showNewLineButtons}
+                formatCurrency={formatCurrency}
+                formatDate={formatDate}
               />
               
               {/* Orphan lines section */}
@@ -2443,6 +2504,8 @@ export function HierarchicalMediaTable({
                             planned={0}
                             allocated={orphanLines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0)}
                             percentageLabel="Linhas órfãs"
+                            formatCurrency={formatCurrency}
+                            formatDate={formatDate}
                           />
                         )}
                       </div>
@@ -2453,7 +2516,7 @@ export function HierarchicalMediaTable({
                   <div className="flex-1 divide-y">
                     {orphanLines.filter(filterLine).map(line => renderLineRow(line))}
                     <div className="p-2">
-                      <AddLineButton subdivisionId={undefined} momentId={undefined} funnelStageId={undefined} />
+                      <AddLineButton subdivisionId={undefined} momentId={undefined} funnelStageId={undefined} showNewLineButtons={showNewLineButtons} onAddLine={onAddLine} />
                     </div>
                   </div>
                 </div>

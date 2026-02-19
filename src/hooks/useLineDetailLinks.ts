@@ -235,5 +235,6 @@ export function useLineLinksForLine(mediaLineId: string | undefined) {
       return data || [];
     },
     enabled: !!mediaLineId && !!user?.id,
+    staleTime: 30000, // 30s to prevent refetches on remount
   });
 }
