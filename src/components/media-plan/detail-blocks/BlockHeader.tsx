@@ -13,7 +13,18 @@ interface BlockHeaderProps {
 }
 
 export function BlockHeader({ block, isCollapsed, onToggle, colSpan }: BlockHeaderProps) {
-  if (!block.collapsible) return null;
+  if (!block.collapsible) {
+    return (
+      <th
+        colSpan={colSpan}
+        className="px-2 py-1.5 bg-muted/50 border-b border-r select-none"
+      >
+        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {block.label}
+        </div>
+      </th>
+    );
+  }
 
   return (
     <th

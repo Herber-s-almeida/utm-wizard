@@ -90,6 +90,7 @@ export function useLineDetailTypes() {
           slug: data.slug,
           description: data.description,
           icon: data.icon,
+          detail_category: data.detail_category || 'custom',
           field_schema: data.field_schema as unknown as Json,
           metadata_schema: data.metadata_schema as unknown as Json,
           has_insertion_grid: data.has_insertion_grid,
