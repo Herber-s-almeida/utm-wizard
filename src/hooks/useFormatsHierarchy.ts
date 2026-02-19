@@ -113,6 +113,7 @@ export function useFormats() {
       return data as Format[];
     },
     enabled: !!currentEnvironmentId,
+    staleTime: 5 * 60 * 1000,
   });
 
   const create = useMutation({
