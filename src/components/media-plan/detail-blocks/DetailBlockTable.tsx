@@ -26,6 +26,7 @@ import { FormatWizardDialog } from '@/components/config/FormatWizardDialog';
 import { CreativeDialog } from '@/components/config/CreativeDialog';
 import { cn } from '@/lib/utils';
 import { format as fnsFormat, parseISO, isValid } from 'date-fns';
+import { toast } from 'sonner';
 import { ptBR } from 'date-fns/locale';
 
 export interface DetailBlockTableProps {
@@ -215,9 +216,24 @@ export function DetailBlockTable({
     setEditingData({});
   };
 
+  const validateDates = (data: Record<string, unknown>): string | null => {
+    const start = data.period_start as string | undefined;
+    const end = data.period_end as string | undefined;
+    if (start && end && start > end) return 'A data de fim deve ser posterior à data de início.';
+    if (start && planStartDate && start < planStartDate) return 'A data de início deve estar dentro do período do plano.';
+    if (end && planEndDate && end > planEndDate) return 'A data de fim deve estar dentro do período do plano.';
+    if (start && planEndDate && start > planEndDate) return 'A data de início deve estar dentro do período do plano.';
+    if (end && planStartDate && end < planStartDate) return 'A data de fim deve estar dentro do período do plano.';
+    return null;
+  };
+
   const handleSave = async (itemId: string) => {
+    const dateError = validateDates(editingData);
+    if (dateError) {
+      toast.error(dateError);
+      return;
+    }
     try {
-      // Separate special columns from generic data
       const { status_id, format_id, creative_id, days_of_week, period_start, period_end, ...rest } = editingData;
       await onUpdateItem(itemId, rest, { status_id, format_id, creative_id, days_of_week, period_start, period_end });
       setEditingItemId(null);
@@ -228,6 +244,11 @@ export function DetailBlockTable({
   };
 
   const handleCreate = async () => {
+    const dateError = validateDates(newItemData);
+    if (dateError) {
+      toast.error(dateError);
+      return;
+    }
     try {
       const { status_id, format_id, creative_id, days_of_week, period_start, period_end, ...rest } = newItemData;
       await onCreateItem({ ...rest, status_id, format_id, creative_id, days_of_week, period_start, period_end });
@@ -365,7 +386,7 @@ export function DetailBlockTable({
                   : item.calculated;
                 const displayItem: DetailItemRow = { ...item, data: displayData, calculated: displayCalc };
 
-                return (
+                  return (
                   <TableRow key={item.id} className="group hover:bg-muted/20">
                     {allVisibleColumns.map(col => (
                       <TableCell key={col.key} className="py-0.5 px-2">
@@ -377,6 +398,8 @@ export function DetailBlockTable({
                           onChange={(val) => setEditingData(prev => ({ ...prev, [col.key]: val }))}
                           selectOptions={selectOptionsForColumn(col)}
                           onCreateNew={isEditing ? getCreateNewHandler(col) : undefined}
+                          minDate={col.type === 'date' ? (planStartDate || undefined) : undefined}
+                          maxDate={col.type === 'date' ? (planEndDate || undefined) : undefined}
                         />
                       </TableCell>
                     ))}
@@ -429,6 +452,8 @@ export function DetailBlockTable({
                         onChange={(val) => setNewItemData(prev => ({ ...prev, [col.key]: val }))}
                         selectOptions={selectOptionsForColumn(col)}
                         onCreateNew={getCreateNewHandler(col)}
+                        minDate={col.type === 'date' ? (planStartDate || undefined) : undefined}
+                        maxDate={col.type === 'date' ? (planEndDate || undefined) : undefined}
                       />
                     </TableCell>
                   ))}
