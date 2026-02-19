@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -69,6 +69,7 @@ export default function LineDetailPage() {
       return data;
     },
     enabled: !!planSlug,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch line info with relations
@@ -81,7 +82,7 @@ export default function LineDetailPage() {
         .select(`
           id, line_code, platform, budget, start_date, end_date,
           vehicle_id, medium_id, channel_id, subdivision_id, moment_id, funnel_stage_id, target_id,
-          vehicles(name), mediums(name), channels(name), subdivisions(name), moments(name), funnel_stages(name), targets(name)
+          vehicles(name), mediums(name), channels(name), plan_subdivisions(name), moments(name), funnel_stages(name), targets(name)
         `)
         .eq('id', mediaLineId)
         .maybeSingle();
@@ -89,6 +90,7 @@ export default function LineDetailPage() {
       return data;
     },
     enabled: !!mediaLineId,
+    staleTime: 5 * 60 * 1000,
   });
 
   const planId = plan?.id;
@@ -100,7 +102,7 @@ export default function LineDetailPage() {
   const vehicleName = (line as any)?.vehicles?.name;
   const mediumName = (line as any)?.mediums?.name;
   const channelName = (line as any)?.channels?.name;
-  const subdivisionName = (line as any)?.subdivisions?.name;
+  const subdivisionName = (line as any)?.plan_subdivisions?.name;
   const momentName = (line as any)?.moments?.name;
   const funnelStageName = (line as any)?.funnel_stages?.name;
   const targetName = (line as any)?.targets?.name;
@@ -218,11 +220,10 @@ export default function LineDetailPage() {
   const budgetDifference = lineBudget - totalNet;
   const hasBudgetMismatch = Math.abs(budgetDifference) > 0.01;
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-  };
+  const currencyFormatter = useMemo(() => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }), []);
+  const formatCurrency = useCallback((value: number) => currencyFormatter.format(value), [currencyFormatter]);
 
-  const buildInheritedContext = (): Record<string, unknown> => ({
+  const inheritedContext = useMemo(() => ({
     vehicle_name: vehicleName,
     medium_name: mediumName,
     channel_name: channelName,
@@ -232,7 +233,7 @@ export default function LineDetailPage() {
     target_name: targetName,
     line_code: lineCode,
     line_budget: lineBudget,
-  });
+  }), [vehicleName, mediumName, channelName, subdivisionName, momentName, funnelStageName, targetName, lineCode, lineBudget]);
 
   const BLOCK_CATEGORIES: DetailCategory[] = ['ooh', 'radio', 'tv'];
   const isBlockBasedType = (type: LineDetailType): boolean =>
@@ -252,7 +253,7 @@ export default function LineDetailPage() {
     return iconName ? ICON_MAP[iconName] || FileText : FileText;
   };
 
-  const handleCreateDetail = async () => {
+  const handleCreateDetail = useCallback(async () => {
     if (!newDetailTypeId) return;
     const autoName = selectedType
       ? `${selectedType.name}${lineCode ? ` - ${lineCode}` : ''}`
@@ -266,7 +267,7 @@ export default function LineDetailPage() {
         detail_type_id: newDetailTypeId,
         name: autoName,
         metadata,
-        inherited_context: buildInheritedContext(),
+        inherited_context: inheritedContext,
       });
       setShowNewDetailForm(false);
       setNewDetailTypeId('');
@@ -275,9 +276,9 @@ export default function LineDetailPage() {
     } catch (error) {
       console.error('Error creating detail:', error);
     }
-  };
+  }, [newDetailTypeId, selectedType, lineCode, newMetadata, newDetailHasGrid, createDetail, inheritedContext]);
 
-  const handleDeleteDetail = async (detailId: string) => {
+  const handleDeleteDetail = useCallback(async (detailId: string) => {
     try {
       await deleteDetail(detailId);
       if (activeTab === detailId && details.length > 1) {
@@ -287,19 +288,27 @@ export default function LineDetailPage() {
     } catch (error) {
       console.error('Error deleting detail:', error);
     }
-  };
-
-  if (!mediaLineId) return null;
+  }, [deleteDetail, activeTab, details]);
 
   // Inline context badges from line data
-  const contextBadges = [
+  const contextBadges = useMemo(() => [
     { label: 'Subdivisão', value: subdivisionName, icon: MapPin },
     { label: 'Momento', value: momentName, icon: Calendar },
     { label: 'Fase', value: funnelStageName, icon: TrendingUp },
     { label: 'Veículo', value: vehicleName, icon: Tv },
     { label: 'Meio', value: mediumName, icon: Radio },
     { label: 'Target', value: targetName, icon: Target },
-  ].filter(b => b.value);
+  ].filter(b => b.value), [subdivisionName, momentName, funnelStageName, vehicleName, mediumName, targetName]);
+
+  // Memoize stable props for DetailBlockTable
+  const memoizedFormats = useMemo(() => (formatOptions || []).map(f => ({ id: f.id, name: f.name })), [formatOptions]);
+  const memoizedStatuses = useMemo(() => (statusOptions || []).map(s => ({ id: s.id, name: s.name })), [statusOptions]);
+  const memoizedFormatDetails = useMemo(() => formatHierarchy || {}, [formatHierarchy]);
+
+  const handleFormatCreated = useCallback(() => formats.refetch(), [formats]);
+  const handleCreativeCreated = useCallback(() => refetchCreatives(), [refetchCreatives]);
+
+  if (!mediaLineId) return null;
 
   return (
     <DashboardLayout>
@@ -571,13 +580,13 @@ export default function LineDetailPage() {
                               onSaveInsertions={async (itemId, ins) => {
                                 await upsertInsertions({ item_id: itemId, insertions: ins });
                               }}
-                              formats={(formatOptions || []).map(f => ({ id: f.id, name: f.name }))}
-                              statuses={(statusOptions || []).map(s => ({ id: s.id, name: s.name }))}
+                              formats={memoizedFormats}
+                              statuses={memoizedStatuses}
                               creatives={lineCreatives}
-                              formatDetails={formatHierarchy || {}}
+                              formatDetails={memoizedFormatDetails}
                               mediaLineId={mediaLineId}
-                              onFormatCreated={() => formats.refetch()}
-                              onCreativeCreated={() => refetchCreatives()}
+                              onFormatCreated={handleFormatCreated}
+                              onCreativeCreated={handleCreativeCreated}
                             />
                           );
                         }

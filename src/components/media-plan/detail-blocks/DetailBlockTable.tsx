@@ -7,7 +7,7 @@
  * Layout: two independent scroll panels – top for the data table, bottom for the grid.
  * Both have sticky column headers and sticky totals/footer rows.
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import { Plus, Trash2, Save, X, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -65,7 +65,7 @@ export interface DetailBlockTableProps {
   readOnly?: boolean;
 }
 
-export function DetailBlockTable({
+export const DetailBlockTable = memo(function DetailBlockTable({
   category,
   items,
   inheritedContext,
@@ -523,4 +523,4 @@ export function DetailBlockTable({
       )}
     </div>
   );
-}
+});
