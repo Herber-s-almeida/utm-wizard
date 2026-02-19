@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { MediaLine, MediaCreative } from '@/types/media';
 import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPlural } from '@/types/hierarchy';
 
@@ -332,10 +332,10 @@ export function usePlanAlerts({
   const timingAlerts = alerts.filter(a => a.category === 'timing');
   const utmAlerts = alerts.filter(a => a.category === 'utm');
 
-  // Get alerts for a specific line
-  const getLineAlerts = (lineId: string) => {
+  // Get alerts for a specific line (memoized to prevent child re-renders)
+  const getLineAlerts = useCallback((lineId: string) => {
     return alerts.filter(a => a.lineId === lineId);
-  };
+  }, [alerts]);
 
   // Get lines with alerts
   const linesWithAlerts = new Set(alerts.filter(a => a.lineId).map(a => a.lineId));
