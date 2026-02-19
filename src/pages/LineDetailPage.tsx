@@ -267,18 +267,10 @@ export default function LineDetailPage() {
   const handleCreateDetail = useCallback(async () => {
     if (!newDetailTypeId) return;
 
-    // Generate sequential detail code: lineCode_001, lineCode_002, ...
-    const existingCount = details.filter(d => d.detail_type_id === newDetailTypeId).length;
-    const seqNumber = String(existingCount + 1).padStart(3, '0');
-    const detailCode = lineCode ? `${lineCode}_${seqNumber}` : `DET_${seqNumber}`;
-
-    const autoName = selectedType
-      ? `${selectedType.name} - ${detailCode}`
-      : detailCode;
+    const autoName = selectedType?.name || 'Detalhamento';
     try {
       const metadata: Record<string, unknown> = {
         ...newMetadata,
-        detail_code: detailCode,
         ...(selectedType && isBlockBasedType(selectedType) ? { has_insertion_grid: newDetailHasGrid } : {}),
       };
       const result = await createDetail({
@@ -431,7 +423,7 @@ export default function LineDetailPage() {
                         className="data-[state=active]:bg-muted gap-2 px-3 py-1.5"
                       >
                         <Icon className="h-4 w-4" />
-                        {detail.name || detail.detail_type?.name || 'Detalhamento'}
+                        {detail.detail_type?.name || detail.name || 'Detalhamento'}
                         <Badge variant="secondary" className="ml-1 text-xs">
                           {detail.items?.length || 0}
                         </Badge>
@@ -474,14 +466,6 @@ export default function LineDetailPage() {
                       </Select>
                     </div>
 
-                    {selectedType && lineCode && (
-                      <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-                        <p className="text-xs text-muted-foreground mb-1">Código do detalhamento:</p>
-                        <p className="font-mono font-medium text-sm">
-                          {lineCode}_{String(details.filter(d => d.detail_type_id === newDetailTypeId).length + 1).padStart(3, '0')}
-                        </p>
-                      </div>
-                    )}
 
                     {selectedType && isBlockBasedType(selectedType) && (
                       <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
