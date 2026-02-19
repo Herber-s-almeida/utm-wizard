@@ -146,9 +146,9 @@ export default function MediaPlanDetail() {
   // Element visibility
   const { elements, toggleVisibility, hideElement, isVisible } = usePlanElementsVisibility(planId);
 
-  // Reset state and fetch data when identifier changes (navigating between plans)
+  // Reset state and fetch data when identifier or environment changes
   useEffect(() => {
-    if (user?.id && identifier) {
+    if (user?.id && identifier && currentEnvironmentId) {
       // Reset state for new plan
       setLoading(true);
       setPlan(null);
@@ -161,7 +161,7 @@ export default function MediaPlanDetail() {
       
       fetchData();
     }
-  }, [user?.id, identifier]);
+  }, [user?.id, identifier, currentEnvironmentId]);
 
   // Track previous line IDs to avoid unnecessary re-renders
   const prevLineIdsRef = useRef<string>('');
@@ -429,8 +429,8 @@ export default function MediaPlanDetail() {
 
   const totalLinesBudget = lines.reduce((acc, line) => acc + Number(line.budget || 0), 0);
 
-  // Get plan hierarchy options from budget distributions
-  const getPlanHierarchyOptions = () => {
+  // Get plan hierarchy options from budget distributions (memoized to prevent re-render cascades)
+  const { planSubdivisions, planMoments, planFunnelStages } = useMemo(() => {
     const subdivisionDists = budgetDistributions.filter(d => d.distribution_type === 'subdivision');
     const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
     const funnelDists = budgetDistributions.filter(d => d.distribution_type === 'funnel_stage');
@@ -462,9 +462,7 @@ export default function MediaPlanDetail() {
         }));
 
     return { planSubdivisions, planMoments, planFunnelStages };
-  };
-
-  const { planSubdivisions, planMoments, planFunnelStages } = getPlanHierarchyOptions();
+  }, [budgetDistributions, subdivisions.data, moments.data, funnelStages.data]);
 
   // Get hierarchy order from plan (fallback to default if not set)
   const hierarchyOrder: HierarchyLevel[] = useMemo(() => {
@@ -649,6 +647,9 @@ export default function MediaPlanDetail() {
     });
   }, [budgetDistributions, subdivisions.data, moments.data]);
 
+  // Stable reference for moments data to prevent re-render loops
+  const stableMomentsData = useMemo(() => moments.data || [], [moments.data]);
+
   // Plan alerts - now with dynamic hierarchy order and monthly budgets for allocation mismatch detection
   const planAlerts = usePlanAlerts({
     totalBudget: plan?.total_budget || 0,
@@ -658,7 +659,7 @@ export default function MediaPlanDetail() {
     monthlyBudgets,
     planStartDate: plan?.start_date || null,
     planEndDate: plan?.end_date || null,
-    moments: moments.data || [],
+    moments: stableMomentsData,
     hierarchyOrder,
   });
 
