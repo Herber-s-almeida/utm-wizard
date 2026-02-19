@@ -137,6 +137,16 @@ export default function MediaPlanDetail() {
   const channels = useChannels();
   const targets = useTargets();
   const statuses = useStatuses();
+
+  // Stable array references to prevent re-render cascades in child components
+  const stableSubdivisionsList = useMemo(() => subdivisions.data || [], [subdivisions.data]);
+  const stableMomentsList = useMemo(() => moments.data || [], [moments.data]);
+  const stableFunnelStagesList = useMemo(() => funnelStages.data || [], [funnelStages.data]);
+  const stableMediumsList = useMemo(() => mediums.data || [], [mediums.data]);
+  const stableVehiclesList = useMemo(() => vehicles.data || [], [vehicles.data]);
+  const stableChannelsList = useMemo(() => channels.data || [], [channels.data]);
+  const stableTargetsList = useMemo(() => targets.data || [], [targets.data]);
+  const stableStatusesList = useMemo(() => statuses.activeItems || [], [statuses.activeItems]);
   
   // Environment-based permissions (replaces legacy usePlanRoles)
   const { canEdit: environmentCanEdit, isEnvironmentAdmin, currentEnvironmentId } = useEnvironment();
@@ -315,7 +325,7 @@ export default function MediaPlanDetail() {
     }
   };
 
-  const handleUpdateLine = async (lineId: string, updates: Partial<MediaLine>) => {
+  const handleUpdateLine = useCallback(async (lineId: string, updates: Partial<MediaLine>) => {
     try {
       const { error } = await supabase
         .from('media_lines')
@@ -324,15 +334,15 @@ export default function MediaPlanDetail() {
 
       if (error) throw error;
 
-      setLines(lines.map(l => l.id === lineId ? { ...l, ...updates } : l));
+      setLines(prev => prev.map(l => l.id === lineId ? { ...l, ...updates } : l));
       toast.success('Linha atualizada');
     } catch (error) {
       console.error('Error updating line:', error);
       toast.error('Erro ao atualizar linha');
     }
-  };
+  }, []);
 
-  const handleValidateUTM = async (lineId: string, validated: boolean) => {
+  const handleValidateUTM = useCallback(async (lineId: string, validated: boolean) => {
     try {
       const updates = validated 
         ? { 
@@ -353,13 +363,13 @@ export default function MediaPlanDetail() {
 
       if (error) throw error;
 
-      setLines(lines.map(l => l.id === lineId ? { ...l, ...updates } : l));
+      setLines(prev => prev.map(l => l.id === lineId ? { ...l, ...updates } : l));
       toast.success(validated ? 'UTM validado com sucesso!' : 'Validação removida');
     } catch (error) {
       console.error('Error validating UTM:', error);
       toast.error('Erro ao validar UTM');
     }
-  };
+  }, [user?.id]);
 
   const handleUpdateMomentDates = async (distributionId: string | null, startDate: string | null, endDate: string | null) => {
     if (!plan || !distributionId) return;
@@ -413,6 +423,29 @@ export default function MediaPlanDetail() {
     setFilteredLines(newFilteredLines);
   }, []);
 
+  // Memoized callbacks to prevent child re-renders
+  const handleEditLine = useCallback((line: MediaLine, initialStep?: string) => {
+    setEditingLine(line);
+    setEditInitialStep(initialStep);
+    setWizardOpen(true);
+  }, []);
+
+  const handleDeleteLineClick = useCallback((line: MediaLine) => {
+    setLineToDelete(line);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const handleAddLine = useCallback((prefill?: { subdivisionId?: string; momentId?: string; funnelStageId?: string }) => {
+    setEditingLine(null);
+    setEditInitialStep(undefined);
+    setWizardPrefill(prefill);
+    setWizardOpen(true);
+  }, []);
+
+  const handleRefreshData = useCallback(() => {
+    fetchData();
+  }, [user?.id, identifier, currentEnvironmentId]);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -435,34 +468,31 @@ export default function MediaPlanDetail() {
     const momentDists = budgetDistributions.filter(d => d.distribution_type === 'moment');
     const funnelDists = budgetDistributions.filter(d => d.distribution_type === 'funnel_stage');
 
-    // Build subdivision options
     const planSubdivisions: { id: string | null; name: string }[] = subdivisionDists.length === 0
       ? [{ id: null, name: 'Geral' }]
       : subdivisionDists.map(d => ({
           id: d.reference_id,
-          name: (subdivisions.data || []).find(s => s.id === d.reference_id)?.name || 'Geral'
+          name: stableSubdivisionsList.find(s => s.id === d.reference_id)?.name || 'Geral'
         }));
 
-    // Build moment options - deduplicate by reference_id
     const uniqueMomentIds = [...new Set(momentDists.map(d => d.reference_id))];
     const planMoments: { id: string | null; name: string }[] = momentDists.length === 0
       ? [{ id: null, name: 'Geral' }]
       : uniqueMomentIds.map(refId => ({
           id: refId,
-          name: (moments.data || []).find(m => m.id === refId)?.name || 'Geral'
+          name: stableMomentsList.find(m => m.id === refId)?.name || 'Geral'
         }));
 
-    // Build funnel stage options - deduplicate by reference_id
     const uniqueFunnelIds = [...new Set(funnelDists.map(d => d.reference_id))];
     const planFunnelStages: { id: string | null; name: string }[] = funnelDists.length === 0
       ? [{ id: null, name: 'Geral' }]
       : uniqueFunnelIds.map(refId => ({
           id: refId,
-          name: (funnelStages.data || []).find(f => f.id === refId)?.name || 'Geral'
+          name: stableFunnelStagesList.find(f => f.id === refId)?.name || 'Geral'
         }));
 
     return { planSubdivisions, planMoments, planFunnelStages };
-  }, [budgetDistributions, subdivisions.data, moments.data, funnelStages.data]);
+  }, [budgetDistributions, stableSubdivisionsList, stableMomentsList, stableFunnelStagesList]);
 
   // Get hierarchy order from plan (fallback to default if not set)
   const hierarchyOrder: HierarchyLevel[] = useMemo(() => {
@@ -471,6 +501,13 @@ export default function MediaPlanDetail() {
     }
     return DEFAULT_HIERARCHY_ORDER;
   }, [plan?.hierarchy_order]);
+
+  // Stable levelOrder object to prevent child re-renders
+  const stableLevelOrder = useMemo(() => ({
+    funnel_stage: (plan as any)?.funnel_order || [],
+    subdivision: (plan as any)?.subdivision_order || [],
+    moment: (plan as any)?.moment_order || [],
+  }), [plan]);
 
   // Check if there are real distributions for showing hierarchy card
   const hasRealDistributions = useMemo(() => {
@@ -530,11 +567,11 @@ export default function MediaPlanDetail() {
       if (!refId) return 'Geral';
       switch (level) {
         case 'subdivision':
-          return (subdivisions.data || []).find(s => s.id === refId)?.name || 'Geral';
+          return stableSubdivisionsList.find(s => s.id === refId)?.name || 'Geral';
         case 'moment':
-          return (moments.data || []).find(m => m.id === refId)?.name || 'Geral';
+          return stableMomentsList.find(m => m.id === refId)?.name || 'Geral';
         case 'funnel_stage':
-          return (funnelStages.data || []).find(f => f.id === refId)?.name || 'Geral';
+          return stableFunnelStagesList.find(f => f.id === refId)?.name || 'Geral';
         default:
           return 'Geral';
       }
@@ -554,7 +591,7 @@ export default function MediaPlanDetail() {
       hierarchyOrder,
       getNameForLevel
     );
-  }, [lines, budgetDistributions, hierarchyOrder, subdivisions.data, moments.data, funnelStages.data]);
+  }, [lines, budgetDistributions, hierarchyOrder, stableSubdivisionsList, stableMomentsList, stableFunnelStagesList]);
 
   // Build momentDates map for MediaLineWizard
   const momentDates = useMemo(() => {
@@ -578,9 +615,9 @@ export default function MediaPlanDetail() {
     return lines.map(line => ({
       line_code: line.line_code || '',
       moment_id: line.moment_id || null,
-      moment_name: moments.data?.find(m => m.id === line.moment_id)?.name || 'Geral',
+      moment_name: stableMomentsList.find(m => m.id === line.moment_id)?.name || 'Geral',
     }));
-  }, [lines, moments.data]);
+  }, [lines, stableMomentsList]);
 
   // Build moments timeline data - showing ALL subdivision + moment combinations from plan
   const momentsForTimeline = useMemo(() => {
@@ -591,14 +628,12 @@ export default function MediaPlanDetail() {
     
     const getSubdivisionName = (refId: string | null): string => {
       if (!refId) return 'Geral';
-      const found = (subdivisions.data || []).find(s => s.id === refId);
-      return found?.name || 'Geral';
+      return stableSubdivisionsList.find(s => s.id === refId)?.name || 'Geral';
     };
     
     const getMomentName = (refId: string | null): string => {
       if (!refId) return 'Geral';
-      const found = (moments.data || []).find(m => m.id === refId);
-      return found?.name || 'Geral';
+      return stableMomentsList.find(m => m.id === refId)?.name || 'Geral';
     };
     
     // Build timeline items showing ALL subdivision + moment combinations
@@ -645,10 +680,10 @@ export default function MediaPlanDetail() {
       if (!b.startDate) return -1;
       return a.startDate.localeCompare(b.startDate);
     });
-  }, [budgetDistributions, subdivisions.data, moments.data]);
+  }, [budgetDistributions, stableSubdivisionsList, stableMomentsList]);
 
-  // Stable reference for moments data to prevent re-render loops
-  const stableMomentsData = useMemo(() => moments.data || [], [moments.data]);
+  // Stable reference for moments data to prevent re-render loops (reuse existing stable list)
+  const stableMomentsData = stableMomentsList;
 
   // Plan alerts - now with dynamic hierarchy order and monthly budgets for allocation mismatch detection
   const planAlerts = usePlanAlerts({
@@ -1172,39 +1207,23 @@ export default function MediaPlanDetail() {
           creatives={creatives}
           budgetDistributions={budgetDistributions}
           monthlyBudgets={monthlyBudgets}
-          mediums={mediums.data || []}
-          vehicles={vehicles.data || []}
-          channels={channels.data || []}
-          targets={targets.data || []}
-          subdivisions={subdivisions.data || []}
-          moments={moments.data || []}
-          funnelStages={funnelStages.data || []}
-          statuses={statuses.activeItems || []}
+          mediums={stableMediumsList}
+          vehicles={stableVehiclesList}
+          channels={stableChannelsList}
+          targets={stableTargetsList}
+          subdivisions={stableSubdivisionsList}
+          moments={stableMomentsList}
+          funnelStages={stableFunnelStagesList}
+          statuses={stableStatusesList}
           hierarchyOrder={hierarchyOrder}
-          levelOrder={{
-            funnel_stage: (plan as any).funnel_order || [],
-            subdivision: (plan as any).subdivision_order || [],
-            moment: (plan as any).moment_order || [],
-          }}
+          levelOrder={stableLevelOrder}
           showNewLineButtons={isVisible('new-line-buttons') && canEdit}
           lineAlerts={planAlerts.getLineAlerts}
-          onEditLine={(line, initialStep) => {
-            setEditingLine(line);
-            setEditInitialStep(initialStep);
-            setWizardOpen(true);
-          }}
-          onDeleteLine={(line) => {
-            setLineToDelete(line);
-            setDeleteDialogOpen(true);
-          }}
-          onAddLine={(prefill) => {
-            setEditingLine(null);
-            setEditInitialStep(undefined);
-            setWizardPrefill(prefill);
-            setWizardOpen(true);
-          }}
+          onEditLine={handleEditLine}
+          onDeleteLine={handleDeleteLineClick}
+          onAddLine={handleAddLine}
           onUpdateLine={handleUpdateLine}
-          onUpdateMonthlyBudgets={fetchData}
+          onUpdateMonthlyBudgets={handleRefreshData}
           onFilteredLinesChange={handleFilteredLinesChange}
           onValidateUTM={handleValidateUTM}
         />
