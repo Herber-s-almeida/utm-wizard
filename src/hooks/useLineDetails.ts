@@ -323,7 +323,34 @@ export function useLineDetails(mediaLineId: string | undefined, planId?: string)
 
   const createItemMutation = useMutation({
     mutationFn: async (input: { line_detail_id: string; data: Record<string, unknown> }) => {
-      if (!user?.id || !currentEnvironmentId) throw new Error('User not found');
+      if (!user?.id || !currentEnvironmentId || !mediaLineId) throw new Error('User not found');
+
+      // Count existing items across ALL details linked to this mediaLineId for global sequencing
+      const { data: links } = await supabase
+        .from('line_detail_line_links')
+        .select('line_detail_id')
+        .eq('media_line_id', mediaLineId);
+
+      const linkedDetailIds = (links || []).map(l => l.line_detail_id);
+      let existingCount = 0;
+      if (linkedDetailIds.length > 0) {
+        const { count } = await supabase
+          .from('line_detail_items')
+          .select('id', { count: 'exact', head: true })
+          .in('line_detail_id', linkedDetailIds)
+          .eq('is_active', true);
+        existingCount = count || 0;
+      }
+
+      // Fetch the line_code from the parent line
+      const { data: lineData } = await supabase
+        .from('media_lines')
+        .select('line_code')
+        .eq('id', mediaLineId)
+        .single();
+
+      const lineCode = lineData?.line_code || 'DET';
+      const detailCode = `${lineCode}_${String(existingCount + 1).padStart(3, '0')}`;
 
       // Extract actual DB columns from data
       const { status_id, format_id, creative_id, days_of_week, period_start, period_end, ...jsonData } = input.data;
@@ -334,7 +361,7 @@ export function useLineDetails(mediaLineId: string | undefined, planId?: string)
           line_detail_id: input.line_detail_id,
           user_id: user.id,
           environment_id: currentEnvironmentId,
-          data: jsonData as Json,
+          data: { ...jsonData, detail_code: detailCode } as Json,
           status_id: (status_id as string) || null,
           format_id: (format_id as string) || null,
           creative_id: (creative_id as string) || null,
