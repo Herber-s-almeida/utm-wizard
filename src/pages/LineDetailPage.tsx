@@ -285,7 +285,7 @@ export default function LineDetailPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col -m-4 md:-m-6 lg:-m-8 h-[calc(100vh-3.5rem)] md:h-screen">
         {/* Header */}
         <div className="border-b bg-card px-6 py-4">
           <div className="flex items-center justify-between">

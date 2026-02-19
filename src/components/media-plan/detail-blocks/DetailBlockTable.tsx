@@ -337,8 +337,8 @@ export function DetailBlockTable({
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto">
-        <div className="rounded-lg border overflow-x-auto">
-          <Table className="min-w-max text-xs">
+        <div className="overflow-x-auto">
+          <Table className="w-full text-xs">
             <TableHeader>
               {/* Block group headers */}
               <TableRow className="bg-muted/30">
@@ -511,7 +511,7 @@ export function DetailBlockTable({
 
       {/* Add button */}
       {!readOnly && !isAddingNew && (
-        <div className="p-3 border-t">
+        <div className="px-4 py-3">
           <Button variant="outline" size="sm" onClick={() => setIsAddingNew(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Adicionar Item
