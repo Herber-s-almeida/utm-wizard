@@ -318,7 +318,7 @@ export const DetailBlockTable = memo(function DetailBlockTable({
   return (
     <div className="flex flex-col h-full">
       {/* ── Top panel: data table with sticky header + sticky totals ── */}
-      <div className={cn("flex-1 min-h-0 overflow-auto relative", hasGrid && "max-h-[55%]", !hasGrid && "flex-1")}>
+      <div className={cn("min-h-0 overflow-auto relative", hasGrid ? "h-[45%] shrink-0" : "flex-1")}>
         <table className="w-full text-xs border-collapse">
           {/* Sticky block group + column headers */}
           <thead className="sticky top-0 z-20">
@@ -484,7 +484,7 @@ export const DetailBlockTable = memo(function DetailBlockTable({
 
       {/* ── Bottom panel: insertion grid with its own scroll ── */}
       {hasGrid && enrichedItems.length > 0 && (
-        <div className="min-h-[200px] flex-1 overflow-auto border-t">
+        <div className="flex-1 min-h-[250px] overflow-auto border-t">
           <GridBlock
             items={enrichedItems.map((i, idx) => ({
               id: i.id,

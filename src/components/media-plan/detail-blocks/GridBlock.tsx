@@ -303,8 +303,8 @@ export const GridBlock = memo(function GridBlock({
               const itemTotal = Object.values(itemInsertions).reduce((s, q) => s + q, 0);
 
               return (
-                <tr key={item.id} className="hover:bg-muted/20 group">
-                  <td className="sticky left-0 z-10 bg-background border-r border-b px-2 py-0.5 text-[10px] font-medium whitespace-nowrap group-hover:bg-muted/20">
+                <tr key={item.id} className="hover:bg-muted/20 group h-9">
+                  <td className="sticky left-0 z-10 bg-background border-r border-b px-2 py-1 text-[10px] font-medium whitespace-nowrap group-hover:bg-muted/20">
                     <div className="flex items-center gap-1">
                       <span>{item.label || `#${idx + 1}`}</span>
                       {!readOnly && selectedDays.length > 0 && (
