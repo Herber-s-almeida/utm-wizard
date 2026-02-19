@@ -36,6 +36,8 @@ export interface DetailBlockTableProps {
     format_id?: string | null;
     creative_id?: string | null;
     status_id?: string | null;
+    readOnly?: boolean;
+    sourceLineCode?: string;
     insertions?: Array<{ insertion_date: string; quantity: number; line_detail_item_id: string }>;
   }>;
   /** Inherited context from the media line */
@@ -132,7 +134,8 @@ export const DetailBlockTable = memo(function DetailBlockTable({
       mergedData.subdivision = inheritedContext.subdivision_name;
       mergedData.moment = inheritedContext.moment_name;
       mergedData.funnel_stage = inheritedContext.funnel_stage_name;
-      mergedData.line_code = inheritedContext.line_code;
+      // Use per-item line_code if available (for sibling items), otherwise use inherited
+      mergedData.line_code = item.sourceLineCode || item.data.line_code || inheritedContext.line_code;
       mergedData.vehicle = inheritedContext.vehicle_name;
       mergedData.medium = inheritedContext.medium_name;
 
@@ -167,7 +170,13 @@ export const DetailBlockTable = memo(function DetailBlockTable({
       }
 
       const calculated = calculateFinancials(mergedData as DetailItemData);
-      return { id: item.id, data: mergedData, calculated };
+      return {
+        id: item.id,
+        data: mergedData,
+        calculated,
+        readOnly: item.readOnly,
+        sourceLineCode: item.sourceLineCode,
+      };
     });
   }, [items, inheritedContext, hasGrid, formatDetails, creatives]);
 
@@ -362,6 +371,7 @@ export const DetailBlockTable = memo(function DetailBlockTable({
             {/* Data rows */}
             {enrichedItems.map(item => {
               const isEditing = editingItemId === item.id;
+              const isItemReadOnly = readOnly || item.readOnly;
               const displayData = isEditing ? { ...item.data, ...editingData } : item.data;
               const displayCalc = isEditing
                 ? calculateFinancials(editingData as DetailItemData)
@@ -369,24 +379,51 @@ export const DetailBlockTable = memo(function DetailBlockTable({
               const displayItem: DetailItemRow = { ...item, data: displayData, calculated: displayCalc };
 
               return (
-                <tr key={item.id} className="group hover:bg-muted/20 border-b border-border/50">
-                  {allVisibleColumns.map(col => (
+                <tr
+                  key={item.id}
+                  className={cn(
+                    "group border-b border-border/50",
+                    item.readOnly
+                      ? "bg-muted/10 hover:bg-muted/20"
+                      : "hover:bg-muted/20"
+                  )}
+                >
+                  {allVisibleColumns.map((col, colIdx) => (
                     <td key={col.key} className="py-0.5 px-2 align-middle">
-                      <CellRenderer
-                        column={col}
-                        value={getDisplayValue(col, displayItem)}
-                        isEditing={isEditing && isColumnEditable(col)}
-                        readOnly={readOnly}
-                        onChange={(val) => setEditingData(prev => ({ ...prev, [col.key]: val }))}
-                        selectOptions={selectOptionsForColumn(col)}
-                        onCreateNew={isEditing ? getCreateNewHandler(col) : undefined}
-                        minDate={col.type === 'date' ? (planStartDate || undefined) : undefined}
-                        maxDate={col.type === 'date' ? (planEndDate || undefined) : undefined}
-                      />
+                      {colIdx === 0 && item.sourceLineCode ? (
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline" className="text-[9px] px-1 py-0 font-mono shrink-0 bg-muted/50">
+                            {item.sourceLineCode}
+                          </Badge>
+                          <CellRenderer
+                            column={col}
+                            value={getDisplayValue(col, displayItem)}
+                            isEditing={isEditing && isColumnEditable(col)}
+                            readOnly={isItemReadOnly}
+                            onChange={(val) => setEditingData(prev => ({ ...prev, [col.key]: val }))}
+                            selectOptions={selectOptionsForColumn(col)}
+                            onCreateNew={isEditing ? getCreateNewHandler(col) : undefined}
+                            minDate={col.type === 'date' ? (planStartDate || undefined) : undefined}
+                            maxDate={col.type === 'date' ? (planEndDate || undefined) : undefined}
+                          />
+                        </div>
+                      ) : (
+                        <CellRenderer
+                          column={col}
+                          value={getDisplayValue(col, displayItem)}
+                          isEditing={isEditing && isColumnEditable(col)}
+                          readOnly={isItemReadOnly}
+                          onChange={(val) => setEditingData(prev => ({ ...prev, [col.key]: val }))}
+                          selectOptions={selectOptionsForColumn(col)}
+                          onCreateNew={isEditing ? getCreateNewHandler(col) : undefined}
+                          minDate={col.type === 'date' ? (planStartDate || undefined) : undefined}
+                          maxDate={col.type === 'date' ? (planEndDate || undefined) : undefined}
+                        />
+                      )}
                     </td>
                   ))}
                   <td className="py-0.5 px-1 align-middle">
-                    {!readOnly && (
+                    {!isItemReadOnly && (
                       isEditing ? (
                         <div className="flex gap-0.5">
                           <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => handleSave(item.id)}>

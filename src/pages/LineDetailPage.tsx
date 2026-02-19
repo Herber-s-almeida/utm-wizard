@@ -222,6 +222,92 @@ export default function LineDetailPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Derive active detail type ID from current tab selection
+  const activeDetailTypeId = useMemo(() => {
+    if (!activeTab) return null;
+    const d = details.find(det => det.id === activeTab);
+    return d?.detail_type_id || null;
+  }, [activeTab, details]);
+
+  // Fetch sibling items from other lines in the same plan that use the same detail type
+  const { data: siblingItems = [] } = useQuery({
+    queryKey: ['sibling-detail-items', planId, activeDetailTypeId, mediaLineId],
+    queryFn: async () => {
+      if (!planId || !activeDetailTypeId || !mediaLineId) return [];
+
+      // Find other line_details in this plan with the same type, from OTHER lines
+      const { data: otherDetails } = await supabase
+        .from('line_details')
+        .select('id, media_line_id')
+        .eq('media_plan_id', planId)
+        .eq('detail_type_id', activeDetailTypeId)
+        .neq('media_line_id', mediaLineId);
+
+      if (!otherDetails?.length) return [];
+
+      const otherDetailIds = otherDetails.map(d => d.id);
+      const otherLineIds = [...new Set(otherDetails.map(d => d.media_line_id).filter(Boolean))] as string[];
+
+      // Fetch items + line codes in parallel
+      const [itemsRes, linesRes] = await Promise.all([
+        supabase
+          .from('line_detail_items')
+          .select('*')
+          .in('line_detail_id', otherDetailIds)
+          .eq('is_active', true)
+          .order('sort_order'),
+        supabase
+          .from('media_lines')
+          .select('id, line_code')
+          .in('id', otherLineIds),
+      ]);
+
+      const lineCodeMap: Record<string, string> = {};
+      (linesRes.data || []).forEach(l => { lineCodeMap[l.id] = l.line_code || '?'; });
+      const detailLineMap: Record<string, string> = {};
+      otherDetails.forEach(d => { if (d.media_line_id) detailLineMap[d.id] = d.media_line_id; });
+
+      // Fetch insertions
+      const itemIds = (itemsRes.data || []).map(i => i.id);
+      let insertionsData: Array<{ line_detail_item_id: string; insertion_date: string; quantity: number }> = [];
+      if (itemIds.length > 0) {
+        const { data } = await supabase
+          .from('line_detail_insertions')
+          .select('line_detail_item_id, insertion_date, quantity')
+          .in('line_detail_item_id', itemIds);
+        insertionsData = (data || []) as typeof insertionsData;
+      }
+
+      return (itemsRes.data || []).map(item => {
+        const lineId = detailLineMap[item.line_detail_id];
+        const itemData = (typeof item.data === 'object' && item.data && !Array.isArray(item.data)
+          ? item.data : {}) as Record<string, unknown>;
+        return {
+          id: item.id,
+          data: itemData,
+          total_insertions: item.total_insertions,
+          days_of_week: item.days_of_week,
+          period_start: item.period_start,
+          period_end: item.period_end,
+          format_id: item.format_id,
+          creative_id: item.creative_id,
+          status_id: item.status_id,
+          sourceLineCode: lineCodeMap[lineId] || '?',
+          readOnly: true as const,
+          insertions: insertionsData
+            .filter(ins => ins.line_detail_item_id === item.id)
+            .map(ins => ({
+              insertion_date: ins.insertion_date,
+              quantity: ins.quantity || 0,
+              line_detail_item_id: ins.line_detail_item_id,
+            })),
+        };
+      });
+    },
+    enabled: !!planId && !!activeDetailTypeId && !!mediaLineId,
+    staleTime: 5 * 60 * 1000,
+  });
+
   useEffect(() => {
     if (details.length > 0 && !activeTab) {
       setActiveTab(details[0].id);
@@ -541,6 +627,7 @@ export default function LineDetailPage() {
                     onFormatCreated={handleFormatCreated}
                     onCreativeCreated={handleCreativeCreated}
                     planLines={planLines}
+                    siblingItems={siblingItems}
                   />
                 </TabsContent>
               )}
@@ -574,6 +661,7 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
   onFormatCreated,
   onCreativeCreated,
   planLines,
+  siblingItems,
 }: {
   detail: LineDetail;
   getDetailCategory: (d: LineDetail) => DetailCategory | null;
@@ -592,6 +680,20 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
   onFormatCreated: () => void;
   onCreativeCreated: () => void;
   planLines: Array<{ id: string; line_code: string | null; platform: string | null; budget: number | null }>;
+  siblingItems: Array<{
+    id: string;
+    data: Record<string, unknown>;
+    total_insertions?: number | null;
+    days_of_week?: string[] | null;
+    period_start?: string | null;
+    period_end?: string | null;
+    format_id?: string | null;
+    creative_id?: string | null;
+    status_id?: string | null;
+    sourceLineCode: string;
+    readOnly: true;
+    insertions?: Array<{ insertion_date: string; quantity: number; line_detail_item_id: string }>;
+  }>;
 }) {
   const detailCategory = getDetailCategory(detail);
 
@@ -615,6 +717,24 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
     }));
   }, [detail.items]);
 
+  // Merge current line items with sibling items from other lines
+  const allItems = useMemo(() => {
+    return [...mappedItems, ...siblingItems.map(si => ({
+      id: si.id,
+      data: si.data,
+      total_insertions: si.total_insertions ?? undefined,
+      days_of_week: si.days_of_week ?? undefined,
+      period_start: si.period_start,
+      period_end: si.period_end,
+      format_id: si.format_id,
+      creative_id: si.creative_id,
+      status_id: si.status_id,
+      sourceLineCode: si.sourceLineCode,
+      readOnly: true as const,
+      insertions: si.insertions,
+    }))];
+  }, [mappedItems, siblingItems]);
+
   const handleCreate = useCallback(
     (data: Record<string, unknown>) => createItem({ line_detail_id: detail.id, data }),
     [createItem, detail.id]
@@ -627,7 +747,6 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
     },
     [updateItem]
   );
-
   const handleSaveInsertions = useCallback(
     async (itemId: string, ins: { date: string; quantity: number }[]) => {
       await upsertInsertions({ item_id: itemId, insertions: ins });
@@ -672,7 +791,7 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
         {detailCategory ? (
           <DetailBlockTable
             category={detailCategory}
-            items={mappedItems}
+            items={allItems}
             inheritedContext={detail.inherited_context}
             hasGrid={(detail.metadata as any)?.has_insertion_grid ?? detail.detail_type?.has_insertion_grid ?? false}
             planStartDate={startDate}
