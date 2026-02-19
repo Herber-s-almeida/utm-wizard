@@ -253,10 +253,15 @@ export function LineDetailDialog({
       : undefined;
     
     try {
+      const metadata: Record<string, unknown> = {
+        ...newMetadata,
+        ...(selectedType && isBlockBasedType(selectedType) ? { has_insertion_grid: newDetailHasGrid } : {}),
+      };
+      
       const result = await createDetail({
         detail_type_id: newDetailTypeId,
         name: autoName,
-        metadata: newMetadata,
+        metadata,
         inherited_context: buildInheritedContext(),
       });
       
@@ -633,7 +638,7 @@ export function LineDetailDialog({
                                 })),
                               }))}
                               inheritedContext={detail.inherited_context}
-                              hasGrid={detail.detail_type?.has_insertion_grid ?? false}
+                              hasGrid={(detail.metadata as any)?.has_insertion_grid ?? detail.detail_type?.has_insertion_grid ?? false}
                               planStartDate={startDate}
                               planEndDate={endDate}
                               onCreateItem={(data) => createItem({ line_detail_id: detail.id, data })}
