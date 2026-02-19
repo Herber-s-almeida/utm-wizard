@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
+import type { DetailCategory } from '@/utils/detailSchemas';
 
 export interface FieldSchemaItem {
   key: string;
@@ -28,6 +29,7 @@ export interface LineDetailType {
   slug: string | null;
   description: string | null;
   icon: string | null;
+  detail_category: DetailCategory | null;
   field_schema: FieldSchemaItem[];
   metadata_schema: MetadataSchemaItem[];
   has_insertion_grid: boolean;

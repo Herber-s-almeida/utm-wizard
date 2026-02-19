@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { useLineDetailTypes, LineDetailType, FieldSchemaItem } from '@/hooks/useLineDetailTypes';
+import { useLineDetailTypes, LineDetailType } from '@/hooks/useLineDetailTypes';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit2, Trash2, Grid3X3, FileText, ListChecks, Settings2, Copy } from 'lucide-react';
+import { Plus, Edit2, Trash2, Grid3X3, FileText, ListChecks, Settings2, Copy, Monitor, Radio, Tv, MapPin } from 'lucide-react';
 import { DetailTypeDialog } from '@/components/config/DetailTypeDialog';
+import { detailTypeSchemas, DetailCategory } from '@/utils/detailSchemas';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,17 +24,20 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
   'file': <FileText className="h-5 w-5" />,
 };
 
-function getFieldTypeBadge(type: FieldSchemaItem['type']) {
-  const colors: Record<string, string> = {
-    text: 'bg-blue-100 text-blue-800',
-    number: 'bg-green-100 text-green-800',
-    currency: 'bg-yellow-100 text-yellow-800',
-    percentage: 'bg-purple-100 text-purple-800',
-    date: 'bg-pink-100 text-pink-800',
-    time: 'bg-orange-100 text-orange-800',
-    select: 'bg-indigo-100 text-indigo-800',
-  };
-  return colors[type] || 'bg-gray-100 text-gray-800';
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  'ooh': <MapPin className="h-5 w-5" />,
+  'radio': <Radio className="h-5 w-5" />,
+  'tv': <Tv className="h-5 w-5" />,
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  'ooh': 'bg-amber-500/10 text-amber-600',
+  'radio': 'bg-blue-500/10 text-blue-600',
+  'tv': 'bg-purple-500/10 text-purple-600',
+};
+
+function isPredefined(type: LineDetailType): boolean {
+  return !!type.detail_category && type.detail_category !== 'custom';
 }
 
 export default function DetailTypesPage() {
@@ -42,6 +46,9 @@ export default function DetailTypesPage() {
   const [editingType, setEditingType] = useState<LineDetailType | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [typeToDelete, setTypeToDelete] = useState<LineDetailType | null>(null);
+
+  const predefinedTypes = types.filter(isPredefined);
+  const customTypes = types.filter(t => !isPredefined(t));
 
   const handleCreate = () => {
     setEditingType(null);
@@ -59,6 +66,7 @@ export default function DetailTypesPage() {
       slug: type.slug ? `${type.slug}-copia` : null,
       description: type.description,
       icon: type.icon,
+      detail_category: null,
       field_schema: type.field_schema,
       metadata_schema: type.metadata_schema,
       has_insertion_grid: type.has_insertion_grid,
@@ -69,7 +77,7 @@ export default function DetailTypesPage() {
   };
 
   const handleDelete = (type: LineDetailType) => {
-    if (type.is_system) return;
+    if (type.is_system || isPredefined(type)) return;
     setTypeToDelete(type);
     setDeleteDialogOpen(true);
   };
@@ -91,6 +99,142 @@ export default function DetailTypesPage() {
     setDialogOpen(false);
   };
 
+  const renderPredefinedCard = (type: LineDetailType) => {
+    const cat = type.detail_category as DetailCategory;
+    const schema = detailTypeSchemas[cat];
+    const blockNames = schema?.blocks.map(b => b.label) || [];
+    const totalCols = schema?.blocks.reduce((s, b) => s + b.columns.length, 0) || 0;
+
+    return (
+      <Card key={type.id} className="group relative border-2">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-md ${CATEGORY_COLORS[cat] || 'bg-primary/10 text-primary'}`}>
+                {CATEGORY_ICONS[cat] || <Monitor className="h-5 w-5" />}
+              </div>
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  {type.name}
+                  <Badge variant="secondary" className="text-xs">Pré-definido</Badge>
+                </CardTitle>
+                {type.description && (
+                  <CardDescription className="text-xs mt-1">{type.description}</CardDescription>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Block structure preview */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2">
+              Blocos ({blockNames.length}) · {totalCols} campos
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {blockNames.map(name => (
+                <Badge key={name} variant="outline" className="text-xs">
+                  {name}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          {/* Grid support */}
+          {schema?.supportsGrid && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Grid3X3 className="h-3.5 w-3.5" />
+              <span>Suporta grade de inserções</span>
+            </div>
+          )}
+
+          {/* Type-specific fields */}
+          {cat === 'ooh' && (
+            <div className="text-xs text-muted-foreground">
+              <span className="font-medium">Campos exclusivos:</span> Ponto OOH, Tipo de Ponto, Localização
+            </div>
+          )}
+          {(cat === 'radio' || cat === 'tv') && (
+            <div className="text-xs text-muted-foreground">
+              <span className="font-medium">Campos exclusivos:</span> Programa, Faixa Horária
+            </div>
+          )}
+
+          {/* Actions - limited for predefined */}
+          <div className="flex items-center gap-1 pt-2 border-t">
+            <Button variant="ghost" size="sm" onClick={() => handleEdit(type)} className="flex-1">
+              <Edit2 className="h-3.5 w-3.5 mr-1" />
+              Visualizar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderCustomCard = (type: LineDetailType) => (
+    <Card key={type.id} className="group relative">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-md bg-primary/10 text-primary">
+              {TYPE_ICONS[type.icon || 'list'] || <ListChecks className="h-5 w-5" />}
+            </div>
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                {type.name}
+                {type.is_system && <Badge variant="secondary" className="text-xs">Sistema</Badge>}
+              </CardTitle>
+              {type.description && (
+                <CardDescription className="text-xs mt-1">{type.description}</CardDescription>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-2">
+            Campos ({type.field_schema.length})
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {type.field_schema.slice(0, 5).map(field => (
+              <Badge key={field.key} variant="outline" className="text-xs">
+                {field.label}
+              </Badge>
+            ))}
+            {type.field_schema.length > 5 && (
+              <Badge variant="outline" className="text-xs">+{type.field_schema.length - 5}</Badge>
+            )}
+          </div>
+        </div>
+
+        {type.has_insertion_grid && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Grid3X3 className="h-3.5 w-3.5" />
+            <span>Grade de inserções: {type.insertion_grid_type === 'daily' ? 'Diária' : 'Mensal'}</span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-1 pt-2 border-t">
+          <Button variant="ghost" size="sm" onClick={() => handleEdit(type)} className="flex-1">
+            <Edit2 className="h-3.5 w-3.5 mr-1" />
+            Editar
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => handleDuplicate(type)} className="flex-1">
+            <Copy className="h-3.5 w-3.5 mr-1" />
+            Duplicar
+          </Button>
+          {!type.is_system && (
+            <Button variant="ghost" size="sm" onClick={() => handleDelete(type)} className="text-destructive hover:text-destructive">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -103,7 +247,7 @@ export default function DetailTypesPage() {
           </div>
           <Button onClick={handleCreate}>
             <Plus className="h-4 w-4 mr-2" />
-            Novo Tipo
+            Novo Tipo Personalizado
           </Button>
         </div>
 
@@ -111,21 +255,11 @@ export default function DetailTypesPage() {
         <Card className="bg-muted/30 border-dashed">
           <CardContent className="py-4 space-y-3">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Algumas entregas de mídia precisam de detalhamento diferente, como entregas semanais, 
-              diárias ou ações pontuais que precisam ser destacadas no plano. Para isso, utiliza-se 
-              o <strong>detalhamento</strong>, que permite fazer um aprofundamento de uma das linhas 
-              do plano em suas entregas pormenores, organizando melhor a execução e o acompanhamento 
-              das ações de mídia.
+              Os tipos <strong>pré-definidos</strong> (OOH, Rádio, TV) possuem uma estrutura otimizada 
+              com blocos de Campanha, Formato e Mensagem, Financeiro e Período, incluindo cálculos 
+              automáticos e grade de inserções. Tipos <strong>personalizados</strong> permitem criar 
+              schemas livres para outros meios.
             </p>
-            <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-              <p className="text-sm font-medium text-primary mb-1">Campos herdados automaticamente</p>
-              <p className="text-xs text-muted-foreground">
-                Os seguintes campos são herdados da linha de mídia e <strong>não devem</strong> ser 
-                incluídos no schema do tipo de detalhamento: <span className="font-medium">Veículo, 
-                Meio, Canal, Praça/Subdivisão, Momento, Fase do Funil, Formato e Secundagem</span>. 
-                Estes campos são exibidos automaticamente como contexto no detalhamento.
-              </p>
-            </div>
           </CardContent>
         </Card>
 
@@ -137,121 +271,46 @@ export default function DetailTypesPage() {
                   <div className="h-5 w-32 bg-muted rounded" />
                   <div className="h-4 w-48 bg-muted rounded" />
                 </CardHeader>
-                <CardContent>
-                  <div className="h-20 bg-muted rounded" />
-                </CardContent>
+                <CardContent><div className="h-20 bg-muted rounded" /></CardContent>
               </Card>
             ))}
           </div>
-        ) : types.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Settings2 className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhum tipo configurado</h3>
-              <p className="text-muted-foreground text-center mb-4">
-                Crie seu primeiro tipo de detalhamento para começar a usar
-              </p>
-              <Button onClick={handleCreate}>
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Tipo
-              </Button>
-            </CardContent>
-          </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {types.map(type => (
-              <Card key={type.id} className="group relative">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-md bg-primary/10 text-primary">
-                        {TYPE_ICONS[type.icon || 'list'] || <ListChecks className="h-5 w-5" />}
-                      </div>
-                      <div>
-                        <CardTitle className="text-base flex items-center gap-2">
-                          {type.name}
-                          {type.is_system && (
-                            <Badge variant="secondary" className="text-xs">Sistema</Badge>
-                          )}
-                        </CardTitle>
-                        {type.description && (
-                          <CardDescription className="text-xs mt-1">
-                            {type.description}
-                          </CardDescription>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {/* Field schema preview */}
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2">
-                      Campos ({type.field_schema.length})
+          <>
+            {/* Pre-defined types */}
+            {predefinedTypes.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-lg font-semibold">Tipos Pré-definidos</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {predefinedTypes.map(renderPredefinedCard)}
+                </div>
+              </div>
+            )}
+
+            {/* Custom types */}
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold">Tipos Personalizados</h2>
+              {customTypes.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12">
+                    <Settings2 className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Nenhum tipo personalizado</h3>
+                    <p className="text-muted-foreground text-center mb-4">
+                      Crie um tipo personalizado para meios que não sejam OOH, Rádio ou TV
                     </p>
-                    <div className="flex flex-wrap gap-1">
-                      {type.field_schema.slice(0, 5).map(field => (
-                        <Badge 
-                          key={field.key} 
-                          variant="outline" 
-                          className={`text-xs ${getFieldTypeBadge(field.type)}`}
-                        >
-                          {field.label}
-                        </Badge>
-                      ))}
-                      {type.field_schema.length > 5 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{type.field_schema.length - 5}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Insertion grid info */}
-                  {type.has_insertion_grid && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Grid3X3 className="h-3.5 w-3.5" />
-                      <span>
-                        Grade de inserções: {type.insertion_grid_type === 'daily' ? 'Diária' : 'Mensal'}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 pt-2 border-t">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(type)}
-                      className="flex-1"
-                    >
-                      <Edit2 className="h-3.5 w-3.5 mr-1" />
-                      Editar
+                    <Button onClick={handleCreate}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Criar Tipo
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDuplicate(type)}
-                      className="flex-1"
-                    >
-                      <Copy className="h-3.5 w-3.5 mr-1" />
-                      Duplicar
-                    </Button>
-                    {!type.is_system && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(type)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {customTypes.map(renderCustomCard)}
+                </div>
+              )}
+            </div>
+          </>
         )}
       </div>
 
