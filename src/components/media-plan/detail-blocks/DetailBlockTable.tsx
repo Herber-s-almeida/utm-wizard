@@ -3,19 +3,14 @@
  * Renders all blocks (Campaign, Format & Message, Financial, Period) as column groups,
  * supports inline editing, calculated fields, totals row, optional grid,
  * and wizard dialogs for creating new formats and creatives.
+ *
+ * Layout: two independent scroll panels – top for the data table, bottom for the grid.
+ * Both have sticky column headers and sticky totals/footer rows.
  */
 import { useState, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Save, X, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { type DetailCategory, type BlockDef, type ColumnDef, detailTypeSchemas } from '@/utils/detailSchemas';
 import { calculateFinancials, calculateTotals, formatBRL, formatPercentage, countGridInsertions, type DetailItemData } from '@/utils/financialCalculations';
 import { BlockHeader } from './BlockHeader';
@@ -117,7 +112,6 @@ export function DetailBlockTable({
     });
   };
 
-  // Get visible columns per block considering collapse state
   const getVisibleColumns = useCallback((block: BlockDef): ColumnDef[] => {
     if (!block.collapsible || !collapsedBlocks.has(block.key)) {
       return block.columns;
@@ -133,10 +127,8 @@ export function DetailBlockTable({
   // Build enriched item rows with inherited data and calculations
   const enrichedItems: DetailItemRow[] = useMemo(() => {
     return items.map(item => {
-      // Merge inherited context into data for display
       const mergedData: Record<string, unknown> = { ...item.data };
 
-      // Fill inherited fields
       mergedData.subdivision = inheritedContext.subdivision_name;
       mergedData.moment = inheritedContext.moment_name;
       mergedData.funnel_stage = inheritedContext.funnel_stage_name;
@@ -144,7 +136,6 @@ export function DetailBlockTable({
       mergedData.vehicle = inheritedContext.vehicle_name;
       mergedData.medium = inheritedContext.medium_name;
 
-      // For grid mode, total_insertions comes from grid
       if (hasGrid && item.insertions) {
         const gridTotal = item.insertions.reduce((sum, ins) => sum + (ins.quantity || 0), 0);
         mergedData.total_insertions = gridTotal;
@@ -152,17 +143,13 @@ export function DetailBlockTable({
         mergedData.total_insertions = item.total_insertions;
       }
 
-      // Period
       mergedData.period_start = item.period_start || item.data.period_start;
       mergedData.period_end = item.period_end || item.data.period_end;
-
-      // Status / format / creative IDs
       mergedData.status_id = item.status_id || item.data.status_id;
       mergedData.format_id = item.format_id || item.data.format_id;
       mergedData.creative_id = item.creative_id || item.data.creative_id;
       mergedData.days_of_week = item.days_of_week || item.data.days_of_week;
 
-      // Enrich format-inherited fields from formatDetails
       const fmtId = mergedData.format_id as string;
       if (fmtId && formatDetails[fmtId]) {
         const fd = formatDetails[fmtId];
@@ -171,7 +158,6 @@ export function DetailBlockTable({
         mergedData.duration = fd.duration || mergedData.duration;
       }
 
-      // Enrich creative-inherited fields
       const crtId = mergedData.creative_id as string;
       if (crtId) {
         const crt = creatives.find(c => c.id === crtId);
@@ -181,12 +167,10 @@ export function DetailBlockTable({
       }
 
       const calculated = calculateFinancials(mergedData as DetailItemData);
-
       return { id: item.id, data: mergedData, calculated };
     });
   }, [items, inheritedContext, hasGrid, formatDetails, creatives]);
 
-  // Totals
   const totals = useMemo(() => {
     const itemsData = enrichedItems.map(r => r.data as DetailItemData);
     return calculateTotals(itemsData);
@@ -259,10 +243,9 @@ export function DetailBlockTable({
     }
   };
 
-  // Grid insertions data – mutable local state for pending changes
+  // Grid insertions – mutable local state for pending changes
   const [localInsertions, setLocalInsertions] = useState<Record<string, Record<string, number>>>({});
 
-  // Seed from server data
   const gridInsertions = useMemo(() => {
     const map: Record<string, Record<string, number>> = {};
     items.forEach(item => {
@@ -285,7 +268,6 @@ export function DetailBlockTable({
 
   const handleSaveAllInsertions = useCallback(async () => {
     if (!onSaveInsertions) return;
-    // For each item with local changes, build full insertion list and save
     const itemIds = Object.keys(gridInsertions);
     for (const itemId of itemIds) {
       const all = gridInsertions[itemId];
@@ -316,7 +298,6 @@ export function DetailBlockTable({
       return String(totals.totalDays);
     }
 
-    // Sum type
     const sumKey = col.formula || col.key;
     const sumMap: Record<string, string> = {
       total_insertions: String(totals.sums.total_insertions || 0),
@@ -336,161 +317,174 @@ export function DetailBlockTable({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-auto">
-        <div className="overflow-x-auto">
-          <Table className="w-full text-xs">
-            <TableHeader>
-              {/* Block group headers */}
-              <TableRow className="bg-muted/30">
-                {schema.blocks.map(block => {
-                  const visibleCols = getVisibleColumns(block);
-                  if (visibleCols.length === 0) return null;
-                  return (
-                    <BlockHeader
-                      key={block.key}
-                      block={block}
-                      isCollapsed={collapsedBlocks.has(block.key)}
-                      onToggle={() => toggleBlock(block.key)}
-                      colSpan={visibleCols.length}
-                    />
-                  );
-                })}
-                <th className="w-[70px] bg-muted/70 border-b px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                  Ações
-                </th>
-              </TableRow>
-              {/* Column headers */}
-              <TableRow className="bg-muted/50">
-                {allVisibleColumns.map(col => (
-                  <TableHead
-                    key={col.key}
-                    className="text-[10px] font-medium whitespace-nowrap px-2 py-1.5"
-                    style={{ minWidth: col.minWidth || 80 }}
-                  >
-                    {col.label}
-                    {col.inherited && (
-                      <span className="ml-1 text-[8px] text-muted-foreground">(herd.)</span>
-                    )}
-                  </TableHead>
-                ))}
-                <TableHead className="w-[70px]" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {/* Data rows */}
-              {enrichedItems.map(item => {
-                const isEditing = editingItemId === item.id;
-                const displayData = isEditing ? { ...item.data, ...editingData } : item.data;
-                const displayCalc = isEditing
-                  ? calculateFinancials(editingData as DetailItemData)
-                  : item.calculated;
-                const displayItem: DetailItemRow = { ...item, data: displayData, calculated: displayCalc };
-
-                  return (
-                  <TableRow key={item.id} className="group hover:bg-muted/20">
-                    {allVisibleColumns.map(col => (
-                      <TableCell key={col.key} className="py-0.5 px-2">
-                        <CellRenderer
-                          column={col}
-                          value={getDisplayValue(col, displayItem)}
-                          isEditing={isEditing && isColumnEditable(col)}
-                          readOnly={readOnly}
-                          onChange={(val) => setEditingData(prev => ({ ...prev, [col.key]: val }))}
-                          selectOptions={selectOptionsForColumn(col)}
-                          onCreateNew={isEditing ? getCreateNewHandler(col) : undefined}
-                          minDate={col.type === 'date' ? (planStartDate || undefined) : undefined}
-                          maxDate={col.type === 'date' ? (planEndDate || undefined) : undefined}
-                        />
-                      </TableCell>
-                    ))}
-                    <TableCell className="py-0.5 px-1">
-                      {!readOnly && (
-                        isEditing ? (
-                          <div className="flex gap-0.5">
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => handleSave(item.id)}>
-                              <Save className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelEditing}>
-                              <X className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => startEditing(item)}
-                            >
-                              <Save className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-destructive hover:text-destructive"
-                              onClick={() => onDeleteItem(item.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        )
-                      )}
-                    </TableCell>
-                  </TableRow>
+      {/* ── Top panel: data table with sticky header + sticky totals ── */}
+      <div className={cn("flex-1 min-h-0 overflow-auto relative", hasGrid && "max-h-[55%]", !hasGrid && "flex-1")}>
+        <table className="w-full text-xs border-collapse">
+          {/* Sticky block group + column headers */}
+          <thead className="sticky top-0 z-20">
+            {/* Block group headers */}
+            <tr className="bg-muted/80 backdrop-blur-sm">
+              {schema.blocks.map(block => {
+                const visibleCols = getVisibleColumns(block);
+                if (visibleCols.length === 0) return null;
+                return (
+                  <BlockHeader
+                    key={block.key}
+                    block={block}
+                    isCollapsed={collapsedBlocks.has(block.key)}
+                    onToggle={() => toggleBlock(block.key)}
+                    colSpan={visibleCols.length}
+                  />
                 );
               })}
+              <th className="w-[70px] bg-muted/80 backdrop-blur-sm border-b px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                Ações
+              </th>
+            </tr>
+            {/* Column headers */}
+            <tr className="bg-muted/60 backdrop-blur-sm">
+              {allVisibleColumns.map(col => (
+                <th
+                  key={col.key}
+                  className="text-[10px] font-medium whitespace-nowrap px-2 py-1.5 text-left align-middle text-muted-foreground border-b"
+                  style={{ minWidth: col.minWidth || 80 }}
+                >
+                  {col.label}
+                  {col.inherited && (
+                    <span className="ml-1 text-[8px] text-muted-foreground/60">(herd.)</span>
+                  )}
+                </th>
+              ))}
+              <th className="w-[70px] border-b" />
+            </tr>
+          </thead>
+          <tbody>
+            {/* Data rows */}
+            {enrichedItems.map(item => {
+              const isEditing = editingItemId === item.id;
+              const displayData = isEditing ? { ...item.data, ...editingData } : item.data;
+              const displayCalc = isEditing
+                ? calculateFinancials(editingData as DetailItemData)
+                : item.calculated;
+              const displayItem: DetailItemRow = { ...item, data: displayData, calculated: displayCalc };
 
-              {/* New item row */}
-              {isAddingNew && (
-                <TableRow className="bg-primary/5">
+              return (
+                <tr key={item.id} className="group hover:bg-muted/20 border-b border-border/50">
                   {allVisibleColumns.map(col => (
-                    <TableCell key={col.key} className="py-0.5 px-2">
+                    <td key={col.key} className="py-0.5 px-2 align-middle">
                       <CellRenderer
                         column={col}
-                        value={col.inherited ? (inheritedContext as any)[col.inheritField || ''] : newItemData[col.key]}
-                        isEditing={isColumnEditable(col)}
-                        onChange={(val) => setNewItemData(prev => ({ ...prev, [col.key]: val }))}
+                        value={getDisplayValue(col, displayItem)}
+                        isEditing={isEditing && isColumnEditable(col)}
+                        readOnly={readOnly}
+                        onChange={(val) => setEditingData(prev => ({ ...prev, [col.key]: val }))}
                         selectOptions={selectOptionsForColumn(col)}
-                        onCreateNew={getCreateNewHandler(col)}
+                        onCreateNew={isEditing ? getCreateNewHandler(col) : undefined}
                         minDate={col.type === 'date' ? (planStartDate || undefined) : undefined}
                         maxDate={col.type === 'date' ? (planEndDate || undefined) : undefined}
                       />
-                    </TableCell>
+                    </td>
                   ))}
-                  <TableCell className="py-0.5 px-1">
-                    <div className="flex gap-0.5">
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={handleCreate}>
-                        <Save className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setIsAddingNew(false); setNewItemData({}); }}>
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-
-              {/* Totals row */}
-              {enrichedItems.length > 0 && (
-                <TableRow className="bg-muted font-semibold">
-                  {allVisibleColumns.map((col, idx) => (
-                    <TableCell key={col.key} className="py-1.5 px-2 text-xs">
-                      {idx === 0 ? (
-                        <span className="font-bold">TOTAIS</span>
+                  <td className="py-0.5 px-1 align-middle">
+                    {!readOnly && (
+                      isEditing ? (
+                        <div className="flex gap-0.5">
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => handleSave(item.id)}>
+                            <Save className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelEditing}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       ) : (
-                        formatTotalValue(col)
-                      )}
-                    </TableCell>
-                  ))}
-                  <TableCell />
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => startEditing(item)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive hover:text-destructive"
+                            onClick={() => onDeleteItem(item.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
 
-        {/* Grid Block */}
-        {hasGrid && enrichedItems.length > 0 && (
+            {/* New item row */}
+            {isAddingNew && (
+              <tr className="bg-primary/5 border-b">
+                {allVisibleColumns.map(col => (
+                  <td key={col.key} className="py-0.5 px-2">
+                    <CellRenderer
+                      column={col}
+                      value={col.inherited ? (inheritedContext as any)[col.inheritField || ''] : newItemData[col.key]}
+                      isEditing={isColumnEditable(col)}
+                      onChange={(val) => setNewItemData(prev => ({ ...prev, [col.key]: val }))}
+                      selectOptions={selectOptionsForColumn(col)}
+                      onCreateNew={getCreateNewHandler(col)}
+                      minDate={col.type === 'date' ? (planStartDate || undefined) : undefined}
+                      maxDate={col.type === 'date' ? (planEndDate || undefined) : undefined}
+                    />
+                  </td>
+                ))}
+                <td className="py-0.5 px-1">
+                  <div className="flex gap-0.5">
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={handleCreate}>
+                      <Save className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setIsAddingNew(false); setNewItemData({}); }}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+          {/* Sticky totals footer */}
+          {enrichedItems.length > 0 && (
+            <tfoot className="sticky bottom-0 z-10">
+              <tr className="bg-muted font-semibold">
+                {allVisibleColumns.map((col, idx) => (
+                  <td key={col.key} className="py-1.5 px-2 text-xs border-t">
+                    {idx === 0 ? (
+                      <span className="font-bold">TOTAIS</span>
+                    ) : (
+                      formatTotalValue(col)
+                    )}
+                  </td>
+                ))}
+                <td className="border-t" />
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
+
+      {/* Add item button between panels */}
+      {!readOnly && !isAddingNew && (
+        <div className="px-4 py-2 border-t border-b bg-background shrink-0 flex items-center justify-between">
+          <Button variant="outline" size="sm" onClick={() => setIsAddingNew(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Item
+          </Button>
+        </div>
+      )}
+
+      {/* ── Bottom panel: insertion grid with its own scroll ── */}
+      {hasGrid && enrichedItems.length > 0 && (
+        <div className="min-h-[200px] flex-1 overflow-auto border-t">
           <GridBlock
             items={enrichedItems.map((i, idx) => ({
               id: i.id,
@@ -506,16 +500,6 @@ export function DetailBlockTable({
             onSaveAll={onSaveInsertions ? handleSaveAllInsertions : undefined}
             readOnly={readOnly}
           />
-        )}
-      </div>
-
-      {/* Add button */}
-      {!readOnly && !isAddingNew && (
-        <div className="px-4 py-3">
-          <Button variant="outline" size="sm" onClick={() => setIsAddingNew(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Item
-          </Button>
         </div>
       )}
 

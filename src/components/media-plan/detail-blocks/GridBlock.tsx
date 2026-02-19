@@ -200,10 +200,10 @@ export function GridBlock({
   }
 
   return (
-    <div className="border-t">
+    <div>
       {/* Save bar */}
       {!readOnly && (
-        <div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b">
+        <div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b sticky top-0 z-30">
           <span className="text-[10px] font-medium text-muted-foreground">
             Grade de Inserções
             {hasChanges && (
@@ -229,10 +229,10 @@ export function GridBlock({
 
       <div className="overflow-x-auto">
         <table className="min-w-max text-[11px]">
-          <thead>
+          <thead className="sticky top-[33px] z-20">
             {/* Month headers row */}
-            <tr className="bg-muted/50">
-              <th className="sticky left-0 z-10 bg-muted/50 border-r border-b px-2 py-1 text-left text-[10px] font-semibold min-w-[80px]">
+            <tr className="bg-muted/80 backdrop-blur-sm">
+              <th className="sticky left-0 z-30 bg-muted/80 border-r border-b px-2 py-1 text-left text-[10px] font-semibold min-w-[80px]">
                 Item
               </th>
               {months.map(month => {
@@ -260,8 +260,8 @@ export function GridBlock({
               </th>
             </tr>
             {/* Weekday row */}
-            <tr className="bg-muted/30">
-              <th className="sticky left-0 z-10 bg-muted/30 border-r border-b" />
+            <tr className="bg-muted/60 backdrop-blur-sm">
+              <th className="sticky left-0 z-30 bg-muted/60 border-r border-b" />
               {months.map(month => {
                 if (collapsedMonths.has(month.key)) {
                   return <th key={`${month.key}-wd`} className="border-r border-b" />;
@@ -278,8 +278,8 @@ export function GridBlock({
               <th className="border-b" />
             </tr>
             {/* Date row */}
-            <tr className="bg-muted/20">
-              <th className="sticky left-0 z-10 bg-muted/20 border-r border-b" />
+            <tr className="bg-muted/40 backdrop-blur-sm">
+              <th className="sticky left-0 z-30 bg-muted/40 border-r border-b" />
               {months.map(month => {
                 if (collapsedMonths.has(month.key)) {
                   return <th key={`${month.key}-dt`} className="border-r border-b text-[9px] text-muted-foreground">Σ</th>;
@@ -305,7 +305,7 @@ export function GridBlock({
 
               return (
                 <tr key={item.id} className="hover:bg-muted/20 group">
-                  <td className="sticky left-0 z-10 bg-background border-r border-b px-2 py-0.5 text-[10px] font-medium whitespace-nowrap">
+                  <td className="sticky left-0 z-10 bg-background border-r border-b px-2 py-0.5 text-[10px] font-medium whitespace-nowrap group-hover:bg-muted/20">
                     <div className="flex items-center gap-1">
                       <span>{item.label || `#${idx + 1}`}</span>
                       {!readOnly && selectedDays.length > 0 && (

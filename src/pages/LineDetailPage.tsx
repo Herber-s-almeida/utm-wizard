@@ -25,13 +25,17 @@ import {
   Link2,
   Grid3X3,
   ArrowLeft,
+  MapPin,
+  Calendar,
+  TrendingUp,
+  Target,
+  Hash,
 } from 'lucide-react';
 import { useLineDetails, LineDetail } from '@/hooks/useLineDetails';
 import { useLineDetailTypes, LineDetailType } from '@/hooks/useLineDetailTypes';
 import { LineDetailTable } from '@/components/media-plan/LineDetailTable';
 import { DetailBlockTable } from '@/components/media-plan/detail-blocks/DetailBlockTable';
 import { LinkedLinesTab } from '@/components/media-plan/LinkedLinesTab';
-import { InheritedContextHeader } from '@/components/media-plan/InheritedContextHeader';
 import { type DetailCategory, detailTypeSchemas } from '@/utils/detailSchemas';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -67,7 +71,7 @@ export default function LineDetailPage() {
     enabled: !!planSlug,
   });
 
-  // Fetch line info
+  // Fetch line info with relations
   const { data: line } = useQuery({
     queryKey: ['line-for-detail-page', mediaLineId],
     queryFn: async () => {
@@ -76,8 +80,8 @@ export default function LineDetailPage() {
         .from('media_lines')
         .select(`
           id, line_code, platform, budget, start_date, end_date,
-          vehicle_id, medium_id, channel_id, subdivision_id, moment_id, funnel_stage_id,
-          vehicles(name), mediums(name), channels(name), subdivisions(name), moments(name), funnel_stages(name)
+          vehicle_id, medium_id, channel_id, subdivision_id, moment_id, funnel_stage_id, target_id,
+          vehicles(name), mediums(name), channels(name), subdivisions(name), moments(name), funnel_stages(name), targets(name)
         `)
         .eq('id', mediaLineId)
         .maybeSingle();
@@ -99,6 +103,7 @@ export default function LineDetailPage() {
   const subdivisionName = (line as any)?.subdivisions?.name;
   const momentName = (line as any)?.moments?.name;
   const funnelStageName = (line as any)?.funnel_stages?.name;
+  const targetName = (line as any)?.targets?.name;
 
   const {
     details,
@@ -224,6 +229,9 @@ export default function LineDetailPage() {
     subdivision_name: subdivisionName,
     moment_name: momentName,
     funnel_stage_name: funnelStageName,
+    target_name: targetName,
+    line_code: lineCode,
+    line_budget: lineBudget,
   });
 
   const BLOCK_CATEGORIES: DetailCategory[] = ['ooh', 'radio', 'tv'];
@@ -283,40 +291,58 @@ export default function LineDetailPage() {
 
   if (!mediaLineId) return null;
 
+  // Inline context badges from line data
+  const contextBadges = [
+    { label: 'Subdivisão', value: subdivisionName, icon: MapPin },
+    { label: 'Momento', value: momentName, icon: Calendar },
+    { label: 'Fase', value: funnelStageName, icon: TrendingUp },
+    { label: 'Veículo', value: vehicleName, icon: Tv },
+    { label: 'Meio', value: mediumName, icon: Radio },
+    { label: 'Target', value: targetName, icon: Target },
+  ].filter(b => b.value);
+
   return (
     <DashboardLayout>
       <div className="flex flex-col -m-4 md:-m-6 lg:-m-8 h-[calc(100vh-3.5rem)] md:h-screen">
-        {/* Header */}
-        <div className="border-b bg-card px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate(`/media-plans/${planSlug}`)}>
+        {/* ── Compact Header ── */}
+        <div className="border-b bg-card px-4 py-3 shrink-0">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate(`/media-plans/${planSlug}`)}>
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <div>
-                <h1 className="text-lg font-semibold flex items-center gap-2">
+              <div className="min-w-0">
+                <h1 className="text-base font-semibold flex items-center gap-2">
                   Detalhamento da Linha
-                  <Badge variant="outline" className="font-mono">
+                  <Badge variant="outline" className="font-mono text-xs">
                     {lineCode || 'Sem código'}
                   </Badge>
                 </h1>
-                <p className="text-sm text-muted-foreground">
-                  {platform || 'Linha'} • Orçamento: {formatCurrency(lineBudget)}
-                  {plan?.name && <span> • {plan.name}</span>}
-                </p>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                  <span>{platform || 'Linha'} • Orçamento: {formatCurrency(lineBudget)}</span>
+                  {contextBadges.map(b => {
+                    const Icon = b.icon;
+                    return (
+                      <span key={b.label} className="flex items-center gap-1">
+                        <Icon className="h-3 w-3" />
+                        {b.value}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
             {/* Budget comparison */}
             <div className={cn(
-              "flex items-center gap-3 px-4 py-2 rounded-lg",
+              "flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm shrink-0",
               hasBudgetMismatch ? "bg-destructive/10" : "bg-primary/10"
             )}>
               {hasBudgetMismatch && <AlertTriangle className="h-4 w-4 text-destructive" />}
               <div className="text-right">
-                <div className="text-xs text-muted-foreground">Total Detalhado</div>
+                <div className="text-[10px] text-muted-foreground">Total Detalhado</div>
                 <div className={cn(
-                  "font-semibold",
+                  "font-semibold text-sm",
                   hasBudgetMismatch ? "text-destructive" : "text-primary"
                 )}>
                   {formatCurrency(totalNet)}
@@ -324,8 +350,8 @@ export default function LineDetailPage() {
               </div>
               {hasBudgetMismatch && (
                 <div className="text-right border-l pl-3">
-                  <div className="text-xs text-muted-foreground">Diferença</div>
-                  <div className="font-semibold text-destructive">
+                  <div className="text-[10px] text-muted-foreground">Diferença</div>
+                  <div className="font-semibold text-sm text-destructive">
                     {formatCurrency(budgetDifference)}
                   </div>
                 </div>
@@ -334,7 +360,7 @@ export default function LineDetailPage() {
           </div>
         </div>
 
-        {/* Body */}
+        {/* ── Body fills remaining height ── */}
         <div className="flex-1 min-h-0 flex flex-col">
           {isLoading ? (
             <div className="flex-1 flex items-center justify-center">
@@ -367,7 +393,7 @@ export default function LineDetailPage() {
               }}
               className="flex-1 flex flex-col min-h-0"
             >
-              <div className="border-b px-6 py-2 shrink-0">
+              <div className="border-b px-4 py-1.5 shrink-0 bg-muted/20">
                 <TabsList className="h-auto gap-1 bg-transparent p-0">
                   {details.map((detail) => {
                     const Icon = getIcon(detail.detail_type?.icon);
@@ -397,7 +423,7 @@ export default function LineDetailPage() {
 
               {/* New detail form */}
               {showNewDetailForm && (
-                <TabsContent value="new" className="flex-1 p-6 m-0">
+                <TabsContent value="new" className="flex-1 p-6 m-0 overflow-auto">
                   <div className="max-w-lg space-y-4">
                     <div className="space-y-2">
                       <Label>Tipo de Detalhamento</Label>
@@ -427,27 +453,6 @@ export default function LineDetailPage() {
                         <p className="font-medium text-sm">{selectedType.name} - {lineCode}</p>
                       </div>
                     )}
-
-                    <div className="p-4 bg-muted/50 rounded-lg border border-dashed space-y-3">
-                      <p className="text-xs text-muted-foreground font-medium flex items-center gap-2">
-                        <FileText className="h-3.5 w-3.5" />
-                        Contexto herdado automaticamente da linha:
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {vehicleName && <Badge variant="secondary" className="gap-1"><Tv className="h-3 w-3" />{vehicleName}</Badge>}
-                        {mediumName && <Badge variant="secondary" className="gap-1"><Radio className="h-3 w-3" />{mediumName}</Badge>}
-                        {channelName && <Badge variant="outline">{channelName}</Badge>}
-                        {subdivisionName && <Badge variant="outline">{subdivisionName}</Badge>}
-                        {momentName && <Badge variant="outline">{momentName}</Badge>}
-                        {funnelStageName && <Badge variant="outline">{funnelStageName}</Badge>}
-                        {!vehicleName && !mediumName && !subdivisionName && (
-                          <span className="text-xs text-muted-foreground italic">Nenhum contexto disponível na linha</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Estes campos são exibidos como referência e não precisam ser preenchidos novamente.
-                      </p>
-                    </div>
 
                     {selectedType && isBlockBasedType(selectedType) && (
                       <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
@@ -497,17 +502,16 @@ export default function LineDetailPage() {
                 </TabsContent>
               )}
 
-              {/* Detail content */}
+              {/* Detail content – fills entire remaining space */}
               {details.map((detail) => (
                 <TabsContent
                   key={detail.id}
                   value={detail.id}
                   className="flex-1 flex flex-col min-h-0 m-0"
                 >
-                  <InheritedContextHeader context={detail.inherited_context} />
-
+                  {/* Sub-tabs: items / links */}
                   <Tabs defaultValue="items" className="flex-1 flex flex-col min-h-0">
-                    <div className="px-6 py-2 border-b bg-muted/30">
+                    <div className="px-4 py-1.5 border-b bg-muted/20 flex items-center justify-between shrink-0">
                       <TabsList className="h-8">
                         <TabsTrigger value="items" className="text-xs h-7">
                           <FileText className="h-3 w-3 mr-1" />
@@ -519,33 +523,18 @@ export default function LineDetailPage() {
                         </TabsTrigger>
                       </TabsList>
 
-                      {detail.metadata && Object.keys(detail.metadata as object).length > 0 && (
-                        <div className="flex items-center gap-4 text-sm mt-2">
-                          {Object.entries(detail.metadata as Record<string, unknown>).map(([key, value]) => {
-                            const fieldDef = detail.detail_type?.metadata_schema?.find(f => f.key === key);
-                            return (
-                              <div key={key} className="flex items-center gap-1">
-                                <span className="text-muted-foreground">{fieldDef?.label || key}:</span>
-                                <span className="font-medium">{String(value)}</span>
-                              </div>
-                            );
-                          })}
-                          <div className="ml-auto">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteDetail(detail.id)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Excluir
-                            </Button>
-                          </div>
-                        </div>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-destructive hover:text-destructive text-xs"
+                        onClick={() => handleDeleteDetail(detail.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        Excluir
+                      </Button>
                     </div>
 
-                    <TabsContent value="items" className="flex-1 overflow-auto m-0 p-0">
+                    <TabsContent value="items" className="flex-1 flex flex-col min-h-0 m-0 p-0">
                       {(() => {
                         const detailCategory = getDetailCategory(detail);
                         if (detailCategory) {
