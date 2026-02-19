@@ -359,7 +359,7 @@ export const GridBlock = memo(function GridBlock({
                               type="number"
                               min={0}
                               className={cn(
-                                "h-6 text-[10px] text-center border-0 p-0 bg-transparent w-full outline-none focus:ring-1 focus:ring-primary/30",
+                                "h-8 text-[11px] text-center border-0 p-0 bg-transparent w-full outline-none focus:ring-1 focus:ring-primary/30",
                                 isHighlighted && qty > 0 && "bg-primary/10 font-medium"
                               )}
                               value={qty || ''}
