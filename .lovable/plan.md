@@ -1,52 +1,61 @@
 
-# Ativar o Sistema de Detalhamento por Blocos (OOH, Radio, TV)
+# Correcao da Nomenclatura Sequencial: do Detalhamento para o Item
 
-## Problema Identificado
+## Problema Atual
 
-Toda a infraestrutura de detalhamento por blocos ja esta construida no codigo (schemas, motor financeiro, grade de insercoes, renderizadores de celula). Porem, os tipos de detalhamento no banco de dados estao com `detail_category = 'custom'` em vez de `'ooh'`, `'radio'`, `'tv'`. Isso faz com que o sistema ignore a tabela de blocos e use a tabela antiga (generica).
+O codigo sequencial (ex: `CIA2_001`) esta sendo atribuido ao **detalhamento** (template/container) no momento da criacao. Isso esta errado. O detalhamento e apenas um agrupador/template -- o que precisa de identificacao unica sao os **itens** (linhas) dentro dele.
 
-Alem disso, o hook `useLineDetailTypes` nao envia o campo `detail_category` ao criar/atualizar tipos, impedindo que novos tipos sejam criados com a categoria correta.
+## Conceito Correto
 
-## Solucao
+```text
+Linha do Plano (line_code: CIA2)
+  └── Detalhamento "Radio" (template, sem codigo proprio)
+        ├── Item CIA2_001
+        ├── Item CIA2_002
+        └── Item CIA2_003
+  └── Detalhamento "TV" (template, sem codigo proprio)
+        ├── Item CIA2_004
+        └── Item CIA2_005
+```
 
-### Passo 1 - Corrigir dados existentes no banco
+- O detalhamento nao tem codigo sequencial. Seu nome e simplesmente o nome do tipo (ex: "Radio", "TV").
+- Cada **item** dentro do detalhamento recebe um codigo sequencial global por linha: `{line_code}_{seq}`. A sequencia e continua entre todos os detalhamentos da mesma linha.
+- Esse codigo e armazenado em `item.data.detail_code`.
+- A grade de insercoes usa esse codigo como label de cada linha.
 
-Atualizar os 3 tipos de detalhamento existentes para usar as categorias corretas:
+## Mudancas Planejadas
 
-- "OOH / Midia Exterior" (id: c681d3ef...) -> `detail_category = 'ooh'`
-- "Radio" (id: 4f37a7cc...) -> `detail_category = 'radio'`
-- "TV Aberta" (id: fc318b33...) -> `detail_category = 'tv'`
+### 1. `LineDetailPage.tsx` -- Remover codigo do detalhamento
 
-### Passo 2 - Corrigir o hook useLineDetailTypes
+- Na funcao `handleCreateDetail`: remover a logica que gera `detailCode` e salva em `metadata.detail_code`.
+- O nome do detalhamento passa a ser apenas o nome do tipo (ex: `selectedType.name`).
+- Remover o bloco de preview que mostra "Codigo do detalhamento: CIA2_001" no formulario de criacao.
 
-Incluir o campo `detail_category` nas operacoes de insert e update, para que futuros tipos possam ser criados com a categoria correta.
+### 2. `useLineDetails.ts` -- Gerar codigo sequencial no item
 
-### Passo 3 - Corrigir o BlockHeader para blocos nao collapsiveis
+- Na mutacao `createItemMutation`: antes de inserir o item, contar quantos itens ja existem para a mesma linha (todos os detalhamentos vinculados a esta `mediaLineId`) e gerar o proximo codigo sequencial.
+- Buscar o `line_code` da linha pai (pode vir do contexto ja disponivel ou de uma query rapida).
+- Calcular: `detail_code = {line_code}_{String(existingCount + 1).padStart(3, '0')}`.
+- Salvar esse codigo dentro do campo `data` do item: `{ ...jsonData, detail_code }`.
 
-O componente `BlockHeader` retorna `null` quando o bloco nao e collapsible (ex: Campanha, Periodo). Isso faz com que esses blocos nao exibam seu titulo na linha de cabecalho. Precisa renderizar um `<th>` simples com o label mesmo quando nao e collapsible.
+### 3. `DetailBlockTable.tsx` -- Exibir o codigo do item na grade
 
-### Passo 4 - Validar fluxo de criacao no LineDetailDialog
+- Na construcao dos `items` passados ao `GridBlock`, usar `i.data.detail_code` como label (ja e o comportamento atual, so precisa garantir que o valor existe no item e nao no detail).
+- Nenhuma mudanca estrutural necessaria aqui, apenas garantir que o fallback `#1, #2...` funcione quando nao houver codigo.
 
-Garantir que ao criar um novo detalhamento com tipo OOH/Radio/TV, o campo `has_insertion_grid` do detalhamento seja salvo corretamente (ja existe o toggle de grade no formulario de criacao, que precisa ser persistido no `metadata` ou diretamente no campo do banco).
+### 4. Abas do detalhamento
 
-## Detalhes Tecnicos
+- O `TabsTrigger` no `LineDetailPage` passa a exibir apenas o nome do tipo + a quantidade de itens, sem codigo sequencial. Exemplo: "Radio (3)" em vez de "Radio - CIA2_001".
 
-### Arquivos a serem editados:
+## Secao Tecnica
 
-1. **`src/hooks/useLineDetailTypes.ts`** - Adicionar `detail_category` ao payload de `createMutation` e `updateMutation`
-2. **`src/components/media-plan/detail-blocks/BlockHeader.tsx`** - Renderizar cabecalho para blocos nao collapsiveis (Campanha, Periodo)
-3. **`src/components/media-plan/LineDetailDialog.tsx`** - Persistir `has_insertion_grid` do toggle na criacao do detalhamento (passar para `createDetail`)
+**Arquivos modificados:**
+- `src/pages/LineDetailPage.tsx` -- simplificar `handleCreateDetail` e tabs
+- `src/hooks/useLineDetails.ts` -- adicionar geracao de `detail_code` em `createItemMutation`
+- `src/components/media-plan/detail-blocks/DetailBlockTable.tsx` -- confirmar que o label do grid item usa `data.detail_code`
 
-### Dados a serem atualizados no banco:
+**Logica de sequencia global:**
+- A contagem sera feita com uma query rapida: total de items ativos em todos os `line_details` vinculados a esta `mediaLineId` via `line_detail_line_links`.
+- Isso garante que mesmo com multiplos detalhamentos (Radio, TV, OOH), a numeracao e continua: CIA2_001, CIA2_002, ..., CIA2_00N.
 
-- UPDATE em 3 registros da tabela `line_detail_types` para corrigir `detail_category`
-
-### Impacto:
-
-- Ao abrir o dialog de detalhamento de uma linha, os tipos OOH/Radio/TV passarao a usar o `DetailBlockTable` com:
-  - Blocos collapsiveis (Formato e Mensagem, Financeiro)
-  - Campos herdados automaticamente (subdivisao, momento, fase, veiculo, meio, COD)
-  - Motor financeiro com calculos automaticos (bruto, liquido, fees, producao)
-  - Grade de insercoes mensal com auto-paint por dias da semana
-  - Rodape com totalizadores
-- Tipos personalizados continuarao usando a tabela generica existente
+**Nenhuma mudanca de schema no banco** e necessaria -- o `detail_code` ja vive dentro do campo JSONB `data` dos items.
