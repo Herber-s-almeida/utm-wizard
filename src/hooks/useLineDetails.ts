@@ -152,7 +152,8 @@ export function useLineDetails(mediaLineId: string | undefined, planId?: string)
       });
     },
     enabled: !!mediaLineId && !!user?.id,
-    staleTime: 30000, // 30s to prevent refetches on remount
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const createDetailMutation = useMutation({

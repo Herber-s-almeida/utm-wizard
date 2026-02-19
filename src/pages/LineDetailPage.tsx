@@ -39,7 +39,7 @@ import { LinkedLinesTab } from '@/components/media-plan/LinkedLinesTab';
 import { type DetailCategory, detailTypeSchemas } from '@/utils/detailSchemas';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useStatuses } from '@/hooks/useStatuses';
 import { useFormats } from '@/hooks/useFormatsHierarchy';
 import { LoadingPage } from '@/components/ui/loading-dots';
@@ -54,6 +54,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
 export default function LineDetailPage() {
   const { id: planSlug, lineId: mediaLineId } = useParams<{ id: string; lineId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Fetch plan info from slug
   const { data: plan } = useQuery({
@@ -130,9 +131,12 @@ export default function LineDetailPage() {
   const [newDetailHasGrid, setNewDetailHasGrid] = useState(false);
   const [newMetadata, setNewMetadata] = useState<Record<string, unknown>>({});
 
+  // Stable format IDs for query key
+  const formatIdStr = useMemo(() => (formatOptions || []).map(f => f.id).sort().join(','), [formatOptions]);
+
   // Fetch format hierarchy details
   const { data: formatHierarchy } = useQuery({
-    queryKey: ['format-hierarchy-details', formatOptions?.map(f => f.id)],
+    queryKey: ['format-hierarchy-details', formatIdStr],
     queryFn: async () => {
       if (!formatOptions || formatOptions.length === 0) return {};
       const formatIds = formatOptions.map(f => f.id);
@@ -171,10 +175,11 @@ export default function LineDetailPage() {
       return result;
     },
     enabled: (formatOptions?.length || 0) > 0,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch creatives
-  const { data: lineCreatives = [], refetch: refetchCreatives } = useQuery({
+  const { data: lineCreatives = [] } = useQuery({
     queryKey: ['line-creatives-for-detail', mediaLineId],
     queryFn: async () => {
       if (!mediaLineId) return [];
@@ -192,7 +197,12 @@ export default function LineDetailPage() {
       }));
     },
     enabled: !!mediaLineId,
+    staleTime: 5 * 60 * 1000,
   });
+  const refetchCreatives = useCallback(() => {
+    // Only used for manual refresh after creating a creative
+    queryClient.invalidateQueries({ queryKey: ['line-creatives-for-detail', mediaLineId] });
+  }, [mediaLineId]);
 
   // Fetch plan lines for linking
   const { data: planLines = [] } = useQuery({
@@ -209,6 +219,7 @@ export default function LineDetailPage() {
       return data || [];
     },
     enabled: !!planId,
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
@@ -511,111 +522,35 @@ export default function LineDetailPage() {
                 </TabsContent>
               )}
 
-              {/* Detail content – fills entire remaining space */}
-              {details.map((detail) => (
+              {/* Detail content – ONLY render the active detail to avoid heavy DOM */}
+              {activeDetail && !showNewDetailForm && (
                 <TabsContent
-                  key={detail.id}
-                  value={detail.id}
+                  key={activeDetail.id}
+                  value={activeDetail.id}
+                  forceMount
                   className="flex-1 flex flex-col min-h-0 m-0"
                 >
-                  {/* Sub-tabs: items / links */}
-                  <Tabs defaultValue="items" className="flex-1 flex flex-col min-h-0">
-                    <div className="px-4 py-1.5 border-b bg-muted/20 flex items-center justify-between shrink-0">
-                      <TabsList className="h-8">
-                        <TabsTrigger value="items" className="text-xs h-7">
-                          <FileText className="h-3 w-3 mr-1" />
-                          Itens
-                        </TabsTrigger>
-                        <TabsTrigger value="links" className="text-xs h-7">
-                          <Link2 className="h-3 w-3 mr-1" />
-                          Linhas Vinculadas
-                        </TabsTrigger>
-                      </TabsList>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-destructive hover:text-destructive text-xs"
-                        onClick={() => handleDeleteDetail(detail.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-1" />
-                        Excluir
-                      </Button>
-                    </div>
-
-                    <TabsContent value="items" className="flex-1 flex flex-col min-h-0 m-0 p-0">
-                      {(() => {
-                        const detailCategory = getDetailCategory(detail);
-                        if (detailCategory) {
-                          return (
-                            <DetailBlockTable
-                              category={detailCategory}
-                              items={(detail.items || []).map(item => ({
-                                id: item.id,
-                                data: item.data as Record<string, unknown>,
-                                total_insertions: item.total_insertions,
-                                days_of_week: (item as any).days_of_week,
-                                period_start: (item as any).period_start,
-                                period_end: (item as any).period_end,
-                                format_id: (item as any).format_id,
-                                creative_id: (item as any).creative_id,
-                                status_id: (item as any).status_id,
-                                insertions: item.insertions?.map(ins => ({
-                                  insertion_date: ins.insertion_date,
-                                  quantity: ins.quantity,
-                                  line_detail_item_id: ins.line_detail_item_id,
-                                })),
-                              }))}
-                              inheritedContext={detail.inherited_context}
-                              hasGrid={(detail.metadata as any)?.has_insertion_grid ?? detail.detail_type?.has_insertion_grid ?? false}
-                              planStartDate={startDate}
-                              planEndDate={endDate}
-                              onCreateItem={(data) => createItem({ line_detail_id: detail.id, data })}
-                              onUpdateItem={async (id, data, extras) => {
-                                const mergedData = { ...data, ...(extras || {}) };
-                                await updateItem({ id, data: mergedData as any });
-                              }}
-                              onDeleteItem={deleteItem}
-                              onInsertionChange={() => {}}
-                              onSaveInsertions={async (itemId, ins) => {
-                                await upsertInsertions({ item_id: itemId, insertions: ins });
-                              }}
-                              formats={memoizedFormats}
-                              statuses={memoizedStatuses}
-                              creatives={lineCreatives}
-                              formatDetails={memoizedFormatDetails}
-                              mediaLineId={mediaLineId}
-                              onFormatCreated={handleFormatCreated}
-                              onCreativeCreated={handleCreativeCreated}
-                            />
-                          );
-                        }
-                        return (
-                          <LineDetailTable
-                            detail={detail}
-                            onCreateItem={(data) => createItem({ line_detail_id: detail.id, data })}
-                            onUpdateItem={updateItem}
-                            onDeleteItem={deleteItem}
-                            onUpdateInsertions={upsertInsertions}
-                            planStartDate={startDate}
-                            planEndDate={endDate}
-                          />
-                        );
-                      })()}
-                    </TabsContent>
-
-                    <TabsContent value="links" className="flex-1 overflow-auto m-0">
-                      <LinkedLinesTab
-                        detailId={detail.id}
-                        detailTotalNet={
-                          (detail.items || []).reduce((sum, item) => sum + (item.total_net || 0), 0)
-                        }
-                        planLines={planLines}
-                      />
-                    </TabsContent>
-                  </Tabs>
+                  <ActiveDetailContent
+                    detail={activeDetail}
+                    getDetailCategory={getDetailCategory}
+                    startDate={startDate}
+                    endDate={endDate}
+                    createItem={createItem}
+                    updateItem={updateItem}
+                    deleteItem={deleteItem}
+                    upsertInsertions={upsertInsertions}
+                    handleDeleteDetail={handleDeleteDetail}
+                    formats={memoizedFormats}
+                    statuses={memoizedStatuses}
+                    creatives={lineCreatives}
+                    formatDetails={memoizedFormatDetails}
+                    mediaLineId={mediaLineId}
+                    onFormatCreated={handleFormatCreated}
+                    onCreativeCreated={handleCreativeCreated}
+                    planLines={planLines}
+                  />
                 </TabsContent>
-              ))}
+              )}
             </Tabs>
           )}
         </div>
@@ -623,3 +558,165 @@ export default function LineDetailPage() {
     </DashboardLayout>
   );
 }
+
+/**
+ * Extracted active detail content to its own memoized component.
+ * This prevents the parent from re-creating inline closures and arrays on every render.
+ */
+const ActiveDetailContent = memo(function ActiveDetailContent({
+  detail,
+  getDetailCategory,
+  startDate,
+  endDate,
+  createItem,
+  updateItem,
+  deleteItem,
+  upsertInsertions,
+  handleDeleteDetail,
+  formats,
+  statuses,
+  creatives,
+  formatDetails,
+  mediaLineId,
+  onFormatCreated,
+  onCreativeCreated,
+  planLines,
+}: {
+  detail: LineDetail;
+  getDetailCategory: (d: LineDetail) => DetailCategory | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  createItem: (input: { line_detail_id: string; data: Record<string, unknown> }) => Promise<unknown>;
+  updateItem: (input: { id: string; data: Record<string, unknown> }) => Promise<void>;
+  deleteItem: (id: string) => Promise<void>;
+  upsertInsertions: (input: { item_id: string; insertions: { date: string; quantity: number }[] }) => Promise<void>;
+  handleDeleteDetail: (id: string) => Promise<void>;
+  formats: Array<{ id: string; name: string }>;
+  statuses: Array<{ id: string; name: string }>;
+  creatives: Array<{ id: string; creative_id: string; message: string | null; copy_text?: string | null }>;
+  formatDetails: Record<string, { creative_type_name?: string; dimension?: string; duration?: string }>;
+  mediaLineId?: string;
+  onFormatCreated: () => void;
+  onCreativeCreated: () => void;
+  planLines: Array<{ id: string; line_code: string | null; platform: string | null; budget: number | null }>;
+}) {
+  const detailCategory = getDetailCategory(detail);
+
+  // Memoize the items array to avoid recreating on every render
+  const mappedItems = useMemo(() => {
+    return (detail.items || []).map(item => ({
+      id: item.id,
+      data: item.data as Record<string, unknown>,
+      total_insertions: item.total_insertions,
+      days_of_week: (item as any).days_of_week,
+      period_start: (item as any).period_start,
+      period_end: (item as any).period_end,
+      format_id: (item as any).format_id,
+      creative_id: (item as any).creative_id,
+      status_id: (item as any).status_id,
+      insertions: item.insertions?.map(ins => ({
+        insertion_date: ins.insertion_date,
+        quantity: ins.quantity,
+        line_detail_item_id: ins.line_detail_item_id,
+      })),
+    }));
+  }, [detail.items]);
+
+  const handleCreate = useCallback(
+    (data: Record<string, unknown>) => createItem({ line_detail_id: detail.id, data }),
+    [createItem, detail.id]
+  );
+
+  const handleUpdate = useCallback(
+    async (id: string, data: Record<string, unknown>, extras?: Record<string, unknown>) => {
+      const mergedData = { ...data, ...(extras || {}) };
+      await updateItem({ id, data: mergedData as any });
+    },
+    [updateItem]
+  );
+
+  const handleSaveInsertions = useCallback(
+    async (itemId: string, ins: { date: string; quantity: number }[]) => {
+      await upsertInsertions({ item_id: itemId, insertions: ins });
+    },
+    [upsertInsertions]
+  );
+
+  const detailTotalNet = useMemo(
+    () => (detail.items || []).reduce((sum, item) => sum + (item.total_net || 0), 0),
+    [detail.items]
+  );
+
+  // Stable empty callback for insertion change (local state is managed in DetailBlockTable)
+  const noopInsertionChange = useCallback(() => {}, []);
+
+  return (
+    <Tabs defaultValue="items" className="flex-1 flex flex-col min-h-0">
+      <div className="px-4 py-1.5 border-b bg-muted/20 flex items-center justify-between shrink-0">
+        <TabsList className="h-8">
+          <TabsTrigger value="items" className="text-xs h-7">
+            <FileText className="h-3 w-3 mr-1" />
+            Itens
+          </TabsTrigger>
+          <TabsTrigger value="links" className="text-xs h-7">
+            <Link2 className="h-3 w-3 mr-1" />
+            Linhas Vinculadas
+          </TabsTrigger>
+        </TabsList>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-destructive hover:text-destructive text-xs"
+          onClick={() => handleDeleteDetail(detail.id)}
+        >
+          <Trash2 className="h-3.5 w-3.5 mr-1" />
+          Excluir
+        </Button>
+      </div>
+
+      <TabsContent value="items" className="flex-1 flex flex-col min-h-0 m-0 p-0">
+        {detailCategory ? (
+          <DetailBlockTable
+            category={detailCategory}
+            items={mappedItems}
+            inheritedContext={detail.inherited_context}
+            hasGrid={(detail.metadata as any)?.has_insertion_grid ?? detail.detail_type?.has_insertion_grid ?? false}
+            planStartDate={startDate}
+            planEndDate={endDate}
+            onCreateItem={handleCreate}
+            onUpdateItem={handleUpdate}
+            onDeleteItem={deleteItem}
+            onInsertionChange={noopInsertionChange}
+            onSaveInsertions={handleSaveInsertions}
+            formats={formats}
+            statuses={statuses}
+            creatives={creatives}
+            formatDetails={formatDetails}
+            mediaLineId={mediaLineId}
+            onFormatCreated={onFormatCreated}
+            onCreativeCreated={onCreativeCreated}
+          />
+        ) : (
+          <LineDetailTable
+            detail={detail}
+            onCreateItem={handleCreate}
+            onUpdateItem={updateItem}
+            onDeleteItem={deleteItem}
+            onUpdateInsertions={upsertInsertions}
+            planStartDate={startDate}
+            planEndDate={endDate}
+          />
+        )}
+      </TabsContent>
+
+      <TabsContent value="links" className="flex-1 overflow-auto m-0">
+        <LinkedLinesTab
+          detailId={detail.id}
+          detailTotalNet={detailTotalNet}
+          planLines={planLines}
+        />
+      </TabsContent>
+    </Tabs>
+  );
+});

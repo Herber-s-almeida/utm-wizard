@@ -41,6 +41,7 @@ export function useStatuses() {
       return data as Status[];
     },
     enabled: !!currentEnvironmentId,
+    staleTime: 5 * 60 * 1000,
   });
 
   const create = useMutation({
