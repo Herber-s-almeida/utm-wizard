@@ -1,61 +1,64 @@
 
-# Correcao da Nomenclatura Sequencial: do Detalhamento para o Item
 
-## Problema Atual
+# Fix: Editing Existing Data Sources for Column Mapping Review
 
-O codigo sequencial (ex: `CIA2_001`) esta sendo atribuido ao **detalhamento** (template/container) no momento da criacao. Isso esta errado. O detalhamento e apenas um agrupador/template -- o que precisa de identificacao unica sao os **itens** (linhas) dentro dele.
+## Problem
 
-## Conceito Correto
+When clicking the edit button on an existing data source, the `ImportConfigDialog` jumps to step 3 (mapping) but the `headers` state is empty because the spreadsheet preview was never loaded. This means the mapping UI renders an empty list -- effectively broken.
 
-```text
-Linha do Plano (line_code: CIA2)
-  └── Detalhamento "Radio" (template, sem codigo proprio)
-        ├── Item CIA2_001
-        ├── Item CIA2_002
-        └── Item CIA2_003
-  └── Detalhamento "TV" (template, sem codigo proprio)
-        ├── Item CIA2_004
-        └── Item CIA2_005
-```
+## Root Cause
 
-- O detalhamento nao tem codigo sequencial. Seu nome e simplesmente o nome do tipo (ex: "Radio", "TV").
-- Cada **item** dentro do detalhamento recebe um codigo sequencial global por linha: `{line_code}_{seq}`. A sequencia e continua entre todos os detalhamentos da mesma linha.
-- Esse codigo e armazenado em `item.data.detail_code`.
-- A grade de insercoes usa esse codigo como label de cada linha.
+In `ImportConfigDialog.tsx`, line 62: `setStep(existingImportId ? 'mapping' : 'url')` skips the preview fetch entirely. The `headers` state stays as `[]`, so the mapping loop `headers.map(...)` renders nothing.
 
-## Mudancas Planejadas
+## Solution
 
-### 1. `LineDetailPage.tsx` -- Remover codigo do detalhamento
+When opening the dialog to edit an existing source:
+1. Start at the URL step with the existing URL pre-filled
+2. Auto-trigger a preview fetch so the headers load
+3. Then allow the user to proceed to mapping with their existing mappings pre-applied
+4. Also allow updating the source URL and name on the existing record (instead of creating a new one)
 
-- Na funcao `handleCreateDetail`: remover a logica que gera `detailCode` e salva em `metadata.detail_code`.
-- O nome do detalhamento passa a ser apenas o nome do tipo (ex: `selectedType.name`).
-- Remover o bloco de preview que mostra "Codigo do detalhamento: CIA2_001" no formulario de criacao.
+## Detailed Changes
 
-### 2. `useLineDetails.ts` -- Gerar codigo sequencial no item
+### 1. `ImportConfigDialog.tsx` -- Fix edit flow
 
-- Na mutacao `createItemMutation`: antes de inserir o item, contar quantos itens ja existem para a mesma linha (todos os detalhamentos vinculados a esta `mediaLineId`) e gerar o proximo codigo sequencial.
-- Buscar o `line_code` da linha pai (pode vir do contexto ja disponivel ou de uma query rapida).
-- Calcular: `detail_code = {line_code}_{String(existingCount + 1).padStart(3, '0')}`.
-- Salvar esse codigo dentro do campo `data` do item: `{ ...jsonData, detail_code }`.
+**useEffect (open):**
+- Always start at `'url'` step, even when editing
+- Pre-fill `sourceUrl` and `sourceName` from the existing import
+- After a short delay, auto-trigger `handleFetchPreview` so the user sees the preview immediately
+- When existing mappings are provided, apply them after headers load (merge with auto-detected)
 
-### 3. `DetailBlockTable.tsx` -- Exibir o codigo do item na grade
+**New: handleUpdateImportAndProceed function:**
+- When `existingImportId` is set, UPDATE the existing `report_imports` row (URL, name) instead of creating a new one
+- Then proceed to mapping step
 
-- Na construcao dos `items` passados ao `GridBlock`, usar `i.data.detail_code` como label (ja e o comportamento atual, so precisa garantir que o valor existe no item e nao no detail).
-- Nenhuma mudanca estrutural necessaria aqui, apenas garantir que o fallback `#1, #2...` funcione quando nao houver codigo.
+**Modify handleCreateImportAndProceed:**
+- If `existingImportId` exists, call update logic instead of insert
+- Set `importId` from existing ID
 
-### 4. Abas do detalhamento
+**Mapping step adjustments:**
+- Merge existing mappings with auto-detected ones (existing take priority)
+- Show "Voltar" button to go back to preview
 
-- O `TabsTrigger` no `LineDetailPage` passa a exibir apenas o nome do tipo + a quantidade de itens, sem codigo sequencial. Exemplo: "Radio (3)" em vez de "Radio - CIA2_001".
+### 2. `MediaPlanReports.tsx` -- Pass source name to dialog
 
-## Secao Tecnica
+- Pass `existingName={selectedImport?.source_name}` prop so the name field is also pre-filled when editing
 
-**Arquivos modificados:**
-- `src/pages/LineDetailPage.tsx` -- simplificar `handleCreateDetail` e tabs
-- `src/hooks/useLineDetails.ts` -- adicionar geracao de `detail_code` em `createItemMutation`
-- `src/components/media-plan/detail-blocks/DetailBlockTable.tsx` -- confirmar que o label do grid item usa `data.detail_code`
+### 3. `useReportData.ts` -- Add update mutation
 
-**Logica de sequencia global:**
-- A contagem sera feita com uma query rapida: total de items ativos em todos os `line_details` vinculados a esta `mediaLineId` via `line_detail_line_links`.
-- Isso garante que mesmo com multiplos detalhamentos (Radio, TV, OOH), a numeracao e continua: CIA2_001, CIA2_002, ..., CIA2_00N.
+- Add `useUpdateReportImport` mutation that updates `source_url` and `source_name` on an existing `report_imports` row
 
-**Nenhuma mudanca de schema no banco** e necessaria -- o `detail_code` ja vive dentro do campo JSONB `data` dos items.
+## Technical Details
+
+**Files to modify:**
+- `src/components/reports/ImportConfigDialog.tsx` -- main fix: load preview when editing, update instead of create
+- `src/pages/MediaPlanReports.tsx` -- pass `existingName` prop
+- `src/hooks/useReportData.ts` -- add `useUpdateReportImport` mutation
+
+**Flow after fix:**
+1. User clicks edit on existing source
+2. Dialog opens at URL step with URL and name pre-filled
+3. User clicks "Carregar Preview" (or it auto-loads)
+4. Preview shows with existing mappings pre-applied
+5. User proceeds to mapping, adjusts if needed
+6. "Importar Dados" updates the existing record and re-runs import
