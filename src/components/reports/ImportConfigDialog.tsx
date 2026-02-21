@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2, ArrowRight, ArrowLeft, Check, Link, Table, Columns, Upload } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useCreateReportImport, useSaveColumnMappings, useRunImport, METRIC_FIELDS } from '@/hooks/useReportData';
+import { useCreateReportImport, useUpdateReportImport, useSaveColumnMappings, useRunImport, METRIC_FIELDS } from '@/hooks/useReportData';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
@@ -28,6 +28,7 @@ interface ImportConfigDialogProps {
   planId: string;
   existingImportId?: string;
   existingUrl?: string;
+  existingName?: string;
   existingMappings?: { source_column: string; target_field: string }[];
   onComplete?: () => void;
 }
@@ -40,83 +41,62 @@ export function ImportConfigDialog({
   planId,
   existingImportId,
   existingUrl,
+  existingName,
   existingMappings,
   onComplete,
 }: ImportConfigDialogProps) {
   const { user } = useAuth();
   const [step, setStep] = useState<Step>('url');
-  const [sourceUrl, setSourceUrl] = useState(existingUrl || '');
+  const [sourceUrl, setSourceUrl] = useState('');
   const [sourceName, setSourceName] = useState('');
   const [headers, setHeaders] = useState<string[]>([]);
   const [previewRows, setPreviewRows] = useState<any[][]>([]);
   const [mappings, setMappings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [importId, setImportId] = useState(existingImportId || '');
+  const [importId, setImportId] = useState('');
+  const pendingExistingMappings = useRef<Record<string, string> | null>(null);
 
   const createImport = useCreateReportImport();
+  const updateImport = useUpdateReportImport();
   const saveMappings = useSaveColumnMappings();
   const runImport = useRunImport();
 
-  useEffect(() => {
-    if (open) {
-      setStep(existingImportId ? 'mapping' : 'url');
-      setSourceUrl(existingUrl || '');
-      if (existingMappings) {
-        const mappingObj: Record<string, string> = {};
-        existingMappings.forEach((m) => {
-          mappingObj[m.source_column] = m.target_field;
-        });
-        setMappings(mappingObj);
-      }
-      if (existingImportId) {
-        setImportId(existingImportId);
-      }
-    }
-  }, [open, existingImportId, existingUrl, existingMappings]);
-
-  const handleFetchPreview = async () => {
-    if (!sourceUrl) {
-      toast.error('Insira a URL da planilha');
-      return;
-    }
+  const fetchPreview = useCallback(async (url: string) => {
+    if (!url) return;
 
     setLoading(true);
     try {
-      const response = await fetch(sourceUrl);
-      if (!response.ok) {
-        throw new Error('Não foi possível acessar a URL');
-      }
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Não foi possível acessar a URL');
 
       const contentType = response.headers.get('content-type') || '';
-      const isCSV = contentType.includes('text/csv') || 
-                    contentType.includes('text/plain') || 
-                    sourceUrl.includes('output=csv') ||
-                    sourceUrl.includes('output=tsv');
+      const isCSV = contentType.includes('text/csv') ||
+        contentType.includes('text/plain') ||
+        url.includes('output=csv') ||
+        url.includes('output=tsv');
 
       const arrayBuffer = await response.arrayBuffer();
-      
+
       let workbook;
       if (isCSV) {
-        // For CSV, decode as text first to preserve original values
         const decoder = new TextDecoder('utf-8');
         const csvText = decoder.decode(arrayBuffer);
         workbook = XLSX.read(csvText, { type: 'string', raw: true });
       } else {
         workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
       }
-      
+
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true }) as any[][];
 
-      if (jsonData.length < 2) {
-        throw new Error('A planilha deve ter pelo menos cabeçalho e uma linha de dados');
-      }
+      if (jsonData.length < 2) throw new Error('A planilha deve ter pelo menos cabeçalho e uma linha de dados');
 
       const headerRow = jsonData[0] as string[];
-      const dataRows = jsonData.slice(1, 6); // Preview first 5 rows
+      const dataRows = jsonData.slice(1, 6);
 
-      setHeaders(headerRow.map((h) => h?.toString() || ''));
+      const cleanHeaders = headerRow.map((h) => h?.toString() || '');
+      setHeaders(cleanHeaders);
       setPreviewRows(dataRows);
 
       // Auto-detect common column names
@@ -156,39 +136,89 @@ export function ImportConfigDialog({
         }
       });
 
-      setMappings(autoMappings);
+      // Merge: existing mappings take priority over auto-detected
+      if (pendingExistingMappings.current) {
+        setMappings({ ...autoMappings, ...pendingExistingMappings.current });
+        pendingExistingMappings.current = null;
+      } else {
+        setMappings(autoMappings);
+      }
+
       setStep('preview');
     } catch (error: any) {
       toast.error(error.message || 'Erro ao carregar planilha');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleCreateImportAndProceed = async () => {
+  useEffect(() => {
+    if (open) {
+      // Always start at URL step
+      setStep('url');
+      setSourceUrl(existingUrl || '');
+      setSourceName(existingName || '');
+      setHeaders([]);
+      setPreviewRows([]);
+      setMappings({});
+      setImportId(existingImportId || '');
+
+      // If editing, store existing mappings and auto-fetch preview
+      if (existingImportId && existingUrl) {
+        if (existingMappings && existingMappings.length > 0) {
+          const mappingObj: Record<string, string> = {};
+          existingMappings.forEach((m) => {
+            mappingObj[m.source_column] = m.target_field;
+          });
+          pendingExistingMappings.current = mappingObj;
+        }
+        // Auto-trigger preview fetch after a short delay
+        const timer = setTimeout(() => {
+          fetchPreview(existingUrl);
+        }, 300);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [open, existingImportId, existingUrl, existingName, existingMappings, fetchPreview]);
+
+  const handleFetchPreview = () => fetchPreview(sourceUrl);
+
+  const handleCreateOrUpdateImportAndProceed = async () => {
     if (!user?.id) return;
 
-    // Preserve headers before async operation
     const currentHeaders = [...headers];
     const currentMappings = { ...mappings };
     const currentPreviewRows = [...previewRows];
 
     setLoading(true);
     try {
-      const result = await createImport.mutateAsync({
-        media_plan_id: planId,
-        source_url: sourceUrl,
-        source_name: sourceName || 'Google Sheets',
-      });
-
-      // Restore state after mutation to prevent any race condition
-      setHeaders(currentHeaders);
-      setMappings(currentMappings);
-      setPreviewRows(currentPreviewRows);
-      setImportId(result.id);
+      if (existingImportId) {
+        // Update existing import
+        await updateImport.mutateAsync({
+          import_id: existingImportId,
+          media_plan_id: planId,
+          source_url: sourceUrl,
+          source_name: sourceName || 'Google Sheets',
+        });
+        setHeaders(currentHeaders);
+        setMappings(currentMappings);
+        setPreviewRows(currentPreviewRows);
+        setImportId(existingImportId);
+      } else {
+        // Create new import
+        const result = await createImport.mutateAsync({
+          media_plan_id: planId,
+          source_url: sourceUrl,
+          source_name: sourceName || 'Google Sheets',
+        });
+        setHeaders(currentHeaders);
+        setMappings(currentMappings);
+        setPreviewRows(currentPreviewRows);
+        setImportId(result.id);
+      }
       setStep('mapping');
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao criar configuração');
+      toast.error(error.message || 'Erro ao salvar configuração');
     } finally {
       setLoading(false);
     }
@@ -197,7 +227,6 @@ export function ImportConfigDialog({
   const handleSaveMappingsAndImport = async () => {
     if (!user?.id || !importId) return;
 
-    // Validate line_code mapping exists
     const hasLineCode = Object.values(mappings).includes('line_code');
     if (!hasLineCode) {
       toast.error('É necessário mapear a coluna de Código da Linha');
@@ -330,7 +359,7 @@ export function ImportConfigDialog({
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Voltar
               </Button>
-              <Button onClick={handleCreateImportAndProceed} disabled={loading}>
+              <Button onClick={handleCreateOrUpdateImportAndProceed} disabled={loading}>
                 {loading ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
@@ -424,7 +453,7 @@ export function ImportConfigDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Configurar Importação de Dados</DialogTitle>
+          <DialogTitle>{existingImportId ? 'Editar Fonte de Dados' : 'Configurar Importação de Dados'}</DialogTitle>
           <DialogDescription>{stepLabels[step]}</DialogDescription>
         </DialogHeader>
 
