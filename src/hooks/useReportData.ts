@@ -56,6 +56,7 @@ export interface ColumnMapping {
   user_id: string;
   source_column: string;
   target_field: string;
+  date_format?: string | null;
 }
 
 export const METRIC_FIELDS = [
@@ -177,7 +178,7 @@ export function useSaveColumnMappings() {
   return useMutation({
     mutationFn: async (data: {
       import_id: string;
-      mappings: { source_column: string; target_field: string }[];
+      mappings: { source_column: string; target_field: string; date_format?: string }[];
     }) => {
       // Delete existing mappings
       await supabase
@@ -194,6 +195,7 @@ export function useSaveColumnMappings() {
             user_id: user!.id,
             source_column: m.source_column,
             target_field: m.target_field,
+            date_format: m.date_format || null,
           }))
         );
 
@@ -213,7 +215,7 @@ export function useRunImport() {
       import_id: string;
       media_plan_id: string;
       source_url: string;
-      mappings: { source_column: string; target_field: string }[];
+      mappings: { source_column: string; target_field: string; date_format?: string }[];
     }) => {
       const { data: session } = await supabase.auth.getSession();
       
