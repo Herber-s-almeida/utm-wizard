@@ -264,6 +264,35 @@ export function useUpdateReportDataMatch() {
   });
 }
 
+export function useUpdateReportImport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      import_id: string;
+      media_plan_id: string;
+      source_url: string;
+      source_name: string;
+    }) => {
+      const { data: result, error } = await supabase
+        .from('report_imports')
+        .update({
+          source_url: data.source_url,
+          source_name: data.source_name,
+        })
+        .eq('id', data.import_id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return result as ReportImport;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['report-imports', variables.media_plan_id] });
+    },
+  });
+}
+
 export function useDeleteReportImport() {
   const queryClient = useQueryClient();
 

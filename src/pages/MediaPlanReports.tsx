@@ -384,6 +384,7 @@ export default function MediaPlanReports() {
         planId={planId!}
         existingImportId={selectedImport?.id}
         existingUrl={selectedImport?.source_url}
+        existingName={selectedImport?.source_name}
         existingMappings={selectedMappings.map((m) => ({
           source_column: m.source_column,
           target_field: m.target_field,
