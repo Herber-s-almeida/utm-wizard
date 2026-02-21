@@ -235,7 +235,7 @@ serve(async (req) => {
 
         if (value !== undefined && value !== null && value !== "") {
           // Handle date fields
-          if (targetField === "period_start" || targetField === "period_end") {
+          if (targetField === "period_start" || targetField === "period_end" || targetField === "period_date") {
             const dateFormat = dateFormatIndex[indexStr] || "auto";
             let parsedDate: Date | null = null;
 
@@ -308,7 +308,14 @@ serve(async (req) => {
             }
 
             if (parsedDate && !isNaN(parsedDate.getTime())) {
-              reportRow[targetField] = parsedDate.toISOString().split('T')[0];
+              const dateStr = parsedDate.toISOString().split('T')[0];
+              if (targetField === "period_date") {
+                // Single date: set both start and end
+                reportRow["period_start"] = dateStr;
+                reportRow["period_end"] = dateStr;
+              } else {
+                reportRow[targetField] = dateStr;
+              }
             }
             continue;
           }

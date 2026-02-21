@@ -199,15 +199,16 @@ export function ImportConfigDialog({
             autoMappings[header] = 'period_start';
           } else if (h.includes('fim') || h.includes('end') || h.includes('até') || h.includes('ate')) {
             autoMappings[header] = 'period_end';
-          } else if (!Object.values(autoMappings).includes('period_start')) {
-            autoMappings[header] = 'period_start';
+          } else {
+            // Generic date column → period_date (single date)
+            autoMappings[header] = 'period_date';
           }
         }
       });
 
       // Auto-detect date formats for date-mapped columns
       Object.entries(autoMappings).forEach(([header, target]) => {
-        if (target === 'period_start' || target === 'period_end') {
+        if (target === 'period_start' || target === 'period_end' || target === 'period_date') {
           const colIndex = cleanHeaders.indexOf(header);
           if (colIndex !== -1) {
             const sampleValues = dataRows.map((row) => row[colIndex]);
@@ -283,7 +284,7 @@ export function ImportConfigDialog({
   const handleMappingChange = (header: string, value: string) => {
     setMappings((prev) => ({ ...prev, [header]: value }));
     // When a column is mapped to a date field, auto-detect format
-    if (value === 'period_start' || value === 'period_end') {
+    if (value === 'period_start' || value === 'period_end' || value === 'period_date') {
       const colIndex = headers.indexOf(header);
       if (colIndex !== -1 && !dateFormats[header]) {
         const sampleValues = previewRows.map((row) => row[colIndex]);
@@ -386,7 +387,7 @@ export function ImportConfigDialog({
 
   const isDateField = (header: string) => {
     const target = mappings[header];
-    return target === 'period_start' || target === 'period_end';
+    return target === 'period_start' || target === 'period_end' || target === 'period_date';
   };
 
   const getDatePreviewExample = (header: string) => {
