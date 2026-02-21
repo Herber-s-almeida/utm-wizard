@@ -1,0 +1,1 @@
+ALTER TABLE public.report_column_mappings ADD COLUMN date_format text DEFAULT NULL;

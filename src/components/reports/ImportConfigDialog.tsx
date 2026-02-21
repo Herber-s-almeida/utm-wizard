@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, ArrowRight, ArrowLeft, Check, Link, Table, Columns, Upload } from 'lucide-react';
+import { Loader2, ArrowRight, ArrowLeft, Check, Link, Table, Columns, Upload, Calendar } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useCreateReportImport, useUpdateReportImport, useSaveColumnMappings, useRunImport, METRIC_FIELDS } from '@/hooks/useReportData';
 import { toast } from 'sonner';
@@ -29,11 +29,67 @@ interface ImportConfigDialogProps {
   existingImportId?: string;
   existingUrl?: string;
   existingName?: string;
-  existingMappings?: { source_column: string; target_field: string }[];
+  existingMappings?: { source_column: string; target_field: string; date_format?: string | null }[];
   onComplete?: () => void;
 }
 
 type Step = 'url' | 'preview' | 'mapping' | 'import';
+
+const DATE_FORMATS = [
+  { value: 'auto', label: 'Detectar automaticamente' },
+  { value: 'DD/MM/YYYY', label: 'DD/MM/AAAA (ex: 21/11/2025)' },
+  { value: 'MM/DD/YYYY', label: 'MM/DD/AAAA (ex: 11/21/2025)' },
+  { value: 'YYYY-MM-DD', label: 'AAAA-MM-DD (ex: 2025-11-21)' },
+  { value: 'DD-MM-YYYY', label: 'DD-MM-AAAA (ex: 21-11-2025)' },
+  { value: 'DD.MM.YYYY', label: 'DD.MM.AAAA (ex: 21.11.2025)' },
+  { value: 'YYYY/MM/DD', label: 'AAAA/MM/DD (ex: 2025/11/21)' },
+  { value: 'excel_serial', label: 'Número serial Excel' },
+];
+
+function detectDateFormat(sampleValues: any[]): string {
+  const stringValues = sampleValues
+    .filter((v) => v !== undefined && v !== null && v !== '')
+    .map((v) => v.toString().trim());
+
+  if (stringValues.length === 0) return 'auto';
+
+  // Check if all are numbers (Excel serial dates)
+  if (stringValues.every((v) => /^\d+$/.test(v) && parseInt(v) > 30000 && parseInt(v) < 60000)) {
+    return 'excel_serial';
+  }
+
+  // ISO: 2025-11-21
+  if (stringValues.some((v) => /^\d{4}-\d{2}-\d{2}/.test(v))) return 'YYYY-MM-DD';
+
+  // Check DD/MM/YYYY vs MM/DD/YYYY
+  const slashDates = stringValues.filter((v) => /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v));
+  if (slashDates.length > 0) {
+    // If any first part > 12, it must be DD/MM/YYYY
+    const firstParts = slashDates.map((v) => parseInt(v.split('/')[0]));
+    const secondParts = slashDates.map((v) => parseInt(v.split('/')[1]));
+    if (firstParts.some((p) => p > 12)) return 'DD/MM/YYYY';
+    if (secondParts.some((p) => p > 12)) return 'MM/DD/YYYY';
+    // Default to DD/MM/YYYY (Brazilian/European convention)
+    return 'DD/MM/YYYY';
+  }
+
+  // DD-MM-YYYY
+  if (stringValues.some((v) => /^\d{2}-\d{2}-\d{4}$/.test(v))) {
+    const firstParts = stringValues
+      .filter((v) => /^\d{2}-\d{2}-\d{4}$/.test(v))
+      .map((v) => parseInt(v.split('-')[0]));
+    if (firstParts.some((p) => p > 12)) return 'DD-MM-YYYY';
+    return 'DD-MM-YYYY';
+  }
+
+  // DD.MM.YYYY
+  if (stringValues.some((v) => /^\d{2}\.\d{2}\.\d{4}$/.test(v))) return 'DD.MM.YYYY';
+
+  // YYYY/MM/DD
+  if (stringValues.some((v) => /^\d{4}\/\d{2}\/\d{2}$/.test(v))) return 'YYYY/MM/DD';
+
+  return 'auto';
+}
 
 export function ImportConfigDialog({
   open,
@@ -52,9 +108,11 @@ export function ImportConfigDialog({
   const [headers, setHeaders] = useState<string[]>([]);
   const [previewRows, setPreviewRows] = useState<any[][]>([]);
   const [mappings, setMappings] = useState<Record<string, string>>({});
+  const [dateFormats, setDateFormats] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [importId, setImportId] = useState('');
   const pendingExistingMappings = useRef<Record<string, string> | null>(null);
+  const pendingExistingDateFormats = useRef<Record<string, string> | null>(null);
 
   const createImport = useCreateReportImport();
   const updateImport = useUpdateReportImport();
@@ -101,7 +159,9 @@ export function ImportConfigDialog({
 
       // Auto-detect common column names
       const autoMappings: Record<string, string> = {};
-      headerRow.forEach((header) => {
+      const autoDateFormats: Record<string, string> = {};
+
+      headerRow.forEach((header, colIndex) => {
         const h = header?.toString().toLowerCase().trim();
         if (h.includes('código') || h.includes('codigo') || h === 'line_code' || h === 'id') {
           autoMappings[header] = 'line_code';
@@ -133,6 +193,26 @@ export function ImportConfigDialog({
           autoMappings[header] = 'bounce_rate';
         } else if (h.includes('pageviews') || h.includes('visualizações')) {
           autoMappings[header] = 'pageviews';
+        } else if (h.includes('data') || h.includes('date') || h.includes('período') || h.includes('periodo') || h.includes('period')) {
+          // Auto-detect date columns
+          if (h.includes('início') || h.includes('inicio') || h.includes('start') || h.includes('de')) {
+            autoMappings[header] = 'period_start';
+          } else if (h.includes('fim') || h.includes('end') || h.includes('até') || h.includes('ate')) {
+            autoMappings[header] = 'period_end';
+          } else if (!Object.values(autoMappings).includes('period_start')) {
+            autoMappings[header] = 'period_start';
+          }
+        }
+      });
+
+      // Auto-detect date formats for date-mapped columns
+      Object.entries(autoMappings).forEach(([header, target]) => {
+        if (target === 'period_start' || target === 'period_end') {
+          const colIndex = cleanHeaders.indexOf(header);
+          if (colIndex !== -1) {
+            const sampleValues = dataRows.map((row) => row[colIndex]);
+            autoDateFormats[header] = detectDateFormat(sampleValues);
+          }
         }
       });
 
@@ -142,6 +222,13 @@ export function ImportConfigDialog({
         pendingExistingMappings.current = null;
       } else {
         setMappings(autoMappings);
+      }
+
+      if (pendingExistingDateFormats.current) {
+        setDateFormats({ ...autoDateFormats, ...pendingExistingDateFormats.current });
+        pendingExistingDateFormats.current = null;
+      } else {
+        setDateFormats(autoDateFormats);
       }
 
       setStep('preview');
@@ -166,16 +253,22 @@ export function ImportConfigDialog({
       setHeaders([]);
       setPreviewRows([]);
       setMappings({});
+      setDateFormats({});
       setImportId(existingImportId || '');
 
       // If editing, store existing mappings and auto-fetch preview
       if (existingImportId && existingUrl) {
         if (existingMappings && existingMappings.length > 0) {
           const mappingObj: Record<string, string> = {};
+          const dateFormatObj: Record<string, string> = {};
           existingMappings.forEach((m) => {
             mappingObj[m.source_column] = m.target_field;
+            if (m.date_format) {
+              dateFormatObj[m.source_column] = m.date_format;
+            }
           });
           pendingExistingMappings.current = mappingObj;
+          pendingExistingDateFormats.current = dateFormatObj;
         }
         const timer = setTimeout(() => {
           fetchPreview(existingUrl);
@@ -187,17 +280,37 @@ export function ImportConfigDialog({
 
   const handleFetchPreview = () => fetchPreview(sourceUrl);
 
+  const handleMappingChange = (header: string, value: string) => {
+    setMappings((prev) => ({ ...prev, [header]: value }));
+    // When a column is mapped to a date field, auto-detect format
+    if (value === 'period_start' || value === 'period_end') {
+      const colIndex = headers.indexOf(header);
+      if (colIndex !== -1 && !dateFormats[header]) {
+        const sampleValues = previewRows.map((row) => row[colIndex]);
+        const detected = detectDateFormat(sampleValues);
+        setDateFormats((prev) => ({ ...prev, [header]: detected }));
+      }
+    } else {
+      // Remove date format if no longer a date field
+      setDateFormats((prev) => {
+        const next = { ...prev };
+        delete next[header];
+        return next;
+      });
+    }
+  };
+
   const handleCreateOrUpdateImportAndProceed = async () => {
     if (!user?.id) return;
 
     const currentHeaders = [...headers];
     const currentMappings = { ...mappings };
+    const currentDateFormats = { ...dateFormats };
     const currentPreviewRows = [...previewRows];
 
     setLoading(true);
     try {
       if (existingImportId) {
-        // Update existing import
         await updateImport.mutateAsync({
           import_id: existingImportId,
           media_plan_id: planId,
@@ -206,10 +319,10 @@ export function ImportConfigDialog({
         });
         setHeaders(currentHeaders);
         setMappings(currentMappings);
+        setDateFormats(currentDateFormats);
         setPreviewRows(currentPreviewRows);
         setImportId(existingImportId);
       } else {
-        // Create new import
         const result = await createImport.mutateAsync({
           media_plan_id: planId,
           source_url: sourceUrl,
@@ -217,6 +330,7 @@ export function ImportConfigDialog({
         });
         setHeaders(currentHeaders);
         setMappings(currentMappings);
+        setDateFormats(currentDateFormats);
         setPreviewRows(currentPreviewRows);
         setImportId(result.id);
       }
@@ -244,6 +358,7 @@ export function ImportConfigDialog({
         .map(([source, target]) => ({
           source_column: source,
           target_field: target,
+          date_format: dateFormats[source] || undefined,
         }));
 
       await saveMappings.mutateAsync({
@@ -267,6 +382,18 @@ export function ImportConfigDialog({
     } finally {
       setLoading(false);
     }
+  };
+
+  const isDateField = (header: string) => {
+    const target = mappings[header];
+    return target === 'period_start' || target === 'period_end';
+  };
+
+  const getDatePreviewExample = (header: string) => {
+    const colIndex = headers.indexOf(header);
+    if (colIndex === -1 || previewRows.length === 0) return null;
+    const val = previewRows[0][colIndex];
+    return val !== undefined && val !== null ? val.toString() : null;
   };
 
   const renderStep = () => {
@@ -388,33 +515,61 @@ export function ImportConfigDialog({
               </div>
             </div>
 
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
               {headers.map((header) => (
-                <div key={header} className="flex items-center gap-2">
-                  <span className="text-sm truncate w-32 shrink-0" title={header}>
-                    {header}
-                  </span>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <Select
-                    value={mappings[header] || 'ignore'}
-                    onValueChange={(value) => {
-                      setMappings((prev) => ({ ...prev, [header]: value }));
-                    }}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Ignorar" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ignore">Ignorar</SelectItem>
-                      {METRIC_FIELDS.map((field) => (
-                        <SelectItem key={field.value} value={field.value}>
-                          {field.label}
-                          {field.required && ' *'}
-                          {field.group && ` (${field.group})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div key={header} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm truncate w-32 shrink-0" title={header}>
+                      {header}
+                    </span>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <Select
+                      value={mappings[header] || 'ignore'}
+                      onValueChange={(value) => handleMappingChange(header, value)}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Ignorar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ignore">Ignorar</SelectItem>
+                        {METRIC_FIELDS.map((field) => (
+                          <SelectItem key={field.value} value={field.value}>
+                            {field.label}
+                            {field.required && ' *'}
+                            {field.group && ` (${field.group})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {isDateField(header) && (
+                    <div className="ml-[calc(8rem+1.5rem)] flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <Select
+                        value={dateFormats[header] || 'auto'}
+                        onValueChange={(value) =>
+                          setDateFormats((prev) => ({ ...prev, [header]: value }))
+                        }
+                      >
+                        <SelectTrigger className="flex-1 h-8 text-xs">
+                          <SelectValue placeholder="Formato da data" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DATE_FORMATS.map((fmt) => (
+                            <SelectItem key={fmt.value} value={fmt.value} className="text-xs">
+                              {fmt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {getDatePreviewExample(header) && (
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          ex: {getDatePreviewExample(header)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

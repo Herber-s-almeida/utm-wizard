@@ -3612,6 +3612,7 @@ export type Database = {
       report_column_mappings: {
         Row: {
           created_at: string
+          date_format: string | null
           id: string
           import_id: string
           source_column: string
@@ -3620,6 +3621,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          date_format?: string | null
           id?: string
           import_id: string
           source_column: string
@@ -3628,6 +3630,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          date_format?: string | null
           id?: string
           import_id?: string
           source_column?: string

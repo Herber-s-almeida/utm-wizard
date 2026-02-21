@@ -10,6 +10,7 @@ const corsHeaders = {
 interface ColumnMapping {
   source_column: string;
   target_field: string;
+  date_format?: string;
 }
 
 interface ImportRequest {
@@ -161,12 +162,16 @@ serve(async (req) => {
 
     // Build mapping index
     const mappingIndex: Record<string, string> = {};
+    const dateFormatIndex: Record<string, string> = {};
     for (const mapping of mappings) {
       const sourceIndex = headers.findIndex(
         (h) => h.toLowerCase().trim() === mapping.source_column.toLowerCase().trim(),
       );
       if (sourceIndex !== -1) {
         mappingIndex[sourceIndex.toString()] = mapping.target_field;
+        if (mapping.date_format) {
+          dateFormatIndex[sourceIndex.toString()] = mapping.date_format;
+        }
       }
     }
 
@@ -231,43 +236,79 @@ serve(async (req) => {
         if (value !== undefined && value !== null && value !== "") {
           // Handle date fields
           if (targetField === "period_start" || targetField === "period_end") {
-            if (typeof value === "string") {
-              // Try to parse various date formats
-              let parsedDate: Date | null = null;
-              const trimmedValue = value.trim();
-              
-              // ISO format: 2025-11-21
-              if (/^\d{4}-\d{2}-\d{2}$/.test(trimmedValue)) {
-                parsedDate = new Date(trimmedValue + 'T00:00:00Z');
-              }
-              // BR format: 21/11/2025
-              else if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmedValue)) {
-                const [day, month, year] = trimmedValue.split('/');
-                parsedDate = new Date(`${year}-${month}-${day}T00:00:00Z`);
-              }
-              // US format: 11/21/2025
-              else if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmedValue)) {
-                // Already handled above, this is a fallback
-              }
-              // Try generic Date parse
-              else {
-                const attempt = new Date(trimmedValue);
-                if (!isNaN(attempt.getTime())) {
-                  parsedDate = attempt;
-                }
-              }
-              
-              if (parsedDate && !isNaN(parsedDate.getTime())) {
-                reportRow[targetField] = parsedDate.toISOString().split('T')[0];
-              }
-            } else if (typeof value === "number") {
+            const dateFormat = dateFormatIndex[indexStr] || "auto";
+            let parsedDate: Date | null = null;
+
+            if (typeof value === "number") {
               // Excel serial date number
               const excelEpoch = new Date(1899, 11, 30);
               const msPerDay = 24 * 60 * 60 * 1000;
-              const parsedDate = new Date(excelEpoch.getTime() + value * msPerDay);
-              if (!isNaN(parsedDate.getTime())) {
-                reportRow[targetField] = parsedDate.toISOString().split('T')[0];
+              parsedDate = new Date(excelEpoch.getTime() + value * msPerDay);
+            } else if (typeof value === "string") {
+              const trimmedValue = value.trim();
+
+              if (dateFormat === "excel_serial" && /^\d+$/.test(trimmedValue)) {
+                const serial = parseInt(trimmedValue);
+                const excelEpoch = new Date(1899, 11, 30);
+                const msPerDay = 24 * 60 * 60 * 1000;
+                parsedDate = new Date(excelEpoch.getTime() + serial * msPerDay);
+              } else if (dateFormat === "DD/MM/YYYY" || dateFormat === "auto") {
+                // Try DD/MM/YYYY first
+                const match = trimmedValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                if (match) {
+                  const [, day, month, year] = match;
+                  parsedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00Z`);
+                }
               }
+
+              if (!parsedDate && (dateFormat === "MM/DD/YYYY" || dateFormat === "auto")) {
+                const match = trimmedValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                if (match) {
+                  const [, month, day, year] = match;
+                  const candidate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00Z`);
+                  if (!isNaN(candidate.getTime())) parsedDate = candidate;
+                }
+              }
+
+              if (!parsedDate && (dateFormat === "YYYY-MM-DD" || dateFormat === "auto")) {
+                if (/^\d{4}-\d{2}-\d{2}/.test(trimmedValue)) {
+                  parsedDate = new Date(trimmedValue.substring(0, 10) + 'T00:00:00Z');
+                }
+              }
+
+              if (!parsedDate && (dateFormat === "DD-MM-YYYY" || dateFormat === "auto")) {
+                const match = trimmedValue.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+                if (match) {
+                  const [, day, month, year] = match;
+                  parsedDate = new Date(`${year}-${month}-${day}T00:00:00Z`);
+                }
+              }
+
+              if (!parsedDate && (dateFormat === "DD.MM.YYYY" || dateFormat === "auto")) {
+                const match = trimmedValue.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+                if (match) {
+                  const [, day, month, year] = match;
+                  parsedDate = new Date(`${year}-${month}-${day}T00:00:00Z`);
+                }
+              }
+
+              if (!parsedDate && (dateFormat === "YYYY/MM/DD" || dateFormat === "auto")) {
+                const match = trimmedValue.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+                if (match) {
+                  const [, year, month, day] = match;
+                  parsedDate = new Date(`${year}-${month}-${day}T00:00:00Z`);
+                }
+              }
+
+              // Last resort: generic Date parse
+              if (!parsedDate && dateFormat === "auto") {
+                const attempt = new Date(trimmedValue);
+                if (!isNaN(attempt.getTime())) parsedDate = attempt;
+              }
+            }
+
+            if (parsedDate && !isNaN(parsedDate.getTime())) {
+              reportRow[targetField] = parsedDate.toISOString().split('T')[0];
             }
             continue;
           }

@@ -385,9 +385,10 @@ export default function MediaPlanReports() {
         existingImportId={selectedImport?.id}
         existingUrl={selectedImport?.source_url}
         existingName={selectedImport?.source_name}
-        existingMappings={selectedMappings.map((m) => ({
+        existingMappings={selectedMappings.map((m: any) => ({
           source_column: m.source_column,
           target_field: m.target_field,
+          date_format: m.date_format || null,
         }))}
         onComplete={() => {
           refetchImports();
