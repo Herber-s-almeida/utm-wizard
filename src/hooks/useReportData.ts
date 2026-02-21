@@ -61,6 +61,7 @@ export interface ColumnMapping {
 
 export const METRIC_FIELDS = [
   { value: 'line_code', label: 'Código da Linha', required: true },
+  { value: 'period_date', label: 'Data (período único)' },
   { value: 'period_start', label: 'Data Início' },
   { value: 'period_end', label: 'Data Fim' },
   // Media
