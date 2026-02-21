@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -152,9 +152,14 @@ export function ImportConfigDialog({
     }
   }, []);
 
+  const prevOpenRef = useRef(false);
+
   useEffect(() => {
-    if (open) {
-      // Always start at URL step
+    const wasOpen = prevOpenRef.current;
+    prevOpenRef.current = open;
+
+    // Only reset when dialog transitions from closed to open
+    if (open && !wasOpen) {
       setStep('url');
       setSourceUrl(existingUrl || '');
       setSourceName(existingName || '');
@@ -172,7 +177,6 @@ export function ImportConfigDialog({
           });
           pendingExistingMappings.current = mappingObj;
         }
-        // Auto-trigger preview fetch after a short delay
         const timer = setTimeout(() => {
           fetchPreview(existingUrl);
         }, 300);
