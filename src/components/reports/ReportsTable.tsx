@@ -37,7 +37,7 @@ interface ReportsTableProps {
   planName: string;
 }
 
-type SortField = 'line_code' | 'cost' | 'impressions' | 'clicks' | 'conversions' | 'variance';
+type SortField = 'line_code' | 'period_start' | 'cost' | 'impressions' | 'clicks' | 'conversions' | 'variance';
 type SortDirection = 'asc' | 'desc';
 
 export function ReportsTable({ reportData, mediaLines, planId, planName }: ReportsTableProps) {
@@ -103,6 +103,10 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
           aVal = a.line_code;
           bVal = b.line_code;
           break;
+        case 'period_start':
+          aVal = a.period_start || '';
+          bVal = b.period_start || '';
+          break;
         case 'cost':
           aVal = Number(a.cost || 0);
           bVal = Number(b.cost || 0);
@@ -167,6 +171,7 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
     const exportData = filteredData.map((r) => ({
       'Código': r.line_code,
       'Status Match': r.match_status === 'matched' ? 'Casada' : r.match_status === 'manual' ? 'Manual' : 'Não Casada',
+      'Data': r.period_start ? new Date(r.period_start + 'T00:00:00').toLocaleDateString('pt-BR') : '',
       'Orç. Planejado': r.planned,
       'Investimento': r.cost,
       'Variação (%)': r.variance.toFixed(1),
@@ -245,7 +250,10 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
                   <TableHead className="w-32">
                     <SortButton field="line_code">Código</SortButton>
                   </TableHead>
-                  <TableHead className="w-24">Status</TableHead>
+                   <TableHead className="w-24">Status</TableHead>
+                  <TableHead className="w-28">
+                    <SortButton field="period_start">Data</SortButton>
+                  </TableHead>
                   <TableHead className="text-right">Planejado</TableHead>
                   <TableHead className="text-right">
                     <SortButton field="cost">Investido</SortButton>
@@ -273,7 +281,7 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
               <TableBody>
                 {filteredData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={15} className="text-center py-8 text-muted-foreground">
                       Nenhum dado encontrado
                     </TableCell>
                   </TableRow>
@@ -298,6 +306,11 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
                             Não
                           </Badge>
                         )}
+                      </TableCell>
+                      <TableCell className="text-xs tabular-nums whitespace-nowrap">
+                        {row.period_start
+                          ? new Date(row.period_start + 'T00:00:00').toLocaleDateString('pt-BR')
+                          : '-'}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatCurrency(row.planned)}
