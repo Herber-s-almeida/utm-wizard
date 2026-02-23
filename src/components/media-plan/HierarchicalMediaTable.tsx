@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef, UIEvent } from 'react';
 import { motion } from 'framer-motion';
 import { Pencil, Trash2, Plus, Image as ImageIcon, Check, X, Settings2, Filter, Columns, Search, AlertTriangle, Link, LayoutGrid, List, Link2, RotateCcw } from 'lucide-react';
+import { PercentageInput } from '@/components/media-plan/PercentageInput';
 import { LineDetailButton } from '@/components/media-plan/LineDetailButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -326,7 +327,33 @@ const MonthBudgetCell = ({
   );
 };
 
-const EditableCell = ({ 
+const FeePercentageCell = ({
+  line,
+  onUpdateLine,
+  width,
+}: {
+  line: MediaLine;
+  onUpdateLine: (lineId: string, updates: Partial<MediaLine>) => Promise<void>;
+  width: number;
+}) => {
+  const feeValue = Number(line.fee_percentage) || 0;
+
+  const handleChange = (value: number) => {
+    onUpdateLine(line.id, { fee_percentage: value } as Partial<MediaLine>);
+  };
+
+  return (
+    <div className="p-1 border-r shrink-0 bg-primary/5" style={{ width }}>
+      <PercentageInput
+        value={feeValue}
+        onChange={handleChange}
+        className="h-6 text-xs"
+      />
+    </div>
+  );
+};
+
+const EditableCell = ({
   line, 
   field, 
   displayValue, 
@@ -1140,10 +1167,13 @@ export function HierarchicalMediaTable({
     return differenceInDays(lineEnd, lineStart) + 1;
   };
 
-  // Calculate allocated budget (sum of monthly budgets) for a line
+  // Calculate allocated budget (sum of monthly budgets + fee) for a line
   const getLineAllocatedBudget = (lineId: string): number => {
     const lineBudgets = monthlyBudgets[lineId] || [];
-    return lineBudgets.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+    const sumMonths = lineBudgets.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+    const line = lines.find(l => l.id === lineId);
+    const fee = Number(line?.fee_percentage) || 0;
+    return sumMonths * (1 + fee / 100);
   };
 
   // Get the budget for a specific month for a line
@@ -1616,6 +1646,13 @@ export function HierarchicalMediaTable({
           {formatCurrency(getLineAllocatedBudget(line.id))}
         </div>
         
+        {/* Fee Percentage - fixed column */}
+        <FeePercentageCell
+          line={line}
+          onUpdateLine={onUpdateLine}
+          width={getWidth('fee')}
+        />
+        
         {/* Month columns - fixed columns */}
         {planMonths.map((month, idx) => (
           <MonthBudgetCell
@@ -1636,7 +1673,7 @@ export function HierarchicalMediaTable({
     handleStatusChange, statusesList, lineAlerts, validatingLineId, onValidateUTM,
     onEditLine, onDeleteLine, getLineCampaignDays, getLineAllocatedBudget, planMonths,
     getMonthBudget, onUpdateMonthlyBudgets, isMonthEditableForLine, formatCurrency,
-    formatDate, generateLineCode, editableCellProps
+    formatDate, generateLineCode, editableCellProps, onUpdateLine
   ]);
 
   // DynamicHierarchyRenderer is now at module scope
@@ -1645,8 +1682,8 @@ export function HierarchicalMediaTable({
   const getMinWidth = () => {
     let width = getWidth('line_code') + getWidth('budget') + getWidth('status') + 
                 getWidth('start_date') + getWidth('end_date') + getWidth('actions');
-    // New fixed columns: Dias, Orçamento Alocado, Months
-    width += getWidth('days') + getWidth('allocated');
+    // New fixed columns: Dias, Orçamento Alocado, Taxas, Months
+    width += getWidth('days') + getWidth('allocated') + getWidth('fee');
     width += planMonths.length * getWidth('month');
     // Add widths for hierarchy columns based on hierarchyOrder
     for (const level of hierarchyOrder) {
@@ -2168,6 +2205,9 @@ export function HierarchicalMediaTable({
             <ResizableColumnHeader columnKey="allocated" width={getWidth('allocated')} onResize={handleResize} className="p-3 border-r bg-primary/5">
               Orc. Alocado
             </ResizableColumnHeader>
+            <ResizableColumnHeader columnKey="fee" width={getWidth('fee')} onResize={handleResize} className="p-3 border-r bg-primary/5">
+              Taxas
+            </ResizableColumnHeader>
             {planMonths.map((month, idx) => (
               <ResizableColumnHeader key={idx} columnKey="month" width={getWidth('month')} onResize={handleResize} className="p-3 border-r bg-primary/5 text-center">
                 {formatMonthHeader(month)}
@@ -2431,6 +2471,13 @@ export function HierarchicalMediaTable({
                       {formatCurrency(getLineAllocatedBudget(line.id))}
                     </div>
                     
+                    {/* Fee Percentage - fixed column */}
+                    <FeePercentageCell
+                      line={line}
+                      onUpdateLine={onUpdateLine}
+                      width={getWidth('fee')}
+                    />
+                    
                     {/* Month columns - fixed columns */}
                     {planMonths.map((month, idx) => (
                       <MonthBudgetCell
@@ -2587,6 +2634,7 @@ export function HierarchicalMediaTable({
             <div className="p-3 shrink-0 bg-primary/5 font-bold text-xs" style={{ width: getWidth('allocated') }}>
               {formatCurrency(lines.reduce((sum, l) => sum + getLineAllocatedBudget(l.id), 0))}
             </div>
+            <div className="p-3 shrink-0 bg-primary/5" style={{ width: getWidth('fee') }}></div>
             {planMonths.map((month, idx) => (
               <div key={idx} className="p-3 shrink-0 bg-primary/5 text-xs font-medium text-center" style={{ width: getWidth('month') }}>
                 {formatCurrency(lines.reduce((sum, l) => sum + getMonthBudget(l.id, month), 0))}

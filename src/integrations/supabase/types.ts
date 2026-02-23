@@ -2554,6 +2554,7 @@ export type Database = {
           destination_url: string | null
           end_date: string | null
           environment_id: string | null
+          fee_percentage: number | null
           format: string | null
           funnel_stage: string | null
           funnel_stage_id: string | null
@@ -2600,6 +2601,7 @@ export type Database = {
           destination_url?: string | null
           end_date?: string | null
           environment_id?: string | null
+          fee_percentage?: number | null
           format?: string | null
           funnel_stage?: string | null
           funnel_stage_id?: string | null
@@ -2646,6 +2648,7 @@ export type Database = {
           destination_url?: string | null
           end_date?: string | null
           environment_id?: string | null
+          fee_percentage?: number | null
           format?: string | null
           funnel_stage?: string | null
           funnel_stage_id?: string | null
