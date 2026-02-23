@@ -1,0 +1,1 @@
+ALTER TABLE public.media_lines ADD COLUMN fee_percentage numeric DEFAULT 0;

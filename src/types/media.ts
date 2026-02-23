@@ -63,6 +63,7 @@ export interface MediaLine {
   budget_allocation: 'campaign' | 'creative';
   percentage_of_plan: number;
   line_code: string | null;
+  fee_percentage: number;
   created_at: string;
   updated_at: string;
 }

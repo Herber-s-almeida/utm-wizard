@@ -19,6 +19,7 @@ export type ColumnKey =
   | 'actions'
   | 'days'
   | 'allocated'
+  | 'fee'
   | 'month';
 
 export interface ColumnWidths {
@@ -40,6 +41,7 @@ export interface ColumnWidths {
   actions: number;
   days: number;
   allocated: number;
+  fee: number;
   month: number;
 }
 
@@ -62,6 +64,7 @@ const DEFAULT_WIDTHS: ColumnWidths = {
   actions: 100,
   days: 60,
   allocated: 100,
+  fee: 80,
   month: 90,
 };
 
