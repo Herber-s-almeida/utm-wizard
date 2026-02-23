@@ -21,6 +21,7 @@ interface PlanDetailSummaryCardProps {
   linesCount: number;
   creativesCount: number;
   customKpis?: Array<{ key: string; name: string; unit: string }>;
+  manualVersionNumber?: number;
   onHide?: () => void;
 }
 
@@ -30,6 +31,7 @@ export function PlanDetailSummaryCard({
   linesCount, 
   creativesCount,
   customKpis = [],
+  manualVersionNumber,
   onHide,
 }: PlanDetailSummaryCardProps) {
   const formatCurrency = (value: number) => {
@@ -81,6 +83,9 @@ export function PlanDetailSummaryCard({
             <button className="flex-1 flex items-center gap-3 hover:bg-muted/30 transition-colors text-left rounded-lg -m-2 p-2">
               <div className="w-3 h-3 rounded-full bg-primary" />
               <h3 className="font-display text-lg font-semibold text-foreground">Resumo do Plano</h3>
+              {manualVersionNumber != null && manualVersionNumber > 0 && (
+                <Badge variant="outline" className="text-xs font-mono">v{manualVersionNumber}</Badge>
+              )}
               <div className="flex-1 h-[2px] bg-gradient-to-r from-primary/50 to-transparent rounded-full min-w-[100px]" />
             </button>
           </AnimatedCollapsibleTrigger>

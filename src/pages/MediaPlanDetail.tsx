@@ -86,6 +86,8 @@ import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER, getLevelLabel, getLevelLabelPl
 import { buildHierarchyTree, flattenHierarchyTree, HierarchyTreeNode, FlatHierarchyRow, MediaLineRef } from '@/utils/hierarchyDataBuilder';
 import { generateBudgetDistributionsFromLines } from '@/utils/generateBudgetDistributions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { usePlanVersions } from '@/hooks/usePlanVersions';
+import { UnsavedVersionAlert } from '@/components/media-plan/UnsavedVersionAlert';
 
 interface BudgetDistribution {
   id: string;
@@ -127,6 +129,7 @@ export default function MediaPlanDetail() {
   const [filterByAlerts, setFilterByAlerts] = useState(false);
   const [alertsVisible, setAlertsVisible] = useState(false);
   const [isGeneratingHierarchy, setIsGeneratingHierarchy] = useState(false);
+  const [unsavedAlertDismissed, setUnsavedAlertDismissed] = useState(false);
 
   // Library data for display
   const subdivisions = useSubdivisions();
@@ -156,6 +159,22 @@ export default function MediaPlanDetail() {
   // Element visibility
   const { elements, toggleVisibility, hideElement, isVisible } = usePlanElementsVisibility(planId);
 
+  // Version tracking for unsaved alert and badge
+  const { versions } = usePlanVersions(planId || undefined);
+  const manualVersionNumber = useMemo(() => {
+    const manualVersions = versions.filter(v => !v.is_auto_backup);
+    if (manualVersions.length === 0) return 0;
+    return Math.max(...manualVersions.map(v => v.version_number));
+  }, [versions]);
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (versions.length === 0) return false;
+    const lastManual = versions.find(v => !v.is_auto_backup);
+    const lastAuto = versions.find(v => v.is_auto_backup);
+    if (!lastManual) return versions.length > 0; // no manual version exists but versions exist
+    if (!lastAuto) return false; // no auto backup, all good
+    return new Date(lastAuto.created_at) > new Date(lastManual.created_at);
+  }, [versions]);
   // Reset state and fetch data when identifier or environment changes
   useEffect(() => {
     if (user?.id && identifier && currentEnvironmentId) {
@@ -876,6 +895,7 @@ export default function MediaPlanDetail() {
             totalLinesBudget={totalLinesBudget}
             linesCount={lines.length}
             creativesCount={Object.values(creatives).reduce((acc, c) => acc + c.length, 0)}
+            manualVersionNumber={manualVersionNumber}
             onHide={() => hideElement('plan-summary')}
           />
         )}
@@ -1293,6 +1313,16 @@ export default function MediaPlanDetail() {
           onOpenChange={setPermissionsDialogOpen}
           planId={planId}
           planName={plan?.name || ''}
+        />
+      )}
+
+      {/* Unsaved Version Alert */}
+      {planId && hasUnsavedChanges && !unsavedAlertDismissed && !loading && (
+        <UnsavedVersionAlert
+          open={true}
+          onDismiss={() => setUnsavedAlertDismissed(true)}
+          planId={planId}
+          onVersionSaved={() => setUnsavedAlertDismissed(true)}
         />
       )}
     </DashboardLayout>
