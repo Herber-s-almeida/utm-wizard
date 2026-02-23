@@ -1,64 +1,57 @@
 
 
-# Fix: Editing Existing Data Sources for Column Mapping Review
+# Correcao: Taxa refletida no total alocado das hierarquias
 
-## Problem
+## Problema
 
-When clicking the edit button on an existing data source, the `ImportConfigDialog` jumps to step 3 (mapping) but the `headers` state is empty because the spreadsheet preview was never loaded. This means the mapping UI renders an empty list -- effectively broken.
+A coluna "Orc. Alocado" na linha individual ja calcula corretamente com a taxa (`soma meses * (1 + taxa/100)`), mas os totais nos cards de hierarquia (ex: "Awareness") usam o campo estatico `line.budget` -- ignorando completamente a taxa e os orcamentos mensais.
 
-## Root Cause
+## Causa Raiz
 
-In `ImportConfigDialog.tsx`, line 62: `setStep(existingImportId ? 'mapping' : 'url')` skips the preview fetch entirely. The `headers` state stays as `[]`, so the mapping loop `headers.map(...)` renders nothing.
+Dois pontos:
 
-## Solution
+1. **`hierarchyDataBuilder.ts` linha 85**: `calculateAllocatedBudget` soma `line.budget` (valor estatico) em vez de usar um valor calculado com taxas.
+2. **`HierarchicalMediaTable.tsx` linha 983**: O array `lineRefs` passado ao builder nao inclui o valor calculado com taxa -- apenas o `budget` estatico.
 
-When opening the dialog to edit an existing source:
-1. Start at the URL step with the existing URL pre-filled
-2. Auto-trigger a preview fetch so the headers load
-3. Then allow the user to proceed to mapping with their existing mappings pre-applied
-4. Also allow updating the source URL and name on the existing record (instead of creating a new one)
+## Alteracoes
 
-## Detailed Changes
+### 1. `src/utils/hierarchyDataBuilder.ts`
 
-### 1. `ImportConfigDialog.tsx` -- Fix edit flow
+- Adicionar campo opcional `allocatedBudget?: number` ao `MediaLineRef`
+- Na funcao `calculateAllocatedBudget` (linha 85), trocar:
+  ```
+  .reduce((acc, line) => acc + (Number(line.budget) || 0), 0)
+  ```
+  por:
+  ```
+  .reduce((acc, line) => acc + (line.allocatedBudget ?? (Number(line.budget) || 0)), 0)
+  ```
+  Isso usa o valor pre-calculado com taxa quando disponivel, e faz fallback para `budget` quando nao.
 
-**useEffect (open):**
-- Always start at `'url'` step, even when editing
-- Pre-fill `sourceUrl` and `sourceName` from the existing import
-- After a short delay, auto-trigger `handleFetchPreview` so the user sees the preview immediately
-- When existing mappings are provided, apply them after headers load (merge with auto-detected)
+### 2. `src/components/media-plan/HierarchicalMediaTable.tsx`
 
-**New: handleUpdateImportAndProceed function:**
-- When `existingImportId` is set, UPDATE the existing `report_imports` row (URL, name) instead of creating a new one
-- Then proceed to mapping step
+- Na construcao do `lineRefs` (~linha 983), calcular o `allocatedBudget` para cada linha:
+  ```typescript
+  const lineRefs: MediaLineRef[] = lines.map(l => {
+    const lineBudgets = monthlyBudgets[l.id] || [];
+    const sumMonths = lineBudgets.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+    const fee = Number(l.fee_percentage) || 0;
+    const allocated = sumMonths > 0 ? sumMonths * (1 + fee / 100) : (Number(l.budget) || 0);
+    return {
+      id: l.id,
+      budget: Number(l.budget) || 0,
+      allocatedBudget: allocated,
+      subdivision_id: l.subdivision_id,
+      moment_id: l.moment_id,
+      funnel_stage_id: l.funnel_stage_id,
+    };
+  });
+  ```
 
-**Modify handleCreateImportAndProceed:**
-- If `existingImportId` exists, call update logic instead of insert
-- Set `importId` from existing ID
+## Resultado
 
-**Mapping step adjustments:**
-- Merge existing mappings with auto-detected ones (existing take priority)
-- Show "Voltar" button to go back to preview
+- Os cards de hierarquia (Awareness, etc.) passam a somar os valores reais alocados incluindo taxas
+- A coluna "Orc. Alocado" individual continua funcionando como antes
+- O rodape da tabela ja usa `getLineAllocatedBudget` e nao precisa de mudanca
+- Sem alteracoes no banco de dados
 
-### 2. `MediaPlanReports.tsx` -- Pass source name to dialog
-
-- Pass `existingName={selectedImport?.source_name}` prop so the name field is also pre-filled when editing
-
-### 3. `useReportData.ts` -- Add update mutation
-
-- Add `useUpdateReportImport` mutation that updates `source_url` and `source_name` on an existing `report_imports` row
-
-## Technical Details
-
-**Files to modify:**
-- `src/components/reports/ImportConfigDialog.tsx` -- main fix: load preview when editing, update instead of create
-- `src/pages/MediaPlanReports.tsx` -- pass `existingName` prop
-- `src/hooks/useReportData.ts` -- add `useUpdateReportImport` mutation
-
-**Flow after fix:**
-1. User clicks edit on existing source
-2. Dialog opens at URL step with URL and name pre-filled
-3. User clicks "Carregar Preview" (or it auto-loads)
-4. Preview shows with existing mappings pre-applied
-5. User proceeds to mapping, adjusts if needed
-6. "Importar Dados" updates the existing record and re-runs import
