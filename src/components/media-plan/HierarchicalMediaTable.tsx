@@ -1023,7 +1023,7 @@ export function HierarchicalMediaTable({
       getNameForLevel,
       levelOrder
     );
-  }, [lines, budgetDistributions, plan.total_budget, hierarchyOrder, getNameForLevel, levelOrder]);
+  }, [lines, budgetDistributions, plan.total_budget, hierarchyOrder, getNameForLevel, levelOrder, monthlyBudgets]);
 
   // Helper to get line ref ID for a specific level
   const getLineRefIdForLevel = useCallback((line: MediaLine, level: HierarchyLevel): string | null => {

@@ -76,8 +76,19 @@ export function usePlanAlerts({
     const result: PlanAlert[] = [];
     const today = new Date().toISOString().split('T')[0];
 
-    // 1. Check total budget allocation
-    const totalAllocated = lines.reduce((acc, line) => acc + Number(line.budget || 0), 0);
+    // Helper: calculate allocated budget for a line (monthly sum * (1 + fee/100))
+    const getLineAllocatedBudget = (line: MediaLine): number => {
+      const lineMonthly = monthlyBudgets[line.id] || [];
+      const sumMonths = lineMonthly.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+      const fee = Number((line as any).fee_percentage) || 0;
+      if (sumMonths > 0) {
+        return sumMonths * (1 + fee / 100);
+      }
+      return Number(line.budget || 0);
+    };
+
+    // 1. Check total budget allocation (using allocated with fees)
+    const totalAllocated = lines.reduce((acc, line) => acc + getLineAllocatedBudget(line), 0);
     if (totalAllocated > totalBudget && totalBudget > 0) {
       const excess = totalAllocated - totalBudget;
       const percentage = ((excess / totalBudget) * 100).toFixed(1);
@@ -103,7 +114,7 @@ export function usePlanAlerts({
           return (dist.reference_id === null && !lineRefId) || lineRefId === dist.reference_id;
         });
         
-        const allocated = matchingLines.reduce((acc, l) => acc + Number(l.budget || 0), 0);
+        const allocated = matchingLines.reduce((acc, l) => acc + getLineAllocatedBudget(l), 0);
         
         // Check for budget exceeded
         if (allocated > dist.amount && dist.amount > 0) {
@@ -298,19 +309,29 @@ export function usePlanAlerts({
         });
       }
 
-      // 13. NEW: Budget allocation mismatch (line budget vs monthly allocated)
+      // 13. Budget allocation mismatch (line budget vs allocated with fees)
       const lineBudget = Number(line.budget || 0);
-      const lineMonthlyBudgets = monthlyBudgets[line.id] || [];
-      const allocatedBudget = lineMonthlyBudgets.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+      const lineAllocated = getLineAllocatedBudget(line);
       
-      if (lineBudget > 0 && Math.abs(lineBudget - allocatedBudget) > 0.01) {
-        const diff = lineBudget - allocatedBudget;
+      if (lineBudget > 0 && lineAllocated > lineBudget + 0.01) {
+        const diff = lineAllocated - lineBudget;
+        result.push({
+          id: `budget-mismatch-${line.id}`,
+          level: 'error',
+          title: 'Orçamento alocado excede orçamento',
+          description: `A linha "${line.line_code || line.platform}" tem orçamento de R$ ${lineBudget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} mas alocado de R$ ${lineAllocated.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (excesso: R$ ${diff.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`,
+          action: 'Aumente o orçamento da linha ou reduza a taxa/alocação mensal',
+          lineId: line.id,
+          category: 'budget',
+        });
+      } else if (lineBudget > 0 && Math.abs(lineBudget - lineAllocated) > 0.01 && lineAllocated < lineBudget) {
+        const diff = lineBudget - lineAllocated;
         result.push({
           id: `budget-mismatch-${line.id}`,
           level: 'error',
           title: 'Orçamento alocado divergente',
-          description: `A linha "${line.line_code || line.platform}" tem orçamento de R$ ${lineBudget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} mas alocação mensal de R$ ${allocatedBudget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (diferença: R$ ${Math.abs(diff).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`,
-          action: diff > 0 ? 'Distribua o orçamento restante nos meses' : 'Reduza a alocação mensal',
+          description: `A linha "${line.line_code || line.platform}" tem orçamento de R$ ${lineBudget.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} mas alocado de R$ ${lineAllocated.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (diferença: R$ ${diff.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`,
+          action: 'Distribua o orçamento restante nos meses',
           lineId: line.id,
           category: 'budget',
         });
