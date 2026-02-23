@@ -13,6 +13,9 @@ export interface PlanVersion {
     distributions?: Record<string, unknown>[];
     budget_distributions?: Record<string, unknown>[];
     monthly_budgets: Record<string, unknown>[];
+    line_details?: Record<string, unknown>[];
+    line_detail_items?: Record<string, unknown>[];
+    line_detail_links?: Record<string, unknown>[];
   };
   change_log: string | null;
   created_by: string;
@@ -196,6 +199,74 @@ export function usePlanVersions(planId: string | undefined) {
           await supabase
             .from('media_line_monthly_budgets')
             .insert(monthlyBudgets);
+        }
+      }
+
+      // Restore line_details if present in snapshot
+      // First delete existing line_details (cascade will handle items and links)
+      await supabase
+        .from('line_details')
+        .delete()
+        .eq('media_plan_id', planId!);
+
+      if (snapshot.line_details && snapshot.line_details.length > 0) {
+        const detailsData = snapshot.line_details.map(ld => ({
+          id: ld.id as string,
+          media_plan_id: planId!,
+          user_id: user.id,
+          detail_type_id: ld.detail_type_id as string | null,
+          name: ld.name as string,
+          description: ld.description as string | null,
+        }));
+
+        const { error: detailsError } = await supabase
+          .from('line_details')
+          .insert(detailsData);
+
+        if (detailsError) throw detailsError;
+
+        // Restore line_detail_items
+        if (snapshot.line_detail_items && snapshot.line_detail_items.length > 0) {
+          const itemsData = snapshot.line_detail_items.map(ldi => ({
+            id: ldi.id as string,
+            line_detail_id: ldi.line_detail_id as string,
+            user_id: user.id,
+            environment_id: ldi.environment_id as string | null,
+            data: ldi.data as Json,
+            format_id: ldi.format_id as string | null,
+            creative_id: ldi.creative_id as string | null,
+            status_id: ldi.status_id as string | null,
+            period_start: ldi.period_start as string | null,
+            period_end: ldi.period_end as string | null,
+            days_of_week: ldi.days_of_week as string[] | null,
+            total_gross: ldi.total_gross as number | null,
+            total_net: ldi.total_net as number | null,
+            total_insertions: ldi.total_insertions as number | null,
+            sort_order: ldi.sort_order as number | null,
+            is_active: ldi.is_active as boolean | null,
+          }));
+
+          await supabase
+            .from('line_detail_items')
+            .insert(itemsData);
+        }
+
+        // Restore line_detail_line_links
+        if (snapshot.line_detail_links && snapshot.line_detail_links.length > 0) {
+          const linksData = snapshot.line_detail_links.map(ldl => ({
+            id: ldl.id as string,
+            line_detail_id: ldl.line_detail_id as string,
+            media_line_id: ldl.media_line_id as string,
+            user_id: user.id,
+            environment_id: ldl.environment_id as string | null,
+            allocated_amount: ldl.allocated_amount as number | null,
+            allocated_percentage: ldl.allocated_percentage as number | null,
+            is_primary: ldl.is_primary as boolean | null,
+          }));
+
+          await supabase
+            .from('line_detail_line_links')
+            .insert(linksData);
         }
       }
 
