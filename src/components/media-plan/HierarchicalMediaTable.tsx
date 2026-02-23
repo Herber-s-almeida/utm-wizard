@@ -980,18 +980,25 @@ export function HierarchicalMediaTable({
   // Build dynamic hierarchical tree based on hierarchyOrder
   const dynamicHierarchyTree = useMemo(() => {
     // Create MediaLineRef array for the builder
-    const lineRefs: MediaLineRef[] = lines.map(l => ({
-      id: l.id,
-      budget: Number(l.budget) || 0,
-      subdivision_id: l.subdivision_id,
-      moment_id: l.moment_id,
-      funnel_stage_id: l.funnel_stage_id,
-    }));
+    const lineRefs: MediaLineRef[] = lines.map(l => {
+      const lineBudgets = monthlyBudgets[l.id] || [];
+      const sumMonths = lineBudgets.reduce((sum, b) => sum + (Number(b.amount) || 0), 0);
+      const fee = Number(l.fee_percentage) || 0;
+      const allocated = sumMonths > 0 ? sumMonths * (1 + fee / 100) : (Number(l.budget) || 0);
+      return {
+        id: l.id,
+        budget: Number(l.budget) || 0,
+        allocatedBudget: allocated,
+        subdivision_id: l.subdivision_id,
+        moment_id: l.moment_id,
+        funnel_stage_id: l.funnel_stage_id,
+      };
+    });
 
     // If no distributions, create a fallback root node
     if (budgetDistributions.length === 0) {
       const totalBudget = Number(plan.total_budget) || 0;
-      const allocated = lines.reduce((acc, l) => acc + (Number(l.budget) || 0), 0);
+      const allocated = lineRefs.reduce((acc, l) => acc + (l.allocatedBudget ?? (Number(l.budget) || 0)), 0);
       
       const rootNode: HierarchyTreeNode = {
         data: {

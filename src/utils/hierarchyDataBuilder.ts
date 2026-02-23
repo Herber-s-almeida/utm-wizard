@@ -39,6 +39,7 @@ export interface BudgetDistribution {
 export interface MediaLineRef {
   id: string;
   budget: number | null;
+  allocatedBudget?: number;
   subdivision_id: string | null;
   moment_id: string | null;
   funnel_stage_id: string | null;
@@ -82,7 +83,7 @@ function calculateAllocatedBudget(
       }
       return true;
     })
-    .reduce((acc, line) => acc + (Number(line.budget) || 0), 0);
+    .reduce((acc, line) => acc + (line.allocatedBudget ?? (Number(line.budget) || 0)), 0);
 }
 
 // Level order configuration for sorting nodes
