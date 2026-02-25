@@ -16,9 +16,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, ArrowRight, ArrowLeft, Check, Link, Table, Columns, Upload, Calendar } from 'lucide-react';
+import { Loader2, ArrowRight, ArrowLeft, Check, Link, Table, Columns, Upload, Calendar, LayoutTemplate } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useCreateReportImport, useUpdateReportImport, useSaveColumnMappings, useRunImport, METRIC_FIELDS } from '@/hooks/useReportData';
+import {
+  useCreateReportImport,
+  useUpdateReportImport,
+  useSaveColumnMappings,
+  useRunImport,
+  METRIC_FIELDS_BY_CATEGORY,
+  SOURCE_CATEGORIES,
+  SourceCategory,
+} from '@/hooks/useReportData';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
@@ -29,11 +37,12 @@ interface ImportConfigDialogProps {
   existingImportId?: string;
   existingUrl?: string;
   existingName?: string;
+  existingCategory?: SourceCategory;
   existingMappings?: { source_column: string; target_field: string; date_format?: string | null }[];
   onComplete?: () => void;
 }
 
-type Step = 'url' | 'preview' | 'mapping' | 'import';
+type Step = 'category' | 'url' | 'preview' | 'mapping' | 'import';
 
 const DATE_FORMATS = [
   { value: 'auto', label: 'Detectar automaticamente' },
@@ -53,27 +62,21 @@ function detectDateFormat(sampleValues: any[]): string {
 
   if (stringValues.length === 0) return 'auto';
 
-  // Check if all are numbers (Excel serial dates)
   if (stringValues.every((v) => /^\d+$/.test(v) && parseInt(v) > 30000 && parseInt(v) < 60000)) {
     return 'excel_serial';
   }
 
-  // ISO: 2025-11-21
   if (stringValues.some((v) => /^\d{4}-\d{2}-\d{2}/.test(v))) return 'YYYY-MM-DD';
 
-  // Check DD/MM/YYYY vs MM/DD/YYYY
   const slashDates = stringValues.filter((v) => /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v));
   if (slashDates.length > 0) {
-    // If any first part > 12, it must be DD/MM/YYYY
     const firstParts = slashDates.map((v) => parseInt(v.split('/')[0]));
     const secondParts = slashDates.map((v) => parseInt(v.split('/')[1]));
     if (firstParts.some((p) => p > 12)) return 'DD/MM/YYYY';
     if (secondParts.some((p) => p > 12)) return 'MM/DD/YYYY';
-    // Default to DD/MM/YYYY (Brazilian/European convention)
     return 'DD/MM/YYYY';
   }
 
-  // DD-MM-YYYY
   if (stringValues.some((v) => /^\d{2}-\d{2}-\d{4}$/.test(v))) {
     const firstParts = stringValues
       .filter((v) => /^\d{2}-\d{2}-\d{4}$/.test(v))
@@ -82,10 +85,7 @@ function detectDateFormat(sampleValues: any[]): string {
     return 'DD-MM-YYYY';
   }
 
-  // DD.MM.YYYY
   if (stringValues.some((v) => /^\d{2}\.\d{2}\.\d{4}$/.test(v))) return 'DD.MM.YYYY';
-
-  // YYYY/MM/DD
   if (stringValues.some((v) => /^\d{4}\/\d{2}\/\d{2}$/.test(v))) return 'YYYY/MM/DD';
 
   return 'auto';
@@ -98,11 +98,13 @@ export function ImportConfigDialog({
   existingImportId,
   existingUrl,
   existingName,
+  existingCategory,
   existingMappings,
   onComplete,
 }: ImportConfigDialogProps) {
   const { user } = useAuth();
-  const [step, setStep] = useState<Step>('url');
+  const [step, setStep] = useState<Step>('category');
+  const [sourceCategory, setSourceCategory] = useState<SourceCategory>('media');
   const [sourceUrl, setSourceUrl] = useState('');
   const [sourceName, setSourceName] = useState('');
   const [headers, setHeaders] = useState<string[]>([]);
@@ -118,6 +120,10 @@ export function ImportConfigDialog({
   const updateImport = useUpdateReportImport();
   const saveMappings = useSaveColumnMappings();
   const runImport = useRunImport();
+
+  const currentMetricFields = useMemo(() => {
+    return METRIC_FIELDS_BY_CATEGORY[sourceCategory] || METRIC_FIELDS_BY_CATEGORY.media;
+  }, [sourceCategory]);
 
   const fetchPreview = useCallback(async (url: string) => {
     if (!url) return;
@@ -188,7 +194,6 @@ export function ImportConfigDialog({
         } else if (h === 'engaged sessions' || h === 'engaged_sessions' || h.includes('sessões engajadas') || h.includes('sessoes engajadas')) {
           autoMappings[header] = 'engaged_sessions';
         } else if (h.includes('data') || h.includes('date') || h.includes('período') || h.includes('periodo') || h.includes('period')) {
-          // Generic date column → period_date
           autoMappings[header] = 'period_date';
         }
       });
@@ -196,15 +201,14 @@ export function ImportConfigDialog({
       // Auto-detect date formats for date-mapped columns
       Object.entries(autoMappings).forEach(([header, target]) => {
         if (target === 'period_date') {
-          const colIndex = cleanHeaders.indexOf(header);
-          if (colIndex !== -1) {
-            const sampleValues = dataRows.map((row) => row[colIndex]);
+          const colIdx = cleanHeaders.indexOf(header);
+          if (colIdx !== -1) {
+            const sampleValues = dataRows.map((row) => row[colIdx]);
             autoDateFormats[header] = detectDateFormat(sampleValues);
           }
         }
       });
 
-      // Merge: existing mappings take priority over auto-detected
       if (pendingExistingMappings.current) {
         setMappings({ ...autoMappings, ...pendingExistingMappings.current });
         pendingExistingMappings.current = null;
@@ -233,19 +237,19 @@ export function ImportConfigDialog({
     const wasOpen = prevOpenRef.current;
     prevOpenRef.current = open;
 
-    // Only reset when dialog transitions from closed to open
     if (open && !wasOpen) {
-      setStep('url');
-      setSourceUrl(existingUrl || '');
-      setSourceName(existingName || '');
       setHeaders([]);
       setPreviewRows([]);
       setMappings({});
       setDateFormats({});
       setImportId(existingImportId || '');
+      setSourceUrl(existingUrl || '');
+      setSourceName(existingName || '');
+      setSourceCategory(existingCategory || 'media');
 
-      // If editing, store existing mappings and auto-fetch preview
       if (existingImportId && existingUrl) {
+        // Editing: skip category step, go directly to url fetch
+        setStep('url');
         if (existingMappings && existingMappings.length > 0) {
           const mappingObj: Record<string, string> = {};
           const dateFormatObj: Record<string, string> = {};
@@ -262,15 +266,16 @@ export function ImportConfigDialog({
           fetchPreview(existingUrl);
         }, 300);
         return () => clearTimeout(timer);
+      } else {
+        setStep('category');
       }
     }
-  }, [open, existingImportId, existingUrl, existingName, existingMappings, fetchPreview]);
+  }, [open, existingImportId, existingUrl, existingName, existingCategory, existingMappings, fetchPreview]);
 
   const handleFetchPreview = () => fetchPreview(sourceUrl);
 
   const handleMappingChange = (header: string, value: string) => {
     setMappings((prev) => ({ ...prev, [header]: value }));
-    // When a column is mapped to a date field, auto-detect format
     if (value === 'period_date') {
       const colIndex = headers.indexOf(header);
       if (colIndex !== -1 && !dateFormats[header]) {
@@ -279,7 +284,6 @@ export function ImportConfigDialog({
         setDateFormats((prev) => ({ ...prev, [header]: detected }));
       }
     } else {
-      // Remove date format if no longer a date field
       setDateFormats((prev) => {
         const next = { ...prev };
         delete next[header];
@@ -304,6 +308,7 @@ export function ImportConfigDialog({
           media_plan_id: planId,
           source_url: sourceUrl,
           source_name: sourceName || 'Google Sheets',
+          source_category: sourceCategory,
         });
         setHeaders(currentHeaders);
         setMappings(currentMappings);
@@ -315,6 +320,7 @@ export function ImportConfigDialog({
           media_plan_id: planId,
           source_url: sourceUrl,
           source_name: sourceName || 'Google Sheets',
+          source_category: sourceCategory,
         });
         setHeaders(currentHeaders);
         setMappings(currentMappings);
@@ -373,8 +379,7 @@ export function ImportConfigDialog({
   };
 
   const isDateField = (header: string) => {
-    const target = mappings[header];
-    return target === 'period_date';
+    return mappings[header] === 'period_date';
   };
 
   const getDatePreviewExample = (header: string) => {
@@ -386,6 +391,52 @@ export function ImportConfigDialog({
 
   const renderStep = () => {
     switch (step) {
+      case 'category':
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+              <LayoutTemplate className="w-5 h-5 text-primary" />
+              <div>
+                <p className="text-sm font-medium">Tipo de Fonte de Dados</p>
+                <p className="text-xs text-muted-foreground">
+                  Selecione o template que melhor corresponde aos dados que serão importados
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-3">
+              {SOURCE_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.value}
+                  type="button"
+                  onClick={() => setSourceCategory(cat.value)}
+                  className={`flex items-center gap-4 p-4 rounded-lg border text-left transition-colors ${
+                    sourceCategory === cat.value
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      : 'border-border hover:border-primary/50 hover:bg-muted/30'
+                  }`}
+                >
+                  <span className="text-2xl">{cat.icon}</span>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{cat.label}</p>
+                    <p className="text-xs text-muted-foreground">{cat.description}</p>
+                  </div>
+                  {sourceCategory === cat.value && (
+                    <Check className="w-5 h-5 text-primary shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={() => setStep('url')}>
+                <ArrowRight className="w-4 h-4 mr-2" />
+                Continuar
+              </Button>
+            </div>
+          </div>
+        );
+
       case 'url':
         return (
           <div className="space-y-4">
@@ -407,30 +458,35 @@ export function ImportConfigDialog({
                 value={sourceUrl}
                 onChange={(e) => setSourceUrl(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                Suporta formatos CSV e XLSX. Para números decimais, use vírgula (ex: 278,28)
-              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="source-name">Nome da Fonte (opcional)</Label>
+              <Label htmlFor="source-name">Nome da Fonte</Label>
               <Input
                 id="source-name"
-                placeholder="Ex: Dados de Mídia - Janeiro"
+                placeholder="Ex: Google Ads - Janeiro"
                 value={sourceName}
                 onChange={(e) => setSourceName(e.target.value)}
               />
             </div>
 
-            <div className="flex justify-end">
-              <Button onClick={handleFetchPreview} disabled={loading || !sourceUrl}>
-                {loading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <ArrowRight className="w-4 h-4 mr-2" />
-                )}
-                Carregar Preview
-              </Button>
+            <div className="flex justify-between">
+              {!existingImportId && (
+                <Button variant="outline" onClick={() => setStep('category')}>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Voltar
+                </Button>
+              )}
+              <div className="ml-auto">
+                <Button onClick={handleFetchPreview} disabled={loading || !sourceUrl}>
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <ArrowRight className="w-4 h-4 mr-2" />
+                  )}
+                  Carregar Preview
+                </Button>
+              </div>
             </div>
           </div>
         );
@@ -443,7 +499,8 @@ export function ImportConfigDialog({
               <div>
                 <p className="text-sm font-medium">Preview dos Dados</p>
                 <p className="text-xs text-muted-foreground">
-                  {headers.length} colunas encontradas
+                  {headers.length} colunas encontradas •{' '}
+                  Template: {SOURCE_CATEGORIES.find(c => c.value === sourceCategory)?.label}
                 </p>
               </div>
             </div>
@@ -498,7 +555,7 @@ export function ImportConfigDialog({
               <div>
                 <p className="text-sm font-medium">Mapeamento de Colunas</p>
                 <p className="text-xs text-muted-foreground">
-                  Para cada coluna da sua planilha, escolha o campo correspondente no sistema. Campos não mapeados serão ignorados.
+                  Campos disponíveis para o template "{SOURCE_CATEGORIES.find(c => c.value === sourceCategory)?.label}"
                 </p>
               </div>
             </div>
@@ -531,11 +588,10 @@ export function ImportConfigDialog({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="ignore">— Ignorar esta coluna</SelectItem>
-                          {METRIC_FIELDS.map((field) => (
+                          {currentMetricFields.map((field) => (
                             <SelectItem key={field.value} value={field.value}>
                               {field.label}
                               {field.required && ' *'}
-                              {field.group && ` (${field.group})`}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -601,11 +657,16 @@ export function ImportConfigDialog({
     }
   };
 
+  const allSteps: Step[] = existingImportId
+    ? ['url', 'preview', 'mapping', 'import']
+    : ['category', 'url', 'preview', 'mapping', 'import'];
+
   const stepLabels: Record<Step, string> = {
-    url: '1. Fonte de Dados',
-    preview: '2. Preview',
-    mapping: '3. Mapeamento',
-    import: '4. Importação',
+    category: '1. Template',
+    url: existingImportId ? '1. Fonte de Dados' : '2. Fonte de Dados',
+    preview: existingImportId ? '2. Preview' : '3. Preview',
+    mapping: existingImportId ? '3. Mapeamento' : '4. Mapeamento',
+    import: existingImportId ? '4. Importação' : '5. Importação',
   };
 
   return (
@@ -617,11 +678,11 @@ export function ImportConfigDialog({
         </DialogHeader>
 
         <div className="flex gap-1 mb-4">
-          {(['url', 'preview', 'mapping', 'import'] as Step[]).map((s, i) => (
+          {allSteps.map((s, i) => (
             <div
               key={s}
               className={`h-1 flex-1 rounded-full ${
-                i <= ['url', 'preview', 'mapping', 'import'].indexOf(step)
+                i <= allSteps.indexOf(step)
                   ? 'bg-primary'
                   : 'bg-muted'
               }`}
