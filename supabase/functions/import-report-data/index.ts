@@ -164,15 +164,21 @@ serve(async (req) => {
     const mappingIndex: Record<string, string> = {};
     const dateFormatIndex: Record<string, string> = {};
     for (const mapping of mappings) {
-      if (!mapping.source_column || !mapping.target_field) {
-        console.log("Skipping invalid mapping:", JSON.stringify(mapping));
+      if (!mapping || typeof mapping !== 'object') {
+        console.log("Skipping null/invalid mapping entry");
+        continue;
+      }
+      const src = mapping.source_column;
+      const tgt = mapping.target_field;
+      if (!src || typeof src !== 'string' || !tgt || typeof tgt !== 'string') {
+        console.log("Skipping mapping with missing source/target:", JSON.stringify(mapping));
         continue;
       }
       const sourceIndex = headers.findIndex(
-        (h) => h.toLowerCase().trim() === mapping.source_column.toLowerCase().trim(),
+        (h) => (h || "").toLowerCase().trim() === src.toLowerCase().trim(),
       );
       if (sourceIndex !== -1) {
-        mappingIndex[sourceIndex.toString()] = mapping.target_field;
+        mappingIndex[sourceIndex.toString()] = tgt;
         if (mapping.date_format) {
           dateFormatIndex[sourceIndex.toString()] = mapping.date_format;
         }
@@ -180,11 +186,14 @@ serve(async (req) => {
     }
 
     // Find line_code column
-    const lineCodeMapping = mappings.find((m) => m.target_field === "line_code" && m.source_column);
+    const lineCodeMapping = mappings.find(
+      (m) => m && typeof m === 'object' && m.target_field === "line_code" && m.source_column && typeof m.source_column === 'string'
+    );
     if (!lineCodeMapping || !lineCodeMapping.source_column) throw new Error("line_code mapping is required");
 
+    const lineCodeSourceCol = String(lineCodeMapping.source_column);
     const lineCodeIndex = headers.findIndex(
-      (h) => h.toLowerCase().trim() === lineCodeMapping.source_column.toLowerCase().trim(),
+      (h) => (h || "").toLowerCase().trim() === lineCodeSourceCol.toLowerCase().trim(),
     );
     if (lineCodeIndex === -1) {
       throw new Error(`Column "${lineCodeMapping.source_column}" not found in XLSX`);
