@@ -147,19 +147,37 @@ export function useReportData(planId: string, importId?: string) {
   return useQuery({
     queryKey: ['report-data', planId, importId],
     queryFn: async () => {
-      let query = supabase
-        .from('report_data')
-        .select('*')
-        .eq('media_plan_id', planId)
-        .order('line_code', { ascending: true });
+      // Fetch all rows using pagination to bypass the 1000-row default limit
+      let allData: ReportData[] = [];
+      const pageSize = 1000;
+      let from = 0;
+      let hasMore = true;
 
-      if (importId) {
-        query = query.eq('import_id', importId);
+      while (hasMore) {
+        let query = supabase
+          .from('report_data')
+          .select('*')
+          .eq('media_plan_id', planId)
+          .order('line_code', { ascending: true })
+          .range(from, from + pageSize - 1);
+
+        if (importId) {
+          query = query.eq('import_id', importId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allData = allData.concat(data as ReportData[]);
+          from += pageSize;
+          hasMore = data.length === pageSize;
+        } else {
+          hasMore = false;
+        }
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as ReportData[];
+      return allData;
     },
     enabled: !!planId,
   });
