@@ -5,6 +5,7 @@ import { Menu, X, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SidebarCollapseProvider } from '@/hooks/useSidebarCollapse';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
+import { useEnvironmentTheme } from '@/hooks/useEnvironmentTheme';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -13,6 +14,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isViewingOtherEnvironment, userEnvironments, switchEnvironment, currentEnvironmentId } = useEnvironment();
+  useEnvironmentTheme(); // Apply theme CSS classes
 
   // Check if user is admin in any environment (to allow returning to their primary environment)
   const hasAdminEnvironment = userEnvironments.some(env => env.is_environment_admin);

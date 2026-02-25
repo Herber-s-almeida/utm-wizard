@@ -1,8 +1,10 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { FinanceSidebar } from "@/components/finance/FinanceSidebar";
 import { Outlet } from "react-router-dom";
+import { useEnvironmentTheme } from "@/hooks/useEnvironmentTheme";
 
 export function FinanceLayout() {
+  useEnvironmentTheme(); // Apply theme CSS classes before finance-theme override
   return (
     <div className="finance-theme min-h-screen bg-background">
       <SidebarProvider defaultOpen={true}>

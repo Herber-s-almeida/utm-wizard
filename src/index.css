@@ -114,6 +114,142 @@
     --sidebar-ring: 265 85% 55%;
   }
 
+  /* ===== Color Scheme Themes ===== */
+
+  /* Ocean - Blue */
+  .theme-ocean {
+    --primary: 199 89% 48%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 187 72% 47%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 199 89% 48%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --gradient-primary: linear-gradient(135deg, hsl(199, 89%, 48%) 0%, hsl(187, 72%, 47%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(187, 72%, 47%) 0%, hsl(199, 89%, 48%) 100%);
+    --shadow-glow: 0 0 40px hsl(199 89% 48% / 0.15);
+  }
+
+  /* Emerald - Green */
+  .theme-emerald {
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 152 69% 53%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 160 84% 39%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --gradient-primary: linear-gradient(135deg, hsl(160, 84%, 39%) 0%, hsl(152, 69%, 53%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(152, 69%, 53%) 0%, hsl(160, 84%, 39%) 100%);
+    --shadow-glow: 0 0 40px hsl(160 84% 39% / 0.15);
+  }
+
+  /* Sunset - Orange/Amber */
+  .theme-sunset {
+    --primary: 38 92% 50%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 38 92% 50%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --gradient-primary: linear-gradient(135deg, hsl(38, 92%, 50%) 0%, hsl(25, 95%, 53%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(25, 95%, 53%) 0%, hsl(38, 92%, 50%) 100%);
+    --shadow-glow: 0 0 40px hsl(38 92% 50% / 0.15);
+  }
+
+  /* Rose - Pink */
+  .theme-rose {
+    --primary: 347 77% 50%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 350 89% 60%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 347 77% 50%;
+    --sidebar-primary: 347 77% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --gradient-primary: linear-gradient(135deg, hsl(347, 77%, 50%) 0%, hsl(350, 89%, 60%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(350, 89%, 60%) 0%, hsl(347, 77%, 50%) 100%);
+    --shadow-glow: 0 0 40px hsl(347 77% 50% / 0.15);
+  }
+
+  /* Slate - Neutral */
+  .theme-slate {
+    --primary: 215 16% 47%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 215 20% 65%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 215 16% 47%;
+    --sidebar-primary: 215 16% 47%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --gradient-primary: linear-gradient(135deg, hsl(215, 16%, 47%) 0%, hsl(215, 20%, 65%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(215, 20%, 65%) 0%, hsl(215, 16%, 47%) 100%);
+    --shadow-glow: 0 0 40px hsl(215 16% 47% / 0.15);
+  }
+
+  /* Cyberpunk - Dark neon */
+  .theme-cyberpunk {
+    --background: 260 50% 6%;
+    --foreground: 270 40% 98%;
+    --card: 260 50% 9%;
+    --card-foreground: 270 40% 98%;
+    --popover: 260 50% 9%;
+    --popover-foreground: 270 40% 98%;
+    --primary: 280 80% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 260 35% 15%;
+    --secondary-foreground: 270 40% 98%;
+    --muted: 260 35% 15%;
+    --muted-foreground: 270 20% 65%;
+    --accent: 300 70% 60%;
+    --accent-foreground: 0 0% 100%;
+    --border: 260 30% 18%;
+    --input: 260 30% 18%;
+    --ring: 280 80% 60%;
+    --sidebar-background: 260 50% 8%;
+    --sidebar-foreground: 270 40% 98%;
+    --sidebar-primary: 280 80% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 260 35% 15%;
+    --sidebar-accent-foreground: 270 40% 98%;
+    --sidebar-border: 260 30% 18%;
+    --sidebar-ring: 280 80% 60%;
+    --gradient-primary: linear-gradient(135deg, hsl(280, 80%, 60%) 0%, hsl(300, 70%, 60%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(300, 70%, 60%) 0%, hsl(280, 80%, 60%) 100%);
+    --shadow-glow: 0 0 60px hsl(280 80% 60% / 0.25);
+  }
+
+  /* Midnight - Deep blue dark */
+  .theme-midnight {
+    --background: 222 47% 8%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 35% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 222 35% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 210 80% 65%;
+    --accent-foreground: 0 0% 100%;
+    --border: 222 32% 20%;
+    --input: 222 32% 20%;
+    --ring: 217 91% 60%;
+    --sidebar-background: 222 47% 10%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 35% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 222 32% 17%;
+    --sidebar-ring: 217 91% 60%;
+    --gradient-primary: linear-gradient(135deg, hsl(217, 91%, 60%) 0%, hsl(210, 80%, 65%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(210, 80%, 65%) 0%, hsl(217, 91%, 60%) 100%);
+    --shadow-glow: 0 0 60px hsl(217 91% 60% / 0.2);
+  }
+
   /* Finance Manager Theme */
   .finance-theme {
     --primary: 160 84% 39%;
