@@ -171,44 +171,31 @@ export function ImportConfigDialog({
           autoMappings[header] = 'clicks';
         } else if (h.includes('custo') || h.includes('investimento') || h === 'cost') {
           autoMappings[header] = 'cost';
-        } else if (h === 'ctr') {
-          autoMappings[header] = 'ctr';
-        } else if (h === 'cpc') {
-          autoMappings[header] = 'cpc';
-        } else if (h === 'cpm') {
-          autoMappings[header] = 'cpm';
         } else if (h.includes('leads')) {
           autoMappings[header] = 'leads';
         } else if (h.includes('vendas') || h === 'sales') {
           autoMappings[header] = 'sales';
         } else if (h.includes('conversões') || h.includes('conversoes') || h === 'conversions') {
           autoMappings[header] = 'conversions';
-        } else if (h === 'cpa') {
-          autoMappings[header] = 'cpa';
-        } else if (h === 'roas') {
-          autoMappings[header] = 'roas';
         } else if (h.includes('sessões') || h.includes('sessoes') || h === 'sessions') {
           autoMappings[header] = 'sessions';
-        } else if (h.includes('rejeição') || h.includes('bounce')) {
-          autoMappings[header] = 'bounce_rate';
         } else if (h.includes('pageviews') || h.includes('visualizações')) {
           autoMappings[header] = 'pageviews';
+        } else if (h === 'total users' || h === 'total_users' || h === 'usuários' || h === 'usuarios' || h === 'users') {
+          autoMappings[header] = 'total_users';
+        } else if (h === 'new users' || h === 'new_users' || h.includes('usuários novos') || h.includes('nuevos usuarios')) {
+          autoMappings[header] = 'new_users';
+        } else if (h === 'engaged sessions' || h === 'engaged_sessions' || h.includes('sessões engajadas') || h.includes('sessoes engajadas')) {
+          autoMappings[header] = 'engaged_sessions';
         } else if (h.includes('data') || h.includes('date') || h.includes('período') || h.includes('periodo') || h.includes('period')) {
-          // Auto-detect date columns
-          if (h.includes('início') || h.includes('inicio') || h.includes('start') || h.includes('de')) {
-            autoMappings[header] = 'period_start';
-          } else if (h.includes('fim') || h.includes('end') || h.includes('até') || h.includes('ate')) {
-            autoMappings[header] = 'period_end';
-          } else {
-            // Generic date column → period_date (single date)
-            autoMappings[header] = 'period_date';
-          }
+          // Generic date column → period_date
+          autoMappings[header] = 'period_date';
         }
       });
 
       // Auto-detect date formats for date-mapped columns
       Object.entries(autoMappings).forEach(([header, target]) => {
-        if (target === 'period_start' || target === 'period_end' || target === 'period_date') {
+        if (target === 'period_date') {
           const colIndex = cleanHeaders.indexOf(header);
           if (colIndex !== -1) {
             const sampleValues = dataRows.map((row) => row[colIndex]);
@@ -284,7 +271,7 @@ export function ImportConfigDialog({
   const handleMappingChange = (header: string, value: string) => {
     setMappings((prev) => ({ ...prev, [header]: value }));
     // When a column is mapped to a date field, auto-detect format
-    if (value === 'period_start' || value === 'period_end' || value === 'period_date') {
+    if (value === 'period_date') {
       const colIndex = headers.indexOf(header);
       if (colIndex !== -1 && !dateFormats[header]) {
         const sampleValues = previewRows.map((row) => row[colIndex]);
@@ -387,7 +374,7 @@ export function ImportConfigDialog({
 
   const isDateField = (header: string) => {
     const target = mappings[header];
-    return target === 'period_start' || target === 'period_end' || target === 'period_date';
+    return target === 'period_date';
   };
 
   const getDatePreviewExample = (header: string) => {
@@ -511,68 +498,80 @@ export function ImportConfigDialog({
               <div>
                 <p className="text-sm font-medium">Mapeamento de Colunas</p>
                 <p className="text-xs text-muted-foreground">
-                  Associe cada coluna da planilha a uma métrica do sistema
+                  Para cada coluna da sua planilha, escolha o campo correspondente no sistema. Campos não mapeados serão ignorados.
                 </p>
               </div>
             </div>
 
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-              {headers.map((header) => (
-                <div key={header} className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm truncate w-32 shrink-0" title={header}>
-                      {header}
-                    </span>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <Select
-                      value={mappings[header] || 'ignore'}
-                      onValueChange={(value) => handleMappingChange(header, value)}
-                    >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Ignorar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ignore">Ignorar</SelectItem>
-                        {METRIC_FIELDS.map((field) => (
-                          <SelectItem key={field.value} value={field.value}>
-                            {field.label}
-                            {field.required && ' *'}
-                            {field.group && ` (${field.group})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              {headers.map((header) => {
+                const colIndex = headers.indexOf(header);
+                const sampleValue = previewRows.length > 0 && colIndex !== -1 ? previewRows[0][colIndex] : null;
 
-                  {isDateField(header) && (
-                    <div className="ml-[calc(8rem+1.5rem)] flex items-center gap-2">
-                      <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                return (
+                  <div key={header} className="space-y-1 p-2 rounded-lg border bg-card">
+                    <div className="flex items-center gap-2">
+                      <div className="w-36 shrink-0">
+                        <span className="text-sm font-medium truncate block" title={header}>
+                          {header}
+                        </span>
+                        {sampleValue !== null && sampleValue !== undefined && (
+                          <span className="text-xs text-muted-foreground truncate block">
+                            ex: {sampleValue.toString().substring(0, 30)}
+                          </span>
+                        )}
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
                       <Select
-                        value={dateFormats[header] || 'auto'}
-                        onValueChange={(value) =>
-                          setDateFormats((prev) => ({ ...prev, [header]: value }))
-                        }
+                        value={mappings[header] || 'ignore'}
+                        onValueChange={(value) => handleMappingChange(header, value)}
                       >
-                        <SelectTrigger className="flex-1 h-8 text-xs">
-                          <SelectValue placeholder="Formato da data" />
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Ignorar" />
                         </SelectTrigger>
                         <SelectContent>
-                          {DATE_FORMATS.map((fmt) => (
-                            <SelectItem key={fmt.value} value={fmt.value} className="text-xs">
-                              {fmt.label}
+                          <SelectItem value="ignore">— Ignorar esta coluna</SelectItem>
+                          {METRIC_FIELDS.map((field) => (
+                            <SelectItem key={field.value} value={field.value}>
+                              {field.label}
+                              {field.required && ' *'}
+                              {field.group && ` (${field.group})`}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      {getDatePreviewExample(header) && (
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          ex: {getDatePreviewExample(header)}
-                        </span>
-                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {isDateField(header) && (
+                      <div className="ml-[calc(9rem+1.5rem)] flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                        <Select
+                          value={dateFormats[header] || 'auto'}
+                          onValueChange={(value) =>
+                            setDateFormats((prev) => ({ ...prev, [header]: value }))
+                          }
+                        >
+                          <SelectTrigger className="flex-1 h-8 text-xs">
+                            <SelectValue placeholder="Formato da data" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DATE_FORMATS.map((fmt) => (
+                              <SelectItem key={fmt.value} value={fmt.value} className="text-xs">
+                                {fmt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {getDatePreviewExample(header) && (
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            ex: {getDatePreviewExample(header)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             <div className="flex justify-between">

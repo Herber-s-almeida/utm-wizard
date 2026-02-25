@@ -68,7 +68,13 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
       const planned = Number(line?.budget || 0);
       const actual = Number(r.cost || 0);
       const variance = planned > 0 ? ((actual - planned) / planned) * 100 : 0;
-      return { ...r, planned, variance, lineName: line?.platform || '-' };
+      const totalImpressions = Number(r.impressions || 0);
+      const totalClicks = Number(r.clicks || 0);
+      const calculatedCTR = totalImpressions > 0 ? totalClicks / totalImpressions : 0;
+      const calculatedCPC = totalClicks > 0 ? actual / totalClicks : 0;
+      const totalConversions = Number(r.conversions || 0);
+      const calculatedCPA = totalConversions > 0 ? actual / totalConversions : 0;
+      return { ...r, planned, variance, lineName: line?.platform || '-', calculatedCTR, calculatedCPC, calculatedCPA };
     });
   }, [reportData, lineMap]);
 
@@ -76,7 +82,6 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
   const filteredData = useMemo(() => {
     let filtered = dataWithVariance;
 
-    // Search filter
     if (search) {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter(
@@ -86,7 +91,6 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
       );
     }
 
-    // Match status filter
     if (matchFilter !== 'all') {
       filtered = filtered.filter((r) =>
         matchFilter === 'matched'
@@ -95,42 +99,18 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
       );
     }
 
-    // Sort
     filtered.sort((a, b) => {
       let aVal: any, bVal: any;
       switch (sortField) {
-        case 'line_code':
-          aVal = a.line_code;
-          bVal = b.line_code;
-          break;
-        case 'period_start':
-          aVal = a.period_start || '';
-          bVal = b.period_start || '';
-          break;
-        case 'cost':
-          aVal = Number(a.cost || 0);
-          bVal = Number(b.cost || 0);
-          break;
-        case 'impressions':
-          aVal = Number(a.impressions || 0);
-          bVal = Number(b.impressions || 0);
-          break;
-        case 'clicks':
-          aVal = Number(a.clicks || 0);
-          bVal = Number(b.clicks || 0);
-          break;
-        case 'conversions':
-          aVal = Number(a.conversions || 0);
-          bVal = Number(b.conversions || 0);
-          break;
-        case 'variance':
-          aVal = a.variance;
-          bVal = b.variance;
-          break;
-        default:
-          return 0;
+        case 'line_code': aVal = a.line_code; bVal = b.line_code; break;
+        case 'period_start': aVal = a.period_start || ''; bVal = b.period_start || ''; break;
+        case 'cost': aVal = Number(a.cost || 0); bVal = Number(b.cost || 0); break;
+        case 'impressions': aVal = Number(a.impressions || 0); bVal = Number(b.impressions || 0); break;
+        case 'clicks': aVal = Number(a.clicks || 0); bVal = Number(b.clicks || 0); break;
+        case 'conversions': aVal = Number(a.conversions || 0); bVal = Number(b.conversions || 0); break;
+        case 'variance': aVal = a.variance; bVal = b.variance; break;
+        default: return 0;
       }
-
       if (typeof aVal === 'string') {
         return sortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
       }
@@ -156,13 +136,11 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
 
   const handleConfirmMatch = async (mediaLineId: string) => {
     if (!selectedReportData) return;
-
     await updateMatch.mutateAsync({
       report_data_id: selectedReportData.id,
       media_line_id: mediaLineId,
       media_plan_id: planId,
     });
-
     setMatchDialogOpen(false);
     setSelectedReportData(null);
   };
@@ -170,21 +148,22 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
   const handleExport = () => {
     const exportData = filteredData.map((r) => ({
       'Código': r.line_code,
-      'Status Match': r.match_status === 'matched' ? 'Casada' : r.match_status === 'manual' ? 'Manual' : 'Não Casada',
+      'Status': r.match_status === 'matched' ? 'Match' : r.match_status === 'manual' ? 'Manual' : 'Sem Match',
       'Data': r.period_start ? new Date(r.period_start + 'T00:00:00').toLocaleDateString('pt-BR') : '',
       'Orç. Planejado': r.planned,
       'Investimento': r.cost,
       'Variação (%)': r.variance.toFixed(1),
       'Impressões': r.impressions,
       'Cliques': r.clicks,
-      'CTR': r.ctr,
-      'CPC': r.cpc,
-      'CPM': r.cpm,
+      'CTR': r.calculatedCTR,
+      'CPC': r.calculatedCPC,
       'Leads': r.leads,
       'Conversões': r.conversions,
-      'CPA': r.cpa,
+      'CPA': r.calculatedCPA,
       'Sessões': r.sessions,
-      'Taxa Rejeição': r.bounce_rate,
+      'Usuários': r.total_users,
+      'Usuários Novos': r.new_users,
+      'Sessões Engajadas': r.engaged_sessions,
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -231,8 +210,8 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="matched">Casadas</SelectItem>
-                  <SelectItem value="unmatched">Não Casadas</SelectItem>
+                  <SelectItem value="matched">Com Match</SelectItem>
+                  <SelectItem value="unmatched">Sem Match</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" size="sm" onClick={handleExport}>
@@ -275,13 +254,16 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
                   </TableHead>
                   <TableHead className="text-right">CPA</TableHead>
                   <TableHead className="text-right">Sessões</TableHead>
+                  <TableHead className="text-right">Usuários</TableHead>
+                  <TableHead className="text-right">Novos</TableHead>
+                  <TableHead className="text-right">Eng.</TableHead>
                   <TableHead className="w-20">Ação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={15} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={18} className="text-center py-8 text-muted-foreground">
                       Nenhum dado encontrado
                     </TableCell>
                   </TableRow>
@@ -293,7 +275,7 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
                         {row.match_status === 'matched' ? (
                           <Badge variant="default" className="bg-success text-success-foreground">
                             <Check className="w-3 h-3 mr-1" />
-                            Casada
+                            Match
                           </Badge>
                         ) : row.match_status === 'manual' ? (
                           <Badge variant="default" className="bg-primary">
@@ -303,7 +285,7 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
                         ) : (
                           <Badge variant="destructive">
                             <AlertTriangle className="w-3 h-3 mr-1" />
-                            Não
+                            Sem
                           </Badge>
                         )}
                       </TableCell>
@@ -339,10 +321,10 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
                         {formatNumber(Number(row.clicks || 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatPercent(Number(row.ctr || 0))}
+                        {formatPercent(row.calculatedCTR)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatCurrency(Number(row.cpc || 0))}
+                        {formatCurrency(row.calculatedCPC)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(Number(row.leads || 0))}
@@ -351,10 +333,19 @@ export function ReportsTable({ reportData, mediaLines, planId, planName }: Repor
                         {formatNumber(Number(row.conversions || 0))}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatCurrency(Number(row.cpa || 0))}
+                        {formatCurrency(row.calculatedCPA)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(Number(row.sessions || 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(row.total_users || 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(row.new_users || 0))}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(Number(row.engaged_sessions || 0))}
                       </TableCell>
                       <TableCell>
                         {row.match_status === 'unmatched' && (
