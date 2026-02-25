@@ -252,7 +252,7 @@ export default function MediaResourcesListPage() {
           <CardContent>
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-blue-500" />
+                <FileText className="h-4 w-4 text-primary" />
                 <span className="text-sm">{stats.totalLines} linhas de mídia</span>
               </div>
               <div className="flex items-center gap-2">

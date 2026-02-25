@@ -1067,8 +1067,8 @@ export default function EditMediaPlan() {
             transition={{ duration: 0.3 }}
           >
             {existingLines.length > 0 && hierarchyChanged && (
-              <Alert className="border-amber-500/30 bg-amber-500/5 mb-4">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <Alert className="border-warning/30 bg-warning/5 mb-4">
+                <AlertTriangle className="h-4 w-4 text-warning" />
                 <AlertDescription className="text-sm">
                   Alterar a estrutura afetará as {existingLines.length} linha(s) de mídia existentes. 
                   Os orçamentos mensais serão apagados e os vínculos de níveis removidos serão limpos.
@@ -1419,7 +1419,7 @@ export default function EditMediaPlan() {
                     As alterações serão salvas e substituirão as distribuições atuais do plano.
                   </p>
                   {existingLines.length > 0 && (
-                    <p className="text-sm text-amber-600 mt-2">
+                    <p className="text-sm text-warning mt-2">
                       Se você remover subdivisões, momentos ou fases que têm linhas de mídia, essas linhas serão excluídas.
                     </p>
                   )}
@@ -1538,7 +1538,7 @@ export default function EditMediaPlan() {
         <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <AlertTriangle className="h-5 w-5 text-warning" />
               Linhas de mídia serão excluídas
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -1596,7 +1596,7 @@ export default function EditMediaPlan() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <AlertTriangle className="h-5 w-5 text-warning" />
               Alterar Estrutura do Plano?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>

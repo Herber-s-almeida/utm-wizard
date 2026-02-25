@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const ROLE_CONFIG: Record<EnvironmentRole, { label: string; icon: React.ReactNode; color: string }> = {
-  admin: { label: 'Administrador', icon: <Shield className="h-3 w-3" />, color: 'text-blue-500' },
+  admin: { label: 'Administrador', icon: <Shield className="h-3 w-3" />, color: 'text-primary' },
   user: { label: 'Membro', icon: <User className="h-3 w-3" />, color: 'text-muted-foreground' },
 };
 

@@ -184,14 +184,14 @@ export function LinkedLinesTab({
                   <TableRow key={link.id} className="group">
                     <TableCell className="text-center">
                       {link.is_primary ? (
-                        <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 mx-auto" />
+                        <Star className="h-4 w-4 text-warning fill-warning mx-auto" />
                       ) : (
                         <button 
                           onClick={() => setPrimary(link.id)}
                           className="opacity-0 group-hover:opacity-100 transition-opacity"
                           title="Definir como linha primária"
                         >
-                          <Star className="h-4 w-4 text-muted-foreground hover:text-yellow-500 mx-auto" />
+                          <Star className="h-4 w-4 text-muted-foreground hover:text-warning mx-auto" />
                         </button>
                       )}
                     </TableCell>

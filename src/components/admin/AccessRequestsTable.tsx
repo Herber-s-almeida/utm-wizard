@@ -104,21 +104,21 @@ export function AccessRequestsTable({ requests }: AccessRequestsTableProps) {
     switch (status) {
       case "pending":
         return (
-          <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
             <Clock className="h-3 w-3 mr-1" />
             Pendente
           </Badge>
         );
       case "approved":
         return (
-          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+          <Badge variant="outline" className="bg-success/10 text-success border-success/30">
             <CheckCircle2 className="h-3 w-3 mr-1" />
             Aprovado
           </Badge>
         );
       case "rejected":
         return (
-          <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30">
+          <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
             <XCircle className="h-3 w-3 mr-1" />
             Rejeitado
           </Badge>
@@ -181,7 +181,7 @@ export function AccessRequestsTable({ requests }: AccessRequestsTableProps) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleApprove(request)}>
-                        <Check className="h-4 w-4 mr-2 text-green-600" />
+                        <Check className="h-4 w-4 mr-2 text-success" />
                         Aprovar
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -238,7 +238,7 @@ export function AccessRequestsTable({ requests }: AccessRequestsTableProps) {
             <Button
               onClick={handleConfirmApprove}
               disabled={approveRequest.isPending}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-success hover:bg-success/90 text-success-foreground"
             >
               {approveRequest.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
