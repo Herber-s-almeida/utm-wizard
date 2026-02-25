@@ -518,10 +518,10 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
                       <YAxis tickFormatter={(v) => formatCompact(v)} tick={{ fontSize: 11 }} />
                       <Tooltip formatter={(value: number, name: string) => [formatNumber(value), name]} contentStyle={{ fontSize: 12 }} />
                       <Legend />
-                      <Line type="monotone" dataKey="sessions" name="Sessões" stroke={ANALYTICS_COLOR} strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="users" name="Usuários" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="sessions" name="Sessões" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="users" name="Usuários" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} strokeDasharray="4 4" />
                       {hasEngaged && (
-                        <Line type="monotone" dataKey="engaged" name="Engajadas" stroke={CONVERSION_COLOR} strokeWidth={2} dot={false} strokeDasharray="4 4" />
+                        <Line type="monotone" dataKey="engaged" name="Engajadas" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} strokeDasharray="2 2" />
                       )}
                     </LineChart>
                   </ResponsiveContainer>
@@ -543,15 +543,15 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
                     <AreaChart data={dailyData}>
                       <defs>
                         <linearGradient id="engGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={CONVERSION_COLOR} stopOpacity={0.3} />
-                          <stop offset="95%" stopColor={CONVERSION_COLOR} stopOpacity={0} />
+                          <stop offset="5%" stopColor={MEDIA_COLOR} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={MEDIA_COLOR} stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} />
                       <YAxis tickFormatter={(v) => `${v.toFixed(0)}%`} tick={{ fontSize: 11 }} />
                       <Tooltip formatter={(value: number) => [`${value.toFixed(2)}%`, 'Engajamento']} contentStyle={{ fontSize: 12 }} />
-                      <Area type="monotone" dataKey="engagementRate" name="Engajamento" stroke={CONVERSION_COLOR} fill="url(#engGradient)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="engagementRate" name="Engajamento" stroke={MEDIA_COLOR} fill="url(#engGradient)" strokeWidth={2} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -597,7 +597,7 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
                       <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} />
                       <YAxis tickFormatter={(v) => `R$${v.toFixed(2)}`} tick={{ fontSize: 11 }} />
                       <Tooltip formatter={(value: number) => [formatCurrency(value), 'CPC']} contentStyle={{ fontSize: 12 }} />
-                      <Line type="monotone" dataKey="cpc" name="CPC" stroke={ANALYTICS_COLOR} strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="cpc" name="CPC" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </CardContent>
