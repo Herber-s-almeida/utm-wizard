@@ -117,7 +117,7 @@
   /* ===== Color Scheme Themes ===== */
 
   /* Ocean - Blue */
-  .theme-ocean {
+  [data-theme="ocean"] {
     --background: 200 20% 97%;
     --foreground: 200 50% 12%;
     --card: 0 0% 100%;
@@ -153,7 +153,7 @@
   }
 
   /* Emerald - Green */
-  .theme-emerald {
+  [data-theme="emerald"] {
     --background: 150 20% 97%;
     --foreground: 150 50% 12%;
     --card: 0 0% 100%;
@@ -189,7 +189,7 @@
   }
 
   /* Sunset - Orange/Amber */
-  .theme-sunset {
+  [data-theme="sunset"] {
     --background: 35 25% 97%;
     --foreground: 30 50% 12%;
     --card: 0 0% 100%;
@@ -225,7 +225,7 @@
   }
 
   /* Rose - Pink */
-  .theme-rose {
+  [data-theme="rose"] {
     --background: 350 20% 97%;
     --foreground: 345 50% 12%;
     --card: 0 0% 100%;
@@ -261,7 +261,7 @@
   }
 
   /* Slate - Neutral */
-  .theme-slate {
+  [data-theme="slate"] {
     --background: 210 15% 97%;
     --foreground: 215 25% 15%;
     --card: 0 0% 100%;
@@ -297,7 +297,7 @@
   }
 
   /* Cyberpunk - Dark neon */
-  .theme-cyberpunk {
+  [data-theme="cyberpunk"] {
     --background: 260 50% 6%;
     --foreground: 270 40% 98%;
     --card: 260 50% 9%;
@@ -335,7 +335,7 @@
   }
 
   /* Midnight - Deep blue dark */
-  .theme-midnight {
+  [data-theme="midnight"] {
     --background: 222 47% 8%;
     --foreground: 210 40% 98%;
     --card: 222 47% 11%;
