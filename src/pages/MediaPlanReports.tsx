@@ -31,6 +31,7 @@ import {
   useRunImport,
   useDeleteReportImport,
   ReportImport,
+  SOURCE_CATEGORIES,
 } from '@/hooks/useReportData';
 import { ImportConfigDialog } from '@/components/reports/ImportConfigDialog';
 import { ImportWizardDialog } from '@/components/performance/ImportWizardDialog';
@@ -274,15 +275,20 @@ export default function MediaPlanReports() {
                     className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
                   >
                     <div className="flex items-center gap-3">
-                      <BarChart3 className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="font-medium text-sm">{importConfig.source_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {importConfig.last_import_at
-                            ? `Última importação: ${format(new Date(importConfig.last_import_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
-                            : 'Nunca importado'}
-                        </p>
-                      </div>
+                       <BarChart3 className="w-5 h-5 text-primary" />
+                       <div>
+                         <div className="flex items-center gap-2">
+                           <p className="font-medium text-sm">{importConfig.source_name}</p>
+                           <Badge variant="outline" className="text-xs">
+                             {SOURCE_CATEGORIES.find(c => c.value === (importConfig as any).source_category)?.label || 'Mídia Paga'}
+                           </Badge>
+                         </div>
+                         <p className="text-xs text-muted-foreground">
+                           {importConfig.last_import_at
+                             ? `Última importação: ${format(new Date(importConfig.last_import_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
+                             : 'Nunca importado'}
+                         </p>
+                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(importConfig.import_status)}
@@ -337,11 +343,12 @@ export default function MediaPlanReports() {
 
             <TabsContent value="dashboard" className="mt-6">
               <ReportsDashboard
-                reportData={reportData}
-                mediaLines={mediaLines}
-                totalBudget={Number(plan.total_budget || 0)}
-                vehicles={vehicles}
-              />
+                 reportData={reportData}
+                 mediaLines={mediaLines}
+                 totalBudget={Number(plan.total_budget || 0)}
+                 vehicles={vehicles}
+                 reportImports={reportImports}
+               />
             </TabsContent>
 
             <TabsContent value="table" className="mt-6">
@@ -397,6 +404,7 @@ export default function MediaPlanReports() {
         existingImportId={selectedImport?.id}
         existingUrl={selectedImport?.source_url}
         existingName={selectedImport?.source_name}
+        existingCategory={(selectedImport as any)?.source_category}
         existingMappings={selectedMappings.map((m: any) => ({
           source_column: m.source_column,
           target_field: m.target_field,

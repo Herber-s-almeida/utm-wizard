@@ -3777,6 +3777,7 @@ export type Database = {
           import_status: string | null
           last_import_at: string | null
           media_plan_id: string
+          source_category: string
           source_name: string
           source_url: string
           updated_at: string
@@ -3790,6 +3791,7 @@ export type Database = {
           import_status?: string | null
           last_import_at?: string | null
           media_plan_id: string
+          source_category?: string
           source_name: string
           source_url: string
           updated_at?: string
@@ -3803,6 +3805,7 @@ export type Database = {
           import_status?: string | null
           last_import_at?: string | null
           media_plan_id?: string
+          source_category?: string
           source_name?: string
           source_url?: string
           updated_at?: string

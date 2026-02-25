@@ -4,6 +4,73 @@ import { toast } from 'sonner';
 import { useAuth } from './useAuth';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 
+export type SourceCategory = 'media' | 'analytics' | 'conversions' | 'social_organic';
+
+export const SOURCE_CATEGORIES: { value: SourceCategory; label: string; description: string; icon: string }[] = [
+  { value: 'media', label: 'Mídia Paga', description: 'Google Ads, Meta Ads, etc.', icon: '📢' },
+  { value: 'analytics', label: 'Analytics / Site', description: 'Google Analytics, etc.', icon: '📊' },
+  { value: 'conversions', label: 'Conversões / CRM', description: 'Leads, vendas, receita', icon: '🎯' },
+  { value: 'social_organic', label: 'Redes Sociais (Orgânico)', description: 'Alcance, engajamento, seguidores', icon: '📱' },
+];
+
+export const METRIC_FIELDS_BY_CATEGORY: Record<SourceCategory, { value: string; label: string; required?: boolean }[]> = {
+  media: [
+    { value: 'line_code', label: 'Código da Linha', required: true },
+    { value: 'period_date', label: 'Data' },
+    { value: 'impressions', label: 'Impressões' },
+    { value: 'clicks', label: 'Cliques' },
+    { value: 'cost', label: 'Custo / Investimento' },
+    { value: 'conversions', label: 'Conversões' },
+    { value: 'leads', label: 'Leads' },
+    { value: 'sales', label: 'Vendas' },
+  ],
+  analytics: [
+    { value: 'line_code', label: 'Código da Linha', required: true },
+    { value: 'period_date', label: 'Data' },
+    { value: 'sessions', label: 'Sessões' },
+    { value: 'total_users', label: 'Usuários (Total Users)' },
+    { value: 'new_users', label: 'Usuários Novos (New Users)' },
+    { value: 'engaged_sessions', label: 'Sessões Engajadas' },
+    { value: 'pageviews', label: 'Visualizações de Página' },
+    { value: 'avg_session_duration', label: 'Duração Média' },
+  ],
+  conversions: [
+    { value: 'line_code', label: 'Código da Linha', required: true },
+    { value: 'period_date', label: 'Data' },
+    { value: 'leads', label: 'Leads' },
+    { value: 'sales', label: 'Vendas' },
+    { value: 'conversions', label: 'Conversões' },
+    { value: 'cost', label: 'Custo / Investimento' },
+  ],
+  social_organic: [
+    { value: 'line_code', label: 'Código da Linha', required: true },
+    { value: 'period_date', label: 'Data' },
+    { value: 'impressions', label: 'Alcance / Impressões' },
+    { value: 'clicks', label: 'Engajamento / Cliques' },
+    { value: 'sessions', label: 'Visitas ao Perfil' },
+    { value: 'total_users', label: 'Seguidores' },
+    { value: 'pageviews', label: 'Visualizações' },
+  ],
+};
+
+// Flat list for backwards compatibility
+export const METRIC_FIELDS = [
+  { value: 'line_code', label: 'Código da Linha', required: true },
+  { value: 'period_date', label: 'Data' },
+  { value: 'impressions', label: 'Impressões', group: 'Mídia' },
+  { value: 'clicks', label: 'Cliques', group: 'Mídia' },
+  { value: 'cost', label: 'Custo / Investimento', group: 'Mídia' },
+  { value: 'leads', label: 'Leads', group: 'Conversão' },
+  { value: 'sales', label: 'Vendas', group: 'Conversão' },
+  { value: 'conversions', label: 'Conversões', group: 'Conversão' },
+  { value: 'sessions', label: 'Sessões', group: 'Analytics' },
+  { value: 'total_users', label: 'Usuários (Total Users)', group: 'Analytics' },
+  { value: 'new_users', label: 'Usuários Novos (New Users)', group: 'Analytics' },
+  { value: 'engaged_sessions', label: 'Sessões Engajadas', group: 'Analytics' },
+  { value: 'avg_session_duration', label: 'Duração Média', group: 'Analytics' },
+  { value: 'pageviews', label: 'Visualizações de Página', group: 'Analytics' },
+];
+
 export interface ReportImport {
   id: string;
   media_plan_id: string;
@@ -11,6 +78,7 @@ export interface ReportImport {
   environment_id?: string;
   source_url: string;
   source_name: string;
+  source_category: SourceCategory;
   last_import_at: string | null;
   import_status: 'pending' | 'processing' | 'success' | 'error';
   error_message: string | null;
@@ -26,29 +94,24 @@ export interface ReportData {
   line_code: string;
   period_start: string | null;
   period_end: string | null;
-  // Media metrics
   impressions: number;
   clicks: number;
   cost: number;
   ctr: number;
   cpc: number;
   cpm: number;
-  // Conversion metrics
   leads: number;
   sales: number;
   conversions: number;
   cpa: number;
   roas: number;
-  // Analytics metrics
   sessions: number;
   bounce_rate: number;
   avg_session_duration: number;
   pageviews: number;
-  // Google Analytics metrics
   total_users: number;
   new_users: number;
   engaged_sessions: number;
-  // Raw data
   raw_data: Record<string, any>;
   match_status: 'matched' | 'unmatched' | 'manual';
   created_at: string;
@@ -62,26 +125,6 @@ export interface ColumnMapping {
   target_field: string;
   date_format?: string | null;
 }
-
-export const METRIC_FIELDS = [
-  { value: 'line_code', label: 'Código da Linha', required: true },
-  { value: 'period_date', label: 'Data' },
-  // Media
-  { value: 'impressions', label: 'Impressões', group: 'Mídia' },
-  { value: 'clicks', label: 'Cliques', group: 'Mídia' },
-  { value: 'cost', label: 'Custo / Investimento', group: 'Mídia' },
-  // Conversions
-  { value: 'leads', label: 'Leads', group: 'Conversão' },
-  { value: 'sales', label: 'Vendas', group: 'Conversão' },
-  { value: 'conversions', label: 'Conversões', group: 'Conversão' },
-  // Analytics
-  { value: 'sessions', label: 'Sessões', group: 'Analytics' },
-  { value: 'total_users', label: 'Usuários (Total Users)', group: 'Analytics' },
-  { value: 'new_users', label: 'Usuários Novos (New Users)', group: 'Analytics' },
-  { value: 'engaged_sessions', label: 'Sessões Engajadas', group: 'Analytics' },
-  { value: 'avg_session_duration', label: 'Duração Média', group: 'Analytics' },
-  { value: 'pageviews', label: 'Visualizações de Página', group: 'Analytics' },
-];
 
 export function useReportImports(planId: string) {
   return useQuery({
@@ -148,6 +191,7 @@ export function useCreateReportImport() {
       media_plan_id: string;
       source_url: string;
       source_name: string;
+      source_category: SourceCategory;
     }) => {
       const { data: result, error } = await supabase
         .from('report_imports')
@@ -155,6 +199,7 @@ export function useCreateReportImport() {
           media_plan_id: data.media_plan_id,
           source_url: data.source_url,
           source_name: data.source_name,
+          source_category: data.source_category,
           user_id: user!.id,
           environment_id: currentEnvironmentId!,
           import_status: 'pending',
@@ -180,13 +225,11 @@ export function useSaveColumnMappings() {
       import_id: string;
       mappings: { source_column: string; target_field: string; date_format?: string }[];
     }) => {
-      // Delete existing mappings
       await supabase
         .from('report_column_mappings')
         .delete()
         .eq('import_id', data.import_id);
 
-      // Insert new mappings
       const { error } = await supabase
         .from('report_column_mappings')
         .insert(
@@ -275,13 +318,19 @@ export function useUpdateReportImport() {
       media_plan_id: string;
       source_url: string;
       source_name: string;
+      source_category?: SourceCategory;
     }) => {
+      const updateData: any = {
+        source_url: data.source_url,
+        source_name: data.source_name,
+      };
+      if (data.source_category) {
+        updateData.source_category = data.source_category;
+      }
+      
       const { data: result, error } = await supabase
         .from('report_imports')
-        .update({
-          source_url: data.source_url,
-          source_name: data.source_name,
-        })
+        .update(updateData)
         .eq('id', data.import_id)
         .select()
         .single();
