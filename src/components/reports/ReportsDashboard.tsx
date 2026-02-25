@@ -41,14 +41,14 @@ interface ReportsDashboardProps {
 }
 
 const COLORS = [
-  'hsl(265, 85%, 55%)',
-  'hsl(142, 76%, 36%)',
-  'hsl(38, 92%, 50%)',
-  'hsl(0, 84%, 60%)',
-  'hsl(200, 85%, 55%)',
-  'hsl(280, 70%, 60%)',
-  'hsl(320, 70%, 55%)',
-  'hsl(45, 85%, 50%)',
+  'hsl(var(--primary))',
+  'hsl(var(--success))',
+  'hsl(var(--warning))',
+  'hsl(var(--destructive))',
+  'hsl(var(--accent))',
+  'hsl(var(--muted-foreground))',
+  'hsl(var(--ring))',
+  'hsl(var(--secondary-foreground))',
 ];
 
 export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles = [] }: ReportsDashboardProps) {
@@ -388,7 +388,7 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
                     labelLine={false}
                     label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                     outerRadius={100}
-                    fill="#8884d8"
+                    fill="hsl(var(--primary))"
                     dataKey="value"
                   >
                     {distributionData.map((_, index) => (
