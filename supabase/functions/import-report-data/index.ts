@@ -164,6 +164,10 @@ serve(async (req) => {
     const mappingIndex: Record<string, string> = {};
     const dateFormatIndex: Record<string, string> = {};
     for (const mapping of mappings) {
+      if (!mapping.source_column || !mapping.target_field) {
+        console.log("Skipping invalid mapping:", JSON.stringify(mapping));
+        continue;
+      }
       const sourceIndex = headers.findIndex(
         (h) => h.toLowerCase().trim() === mapping.source_column.toLowerCase().trim(),
       );
@@ -176,8 +180,8 @@ serve(async (req) => {
     }
 
     // Find line_code column
-    const lineCodeMapping = mappings.find((m) => m.target_field === "line_code");
-    if (!lineCodeMapping) throw new Error("line_code mapping is required");
+    const lineCodeMapping = mappings.find((m) => m.target_field === "line_code" && m.source_column);
+    if (!lineCodeMapping || !lineCodeMapping.source_column) throw new Error("line_code mapping is required");
 
     const lineCodeIndex = headers.findIndex(
       (h) => h.toLowerCase().trim() === lineCodeMapping.source_column.toLowerCase().trim(),
