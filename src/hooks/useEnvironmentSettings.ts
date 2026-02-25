@@ -10,6 +10,7 @@ export interface EnvironmentSettings {
   cnpj: string | null;
   address: string | null;
   logo_url: string | null;
+  color_scheme: string;
   owner_user_id: string;
 }
 
@@ -26,7 +27,7 @@ export function useEnvironmentSettings() {
 
       const { data, error } = await supabase
         .from('environments')
-        .select('id, name, company_name, cnpj, address, logo_url, owner_user_id')
+        .select('id, name, company_name, cnpj, address, logo_url, color_scheme, owner_user_id')
         .eq('id', currentEnvironmentId)
         .single();
 

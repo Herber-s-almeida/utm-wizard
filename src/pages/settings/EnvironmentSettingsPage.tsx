@@ -10,10 +10,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
-import { Building2, Settings, Loader2, Save, FileText, MapPin, ImageIcon } from 'lucide-react';
+import { Building2, Settings, Loader2, Save, FileText, MapPin, ImageIcon, Palette } from 'lucide-react';
 import { useEnvironmentSettings } from '@/hooks/useEnvironmentSettings';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { EnvironmentLogoUpload } from '@/components/settings/EnvironmentLogoUpload';
+import { ThemeSelector } from '@/components/settings/ThemeSelector';
 
 const settingsSchema = z.object({
   name: z.string().min(2, 'Nome do ambiente deve ter no mínimo 2 caracteres').max(100),
@@ -147,6 +148,22 @@ export default function EnvironmentSettingsPage() {
                     disabled={!canEdit || isUpdating}
                   />
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Color Scheme */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="h-5 w-5 text-primary" />
+                  Esquema de Cores
+                </CardTitle>
+                <CardDescription>
+                  Personalize as cores do ambiente para todos os membros
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ThemeSelector disabled={!canEdit || isUpdating} />
               </CardContent>
             </Card>
 
