@@ -3665,6 +3665,7 @@ export type Database = {
           cpm: number | null
           created_at: string
           ctr: number | null
+          engaged_sessions: number | null
           id: string
           import_id: string
           impressions: number | null
@@ -3673,6 +3674,7 @@ export type Database = {
           match_status: string | null
           media_line_id: string | null
           media_plan_id: string
+          new_users: number | null
           pageviews: number | null
           period_end: string | null
           period_start: string | null
@@ -3680,6 +3682,7 @@ export type Database = {
           roas: number | null
           sales: number | null
           sessions: number | null
+          total_users: number | null
         }
         Insert: {
           avg_session_duration?: number | null
@@ -3692,6 +3695,7 @@ export type Database = {
           cpm?: number | null
           created_at?: string
           ctr?: number | null
+          engaged_sessions?: number | null
           id?: string
           import_id: string
           impressions?: number | null
@@ -3700,6 +3704,7 @@ export type Database = {
           match_status?: string | null
           media_line_id?: string | null
           media_plan_id: string
+          new_users?: number | null
           pageviews?: number | null
           period_end?: string | null
           period_start?: string | null
@@ -3707,6 +3712,7 @@ export type Database = {
           roas?: number | null
           sales?: number | null
           sessions?: number | null
+          total_users?: number | null
         }
         Update: {
           avg_session_duration?: number | null
@@ -3719,6 +3725,7 @@ export type Database = {
           cpm?: number | null
           created_at?: string
           ctr?: number | null
+          engaged_sessions?: number | null
           id?: string
           import_id?: string
           impressions?: number | null
@@ -3727,6 +3734,7 @@ export type Database = {
           match_status?: string | null
           media_line_id?: string | null
           media_plan_id?: string
+          new_users?: number | null
           pageviews?: number | null
           period_end?: string | null
           period_start?: string | null
@@ -3734,6 +3742,7 @@ export type Database = {
           roas?: number | null
           sales?: number | null
           sessions?: number | null
+          total_users?: number | null
         }
         Relationships: [
           {

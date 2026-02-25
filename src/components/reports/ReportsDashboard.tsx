@@ -70,11 +70,17 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
     const totalConversions = reportData.reduce((acc, r) => acc + Number(r.conversions || 0), 0);
     const totalSessions = reportData.reduce((acc, r) => acc + Number(r.sessions || 0), 0);
     const totalSales = reportData.reduce((acc, r) => acc + Number(r.sales || 0), 0);
+    const totalUsers = reportData.reduce((acc, r) => acc + Number(r.total_users || 0), 0);
+    const totalNewUsers = reportData.reduce((acc, r) => acc + Number(r.new_users || 0), 0);
+    const totalEngagedSessions = reportData.reduce((acc, r) => acc + Number(r.engaged_sessions || 0), 0);
 
+    // Calculated metrics
     const avgCTR = totalImpressions > 0 ? totalClicks / totalImpressions : 0;
     const avgCPC = totalClicks > 0 ? totalCost / totalClicks : 0;
     const avgCPM = totalImpressions > 0 ? (totalCost / totalImpressions) * 1000 : 0;
     const avgCPA = totalConversions > 0 ? totalCost / totalConversions : 0;
+    const newUsersPercent = totalUsers > 0 ? totalNewUsers / totalUsers : 0;
+    const engagedSessionsPercent = totalSessions > 0 ? totalEngagedSessions / totalSessions : 0;
 
     // Calculate planned budget from matched lines
     const matchedLineIds = new Set(reportData.filter((r) => r.media_line_id).map((r) => r.media_line_id));
@@ -92,10 +98,15 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
       totalConversions,
       totalSessions,
       totalSales,
+      totalUsers,
+      totalNewUsers,
+      totalEngagedSessions,
       avgCTR,
       avgCPC,
       avgCPM,
       avgCPA,
+      newUsersPercent,
+      engagedSessionsPercent,
       plannedBudget,
       budgetVariance,
     };
@@ -301,45 +312,79 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
       </div>
 
       {/* Secondary KPIs */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Leads</p>
-                <p className="text-2xl font-bold font-display">
-                  {formatNumber(aggregatedMetrics.totalLeads)}
-                </p>
-              </div>
-              <Users className="w-8 h-8 text-primary opacity-50" />
+            <div>
+              <p className="text-sm text-muted-foreground">Leads</p>
+              <p className="text-xl font-bold font-display">
+                {formatNumber(aggregatedMetrics.totalLeads)}
+              </p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Sessões</p>
-                <p className="text-2xl font-bold font-display">
-                  {formatNumber(aggregatedMetrics.totalSessions)}
-                </p>
-              </div>
-              <BarChart3 className="w-8 h-8 text-primary opacity-50" />
+            <div>
+              <p className="text-sm text-muted-foreground">Sessões</p>
+              <p className="text-xl font-bold font-display">
+                {formatNumber(aggregatedMetrics.totalSessions)}
+              </p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Vendas</p>
-                <p className="text-2xl font-bold font-display">
-                  {formatNumber(aggregatedMetrics.totalSales)}
+            <div>
+              <p className="text-sm text-muted-foreground">Vendas</p>
+              <p className="text-xl font-bold font-display">
+                {formatNumber(aggregatedMetrics.totalSales)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div>
+              <p className="text-sm text-muted-foreground">Usuários</p>
+              <p className="text-xl font-bold font-display">
+                {formatNumber(aggregatedMetrics.totalUsers)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div>
+              <p className="text-sm text-muted-foreground">Novos Usuários</p>
+              <p className="text-xl font-bold font-display">
+                {formatNumber(aggregatedMetrics.totalNewUsers)}
+              </p>
+              {aggregatedMetrics.totalUsers > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {formatPercent(aggregatedMetrics.newUsersPercent)} do total
                 </p>
-              </div>
-              <DollarSign className="w-8 h-8 text-success opacity-50" />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div>
+              <p className="text-sm text-muted-foreground">Sessões Engajadas</p>
+              <p className="text-xl font-bold font-display">
+                {formatNumber(aggregatedMetrics.totalEngagedSessions)}
+              </p>
+              {aggregatedMetrics.totalSessions > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {formatPercent(aggregatedMetrics.engagedSessionsPercent)} das sessões
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

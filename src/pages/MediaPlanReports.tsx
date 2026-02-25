@@ -236,22 +236,14 @@ export default function MediaPlanReports() {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
               onClick={() => {
                 setSelectedImport(null);
                 setImportDialogOpen(true);
               }}
               className="gap-2"
             >
-              <Settings className="w-4 h-4" />
-              Configurar Fonte
-            </Button>
-            <Button
-              onClick={() => setImportWizardOpen(true)}
-              className="gap-2"
-            >
-              <Upload className="w-4 h-4" />
-              Importar Dados
+              <Plus className="w-4 h-4" />
+              Adicionar Fonte de Dados
             </Button>
           </div>
         </div>
@@ -265,12 +257,12 @@ export default function MediaPlanReports() {
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <CheckCircle2 className="w-4 h-4 text-success" />
-                    {matchedCount} casadas
+                    {matchedCount} com match
                   </span>
                   {unmatchedCount > 0 && (
                     <span className="flex items-center gap-1">
                       <AlertTriangle className="w-4 h-4 text-warning" />
-                      {unmatchedCount} não casadas
+                      {unmatchedCount} sem match
                     </span>
                   )}
                 </div>
@@ -333,8 +325,14 @@ export default function MediaPlanReports() {
               </TabsTrigger>
               <TabsTrigger value="table" className="gap-2">
                 <Table className="w-4 h-4" />
-                Tabela
+                Todos os Dados
               </TabsTrigger>
+              {reportImports.map((imp) => (
+                <TabsTrigger key={imp.id} value={`source-${imp.id}`} className="gap-2">
+                  <Table className="w-4 h-4" />
+                  {imp.source_name}
+                </TabsTrigger>
+              ))}
             </TabsList>
 
             <TabsContent value="dashboard" className="mt-6">
@@ -354,6 +352,20 @@ export default function MediaPlanReports() {
                 planName={plan.name}
               />
             </TabsContent>
+
+            {reportImports.map((imp) => {
+              const sourceData = reportData.filter((r) => r.import_id === imp.id);
+              return (
+                <TabsContent key={imp.id} value={`source-${imp.id}`} className="mt-6">
+                  <ReportsTable
+                    reportData={sourceData}
+                    mediaLines={mediaLines}
+                    planId={planId!}
+                    planName={`${plan.name} - ${imp.source_name}`}
+                  />
+                </TabsContent>
+              );
+            })}
           </Tabs>
         ) : (
           <Card>
@@ -361,7 +373,7 @@ export default function MediaPlanReports() {
               <BarChart3 className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="font-medium mb-2">Nenhum dado importado</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Configure uma fonte de dados para começar a visualizar relatórios
+                Adicione uma fonte de dados para começar a visualizar relatórios
               </p>
               <Button
                 onClick={() => {
@@ -370,7 +382,7 @@ export default function MediaPlanReports() {
                 }}
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Configurar Fonte de Dados
+                Adicionar Fonte de Dados
               </Button>
             </CardContent>
           </Card>

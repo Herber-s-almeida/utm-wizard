@@ -44,6 +44,10 @@ export interface ReportData {
   bounce_rate: number;
   avg_session_duration: number;
   pageviews: number;
+  // Google Analytics metrics
+  total_users: number;
+  new_users: number;
+  engaged_sessions: number;
   // Raw data
   raw_data: Record<string, any>;
   match_status: 'matched' | 'unmatched' | 'manual';
@@ -61,25 +65,20 @@ export interface ColumnMapping {
 
 export const METRIC_FIELDS = [
   { value: 'line_code', label: 'Código da Linha', required: true },
-  { value: 'period_date', label: 'Data (período único)' },
-  { value: 'period_start', label: 'Data Início' },
-  { value: 'period_end', label: 'Data Fim' },
+  { value: 'period_date', label: 'Data' },
   // Media
   { value: 'impressions', label: 'Impressões', group: 'Mídia' },
   { value: 'clicks', label: 'Cliques', group: 'Mídia' },
   { value: 'cost', label: 'Custo / Investimento', group: 'Mídia' },
-  { value: 'ctr', label: 'CTR', group: 'Mídia' },
-  { value: 'cpc', label: 'CPC', group: 'Mídia' },
-  { value: 'cpm', label: 'CPM', group: 'Mídia' },
   // Conversions
   { value: 'leads', label: 'Leads', group: 'Conversão' },
   { value: 'sales', label: 'Vendas', group: 'Conversão' },
   { value: 'conversions', label: 'Conversões', group: 'Conversão' },
-  { value: 'cpa', label: 'CPA', group: 'Conversão' },
-  { value: 'roas', label: 'ROAS', group: 'Conversão' },
   // Analytics
   { value: 'sessions', label: 'Sessões', group: 'Analytics' },
-  { value: 'bounce_rate', label: 'Taxa de Rejeição', group: 'Analytics' },
+  { value: 'total_users', label: 'Usuários (Total Users)', group: 'Analytics' },
+  { value: 'new_users', label: 'Usuários Novos (New Users)', group: 'Analytics' },
+  { value: 'engaged_sessions', label: 'Sessões Engajadas', group: 'Analytics' },
   { value: 'avg_session_duration', label: 'Duração Média', group: 'Analytics' },
   { value: 'pageviews', label: 'Visualizações de Página', group: 'Analytics' },
 ];
@@ -233,7 +232,7 @@ export function useRunImport() {
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['report-imports', variables.media_plan_id] });
       queryClient.invalidateQueries({ queryKey: ['report-data', variables.media_plan_id] });
-      toast.success(`Importação concluída: ${result.matched} linhas casadas, ${result.unmatched} não casadas`);
+      toast.success(`Importação concluída: ${result.matched} linhas com match, ${result.unmatched} sem match`);
     },
     onError: (error) => {
       toast.error(`Erro na importação: ${error.message}`);
