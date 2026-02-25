@@ -98,18 +98,15 @@ export function useEnvironmentTheme() {
     staleTime: 60 * 1000,
   });
 
-  // Apply theme to document root
+  // Apply theme to document root using data attributes (resilient to class manipulation)
   useEffect(() => {
     const root = document.documentElement;
     
-    // Remove all theme classes
-    THEME_OPTIONS.forEach(t => {
-      root.classList.remove(`theme-${t.id}`);
-    });
-    
-    // Add current theme class
+    // Set data-theme attribute (more robust than classList which can be wiped)
     if (colorScheme && colorScheme !== 'default') {
-      root.classList.add(`theme-${colorScheme}`);
+      root.setAttribute('data-theme', colorScheme);
+    } else {
+      root.removeAttribute('data-theme');
     }
 
     // Handle dark themes
@@ -121,10 +118,7 @@ export function useEnvironmentTheme() {
     }
 
     return () => {
-      // Cleanup on unmount
-      THEME_OPTIONS.forEach(t => {
-        root.classList.remove(`theme-${t.id}`);
-      });
+      root.removeAttribute('data-theme');
       root.classList.remove('dark');
     };
   }, [colorScheme]);
