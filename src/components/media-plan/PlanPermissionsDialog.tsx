@@ -51,7 +51,7 @@ function getPermissionBadge(permission: PlanPermissionLevel) {
       );
     case 'view':
       return (
-        <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400">
+        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
           <Eye className="h-3 w-3 mr-1" />
           Visualizar
         </Badge>

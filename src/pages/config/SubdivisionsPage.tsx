@@ -197,7 +197,7 @@ export default function SubdivisionsPage() {
                   if (archiveId) softDelete.mutate(archiveId);
                   setArchiveId(null);
                 }}
-                className="bg-orange-600 text-white hover:bg-orange-700"
+                className="bg-warning text-warning-foreground hover:bg-warning/90"
               >
                 Arquivar
               </AlertDialogAction>

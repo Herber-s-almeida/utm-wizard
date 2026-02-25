@@ -31,9 +31,9 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  'ooh': 'bg-amber-500/10 text-amber-600',
-  'radio': 'bg-blue-500/10 text-blue-600',
-  'tv': 'bg-purple-500/10 text-purple-600',
+  'ooh': 'bg-warning/10 text-warning',
+  'radio': 'bg-primary/10 text-primary',
+  'tv': 'bg-accent/10 text-accent',
 };
 
 function isPredefined(type: LineDetailType): boolean {

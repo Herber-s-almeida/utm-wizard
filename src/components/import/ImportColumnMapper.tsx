@@ -36,7 +36,7 @@ export function ImportColumnMapper({
       {/* Status Summary */}
       <div className={cn(
         "flex items-center gap-2 p-3 rounded-lg text-sm",
-        requiredMapped ? "bg-green-500/10 text-green-600" : "bg-amber-500/10 text-amber-600"
+        requiredMapped ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
       )}>
         {requiredMapped ? (
           <>
@@ -97,7 +97,7 @@ export function ImportColumnMapper({
                     {mapping.fileColumn}
                   </code>
                   {mapping.detected && isMapped && (
-                    <Badge variant="outline" className="text-xs text-green-600 border-green-300">
+                    <Badge variant="outline" className="text-xs text-success border-success/30">
                       Auto
                     </Badge>
                   )}
@@ -141,7 +141,7 @@ export function ImportColumnMapper({
                   {isMapped && (
                     <Check className={cn(
                       "w-4 h-4 shrink-0",
-                      isRequired ? "text-green-500" : "text-primary"
+                      isRequired ? "text-success" : "text-primary"
                     )} />
                   )}
                 </div>
@@ -162,7 +162,7 @@ export function ImportColumnMapper({
       <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
         <span>* Campos obrigatórios</span>
         <span>•</span>
-        <Badge variant="outline" className="text-xs text-green-600 border-green-300">
+        <Badge variant="outline" className="text-xs text-success border-success/30">
           Auto
         </Badge>
         <span>= Detectado automaticamente</span>

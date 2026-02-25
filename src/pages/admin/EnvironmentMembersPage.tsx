@@ -237,10 +237,10 @@ export default function EnvironmentMembersPage() {
 
         {/* Pending Invites Section */}
         {pendingInvites.length > 0 && (
-          <Card className="border-dashed border-amber-500/50 bg-amber-500/5">
+          <Card className="border-dashed border-warning/50 bg-warning/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Clock className="h-4 w-4 text-amber-500" />
+                <Clock className="h-4 w-4 text-warning" />
                 Convites Pendentes
               </CardTitle>
               <CardDescription>

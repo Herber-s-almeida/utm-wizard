@@ -515,10 +515,10 @@ export function VersionHistoryDialog({
                               <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 {event.type === 'version' && <Badge variant="secondary">Versão</Badge>}
                                 {event.type === 'status' && (
-                                  <Badge variant="outline" className="border-amber-500 text-amber-600">Status</Badge>
+                                  <Badge variant="outline" className="border-warning text-warning">Status</Badge>
                                 )}
                                 {event.type === 'utm' && (
-                                  <Badge variant="outline" className="border-green-500 text-green-600">UTM</Badge>
+                                  <Badge variant="outline" className="border-success text-success">UTM</Badge>
                                 )}
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                   <User className="w-3 h-3" />

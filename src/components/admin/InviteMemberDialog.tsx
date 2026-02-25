@@ -57,7 +57,7 @@ const ROLE_OPTIONS: { value: EnvironmentRole; label: string; description: string
     value: 'admin', 
     label: 'Administrador', 
     description: 'Pode convidar outros membros e gerenciar permissões',
-    icon: <Shield className="h-5 w-5 text-blue-500" />
+    icon: <Shield className="h-5 w-5 text-primary" />
   },
   { 
     value: 'user', 
@@ -277,9 +277,9 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {emailSentSuccess ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
+                <CheckCircle className="h-5 w-5 text-success" />
               ) : (
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                <AlertTriangle className="h-5 w-5 text-warning" />
               )}
               {emailSentSuccess ? 'Convite Enviado!' : 'Convite Criado'}
             </DialogTitle>
@@ -306,7 +306,7 @@ export function InviteMemberDialog({ open, onOpenChange }: InviteMemberDialogPro
             
             {/* Show copyable link when email failed */}
             {inviteLink && !emailSentSuccess && (
-              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-3">
+              <div className="p-4 bg-warning/10 border border-warning/30 rounded-lg space-y-3">
                 <p className="text-sm font-medium flex items-center gap-2">
                   <Copy className="h-4 w-4" />
                   Link de Convite

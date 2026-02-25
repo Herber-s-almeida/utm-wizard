@@ -71,7 +71,7 @@ export function ImportEntityResolver({
   if (totalCount === 0) {
     return (
       <div className="text-center py-12 space-y-4">
-        <Check className="w-16 h-16 mx-auto text-green-500" />
+        <Check className="w-16 h-16 mx-auto text-success" />
         <h2 className="text-xl font-semibold">Todas as entidades encontradas!</h2>
         <p className="text-muted-foreground">
           Todos os veículos, canais e demais itens do arquivo já existem na sua biblioteca.
@@ -110,7 +110,7 @@ export function ImportEntityResolver({
                 <div className={cn(
                   "flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors",
                   "border hover:bg-muted/50",
-                  pendingCount > 0 ? "border-amber-300 bg-amber-50/50" : "border-green-300 bg-green-50/50"
+                  pendingCount > 0 ? "border-warning/30 bg-warning/5" : "border-success/30 bg-success/5"
                 )}>
                   <div className="flex items-center gap-3">
                     {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -255,26 +255,26 @@ function EntityRow({
   return (
     <div className={cn(
       "p-3 rounded-lg border ml-4",
-      isResolved && "bg-green-50/50 border-green-200",
+      isResolved && "bg-success/5 border-success/20",
       !isResolved && "bg-background"
     )}>
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
-            {isResolved && <Check className="w-4 h-4 text-green-500" />}
-            {!isResolved && <AlertTriangle className="w-4 h-4 text-amber-500" />}
+            {isResolved && <Check className="w-4 h-4 text-success" />}
+            {!isResolved && <AlertTriangle className="w-4 h-4 text-warning" />}
             
             {isResolved && resolvedName ? (
               <>
                 <span className="text-muted-foreground line-through">"{entity.originalName}"</span>
-                <ArrowRight className="w-4 h-4 text-green-500" />
-                <span className="font-medium text-green-700">"{resolvedName}"</span>
+                <ArrowRight className="w-4 h-4 text-success" />
+                <span className="font-medium text-success">"{resolvedName}"</span>
               </>
             ) : (
               <span className="font-medium">"{entity.originalName}"</span>
             )}
             
-            {isResolved && <Badge variant="outline" className="text-xs text-green-600">Resolvido</Badge>}
+            {isResolved && <Badge variant="outline" className="text-xs text-success">Resolvido</Badge>}
             
             {isResolved && (
               <Button
@@ -299,7 +299,7 @@ function EntityRow({
                 <>
                   <span className="line-through">{entity.parentContext.name}</span>
                   {' → '}
-                  <span className="text-green-600">{resolvedVehicleName}</span>
+                  <span className="text-success">{resolvedVehicleName}</span>
                 </>
               ) : (
                 entity.parentContext.name

@@ -77,7 +77,7 @@ export function ImportFileUpload({ onFileSelect, file }: ImportFileUploadProps) 
           isDragging 
             ? "border-primary bg-primary/5" 
             : "border-border hover:border-primary/50 hover:bg-muted/30",
-          file && "border-green-500 bg-green-500/5"
+          file && "border-success bg-success/5"
         )}
         onClick={() => document.getElementById('file-input')?.click()}
       >
@@ -91,7 +91,7 @@ export function ImportFileUpload({ onFileSelect, file }: ImportFileUploadProps) 
         
         {file ? (
           <div className="space-y-3">
-            <CheckCircle2 className="w-12 h-12 mx-auto text-green-500" />
+            <CheckCircle2 className="w-12 h-12 mx-auto text-success" />
             <div>
               <p className="font-medium text-foreground">{file.name}</p>
               <p className="text-sm text-muted-foreground">
