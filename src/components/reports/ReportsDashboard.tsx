@@ -316,6 +316,84 @@ export function ReportsDashboard({
     return Array.from(bySource.entries()).map(([name, v]) => ({ name, ...v }));
   }, [filteredReportData, reportImports]);
 
+  // ──── Distribution by Funnel Stage ────
+  const funnelDistributionData = useMemo(() => {
+    if (funnelStages.length === 0) return [];
+    const funnelMap = new Map<string, string>();
+    for (const f of funnelStages) funnelMap.set(f.id, f.name);
+    const lineToFunnel = new Map<string, string>();
+    const lineCodeToFunnel = new Map<string, string>();
+    for (const line of mediaLines) {
+      if (line.funnel_stage_id) {
+        lineToFunnel.set(line.id, line.funnel_stage_id);
+        if (line.line_code) lineCodeToFunnel.set(line.line_code.toLowerCase().trim(), line.funnel_stage_id);
+      }
+    }
+    const costByFunnel = new Map<string, number>();
+    for (const r of filteredReportData) {
+      const cost = Number(r.cost || 0);
+      if (cost === 0) continue;
+      let funnelId: string | undefined;
+      if (r.media_line_id) funnelId = lineToFunnel.get(r.media_line_id);
+      if (!funnelId && r.line_code) funnelId = lineCodeToFunnel.get(r.line_code.toLowerCase().trim());
+      const name = funnelId ? (funnelMap.get(funnelId) || 'Outro') : 'Não identificado';
+      costByFunnel.set(name, (costByFunnel.get(name) || 0) + cost);
+    }
+    return Array.from(costByFunnel.entries()).map(([name, value]) => ({ name, value })).filter(d => d.value > 0).sort((a, b) => b.value - a.value);
+  }, [filteredReportData, mediaLines, funnelStages]);
+
+  // ──── Distribution by Subdivision ────
+  const subdivisionDistributionData = useMemo(() => {
+    if (subdivisions.length === 0) return [];
+    const subMap = new Map<string, string>();
+    for (const s of subdivisions) subMap.set(s.id, s.name);
+    const lineToSub = new Map<string, string>();
+    const lineCodeToSub = new Map<string, string>();
+    for (const line of mediaLines) {
+      if (line.subdivision_id) {
+        lineToSub.set(line.id, line.subdivision_id);
+        if (line.line_code) lineCodeToSub.set(line.line_code.toLowerCase().trim(), line.subdivision_id);
+      }
+    }
+    const costBySub = new Map<string, number>();
+    for (const r of filteredReportData) {
+      const cost = Number(r.cost || 0);
+      if (cost === 0) continue;
+      let subId: string | undefined;
+      if (r.media_line_id) subId = lineToSub.get(r.media_line_id);
+      if (!subId && r.line_code) subId = lineCodeToSub.get(r.line_code.toLowerCase().trim());
+      const name = subId ? (subMap.get(subId) || 'Outro') : 'Não identificado';
+      costBySub.set(name, (costBySub.get(name) || 0) + cost);
+    }
+    return Array.from(costBySub.entries()).map(([name, value]) => ({ name, value })).filter(d => d.value > 0).sort((a, b) => b.value - a.value);
+  }, [filteredReportData, mediaLines, subdivisions]);
+
+  // ──── Distribution by Moment ────
+  const momentDistributionData = useMemo(() => {
+    if (moments.length === 0) return [];
+    const momMap = new Map<string, string>();
+    for (const m of moments) momMap.set(m.id, m.name);
+    const lineToMom = new Map<string, string>();
+    const lineCodeToMom = new Map<string, string>();
+    for (const line of mediaLines) {
+      if (line.moment_id) {
+        lineToMom.set(line.id, line.moment_id);
+        if (line.line_code) lineCodeToMom.set(line.line_code.toLowerCase().trim(), line.moment_id);
+      }
+    }
+    const costByMom = new Map<string, number>();
+    for (const r of filteredReportData) {
+      const cost = Number(r.cost || 0);
+      if (cost === 0) continue;
+      let momId: string | undefined;
+      if (r.media_line_id) momId = lineToMom.get(r.media_line_id);
+      if (!momId && r.line_code) momId = lineCodeToMom.get(r.line_code.toLowerCase().trim());
+      const name = momId ? (momMap.get(momId) || 'Outro') : 'Não identificado';
+      costByMom.set(name, (costByMom.get(name) || 0) + cost);
+    }
+    return Array.from(costByMom.entries()).map(([name, value]) => ({ name, value })).filter(d => d.value > 0).sort((a, b) => b.value - a.value);
+  }, [filteredReportData, mediaLines, moments]);
+
   // ──── Campaign ID table data (only matching plan line_codes) ────
   const planLineCodes = useMemo(() => {
     return new Set(mediaLines.map(l => l.line_code?.trim().toLowerCase()).filter(Boolean));
@@ -818,6 +896,51 @@ export function ReportsDashboard({
                 </CardContent>
               </Card>
             )}
+            {funnelDistributionData.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="text-base font-medium">Distribuição por Fase do Funil</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie data={funnelDistributionData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`} outerRadius={100} dataKey="value">
+                        {funnelDistributionData.map((_, index) => <Cell key={`funnel-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+            {subdivisionDistributionData.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="text-base font-medium">Distribuição por Subdivisão</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie data={subdivisionDistributionData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`} outerRadius={100} dataKey="value">
+                        {subdivisionDistributionData.map((_, index) => <Cell key={`sub-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+            {momentDistributionData.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle className="text-base font-medium">Distribuição por Momento</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie data={momentDistributionData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`} outerRadius={100} dataKey="value">
+                        {momentDistributionData.map((_, index) => <Cell key={`mom-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </section>
       )}
@@ -869,7 +992,7 @@ export function ReportsDashboard({
       )}
 
       {/* ═══════════════ COMPARATIVO ═══════════════ */}
-      {(budgetComparisonData.length > 0 || distributionData.length > 0 || sourceBreakdown.length > 1) && (
+      {(budgetComparisonData.length > 0 || distributionData.length > 0 || funnelDistributionData.length > 0 || subdivisionDistributionData.length > 0 || momentDistributionData.length > 0 || sourceBreakdown.length > 1) && (
         <section className="space-y-4">
           <Separator />
           <div className="flex items-center gap-2">
