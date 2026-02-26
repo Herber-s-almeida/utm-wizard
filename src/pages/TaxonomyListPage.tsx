@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
-import { useEffectiveUserId } from '@/hooks/useEffectiveUserId';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -37,7 +37,7 @@ interface MediaPlan {
 export default function TaxonomyListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const effectiveUserId = useEffectiveUserId();
+  const { currentEnvironmentId } = useEnvironment();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -68,11 +68,10 @@ export default function TaxonomyListPage() {
   // Fetch media plans with line counts
   // Access is controlled by environment roles, not plan_roles
   const { data: plans, isLoading } = useQuery({
-    queryKey: ['taxonomy-plans-list', effectiveUserId],
+    queryKey: ['taxonomy-plans-list', currentEnvironmentId],
     queryFn: async () => {
-      if (!effectiveUserId) return [];
+      if (!currentEnvironmentId) return [];
       
-      // Fetch plans owned by the effective user (environment owner)
       const { data: plans, error } = await supabase
         .from('media_plans')
         .select(`
@@ -90,7 +89,7 @@ export default function TaxonomyListPage() {
             utm_validated
           )
         `)
-        .eq('user_id', effectiveUserId)
+        .eq('environment_id', currentEnvironmentId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
@@ -98,7 +97,7 @@ export default function TaxonomyListPage() {
 
       return (plans || []) as MediaPlan[];
     },
-    enabled: !!effectiveUserId,
+    enabled: !!currentEnvironmentId,
   });
 
   // Filter plans by status and search
