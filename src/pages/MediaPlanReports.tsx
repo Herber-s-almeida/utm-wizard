@@ -5,10 +5,10 @@ import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AnimatedCollapsible, AnimatedCollapsibleTrigger, AnimatedCollapsibleContent } from '@/components/ui/animated-collapsible';
 import {
   ArrowLeft, Plus, Loader2, RefreshCw, Settings, Trash2, BarChart3,
-  Table, Clock, CheckCircle2, XCircle, AlertTriangle,
+  Clock, CheckCircle2, XCircle, AlertTriangle, ExternalLink, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -224,91 +224,79 @@ export default function MediaPlanReports() {
 
         {/* Import Sources */}
         {reportImports.length > 0 && (
-          <Card>
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium">Fontes de Dados</h3>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-success" />{matchedCount} com match</span>
-                  {unmatchedCount > 0 && <span className="flex items-center gap-1"><AlertTriangle className="w-4 h-4 text-warning" />{unmatchedCount} sem match</span>}
-                </div>
-              </div>
-              <div className="space-y-2">
-                {reportImports.map(importConfig => (
-                  <div key={importConfig.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                    <div className="flex items-center gap-3">
-                      <BarChart3 className="w-5 h-5 text-primary" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm">{importConfig.source_name}</p>
-                          <Badge variant="outline" className="text-xs">
-                            {SOURCE_CATEGORIES.find(c => c.value === (importConfig as any).source_category)?.label || 'Mídia Paga'}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {importConfig.last_import_at
-                            ? `Última importação: ${format(new Date(importConfig.last_import_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
-                            : 'Nunca importado'}
-                        </p>
-                      </div>
-                    </div>
+          <AnimatedCollapsible defaultOpen={true} storageKey="report-data-sources">
+            <Card>
+              <CardContent className="py-4">
+                <AnimatedCollapsibleTrigger asChild>
+                  <div className="flex items-center justify-between mb-0 cursor-pointer select-none group">
                     <div className="flex items-center gap-2">
-                      {getStatusBadge(importConfig.import_status)}
-                      <Button variant="ghost" size="icon" onClick={() => handleReimport(importConfig)} disabled={runImport.isPending}>
-                        <RefreshCw className={`w-4 h-4 ${runImport.isPending ? 'animate-spin' : ''}`} />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleEditImport(importConfig)}><Settings className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => { setImportToDelete(importConfig); setDeleteDialogOpen(true); }}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
+                      <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=closed]:hidden" />
+                      <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform group-data-[state=open]:hidden" />
+                      <h3 className="font-medium">Fontes de Dados</h3>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-success" />{matchedCount} com match</span>
+                      {unmatchedCount > 0 && <span className="flex items-center gap-1"><AlertTriangle className="w-4 h-4 text-warning" />{unmatchedCount} sem match</span>}
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </AnimatedCollapsibleTrigger>
+                <AnimatedCollapsibleContent>
+                  <div className="space-y-2 mt-4">
+                    {reportImports.map(importConfig => (
+                      <div key={importConfig.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <BarChart3 className="w-5 h-5 text-primary" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm">{importConfig.source_name}</p>
+                              <Badge variant="outline" className="text-xs">
+                                {SOURCE_CATEGORIES.find(c => c.value === (importConfig as any).source_category)?.label || 'Mídia Paga'}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {importConfig.last_import_at
+                                ? `Última importação: ${format(new Date(importConfig.last_import_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
+                                : 'Nunca importado'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(importConfig.import_status)}
+                          <Button variant="ghost" size="icon" onClick={() => navigate(`${getPlanUrl(plan)}/reports/source/${importConfig.id}`)} title="Ver dados completos">
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleReimport(importConfig)} disabled={runImport.isPending}>
+                            <RefreshCw className={`w-4 h-4 ${runImport.isPending ? 'animate-spin' : ''}`} />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleEditImport(importConfig)}><Settings className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => { setImportToDelete(importConfig); setDeleteDialogOpen(true); }}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </AnimatedCollapsibleContent>
+              </CardContent>
+            </Card>
+          </AnimatedCollapsible>
         )}
 
         {/* Reports Content */}
         {reportData.length > 0 ? (
-          <Tabs defaultValue="dashboard">
-            <TabsList>
-              <TabsTrigger value="dashboard" className="gap-2"><BarChart3 className="w-4 h-4" />Dashboard</TabsTrigger>
-              <TabsTrigger value="table" className="gap-2"><Table className="w-4 h-4" />Todos os Dados</TabsTrigger>
-              {reportImports.map(imp => (
-                <TabsTrigger key={imp.id} value={`source-${imp.id}`} className="gap-2"><Table className="w-4 h-4" />{imp.source_name}</TabsTrigger>
-              ))}
-            </TabsList>
-
-            <TabsContent value="dashboard" className="mt-6">
-              <ReportsDashboard
-                reportData={reportData}
-                mediaLines={mediaLines}
-                totalBudget={Number(plan.total_budget || 0)}
-                vehicles={vehicles}
-                reportImports={reportImports}
-                subdivisions={subdivisions}
-                moments={moments}
-                funnelStages={funnelStages}
-                mediums={mediums}
-                channels={channelsData}
-                targets={targets}
-              />
-            </TabsContent>
-
-            <TabsContent value="table" className="mt-6">
-              <ReportsTable reportData={reportData} mediaLines={mediaLines} planId={planId!} planName={plan.name} />
-            </TabsContent>
-
-            {reportImports.map(imp => {
-              const sourceData = reportData.filter(r => r.import_id === imp.id);
-              return (
-                <TabsContent key={imp.id} value={`source-${imp.id}`} className="mt-6">
-                  <ReportsTable reportData={sourceData} mediaLines={mediaLines} planId={planId!} planName={`${plan.name} - ${imp.source_name}`} />
-                </TabsContent>
-              );
-            })}
-          </Tabs>
+          <ReportsDashboard
+            reportData={reportData}
+            mediaLines={mediaLines}
+            totalBudget={Number(plan.total_budget || 0)}
+            vehicles={vehicles}
+            reportImports={reportImports}
+            subdivisions={subdivisions}
+            moments={moments}
+            funnelStages={funnelStages}
+            mediums={mediums}
+            channels={channelsData}
+            targets={targets}
+          />
         ) : (
           <Card>
             <CardContent className="py-12 text-center">

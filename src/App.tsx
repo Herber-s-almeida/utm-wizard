@@ -31,6 +31,7 @@ import TaxonomyPage from "./pages/TaxonomyPage";
 import TaxonomyListPage from "./pages/TaxonomyListPage";
 import MediaResourcesListPage from "./pages/MediaResourcesListPage";
 import MediaPlanReports from "./pages/MediaPlanReports";
+import ReportSourceDetailPage from "./pages/ReportSourceDetailPage";
 import ReportsPage from "./pages/ReportsPage";
 import MediaResourcesKanbanPage from "./pages/MediaResourcesKanbanPage";
 import NotFound from "./pages/NotFound";
@@ -116,6 +117,7 @@ function AppWithEnvironment() {
           <Route path="/resources" element={<ProtectedRoute><SectionProtectedRoute section="media_resources"><MediaResourcesListPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-resources" element={<ProtectedRoute><SectionProtectedRoute section="media_resources"><MediaResourcesListPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans/:id/reports" element={<ProtectedRoute><SectionProtectedRoute section="reports"><MediaPlanReports /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/media-plans/:id/reports/source/:sourceId" element={<ProtectedRoute><SectionProtectedRoute section="reports"><ReportSourceDetailPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><SectionProtectedRoute section="reports"><ReportsPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/reports/:id" element={<ProtectedRoute><SectionProtectedRoute section="reports"><MediaPlanReports /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/config/subdivisions" element={<ProtectedRoute><SubdivisionsPage /></ProtectedRoute>} />
