@@ -48,7 +48,8 @@ const COLORS = [
   'hsl(var(--ring))', 'hsl(var(--secondary-foreground))',
 ];
 const MEDIA_COLOR = 'hsl(var(--primary))';
-const CONVERSION_COLOR = 'hsl(var(--chart-3))';
+const ACCENT_COLOR = 'hsl(var(--chart-2))';
+const TERTIARY_COLOR = 'hsl(var(--chart-4))';
 
 type DatePreset = '7d' | '30d' | 'month' | 'custom' | 'all';
 
@@ -748,7 +749,7 @@ export function ReportsDashboard({
                       <Tooltip formatter={(value: number, name: string) => [formatNumber(value), name]} contentStyle={{ fontSize: 12 }} />
                       <Legend />
                       <Bar yAxisId="left" dataKey="impressions" name="Impressões" fill={MEDIA_COLOR} opacity={0.3} />
-                      <Line yAxisId="right" type="monotone" dataKey="clicks" name="Cliques" stroke={CONVERSION_COLOR} strokeWidth={2} dot={false} />
+                      <Line yAxisId="right" type="monotone" dataKey="clicks" name="Cliques" stroke={ACCENT_COLOR} strokeWidth={2} dot={false} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -764,8 +765,8 @@ export function ReportsDashboard({
                       <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} /><YAxis tickFormatter={v => formatCompact(v)} tick={{ fontSize: 11 }} />
                       <Tooltip formatter={(value: number, name: string) => [formatNumber(value), name]} contentStyle={{ fontSize: 12 }} /><Legend />
                       <Line type="monotone" dataKey="sessions" name="Sessões" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="users" name="Usuários" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} strokeDasharray="4 4" />
-                      {hasEngaged && <Line type="monotone" dataKey="engaged" name="Engajadas" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} strokeDasharray="2 2" />}
+                      <Line type="monotone" dataKey="users" name="Usuários" stroke={ACCENT_COLOR} strokeWidth={2} dot={false} />
+                      {hasEngaged && <Line type="monotone" dataKey="engaged" name="Engajadas" stroke={TERTIARY_COLOR} strokeWidth={2} dot={false} />}
                     </LineChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -777,11 +778,11 @@ export function ReportsDashboard({
                 <CardContent>
                   <ResponsiveContainer width="100%" height={280}>
                     <AreaChart data={dailyData}>
-                      <defs><linearGradient id="engGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={MEDIA_COLOR} stopOpacity={0.3} /><stop offset="95%" stopColor={MEDIA_COLOR} stopOpacity={0} /></linearGradient></defs>
+                      <defs><linearGradient id="engGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={ACCENT_COLOR} stopOpacity={0.3} /><stop offset="95%" stopColor={ACCENT_COLOR} stopOpacity={0} /></linearGradient></defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} /><YAxis tickFormatter={v => `${v.toFixed(0)}%`} tick={{ fontSize: 11 }} />
                       <Tooltip formatter={(value: number) => [`${value.toFixed(2)}%`, 'Engajamento']} contentStyle={{ fontSize: 12 }} />
-                      <Area type="monotone" dataKey="engagementRate" name="Engajamento" stroke={MEDIA_COLOR} fill="url(#engGradient)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="engagementRate" name="Engajamento" stroke={ACCENT_COLOR} fill="url(#engGradient)" strokeWidth={2} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </CardContent>
