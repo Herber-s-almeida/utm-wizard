@@ -100,7 +100,7 @@ function AppWithEnvironment() {
           <Route path="/environment-select" element={<ProtectedRoute><EnvironmentSelectPage /></ProtectedRoute>} />
           <Route path="/awaiting-access" element={<AwaitingAccess />} />
           <Route path="/settings/setup" element={<ProtectedRoute><EnvironmentSetup /></ProtectedRoute>} />
-          <Route path="/media-plan-dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/media-plan-dashboard" element={<ProtectedRoute><SectionProtectedRoute section="media_plans"><Dashboard /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/executive-dashboard" element={<ProtectedRoute><SectionProtectedRoute section="executive_dashboard"><ExecutiveDashboard /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans" element={<ProtectedRoute><SectionProtectedRoute section="media_plans"><MediaPlans /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/media-plans/new" element={<ProtectedRoute><SectionProtectedRoute section="media_plans" minLevel="edit"><NewMediaPlanSelector /></SectionProtectedRoute></ProtectedRoute>} />
@@ -120,19 +120,19 @@ function AppWithEnvironment() {
           <Route path="/media-plans/:id/reports/source/:sourceId" element={<ProtectedRoute><SectionProtectedRoute section="reports"><ReportSourceDetailPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><SectionProtectedRoute section="reports"><ReportsPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/reports/:id" element={<ProtectedRoute><SectionProtectedRoute section="reports"><MediaPlanReports /></SectionProtectedRoute></ProtectedRoute>} />
-          <Route path="/config/subdivisions" element={<ProtectedRoute><SubdivisionsPage /></ProtectedRoute>} />
-          <Route path="/config/moments" element={<ProtectedRoute><MomentsPage /></ProtectedRoute>} />
-          <Route path="/config/funnel-stages" element={<ProtectedRoute><FunnelStagesPage /></ProtectedRoute>} />
-          <Route path="/config/mediums" element={<ProtectedRoute><MediumsPage /></ProtectedRoute>} />
-          <Route path="/config/vehicles" element={<ProtectedRoute><VehiclesPage /></ProtectedRoute>} />
-          <Route path="/config/targets" element={<ProtectedRoute><TargetsPage /></ProtectedRoute>} />
-          <Route path="/config/formats" element={<ProtectedRoute><FormatsPage /></ProtectedRoute>} />
-          <Route path="/config/creative-types" element={<ProtectedRoute><CreativeTypesPage /></ProtectedRoute>} />
-          <Route path="/config/statuses" element={<ProtectedRoute><StatusesPage /></ProtectedRoute>} />
-          <Route path="/config/kpis" element={<ProtectedRoute><KpisPage /></ProtectedRoute>} />
-          <Route path="/config/detail-types" element={<ProtectedRoute><DetailTypesPage /></ProtectedRoute>} />
-          <Route path="/config/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
-          <Route path="/config/objectives" element={<ProtectedRoute><ObjectivesPage /></ProtectedRoute>} />
+          <Route path="/config/subdivisions" element={<ProtectedRoute><SectionProtectedRoute section="library"><SubdivisionsPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/config/moments" element={<ProtectedRoute><SectionProtectedRoute section="library"><MomentsPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/config/funnel-stages" element={<ProtectedRoute><SectionProtectedRoute section="library"><FunnelStagesPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/config/mediums" element={<ProtectedRoute><SectionProtectedRoute section="library"><MediumsPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/config/vehicles" element={<ProtectedRoute><SectionProtectedRoute section="library"><VehiclesPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/config/targets" element={<ProtectedRoute><SectionProtectedRoute section="library"><TargetsPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/config/formats" element={<ProtectedRoute><SectionProtectedRoute section="library"><FormatsPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/config/creative-types" element={<ProtectedRoute><SectionProtectedRoute section="library"><CreativeTypesPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/config/statuses" element={<ProtectedRoute><SectionProtectedRoute section="library"><StatusesPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/config/kpis" element={<ProtectedRoute><SectionProtectedRoute section="library"><KpisPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/config/detail-types" element={<ProtectedRoute><SectionProtectedRoute section="library"><DetailTypesPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/config/clients" element={<ProtectedRoute><SectionProtectedRoute section="library"><ClientsPage /></SectionProtectedRoute></ProtectedRoute>} />
+          <Route path="/config/objectives" element={<ProtectedRoute><SectionProtectedRoute section="library"><ObjectivesPage /></SectionProtectedRoute></ProtectedRoute>} />
           <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
           <Route path="/trash" element={<ProtectedRoute><TrashPage /></ProtectedRoute>} />
           <Route path="/admin/system-settings" element={<AdminRoute><SystemSettingsPage /></AdminRoute>} />
