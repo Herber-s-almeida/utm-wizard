@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { FileSpreadsheet, ChevronDown, ExternalLink, AlertTriangle, Check, X, Users, Link2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,6 @@ import {
 } from '@/components/ui/tooltip';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { LineDetailDialog } from './LineDetailDialog';
 import { usePlanDetails, PlanDetail } from '@/hooks/usePlanDetails';
 
 interface LineDetailsSummaryCardProps {
@@ -32,8 +32,8 @@ interface LineDetailsSummaryCardProps {
 }
 
 export function LineDetailsSummaryCard({ planId, lines, onHide }: LineDetailsSummaryCardProps) {
-  const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const navigate = useNavigate();
+  const { id: planSlug } = useParams<{ id: string }>();
 
   const { 
     details, 
@@ -79,19 +79,17 @@ export function LineDetailsSummaryCard({ planId, lines, onHide }: LineDetailsSum
   };
 
   const handleOpenDetail = (lineId: string) => {
-    setSelectedLineId(lineId);
-    setDialogOpen(true);
+    navigate(`/media-plans/${planSlug}/line/${lineId}`);
   };
 
-  const selectedLine = lines.find(l => l.id === selectedLineId);
+  
 
   if (totalDetails === 0 && !isLoading) {
     return null;
   }
 
   return (
-    <>
-      <AnimatedCollapsible defaultOpen={false} storageKey="line-details-summary" className="border rounded-lg overflow-hidden bg-card">
+    <AnimatedCollapsible defaultOpen={false} storageKey="line-details-summary" className="border rounded-lg overflow-hidden bg-card">
         <div className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted/70 transition-colors">
           <AnimatedCollapsibleTrigger asChild>
             <button className="flex-1 flex items-center gap-3 text-left">
@@ -285,21 +283,6 @@ export function LineDetailsSummaryCard({ planId, lines, onHide }: LineDetailsSum
             )}
           </div>
         </AnimatedCollapsibleContent>
-      </AnimatedCollapsible>
-
-      {selectedLine && (
-        <LineDetailDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          mediaLineId={selectedLine.id}
-          planId={planId}
-          startDate={selectedLine.start_date}
-          endDate={selectedLine.end_date}
-          lineBudget={Number(selectedLine.budget) || 0}
-          lineCode={selectedLine.line_code || undefined}
-          platform={selectedLine.platform}
-        />
-      )}
-    </>
+    </AnimatedCollapsible>
   );
 }
