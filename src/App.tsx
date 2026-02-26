@@ -57,6 +57,7 @@ import ObjectivesPage from "./pages/config/ObjectivesPage";
 import SystemDocumentationPage from "./pages/admin/SystemDocumentationPage";
 import EnvironmentSetup from "./pages/settings/EnvironmentSetup";
 import EnvironmentSettingsPage from "./pages/settings/EnvironmentSettingsPage";
+import AboutPage from "./pages/AboutPage";
 
 // Finance Manager imports
 import { FinanceLayout } from "./components/layout/FinanceLayout";
@@ -96,6 +97,7 @@ function AppWithEnvironment() {
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/auth/register" element={<AuthRegister />} />
+          <Route path="/about" element={<AboutPage />} />
           <Route path="/auth/join" element={<AuthJoin />} />
           <Route path="/environment-select" element={<ProtectedRoute><EnvironmentSelectPage /></ProtectedRoute>} />
           <Route path="/awaiting-access" element={<AwaitingAccess />} />

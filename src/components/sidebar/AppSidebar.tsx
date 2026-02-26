@@ -1888,6 +1888,17 @@ export function AppSidebar() {
               <LogOut className="h-3.5 w-3.5" />
               Sair
             </Button>
+
+            {/* Copyright */}
+            <div className="mt-3 pt-2 border-t border-sidebar-border text-center">
+              <p className="text-[9px] text-muted-foreground leading-tight">
+                © 2026{' '}
+                <Link to="/about" className="underline hover:text-foreground transition-colors">
+                  asplanning.pro
+                </Link>
+                . Todos os direitos reservados.
+              </p>
+            </div>
           </>
         )}
       </div>
