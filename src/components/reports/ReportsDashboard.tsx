@@ -43,13 +43,13 @@ interface ReportsDashboardProps {
 }
 
 const COLORS = [
-  'hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))', 'hsl(var(--chart-5))', 'hsl(var(--muted-foreground))',
+  'hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--success))',
+  'hsl(var(--warning))', 'hsl(var(--destructive))', 'hsl(var(--muted-foreground))',
   'hsl(var(--ring))', 'hsl(var(--secondary-foreground))',
 ];
 const MEDIA_COLOR = 'hsl(var(--primary))';
-const ACCENT_COLOR = 'hsl(var(--chart-2))';
-const TERTIARY_COLOR = 'hsl(var(--chart-4))';
+const ACCENT_COLOR = 'hsl(var(--success))';
+const TERTIARY_COLOR = 'hsl(var(--warning))';
 
 type DatePreset = '7d' | '30d' | 'month' | 'custom' | 'all';
 
