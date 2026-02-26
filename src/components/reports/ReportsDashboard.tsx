@@ -1,48 +1,29 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ReportData, ReportImport, SOURCE_CATEGORIES, SourceCategory } from '@/hooks/useReportData';
 import { MediaLine } from '@/types/media';
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  ComposedChart,
+  BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, Legend, ComposedChart,
 } from 'recharts';
 import {
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Eye,
-  MousePointer,
-  Users,
-  Target,
-  BarChart3,
-  Activity,
-  UserPlus,
-  Globe,
-  Calendar,
-  Zap,
-  ArrowUpRight,
-  Layers,
+  TrendingUp, TrendingDown, DollarSign, Eye, MousePointer, Users, Target,
+  BarChart3, Activity, Zap, ArrowUpRight, Layers, Calendar as CalendarIcon,
+  Globe, Filter, Search, X,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, subDays, startOfMonth, subMonths, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
-interface Vehicle {
+interface ConfigEntity {
   id: string;
   name: string;
 }
@@ -51,26 +32,45 @@ interface ReportsDashboardProps {
   reportData: ReportData[];
   mediaLines: MediaLine[];
   totalBudget: number;
-  vehicles?: Vehicle[];
+  vehicles?: ConfigEntity[];
   reportImports?: ReportImport[];
+  subdivisions?: ConfigEntity[];
+  moments?: ConfigEntity[];
+  funnelStages?: ConfigEntity[];
+  mediums?: ConfigEntity[];
+  channels?: ConfigEntity[];
+  targets?: ConfigEntity[];
 }
 
 const COLORS = [
-  'hsl(var(--primary))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  'hsl(var(--muted-foreground))',
-  'hsl(var(--ring))',
-  'hsl(var(--secondary-foreground))',
+  'hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))', 'hsl(var(--chart-5))', 'hsl(var(--muted-foreground))',
+  'hsl(var(--ring))', 'hsl(var(--secondary-foreground))',
 ];
-
 const MEDIA_COLOR = 'hsl(var(--primary))';
-const ANALYTICS_COLOR = 'hsl(var(--chart-2))';
 const CONVERSION_COLOR = 'hsl(var(--chart-3))';
 
-export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles = [], reportImports = [] }: ReportsDashboardProps) {
+type DatePreset = '7d' | '30d' | 'month' | 'custom' | 'all';
+
+export function ReportsDashboard({
+  reportData, mediaLines, totalBudget, vehicles = [], reportImports = [],
+  subdivisions = [], moments = [], funnelStages = [], mediums = [], channels = [], targets = [],
+}: ReportsDashboardProps) {
+  // ──── Filter State ────
+  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [campaignIdSearch, setCampaignIdSearch] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [filterVehicle, setFilterVehicle] = useState<string>('all');
+  const [filterMedium, setFilterMedium] = useState<string>('all');
+  const [filterFunnel, setFilterFunnel] = useState<string>('all');
+  const [filterSubdivision, setFilterSubdivision] = useState<string>('all');
+  const [filterMoment, setFilterMoment] = useState<string>('all');
+  const [filterChannel, setFilterChannel] = useState<string>('all');
+  const [filterTarget, setFilterTarget] = useState<string>('all');
+
+  // ──── Formatters ────
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   const formatNumber = (value: number) =>
@@ -80,22 +80,121 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
     if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
     return formatNumber(value);
   };
-  const formatPercent = (value: number) =>
-    `${(value * 100).toFixed(2)}%`;
+  const formatPercent = (value: number) => `${(value * 100).toFixed(2)}%`;
 
-  // ──── Aggregate all metrics (category-agnostic for maximum coverage) ────
+  // ──── Available filter options from current plan lines ────
+  const availableFilters = useMemo(() => {
+    const vIds = new Set(mediaLines.map(l => l.vehicle_id).filter(Boolean));
+    const mIds = new Set(mediaLines.map(l => l.medium_id).filter(Boolean));
+    const fIds = new Set(mediaLines.map(l => l.funnel_stage_id).filter(Boolean));
+    const sIds = new Set(mediaLines.map(l => l.subdivision_id).filter(Boolean));
+    const moIds = new Set(mediaLines.map(l => l.moment_id).filter(Boolean));
+    const cIds = new Set(mediaLines.map(l => l.channel_id).filter(Boolean));
+    const tIds = new Set(mediaLines.map(l => l.target_id).filter(Boolean));
+    return {
+      vehicles: vehicles.filter(v => vIds.has(v.id)),
+      mediums: mediums.filter(m => mIds.has(m.id)),
+      funnelStages: funnelStages.filter(f => fIds.has(f.id)),
+      subdivisions: subdivisions.filter(s => sIds.has(s.id)),
+      moments: moments.filter(m => moIds.has(m.id)),
+      channels: channels.filter(c => cIds.has(c.id)),
+      targets: targets.filter(t => tIds.has(t.id)),
+    };
+  }, [mediaLines, vehicles, mediums, funnelStages, subdivisions, moments, channels, targets]);
+
+  // ──── Date range from preset ────
+  const effectiveDateRange = useMemo(() => {
+    const now = new Date();
+    switch (datePreset) {
+      case '7d': return { from: subDays(now, 7), to: now };
+      case '30d': return { from: subDays(now, 30), to: now };
+      case 'month': return { from: startOfMonth(subMonths(now, 1)), to: now };
+      case 'custom': return { from: dateFrom, to: dateTo };
+      default: return { from: undefined, to: undefined };
+    }
+  }, [datePreset, dateFrom, dateTo]);
+
+  // ──── Filter media lines by advanced filters ────
+  const filteredLineIds = useMemo(() => {
+    let lines = mediaLines;
+    if (filterVehicle !== 'all') lines = lines.filter(l => l.vehicle_id === filterVehicle);
+    if (filterMedium !== 'all') lines = lines.filter(l => l.medium_id === filterMedium);
+    if (filterFunnel !== 'all') lines = lines.filter(l => l.funnel_stage_id === filterFunnel);
+    if (filterSubdivision !== 'all') lines = lines.filter(l => l.subdivision_id === filterSubdivision);
+    if (filterMoment !== 'all') lines = lines.filter(l => l.moment_id === filterMoment);
+    if (filterChannel !== 'all') lines = lines.filter(l => l.channel_id === filterChannel);
+    if (filterTarget !== 'all') lines = lines.filter(l => l.target_id === filterTarget);
+    return new Set(lines.map(l => l.id));
+  }, [mediaLines, filterVehicle, filterMedium, filterFunnel, filterSubdivision, filterMoment, filterChannel, filterTarget]);
+
+  const hasAdvancedFilter = filterVehicle !== 'all' || filterMedium !== 'all' || filterFunnel !== 'all' ||
+    filterSubdivision !== 'all' || filterMoment !== 'all' || filterChannel !== 'all' || filterTarget !== 'all';
+
+  // ──── Filtered line codes for campaign search ────
+  const filteredLineCodes = useMemo(() => {
+    if (!campaignIdSearch) return null;
+    const search = campaignIdSearch.toLowerCase().trim();
+    return new Set(
+      mediaLines
+        .filter(l => l.line_code?.toLowerCase().includes(search))
+        .map(l => l.line_code?.toLowerCase().trim())
+        .filter(Boolean)
+    );
+  }, [campaignIdSearch, mediaLines]);
+
+  // ──── Apply all filters to reportData ────
+  const filteredReportData = useMemo(() => {
+    let data = reportData;
+
+    // Date filter
+    if (effectiveDateRange.from || effectiveDateRange.to) {
+      data = data.filter(r => {
+        const dateStr = r.period_start || r.period_end;
+        if (!dateStr) return false;
+        const date = new Date(dateStr);
+        if (effectiveDateRange.from && date < effectiveDateRange.from) return false;
+        if (effectiveDateRange.to && date > effectiveDateRange.to) return false;
+        return true;
+      });
+    }
+
+    // Advanced filters (by line association)
+    if (hasAdvancedFilter) {
+      data = data.filter(r => {
+        if (r.media_line_id) return filteredLineIds.has(r.media_line_id);
+        // Try matching by line_code
+        if (r.line_code) {
+          const code = r.line_code.toLowerCase().trim();
+          return mediaLines.some(l => l.line_code?.toLowerCase().trim() === code && filteredLineIds.has(l.id));
+        }
+        return false;
+      });
+    }
+
+    // Campaign ID filter
+    if (filteredLineCodes) {
+      data = data.filter(r => {
+        const code = r.line_code?.toLowerCase().trim();
+        return code && filteredLineCodes.has(code);
+      });
+    }
+
+    return data;
+  }, [reportData, effectiveDateRange, hasAdvancedFilter, filteredLineIds, filteredLineCodes, mediaLines]);
+
+  // ──── Aggregate metrics ────
   const allMetrics = useMemo(() => {
-    const totalCost = reportData.reduce((acc, r) => acc + Number(r.cost || 0), 0);
-    const totalImpressions = reportData.reduce((acc, r) => acc + Number(r.impressions || 0), 0);
-    const totalClicks = reportData.reduce((acc, r) => acc + Number(r.clicks || 0), 0);
-    const totalConversions = reportData.reduce((acc, r) => acc + Number(r.conversions || 0), 0);
-    const totalLeads = reportData.reduce((acc, r) => acc + Number(r.leads || 0), 0);
-    const totalSales = reportData.reduce((acc, r) => acc + Number(r.sales || 0), 0);
-    const totalSessions = reportData.reduce((acc, r) => acc + Number(r.sessions || 0), 0);
-    const totalUsers = reportData.reduce((acc, r) => acc + Number(r.total_users || 0), 0);
-    const totalNewUsers = reportData.reduce((acc, r) => acc + Number(r.new_users || 0), 0);
-    const totalEngaged = reportData.reduce((acc, r) => acc + Number(r.engaged_sessions || 0), 0);
-    const totalPageviews = reportData.reduce((acc, r) => acc + Number(r.pageviews || 0), 0);
+    const totalCost = filteredReportData.reduce((acc, r) => acc + Number(r.cost || 0), 0);
+    const totalImpressions = filteredReportData.reduce((acc, r) => acc + Number(r.impressions || 0), 0);
+    const totalClicks = filteredReportData.reduce((acc, r) => acc + Number(r.clicks || 0), 0);
+    const totalConversions = filteredReportData.reduce((acc, r) => acc + Number(r.conversions || 0), 0);
+    const totalLeads = filteredReportData.reduce((acc, r) => acc + Number(r.leads || 0), 0);
+    const totalSales = filteredReportData.reduce((acc, r) => acc + Number(r.sales || 0), 0);
+    const totalSessions = filteredReportData.reduce((acc, r) => acc + Number(r.sessions || 0), 0);
+    const totalUsers = filteredReportData.reduce((acc, r) => acc + Number(r.total_users || 0), 0);
+    const totalNewUsers = filteredReportData.reduce((acc, r) => acc + Number(r.new_users || 0), 0);
+    const totalEngaged = filteredReportData.reduce((acc, r) => acc + Number(r.engaged_sessions || 0), 0);
+    const totalPageviews = filteredReportData.reduce((acc, r) => acc + Number(r.pageviews || 0), 0);
 
     const avgCTR = totalImpressions > 0 ? totalClicks / totalImpressions : 0;
     const avgCPC = totalClicks > 0 ? totalCost / totalClicks : 0;
@@ -107,9 +206,9 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
     const costPerUser = totalUsers > 0 ? totalCost / totalUsers : 0;
     const pagesPerSession = totalSessions > 0 ? totalPageviews / totalSessions : 0;
 
-    const matchedLineIds = new Set(reportData.filter((r) => r.media_line_id).map((r) => r.media_line_id));
+    const matchedLineIds = new Set(filteredReportData.filter(r => r.media_line_id).map(r => r.media_line_id));
     const plannedBudget = mediaLines
-      .filter((l) => matchedLineIds.has(l.id))
+      .filter(l => matchedLineIds.has(l.id))
       .reduce((acc, l) => acc + Number(l.budget || 0), 0);
     const budgetVariance = plannedBudget > 0 ? ((totalCost - plannedBudget) / plannedBudget) * 100 : 0;
     const budgetExecution = totalBudget > 0 ? (totalCost / totalBudget) * 100 : 0;
@@ -121,7 +220,7 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
       newUsersPercent, engagedPercent, costPerSession, costPerUser, pagesPerSession,
       plannedBudget, budgetVariance, budgetExecution,
     };
-  }, [reportData, mediaLines, totalBudget]);
+  }, [filteredReportData, mediaLines, totalBudget]);
 
   // ──── Daily timeline data ────
   const dailyData = useMemo(() => {
@@ -129,8 +228,7 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
       cost: number; impressions: number; clicks: number; conversions: number;
       sessions: number; users: number; newUsers: number; engaged: number; pageviews: number;
     }>();
-
-    for (const r of reportData) {
+    for (const r of filteredReportData) {
       const dateKey = r.period_start || r.period_end;
       if (!dateKey) continue;
       const d = dateKey.substring(0, 10);
@@ -146,36 +244,34 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
       existing.pageviews += Number(r.pageviews || 0);
       byDate.set(d, existing);
     }
-
     return Array.from(byDate.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, v]) => ({
-        date,
-        dateLabel: (() => { try { return format(parseISO(date), 'dd/MM', { locale: ptBR }); } catch { return date; } })(),
+        date, dateLabel: (() => { try { return format(parseISO(date), 'dd/MM', { locale: ptBR }); } catch { return date; } })(),
         ...v,
         ctr: v.impressions > 0 ? (v.clicks / v.impressions) * 100 : 0,
         cpc: v.clicks > 0 ? v.cost / v.clicks : 0,
         engagementRate: v.sessions > 0 ? (v.engaged / v.sessions) * 100 : 0,
       }));
-  }, [reportData]);
+  }, [filteredReportData]);
 
-  // ──── Budget comparison by line code ────
+  // ──── Budget comparison ────
   const budgetComparisonData = useMemo(() => {
     const actualByLineCode = new Map<string, number>();
-    for (const r of reportData) {
+    for (const r of filteredReportData) {
       const lc = r.line_code?.toLowerCase().trim();
       if (!lc) continue;
       actualByLineCode.set(lc, (actualByLineCode.get(lc) || 0) + Number(r.cost || 0));
     }
     return mediaLines
-      .map((line) => ({
+      .map(line => ({
         name: line.line_code || '-',
         planned: Number(line.budget || 0),
         actual: actualByLineCode.get((line.line_code || '').toLowerCase().trim()) || 0,
       }))
-      .filter((d) => d.planned > 0 || d.actual > 0)
+      .filter(d => d.planned > 0 || d.actual > 0)
       .sort((a, b) => b.planned - a.planned);
-  }, [reportData, mediaLines]);
+  }, [filteredReportData, mediaLines]);
 
   // ──── Distribution by vehicle ────
   const distributionData = useMemo(() => {
@@ -190,7 +286,7 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
       }
     }
     const costByVehicle = new Map<string, number>();
-    for (const r of reportData) {
+    for (const r of filteredReportData) {
       if (Number(r.cost || 0) === 0) continue;
       let vehicleId: string | undefined;
       if (r.media_line_id) vehicleId = lineToVehicle.get(r.media_line_id);
@@ -198,19 +294,15 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
       const vehicleName = vehicleId ? (vehicleMap.get(vehicleId) || 'Outro') : 'Não identificado';
       costByVehicle.set(vehicleName, (costByVehicle.get(vehicleName) || 0) + Number(r.cost || 0));
     }
-    return Array.from(costByVehicle.entries())
-      .map(([name, value]) => ({ name, value }))
-      .filter((d) => d.value > 0)
-      .sort((a, b) => b.value - a.value);
-  }, [reportData, mediaLines, vehicles]);
+    return Array.from(costByVehicle.entries()).map(([name, value]) => ({ name, value })).filter(d => d.value > 0).sort((a, b) => b.value - a.value);
+  }, [filteredReportData, mediaLines, vehicles]);
 
-  // ──── Impressions/clicks by source ────
+  // ──── Source breakdown ────
   const sourceBreakdown = useMemo(() => {
     const bySource = new Map<string, { cost: number; impressions: number; clicks: number; sessions: number; users: number }>();
     const importNameMap = new Map<string, string>();
     for (const imp of reportImports) importNameMap.set(imp.id, imp.source_name);
-
-    for (const r of reportData) {
+    for (const r of filteredReportData) {
       const name = importNameMap.get(r.import_id) || 'Desconhecido';
       const existing = bySource.get(name) || { cost: 0, impressions: 0, clicks: 0, sessions: 0, users: 0 };
       existing.cost += Number(r.cost || 0);
@@ -221,7 +313,32 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
       bySource.set(name, existing);
     }
     return Array.from(bySource.entries()).map(([name, v]) => ({ name, ...v }));
-  }, [reportData, reportImports]);
+  }, [filteredReportData, reportImports]);
+
+  // ──── Campaign ID table data ────
+  const campaignTableData = useMemo(() => {
+    const byCode = new Map<string, {
+      impressions: number; clicks: number; cost: number; sessions: number; engaged: number;
+    }>();
+    for (const r of filteredReportData) {
+      const code = r.line_code?.trim();
+      if (!code) continue;
+      const existing = byCode.get(code) || { impressions: 0, clicks: 0, cost: 0, sessions: 0, engaged: 0 };
+      existing.impressions += Number(r.impressions || 0);
+      existing.clicks += Number(r.clicks || 0);
+      existing.cost += Number(r.cost || 0);
+      existing.sessions += Number(r.sessions || 0);
+      existing.engaged += Number(r.engaged_sessions || 0);
+      byCode.set(code, existing);
+    }
+    return Array.from(byCode.entries())
+      .map(([code, v]) => ({
+        code, ...v,
+        ctr: v.impressions > 0 ? v.clicks / v.impressions : 0,
+        cpc: v.clicks > 0 ? v.cost / v.clicks : 0,
+      }))
+      .sort((a, b) => b.cost - a.cost);
+  }, [filteredReportData]);
 
   const hasDailyData = dailyData.length > 1;
   const hasCost = allMetrics.totalCost > 0;
@@ -231,6 +348,27 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
   const hasEngaged = allMetrics.totalEngaged > 0;
   const hasPageviews = allMetrics.totalPageviews > 0;
   const hasConversions = allMetrics.totalConversions > 0 || allMetrics.totalLeads > 0;
+
+  const clearAllFilters = () => {
+    setDatePreset('all');
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    setCampaignIdSearch('');
+    setFilterVehicle('all');
+    setFilterMedium('all');
+    setFilterFunnel('all');
+    setFilterSubdivision('all');
+    setFilterMoment('all');
+    setFilterChannel('all');
+    setFilterTarget('all');
+  };
+
+  const activeFilterCount = [
+    datePreset !== 'all',
+    campaignIdSearch !== '',
+    filterVehicle !== 'all', filterMedium !== 'all', filterFunnel !== 'all',
+    filterSubdivision !== 'all', filterMoment !== 'all', filterChannel !== 'all', filterTarget !== 'all',
+  ].filter(Boolean).length;
 
   if (reportData.length === 0) {
     return (
@@ -245,23 +383,156 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
     );
   }
 
+  const FilterSelect = ({ label, value, onChange, options }: {
+    label: string; value: string; onChange: (v: string) => void; options: ConfigEntity[];
+  }) => {
+    if (options.length === 0) return null;
+    return (
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-muted-foreground">{label}</label>
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Todos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            {options.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8">
+      {/* ═══════════════ FILTROS ═══════════════ */}
+      <Card>
+        <CardContent className="py-4 space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Date Presets */}
+            <div className="flex items-center gap-1">
+              <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+              <div className="flex gap-1">
+                {([
+                  { value: 'all' as DatePreset, label: 'Tudo' },
+                  { value: '7d' as DatePreset, label: '7 dias' },
+                  { value: '30d' as DatePreset, label: '30 dias' },
+                  { value: 'month' as DatePreset, label: 'Último mês' },
+                  { value: 'custom' as DatePreset, label: 'Personalizado' },
+                ]).map(p => (
+                  <Button
+                    key={p.value}
+                    variant={datePreset === p.value ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setDatePreset(p.value)}
+                  >
+                    {p.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom date pickers */}
+            {datePreset === 'custom' && (
+              <div className="flex items-center gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn("h-7 text-xs", !dateFrom && "text-muted-foreground")}>
+                      {dateFrom ? format(dateFrom, 'dd/MM/yyyy') : 'De'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+                <span className="text-xs text-muted-foreground">até</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className={cn("h-7 text-xs", !dateTo && "text-muted-foreground")}>
+                      {dateTo ? format(dateTo, 'dd/MM/yyyy') : 'Até'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={dateTo} onSelect={setDateTo} className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+
+            <Separator orientation="vertical" className="h-6" />
+
+            {/* Campaign ID Search */}
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Buscar ID de campanha..."
+                value={campaignIdSearch}
+                onChange={e => setCampaignIdSearch(e.target.value)}
+                className="h-7 text-xs pl-7 w-52"
+              />
+              {campaignIdSearch && (
+                <button onClick={() => setCampaignIdSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <X className="w-3 h-3 text-muted-foreground" />
+                </button>
+              )}
+            </div>
+
+            <Button
+              variant={showAdvancedFilters ? 'default' : 'outline'}
+              size="sm"
+              className="h-7 text-xs gap-1"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            >
+              <Filter className="w-3 h-3" />
+              Filtros
+              {activeFilterCount > 0 && (
+                <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{activeFilterCount}</Badge>
+              )}
+            </Button>
+
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={clearAllFilters}>
+                <X className="w-3 h-3 mr-1" /> Limpar
+              </Button>
+            )}
+
+            <div className="ml-auto">
+              <Badge variant="outline" className="text-xs">
+                {formatNumber(filteredReportData.length)} / {formatNumber(reportData.length)} registros
+              </Badge>
+            </div>
+          </div>
+
+          {/* Advanced Filters */}
+          {showAdvancedFilters && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 pt-2 border-t">
+              <FilterSelect label="Veículo" value={filterVehicle} onChange={setFilterVehicle} options={availableFilters.vehicles} />
+              <FilterSelect label="Meio" value={filterMedium} onChange={setFilterMedium} options={availableFilters.mediums} />
+              <FilterSelect label="Fase do Funil" value={filterFunnel} onChange={setFilterFunnel} options={availableFilters.funnelStages} />
+              <FilterSelect label="Subdivisão" value={filterSubdivision} onChange={setFilterSubdivision} options={availableFilters.subdivisions} />
+              <FilterSelect label="Momento" value={filterMoment} onChange={setFilterMoment} options={availableFilters.moments} />
+              <FilterSelect label="Canal" value={filterChannel} onChange={setFilterChannel} options={availableFilters.channels} />
+              <FilterSelect label="Target" value={filterTarget} onChange={setFilterTarget} options={availableFilters.targets} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* ═══════════════ VISÃO GERAL ═══════════════ */}
       <section className="space-y-4">
         <div className="flex items-center gap-2">
           <Layers className="w-5 h-5 text-primary" />
           <h2 className="text-lg font-semibold font-display">Visão Geral</h2>
-          <Badge variant="secondary" className="text-xs">{formatNumber(reportData.length)} registros</Badge>
           {dailyData.length > 0 && (
             <Badge variant="outline" className="text-xs gap-1">
-              <Calendar className="w-3 h-3" />
+              <CalendarIcon className="w-3 h-3" />
               {dailyData[0].dateLabel} – {dailyData[dailyData.length - 1].dateLabel}
             </Badge>
           )}
         </div>
 
-        {/* KPI Row 1: Investment & Media Performance */}
+        {/* KPI Row 1 */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
           {hasCost && (
             <Card>
@@ -352,7 +623,7 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
           )}
         </div>
 
-        {/* KPI Row 2: Site / Analytics */}
+        {/* KPI Row 2: Analytics */}
         {(hasUsers || hasSessions || hasEngaged || hasPageviews) && (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             {hasUsers && (
@@ -432,65 +703,87 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
         )}
       </section>
 
+      {/* ═══════════════ CAMPAIGN ID TABLE ═══════════════ */}
+      {campaignTableData.length > 0 && (
+        <section className="space-y-4">
+          <Separator />
+          <div className="flex items-center gap-2">
+            <Search className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold font-display">Resultados por ID de Campanha</h2>
+            <Badge variant="secondary" className="text-xs">{campaignTableData.length} IDs</Badge>
+          </div>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="border rounded-lg overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead className="text-right">Impressões</TableHead>
+                      <TableHead className="text-right">Cliques</TableHead>
+                      <TableHead className="text-right">CTR</TableHead>
+                      <TableHead className="text-right">CPC</TableHead>
+                      <TableHead className="text-right">Investimento</TableHead>
+                      <TableHead className="text-right">Sessões</TableHead>
+                      <TableHead className="text-right">Sess. Engajadas</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {campaignTableData.map(row => (
+                      <TableRow key={row.code}>
+                        <TableCell className="font-mono text-xs font-medium">{row.code}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCompact(row.impressions)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCompact(row.clicks)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatPercent(row.ctr)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{row.cpc > 0 ? formatCurrency(row.cpc) : '-'}</TableCell>
+                        <TableCell className="text-right tabular-nums">{row.cost > 0 ? formatCurrency(row.cost) : '-'}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCompact(row.sessions)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCompact(row.engaged)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
       {/* ═══════════════ TIMELINE CHARTS ═══════════════ */}
       {hasDailyData && (
         <section className="space-y-4">
           <Separator />
           <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-primary" />
+            <CalendarIcon className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-semibold font-display">Evolução Diária</h2>
           </div>
-
           <div className="grid gap-6 lg:grid-cols-2">
-            {/* Daily Investment */}
             {hasCost && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base font-medium flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-primary" />
-                    Investimento Diário
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base font-medium flex items-center gap-2"><DollarSign className="w-4 h-4 text-primary" />Investimento Diário</CardTitle></CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={280}>
                     <AreaChart data={dailyData}>
-                      <defs>
-                        <linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={MEDIA_COLOR} stopOpacity={0.3} />
-                          <stop offset="95%" stopColor={MEDIA_COLOR} stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
+                      <defs><linearGradient id="costGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={MEDIA_COLOR} stopOpacity={0.3} /><stop offset="95%" stopColor={MEDIA_COLOR} stopOpacity={0} /></linearGradient></defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} />
-                      <YAxis tickFormatter={(v) => formatCompact(v)} tick={{ fontSize: 11 }} />
-                      <Tooltip
-                        formatter={(value: number) => formatCurrency(value)}
-                        labelFormatter={(label) => `Data: ${label}`}
-                        contentStyle={{ fontSize: 12 }}
-                      />
+                      <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} /><YAxis tickFormatter={v => formatCompact(v)} tick={{ fontSize: 11 }} />
+                      <Tooltip formatter={(value: number) => formatCurrency(value)} labelFormatter={label => `Data: ${label}`} contentStyle={{ fontSize: 12 }} />
                       <Area type="monotone" dataKey="cost" name="Investimento" stroke={MEDIA_COLOR} fill="url(#costGradient)" strokeWidth={2} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
             )}
-
-            {/* Daily Impressions & Clicks */}
             {hasImpressions && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base font-medium flex items-center gap-2">
-                    <Eye className="w-4 h-4 text-primary" />
-                    Impressões & Cliques
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base font-medium flex items-center gap-2"><Eye className="w-4 h-4 text-primary" />Impressões & Cliques</CardTitle></CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={280}>
                     <ComposedChart data={dailyData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} />
-                      <YAxis yAxisId="left" tickFormatter={(v) => formatCompact(v)} tick={{ fontSize: 11 }} />
-                      <YAxis yAxisId="right" orientation="right" tickFormatter={(v) => formatCompact(v)} tick={{ fontSize: 11 }} />
+                      <YAxis yAxisId="left" tickFormatter={v => formatCompact(v)} tick={{ fontSize: 11 }} />
+                      <YAxis yAxisId="right" orientation="right" tickFormatter={v => formatCompact(v)} tick={{ fontSize: 11 }} />
                       <Tooltip formatter={(value: number, name: string) => [formatNumber(value), name]} contentStyle={{ fontSize: 12 }} />
                       <Legend />
                       <Bar yAxisId="left" dataKey="impressions" name="Impressões" fill={MEDIA_COLOR} opacity={0.3} />
@@ -500,56 +793,32 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
                 </CardContent>
               </Card>
             )}
-
-            {/* Daily Sessions & Users */}
             {hasSessions && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base font-medium flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-primary" />
-                    Sessões & Usuários
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base font-medium flex items-center gap-2"><Activity className="w-4 h-4 text-primary" />Sessões & Usuários</CardTitle></CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={280}>
                     <LineChart data={dailyData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} />
-                      <YAxis tickFormatter={(v) => formatCompact(v)} tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(value: number, name: string) => [formatNumber(value), name]} contentStyle={{ fontSize: 12 }} />
-                      <Legend />
+                      <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} /><YAxis tickFormatter={v => formatCompact(v)} tick={{ fontSize: 11 }} />
+                      <Tooltip formatter={(value: number, name: string) => [formatNumber(value), name]} contentStyle={{ fontSize: 12 }} /><Legend />
                       <Line type="monotone" dataKey="sessions" name="Sessões" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} />
                       <Line type="monotone" dataKey="users" name="Usuários" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} strokeDasharray="4 4" />
-                      {hasEngaged && (
-                        <Line type="monotone" dataKey="engaged" name="Engajadas" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} strokeDasharray="2 2" />
-                      )}
+                      {hasEngaged && <Line type="monotone" dataKey="engaged" name="Engajadas" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} strokeDasharray="2 2" />}
                     </LineChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
             )}
-
-            {/* Engagement Rate over time */}
             {hasEngaged && hasDailyData && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base font-medium flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-primary" />
-                    Taxa de Engajamento (%)
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base font-medium flex items-center gap-2"><Zap className="w-4 h-4 text-primary" />Taxa de Engajamento (%)</CardTitle></CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={280}>
                     <AreaChart data={dailyData}>
-                      <defs>
-                        <linearGradient id="engGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={MEDIA_COLOR} stopOpacity={0.3} />
-                          <stop offset="95%" stopColor={MEDIA_COLOR} stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
+                      <defs><linearGradient id="engGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={MEDIA_COLOR} stopOpacity={0.3} /><stop offset="95%" stopColor={MEDIA_COLOR} stopOpacity={0} /></linearGradient></defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} />
-                      <YAxis tickFormatter={(v) => `${v.toFixed(0)}%`} tick={{ fontSize: 11 }} />
+                      <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} /><YAxis tickFormatter={v => `${v.toFixed(0)}%`} tick={{ fontSize: 11 }} />
                       <Tooltip formatter={(value: number) => [`${value.toFixed(2)}%`, 'Engajamento']} contentStyle={{ fontSize: 12 }} />
                       <Area type="monotone" dataKey="engagementRate" name="Engajamento" stroke={MEDIA_COLOR} fill="url(#engGradient)" strokeWidth={2} />
                     </AreaChart>
@@ -557,22 +826,14 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
                 </CardContent>
               </Card>
             )}
-
-            {/* CTR over time */}
             {hasImpressions && hasDailyData && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base font-medium flex items-center gap-2">
-                    <MousePointer className="w-4 h-4 text-primary" />
-                    CTR Diário (%)
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base font-medium flex items-center gap-2"><MousePointer className="w-4 h-4 text-primary" />CTR Diário (%)</CardTitle></CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={280}>
                     <LineChart data={dailyData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} />
-                      <YAxis tickFormatter={(v) => `${v.toFixed(1)}%`} tick={{ fontSize: 11 }} />
+                      <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} /><YAxis tickFormatter={v => `${v.toFixed(1)}%`} tick={{ fontSize: 11 }} />
                       <Tooltip formatter={(value: number) => [`${value.toFixed(3)}%`, 'CTR']} contentStyle={{ fontSize: 12 }} />
                       <Line type="monotone" dataKey="ctr" name="CTR" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} />
                     </LineChart>
@@ -580,22 +841,14 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
                 </CardContent>
               </Card>
             )}
-
-            {/* CPC over time */}
             {hasCost && allMetrics.totalClicks > 0 && hasDailyData && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base font-medium flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-primary" />
-                    CPC Diário
-                  </CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle className="text-base font-medium flex items-center gap-2"><DollarSign className="w-4 h-4 text-primary" />CPC Diário</CardTitle></CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={dailyData.filter((d) => d.cpc > 0)}>
+                    <LineChart data={dailyData.filter(d => d.cpc > 0)}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} />
-                      <YAxis tickFormatter={(v) => `R$${v.toFixed(2)}`} tick={{ fontSize: 11 }} />
+                      <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} /><YAxis tickFormatter={v => `R$${v.toFixed(2)}`} tick={{ fontSize: 11 }} />
                       <Tooltip formatter={(value: number) => [formatCurrency(value), 'CPC']} contentStyle={{ fontSize: 12 }} />
                       <Line type="monotone" dataKey="cpc" name="CPC" stroke={MEDIA_COLOR} strokeWidth={2} dot={false} />
                     </LineChart>
@@ -607,7 +860,7 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
         </section>
       )}
 
-      {/* ═══════════════ PLANEJADO vs REALIZADO + DISTRIBUIÇÃO ═══════════════ */}
+      {/* ═══════════════ COMPARATIVO ═══════════════ */}
       {(budgetComparisonData.length > 0 || distributionData.length > 0 || sourceBreakdown.length > 1) && (
         <section className="space-y-4">
           <Separator />
@@ -615,7 +868,6 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
             <BarChart3 className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-semibold font-display">Análise Comparativa</h2>
           </div>
-
           <div className="grid gap-6 lg:grid-cols-2">
             {budgetComparisonData.length > 0 && (
               <Card>
@@ -624,10 +876,9 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
                   <ResponsiveContainer width="100%" height={Math.max(300, budgetComparisonData.length * 40)}>
                     <BarChart data={budgetComparisonData} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis type="number" tickFormatter={(v) => formatCompact(v)} />
+                      <XAxis type="number" tickFormatter={v => formatCompact(v)} />
                       <YAxis dataKey="name" type="category" width={60} tick={{ fontSize: 10 }} />
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                      <Legend />
+                      <Tooltip formatter={(value: number) => formatCurrency(value)} /><Legend />
                       <Bar dataKey="planned" name="Planejado" fill="hsl(var(--muted-foreground))" />
                       <Bar dataKey="actual" name="Realizado" fill={MEDIA_COLOR} />
                     </BarChart>
@@ -642,9 +893,7 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie data={distributionData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`} outerRadius={100} fill={MEDIA_COLOR} dataKey="value">
-                        {distributionData.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
+                        {distributionData.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                       </Pie>
                       <Tooltip formatter={(value: number) => formatCurrency(value)} />
                     </PieChart>
@@ -652,8 +901,6 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
                 </CardContent>
               </Card>
             )}
-
-            {/* Source breakdown table */}
             {sourceBreakdown.length > 1 && (
               <Card className="lg:col-span-2">
                 <CardHeader><CardTitle className="text-base font-medium">Comparativo por Fonte de Dados</CardTitle></CardHeader>
@@ -672,7 +919,7 @@ export function ReportsDashboard({ reportData, mediaLines, totalBudget, vehicles
                         </tr>
                       </thead>
                       <tbody>
-                        {sourceBreakdown.map((src) => (
+                        {sourceBreakdown.map(src => (
                           <tr key={src.name} className="border-b border-border/50 hover:bg-muted/30">
                             <td className="py-2 px-3 font-medium">{src.name}</td>
                             <td className="py-2 px-3 text-right">{src.cost > 0 ? formatCurrency(src.cost) : '-'}</td>
