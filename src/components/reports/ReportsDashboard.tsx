@@ -315,7 +315,11 @@ export function ReportsDashboard({
     return Array.from(bySource.entries()).map(([name, v]) => ({ name, ...v }));
   }, [filteredReportData, reportImports]);
 
-  // ──── Campaign ID table data ────
+  // ──── Campaign ID table data (only matching plan line_codes) ────
+  const planLineCodes = useMemo(() => {
+    return new Set(mediaLines.map(l => l.line_code?.trim().toLowerCase()).filter(Boolean));
+  }, [mediaLines]);
+
   const campaignTableData = useMemo(() => {
     const byCode = new Map<string, {
       impressions: number; clicks: number; cost: number; sessions: number; engaged: number;
@@ -323,6 +327,8 @@ export function ReportsDashboard({
     for (const r of filteredReportData) {
       const code = r.line_code?.trim();
       if (!code) continue;
+      // Only include codes that match plan line_codes
+      if (!planLineCodes.has(code.toLowerCase())) continue;
       const existing = byCode.get(code) || { impressions: 0, clicks: 0, cost: 0, sessions: 0, engaged: 0 };
       existing.impressions += Number(r.impressions || 0);
       existing.clicks += Number(r.clicks || 0);
@@ -338,7 +344,7 @@ export function ReportsDashboard({
         cpc: v.clicks > 0 ? v.cost / v.clicks : 0,
       }))
       .sort((a, b) => b.cost - a.cost);
-  }, [filteredReportData]);
+  }, [filteredReportData, planLineCodes]);
 
   const hasDailyData = dailyData.length > 1;
   const hasCost = allMetrics.totalCost > 0;
@@ -703,51 +709,6 @@ export function ReportsDashboard({
         )}
       </section>
 
-      {/* ═══════════════ CAMPAIGN ID TABLE ═══════════════ */}
-      {campaignTableData.length > 0 && (
-        <section className="space-y-4">
-          <Separator />
-          <div className="flex items-center gap-2">
-            <Search className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold font-display">Resultados por ID de Campanha</h2>
-            <Badge variant="secondary" className="text-xs">{campaignTableData.length} IDs</Badge>
-          </div>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="border rounded-lg overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead className="text-right">Impressões</TableHead>
-                      <TableHead className="text-right">Cliques</TableHead>
-                      <TableHead className="text-right">CTR</TableHead>
-                      <TableHead className="text-right">CPC</TableHead>
-                      <TableHead className="text-right">Investimento</TableHead>
-                      <TableHead className="text-right">Sessões</TableHead>
-                      <TableHead className="text-right">Sess. Engajadas</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {campaignTableData.map(row => (
-                      <TableRow key={row.code}>
-                        <TableCell className="font-mono text-xs font-medium">{row.code}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCompact(row.impressions)}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCompact(row.clicks)}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatPercent(row.ctr)}</TableCell>
-                        <TableCell className="text-right tabular-nums">{row.cpc > 0 ? formatCurrency(row.cpc) : '-'}</TableCell>
-                        <TableCell className="text-right tabular-nums">{row.cost > 0 ? formatCurrency(row.cost) : '-'}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCompact(row.sessions)}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatCompact(row.engaged)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-      )}
 
       {/* ═══════════════ TIMELINE CHARTS ═══════════════ */}
       {hasDailyData && (
@@ -857,6 +818,52 @@ export function ReportsDashboard({
               </Card>
             )}
           </div>
+        </section>
+      )}
+
+      {/* ═══════════════ CAMPAIGN ID TABLE ═══════════════ */}
+      {campaignTableData.length > 0 && (
+        <section className="space-y-4">
+          <Separator />
+          <div className="flex items-center gap-2">
+            <Search className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold font-display">Resultados por ID de Campanha</h2>
+            <Badge variant="secondary" className="text-xs">{campaignTableData.length} IDs</Badge>
+          </div>
+          <Card>
+            <CardContent className="pt-4">
+              <div className="border rounded-lg overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead className="text-right">Impressões</TableHead>
+                      <TableHead className="text-right">Cliques</TableHead>
+                      <TableHead className="text-right">CTR</TableHead>
+                      <TableHead className="text-right">CPC</TableHead>
+                      <TableHead className="text-right">Investimento</TableHead>
+                      <TableHead className="text-right">Sessões</TableHead>
+                      <TableHead className="text-right">Sess. Engajadas</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {campaignTableData.map(row => (
+                      <TableRow key={row.code}>
+                        <TableCell className="font-mono text-xs font-medium">{row.code}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCompact(row.impressions)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCompact(row.clicks)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatPercent(row.ctr)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{row.cpc > 0 ? formatCurrency(row.cpc) : '-'}</TableCell>
+                        <TableCell className="text-right tabular-nums">{row.cost > 0 ? formatCurrency(row.cost) : '-'}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCompact(row.sessions)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatCompact(row.engaged)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </section>
       )}
 
