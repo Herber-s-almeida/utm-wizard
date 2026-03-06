@@ -362,7 +362,7 @@ export default function MediaResourcesKanbanPage() {
             <Skeleton className="h-[600px] flex-1" />
           </div>
         ) : (
-          <KanbanBoard creatives={creatives || []} onUpdate={refetch} userId={user?.id || ""} />
+          <KanbanBoard creatives={creatives || []} onUpdate={refetch} userId={user?.id || ""} readOnly={readOnly} />
         )}
       </div>
 

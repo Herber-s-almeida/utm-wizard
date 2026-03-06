@@ -85,11 +85,12 @@ interface KanbanBoardProps {
   creatives: MediaCreativeWithDetails[];
   onUpdate: () => void;
   userId: string;
+  readOnly?: boolean;
 }
 
 export type ColumnId = "fazer" | "fazendo" | "feito";
 
-export function KanbanBoard({ creatives, onUpdate, userId }: KanbanBoardProps) {
+export function KanbanBoard({ creatives, onUpdate, userId, readOnly = false }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overColumnId, setOverColumnId] = useState<ColumnId | null>(null);
 
@@ -183,7 +184,7 @@ export function KanbanBoard({ creatives, onUpdate, userId }: KanbanBoardProps) {
     setActiveId(null);
     setOverColumnId(null);
 
-    if (!over) return;
+    if (!over || readOnly) return;
 
     const activeCreativeId = active.id as string;
     const overId = over.id as string;
@@ -191,7 +192,6 @@ export function KanbanBoard({ creatives, onUpdate, userId }: KanbanBoardProps) {
     const destinationColumn = resolveDestinationColumn(overId);
     if (!destinationColumn) return;
 
-    // Se caiu na mesma coluna, não faz nada
     const activeCreative = creatives.find((c) => c.id === activeCreativeId);
     if (!activeCreative) return;
 
@@ -211,7 +211,7 @@ export function KanbanBoard({ creatives, onUpdate, userId }: KanbanBoardProps) {
     }
 
     toast.success("Status atualizado pelo Kanban");
-    onUpdate(); // refetch no pai
+    onUpdate();
   };
 
   return (
