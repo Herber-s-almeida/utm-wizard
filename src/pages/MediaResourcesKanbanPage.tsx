@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ExternalLink, List, Users } from "lucide-react";
@@ -87,6 +88,8 @@ interface MediaCreativeWithDetails {
 export default function MediaResourcesKanbanPage() {
   const { id: identifier } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const { canEdit: canEditSection } = useEnvironment();
+  const readOnly = !canEditSection('media_resources');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
@@ -331,10 +334,12 @@ export default function MediaResourcesKanbanPage() {
             <h1 className="text-2xl font-bold">Recursos de Mídia - Kanban</h1>
             {mediaPlan && <p className="text-muted-foreground text-sm">Plano: {mediaPlan.name}</p>}
           </div>
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => setNotificationDialogOpen(true)}>
-            <Users className="h-3.5 w-3.5" />
-            Notificar Seguidores
-          </Button>
+          {!readOnly && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => setNotificationDialogOpen(true)}>
+              <Users className="h-3.5 w-3.5" />
+              Notificar Seguidores
+            </Button>
+          )}
           <Link to={resourcesUrl}>
             <Button variant="outline" size="sm" className="gap-2">
               <List className="h-3.5 w-3.5" />
