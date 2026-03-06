@@ -1,5 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -224,14 +225,17 @@ function StatusCell({
   creativeId,
   currentStatus,
   onUpdate,
+  readOnly = false,
 }: {
   creativeId: string;
   currentStatus: string | null;
   onUpdate: () => void;
+  readOnly?: boolean;
 }) {
   const status = PRODUCTION_STATUSES.find((s) => s.value === currentStatus) || PRODUCTION_STATUSES[0];
 
   const handleChange = async (newStatus: string) => {
+    if (readOnly) return;
     const { error } = await supabase
       .from("media_creatives")
       .update({ production_status: newStatus })
@@ -243,6 +247,10 @@ function StatusCell({
       onUpdate();
     }
   };
+
+  if (readOnly) {
+    return <Badge className={`${status.color} text-xs font-normal`}>{status.label}</Badge>;
+  }
 
   return (
     <Select value={currentStatus || "solicitado"} onValueChange={handleChange}>
