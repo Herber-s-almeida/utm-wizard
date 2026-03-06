@@ -330,11 +330,13 @@ function ChangeLogsCell({
   logs,
   userId,
   onUpdate,
+  readOnly = false,
 }: {
   creativeId: string;
   logs: ChangeLog[];
   userId: string;
   onUpdate: () => void;
+  readOnly?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [addingNew, setAddingNew] = useState(false);
@@ -375,22 +377,24 @@ function ChangeLogsCell({
       <Collapsible open={expanded} onOpenChange={setExpanded}>
         <div className="flex items-center gap-1">
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1">
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1">
               {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               {logs.length} alteração(ões)
             </Button>
           </CollapsibleTrigger>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0"
-            onClick={() => {
-              setExpanded(true);
-              setAddingNew(true);
-            }}
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
+          {!readOnly && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={() => {
+                setExpanded(true);
+                setAddingNew(true);
+              }}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          )}
         </div>
         <CollapsibleContent className="mt-2 space-y-2">
           {addingNew && (
