@@ -234,6 +234,7 @@ export function KanbanBoard({ creatives, onUpdate, userId, readOnly = false }: K
                 hasWarning={isInWrongColumn(creative, "fazer")}
                 onUpdate={onUpdate}
                 userId={userId}
+                readOnly={readOnly}
               />
             ))}
           </KanbanColumn>
@@ -250,6 +251,7 @@ export function KanbanBoard({ creatives, onUpdate, userId, readOnly = false }: K
                 hasWarning={isInWrongColumn(creative, "fazendo")}
                 onUpdate={onUpdate}
                 userId={userId}
+                readOnly={readOnly}
               />
             ))}
           </KanbanColumn>
@@ -266,6 +268,7 @@ export function KanbanBoard({ creatives, onUpdate, userId, readOnly = false }: K
                 hasWarning={isInWrongColumn(creative, "feito")}
                 onUpdate={onUpdate}
                 userId={userId}
+                readOnly={readOnly}
               />
             ))}
           </KanbanColumn>
