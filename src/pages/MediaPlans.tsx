@@ -58,7 +58,8 @@ import {
 
 export default function MediaPlans() {
   const { user } = useAuth();
-  const { currentEnvironmentId } = useEnvironment();
+  const { currentEnvironmentId, canEdit } = useEnvironment();
+  const canEditPlans = canEdit('media_plans');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -203,12 +204,14 @@ export default function MediaPlans() {
               {plans.length} {plans.length === 1 ? 'plano' : 'planos'} criados
             </p>
           </div>
-          <Link to="/media-plans/new">
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Novo Plano
-            </Button>
-          </Link>
+          {canEditPlans && (
+            <Link to="/media-plans/new">
+              <Button className="gap-2">
+                <Plus className="w-4 h-4" />
+                Novo Plano
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Search and Filter */}
@@ -290,7 +293,7 @@ export default function MediaPlans() {
                     ? 'Tente uma busca diferente'
                     : 'Comece criando seu primeiro plano de mídia'}
                 </p>
-                {!searchQuery && (
+                {!searchQuery && canEditPlans && (
                   <Link to="/media-plans/new">
                     <Button className="gap-2">
                       <Plus className="w-4 h-4" />
@@ -321,48 +324,51 @@ export default function MediaPlans() {
                           status={plan.status}
                           onStatusChange={(newStatus) => handleStatusChange(plan.id, newStatus)}
                           size="sm"
+                          disabled={!canEditPlans}
                         />
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => navigate(`/media-plans/${plan.slug || plan.id}/edit`)}
-                            >
-                              <Settings2 className="w-4 h-4 mr-2" />
-                              Editar Plano
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => navigate(`/media-plans/${plan.slug || plan.id}?openWizard=true`)}
-                            >
-                              <List className="w-4 h-4 mr-2" />
-                              Criar Linhas
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setPlanToDuplicate(plan);
-                                setDuplicateDialogOpen(true);
-                              }}
-                            >
-                              <Copy className="w-4 h-4 mr-2" />
-                              Duplicar Plano
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => {
-                                setPlanToDelete(plan);
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {canEditPlans && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => navigate(`/media-plans/${plan.slug || plan.id}/edit`)}
+                              >
+                                <Settings2 className="w-4 h-4 mr-2" />
+                                Editar Plano
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => navigate(`/media-plans/${plan.slug || plan.id}?openWizard=true`)}
+                              >
+                                <List className="w-4 h-4 mr-2" />
+                                Criar Linhas
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setPlanToDuplicate(plan);
+                                  setDuplicateDialogOpen(true);
+                                }}
+                              >
+                                <Copy className="w-4 h-4 mr-2" />
+                                Duplicar Plano
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => {
+                                  setPlanToDelete(plan);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     </div>
 

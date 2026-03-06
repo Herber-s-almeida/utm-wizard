@@ -1,5 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -224,14 +225,17 @@ function StatusCell({
   creativeId,
   currentStatus,
   onUpdate,
+  readOnly = false,
 }: {
   creativeId: string;
   currentStatus: string | null;
   onUpdate: () => void;
+  readOnly?: boolean;
 }) {
   const status = PRODUCTION_STATUSES.find((s) => s.value === currentStatus) || PRODUCTION_STATUSES[0];
 
   const handleChange = async (newStatus: string) => {
+    if (readOnly) return;
     const { error } = await supabase
       .from("media_creatives")
       .update({ production_status: newStatus })
@@ -243,6 +247,10 @@ function StatusCell({
       onUpdate();
     }
   };
+
+  if (readOnly) {
+    return <Badge className={`${status.color} text-xs font-normal`}>{status.label}</Badge>;
+  }
 
   return (
     <Select value={currentStatus || "solicitado"} onValueChange={handleChange}>
@@ -322,11 +330,13 @@ function ChangeLogsCell({
   logs,
   userId,
   onUpdate,
+  readOnly = false,
 }: {
   creativeId: string;
   logs: ChangeLog[];
   userId: string;
   onUpdate: () => void;
+  readOnly?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [addingNew, setAddingNew] = useState(false);
@@ -367,22 +377,24 @@ function ChangeLogsCell({
       <Collapsible open={expanded} onOpenChange={setExpanded}>
         <div className="flex items-center gap-1">
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1">
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1">
               {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
               {logs.length} alteração(ões)
             </Button>
           </CollapsibleTrigger>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0"
-            onClick={() => {
-              setExpanded(true);
-              setAddingNew(true);
-            }}
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
+          {!readOnly && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={() => {
+                setExpanded(true);
+                setAddingNew(true);
+              }}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          )}
         </div>
         <CollapsibleContent className="mt-2 space-y-2">
           {addingNew && (
@@ -441,11 +453,13 @@ function ApprovalCell({
   approvedDate,
   currentStatus,
   onUpdate,
+  readOnly = false,
 }: {
   creativeId: string;
   approvedDate: string | null;
   currentStatus: string | null;
   onUpdate: () => void;
+  readOnly?: boolean;
 }) {
   const isApproved = currentStatus === "aprovado" || !!approvedDate;
 
@@ -490,17 +504,23 @@ function ApprovalCell({
           <Check className="h-3 w-3" />
           {format(new Date(approvedDate), "dd/MM/yy", { locale: ptBR })}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
-          onClick={handleUnapprove}
-          title="Desaprovar"
-        >
-          <X className="h-3 w-3" />
-        </Button>
+        {!readOnly && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+            onClick={handleUnapprove}
+            title="Desaprovar"
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        )}
       </div>
     );
+  }
+
+  if (readOnly) {
+    return <span className="text-xs text-muted-foreground">—</span>;
   }
 
   return (
@@ -515,10 +535,12 @@ function PieceLinkCell({
   creativeId,
   link,
   onUpdate,
+  readOnly = false,
 }: {
   creativeId: string;
   link: string | null;
   onUpdate: () => void;
+  readOnly?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(link || "");
@@ -536,6 +558,18 @@ function PieceLinkCell({
       onUpdate();
     }
   };
+
+  if (readOnly) {
+    if (link) {
+      return (
+        <a href={link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1 max-w-[120px] truncate">
+          <LinkIcon className="h-3 w-3 flex-shrink-0" />
+          <span className="truncate">{link}</span>
+        </a>
+      );
+    }
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
 
   if (editing) {
     return (
@@ -591,6 +625,8 @@ function PieceLinkCell({
 export default function MediaResourcesPage() {
   const { id: identifier } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const { canEdit: canEditSection } = useEnvironment();
+  const readOnly = !canEditSection('media_resources');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
@@ -812,10 +848,12 @@ export default function MediaResourcesPage() {
             <h1 className="text-2xl font-bold">Recursos de Mídia</h1>
             {mediaPlan && <p className="text-muted-foreground text-sm">Plano: {mediaPlan.name}</p>}
           </div>
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => setNotificationDialogOpen(true)}>
-            <Users className="h-3.5 w-3.5" />
-            Notificar Seguidores
-          </Button>
+          {!readOnly && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => setNotificationDialogOpen(true)}>
+              <Users className="h-3.5 w-3.5" />
+              Notificar Seguidores
+            </Button>
+          )}
           <Link
             to={
               mediaPlan?.slug
@@ -900,6 +938,7 @@ export default function MediaResourcesPage() {
                             creativeId={creative.id}
                             currentStatus={creative.production_status}
                             onUpdate={refetch}
+                            readOnly={readOnly}
                           />
                         </TableCell>
                         <TableCell>
@@ -917,6 +956,7 @@ export default function MediaResourcesPage() {
                             creativeId={creative.id}
                             field="received_date"
                             onUpdate={refetch}
+                            readOnly={readOnly}
                           />
                         </TableCell>
                         <TableCell>
@@ -925,6 +965,7 @@ export default function MediaResourcesPage() {
                             logs={creative.change_logs || []}
                             userId={user?.id || ""}
                             onUpdate={refetch}
+                            readOnly={readOnly}
                           />
                         </TableCell>
                         <TableCell>
@@ -933,10 +974,11 @@ export default function MediaResourcesPage() {
                             approvedDate={creative.approved_date}
                             currentStatus={creative.production_status}
                             onUpdate={refetch}
+                            readOnly={readOnly}
                           />
                         </TableCell>
                         <TableCell>
-                          <PieceLinkCell creativeId={creative.id} link={creative.piece_link} onUpdate={refetch} />
+                          <PieceLinkCell creativeId={creative.id} link={creative.piece_link} onUpdate={refetch} readOnly={readOnly} />
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-xs">
                           {creative.media_line?.subdivision?.name || "—"}

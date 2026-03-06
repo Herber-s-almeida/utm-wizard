@@ -25,7 +25,8 @@ import { DuplicatePlanDialog } from '@/components/media-plan/DuplicatePlanDialog
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { currentEnvironmentId } = useEnvironment();
+  const { currentEnvironmentId, canEdit } = useEnvironment();
+  const canEditPlans = canEdit('media_plans');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [plans, setPlans] = useState<MediaPlan[]>([]);
@@ -133,12 +134,14 @@ export default function Dashboard() {
               Gerencie seus planos de mídia e acompanhe métricas
             </p>
           </div>
-          <Link to="/media-plans/new">
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Novo Plano
-            </Button>
-          </Link>
+          {canEditPlans && (
+            <Link to="/media-plans/new">
+              <Button className="gap-2">
+                <Plus className="w-4 h-4" />
+                Novo Plano
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Stats Grid */}

@@ -7,6 +7,7 @@ import { Plus, Pencil, Archive, ArrowLeft, ChevronDown, ChevronRight, Lock } fro
 import { Badge } from '@/components/ui/badge';
 import { useSubdivisions } from '@/hooks/useConfigData';
 import { SubdivisionDialog } from '@/components/config/SubdivisionDialog';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { ArchivedSection } from '@/components/config/ArchivedSection';
 import {
   AlertDialog,
@@ -22,6 +23,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 
 export default function SubdivisionsPage() {
   const { data: subdivisions, activeItems, archivedItems, create, update, softDelete, restore, permanentDelete } = useSubdivisions();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditLib = canEditSection('library');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [archiveId, setArchiveId] = useState<string | null>(null);
@@ -79,12 +82,14 @@ export default function SubdivisionsPage() {
           </div>
         </div>
 
-        <div className="flex justify-end mb-4">
-          <Button onClick={() => { setEditingItem(null); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Criar nova subdivisão de plano
-          </Button>
-        </div>
+        {canEditLib && (
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => { setEditingItem(null); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Criar nova subdivisão de plano
+            </Button>
+          </div>
+        )}
 
         <div className="space-y-3">
           {parentSubdivisions.length === 0 ? (
@@ -122,7 +127,7 @@ export default function SubdivisionsPage() {
                             <p className="text-sm text-muted-foreground">{(sub as any).description}</p>
                           )}
                         </div>
-                        {!(sub as any).is_system && (
+                        {!(sub as any).is_system && canEditLib && (
                           <div className="flex items-center gap-1">
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(sub)}>
                               <Pencil className="h-4 w-4" />
@@ -146,11 +151,13 @@ export default function SubdivisionsPage() {
                                     <p className="text-xs text-muted-foreground">{(child as any).description}</p>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-orange-600" onClick={() => setArchiveId(child.id)}>
-                                    <Archive className="h-3 w-3" />
-                                  </Button>
-                                </div>
+                                {canEditLib && (
+                                  <div className="flex items-center gap-1">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-orange-600" onClick={() => setArchiveId(child.id)}>
+                                      <Archive className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>

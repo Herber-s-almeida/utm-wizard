@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useClients, Client } from '@/hooks/useClients';
 import { ClientDialog } from '@/components/config/ClientDialog';
 import { Badge } from '@/components/ui/badge';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +21,8 @@ import {
 
 export default function ClientsPage() {
   const { activeItems: clients, create, update, remove } = useClients();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditLib = canEditSection('library');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Client | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -51,12 +54,14 @@ export default function ClientsPage() {
           </div>
         </div>
 
-        <div className="flex justify-end mb-4">
-          <Button onClick={() => { setEditingItem(null); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Criar novo cliente
-          </Button>
-        </div>
+        {canEditLib && (
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => { setEditingItem(null); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Criar novo cliente
+            </Button>
+          </div>
+        )}
 
         <div className="grid gap-3">
           {clients?.length === 0 ? (
@@ -91,14 +96,16 @@ export default function ClientsPage() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => { setEditingItem(client); setDialogOpen(true); }}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeleteId(client.id)} className="text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {canEditLib && (
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => { setEditingItem(client); setDialogOpen(true); }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(client.id)} className="text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
               </Card>
