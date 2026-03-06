@@ -504,17 +504,23 @@ function ApprovalCell({
           <Check className="h-3 w-3" />
           {format(new Date(approvedDate), "dd/MM/yy", { locale: ptBR })}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
-          onClick={handleUnapprove}
-          title="Desaprovar"
-        >
-          <X className="h-3 w-3" />
-        </Button>
+        {!readOnly && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+            onClick={handleUnapprove}
+            title="Desaprovar"
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        )}
       </div>
     );
+  }
+
+  if (readOnly) {
+    return <span className="text-xs text-muted-foreground">—</span>;
   }
 
   return (
@@ -529,10 +535,12 @@ function PieceLinkCell({
   creativeId,
   link,
   onUpdate,
+  readOnly = false,
 }: {
   creativeId: string;
   link: string | null;
   onUpdate: () => void;
+  readOnly?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(link || "");
