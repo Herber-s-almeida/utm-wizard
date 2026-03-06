@@ -125,8 +125,9 @@ interface KanbanCardProps {
   columnId: ColumnId;
   hasWarning: boolean;
   onUpdate: () => void;
-  userId: string; // ✅ NOVO: necessário para inserir logs
+  userId: string;
   isDragging?: boolean;
+  readOnly?: boolean;
 }
 
 function buildSpecsSummary(formatDetails?: FormatCreativeType[]) {
@@ -173,7 +174,7 @@ function buildSpecsSummary(formatDetails?: FormatCreativeType[]) {
   };
 }
 
-export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, isDragging }: KanbanCardProps) {
+export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, isDragging, readOnly }: KanbanCardProps) {
   const {
     attributes,
     listeners,
