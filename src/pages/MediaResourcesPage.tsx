@@ -559,6 +559,18 @@ function PieceLinkCell({
     }
   };
 
+  if (readOnly) {
+    if (link) {
+      return (
+        <a href={link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1 max-w-[120px] truncate">
+          <LinkIcon className="h-3 w-3 flex-shrink-0" />
+          <span className="truncate">{link}</span>
+        </a>
+      );
+    }
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+
   if (editing) {
     return (
       <div className="flex items-center gap-1">
