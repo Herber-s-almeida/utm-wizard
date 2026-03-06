@@ -17,6 +17,7 @@ interface TaxonomyTableProps {
   defaultUrl?: string | null;
   userId: string;
   onUpdate: () => void;
+  readOnly?: boolean;
 }
 
 // Helper to build utm_content from format, message_slug and creative_id
@@ -33,7 +34,7 @@ function buildUtmContent(
   return parts.join('-');
 }
 
-export function TaxonomyTable({ data, planName, defaultUrl, userId, onUpdate }: TaxonomyTableProps) {
+export function TaxonomyTable({ data, planName, defaultUrl, userId, onUpdate, readOnly }: TaxonomyTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [editingUrl, setEditingUrl] = useState<string | null>(null);
   const [editingTerm, setEditingTerm] = useState<string | null>(null);

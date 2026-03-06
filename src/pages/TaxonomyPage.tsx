@@ -14,11 +14,14 @@ import { toast } from 'sonner';
 import { usePlanBySlug, getPlanUrl } from '@/hooks/usePlanBySlug';
 import { useEffect, useMemo } from 'react';
 import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER } from '@/types/hierarchy';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 export default function TaxonomyPage() {
   const { id: identifier } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditTax = canEditSection('taxonomy');
 
   // Fetch plan by slug or ID
   const { data: plan, isLoading: planLoading } = usePlanBySlug(identifier);
@@ -139,6 +142,7 @@ export default function TaxonomyPage() {
             defaultUrl={plan.default_url}
             userId={user?.id || ''}
             onUpdate={refetch}
+            readOnly={!canEditTax}
           />
         ) : (
           <Card>
