@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, ArrowLeft, Lock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useFunnelStages } from '@/hooks/useConfigData';
 import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +21,8 @@ import {
 
 export default function FunnelStagesPage() {
   const { activeItems: stages, data: allStages, create, update, remove } = useFunnelStages();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditLib = canEditSection('library');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -51,12 +54,14 @@ export default function FunnelStagesPage() {
           </div>
         </div>
 
-        <div className="flex justify-end mb-4">
-          <Button onClick={() => { setEditingItem(null); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Criar nova fase de funil
-          </Button>
-        </div>
+        {canEditLib && (
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => { setEditingItem(null); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Criar nova fase de funil
+            </Button>
+          </div>
+        )}
 
         <div className="grid gap-3">
           {stages?.length === 0 ? (
@@ -84,7 +89,7 @@ export default function FunnelStagesPage() {
                           <p className="text-sm text-muted-foreground">{(stage as any).description}</p>
                         )}
                       </div>
-                      {!(stage as any).is_system && (
+                      {!(stage as any).is_system && canEditLib && (
                         <div className="flex items-center gap-1">
                           <Button variant="ghost" size="icon" onClick={() => { setEditingItem(stage); setDialogOpen(true); }}>
                             <Pencil className="h-4 w-4" />

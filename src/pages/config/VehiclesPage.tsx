@@ -8,6 +8,7 @@ import { useVehicles, useChannels, useMediums, Medium } from '@/hooks/useConfigD
 import { VehicleDialog } from '@/components/config/VehicleDialog';
 import { ChannelDialog } from '@/components/config/ChannelDialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +38,8 @@ export default function VehiclesPage() {
   } = useChannels();
 
   const { activeItems: activeMediums, data: allMediums, create: createMedium } = useMediums();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditLib = canEditSection('library');
   
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [channelDialogOpen, setChannelDialogOpen] = useState(false);
@@ -127,12 +130,14 @@ export default function VehiclesPage() {
           </div>
         </div>
 
-        <div className="flex justify-end mb-4">
-          <Button onClick={() => { setEditingVehicle(null); setVehicleDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Criar novo veículo
-          </Button>
-        </div>
+        {canEditLib && (
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => { setEditingVehicle(null); setVehicleDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Criar novo veículo
+            </Button>
+          </div>
+        )}
 
         <div className="space-y-3">
           {activeVehicles?.length === 0 ? (
@@ -168,14 +173,16 @@ export default function VehiclesPage() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => { setEditingVehicle(vehicle); setVehicleDialogOpen(true); }}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setDeleteId({ type: 'vehicle', id: vehicle.id })} className="text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        {canEditLib && (
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => { setEditingVehicle(vehicle); setVehicleDialogOpen(true); }}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => setDeleteId({ type: 'vehicle', id: vehicle.id })} className="text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </CardHeader>
                     <CollapsibleContent>
@@ -189,25 +196,29 @@ export default function VehiclesPage() {
                                   <p className="text-xs text-muted-foreground">{(channel as any).description}</p>
                                 )}
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingChannel(channel); setChannelDialogOpen(true); }}>
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteId({ type: 'channel', id: channel.id })}>
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
+                              {canEditLib && (
+                                <div className="flex items-center gap-1">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingChannel(channel); setChannelDialogOpen(true); }}>
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteId({ type: 'channel', id: channel.id })}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           ))}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full mt-2"
-                            onClick={() => { setSelectedVehicleId(vehicle.id); setEditingChannel(null); setChannelDialogOpen(true); }}
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Criar novo canal no veículo
-                          </Button>
+                          {canEditLib && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full mt-2"
+                              onClick={() => { setSelectedVehicleId(vehicle.id); setEditingChannel(null); setChannelDialogOpen(true); }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Criar novo canal no veículo
+                            </Button>
+                          )}
                         </div>
                       </CardContent>
                     </CollapsibleContent>

@@ -125,8 +125,9 @@ interface KanbanCardProps {
   columnId: ColumnId;
   hasWarning: boolean;
   onUpdate: () => void;
-  userId: string; // ✅ NOVO: necessário para inserir logs
+  userId: string;
   isDragging?: boolean;
+  readOnly?: boolean;
 }
 
 function buildSpecsSummary(formatDetails?: FormatCreativeType[]) {
@@ -173,7 +174,7 @@ function buildSpecsSummary(formatDetails?: FormatCreativeType[]) {
   };
 }
 
-export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, isDragging }: KanbanCardProps) {
+export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, isDragging, readOnly }: KanbanCardProps) {
   const {
     attributes,
     listeners,
@@ -429,23 +430,25 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, i
                 {logs.length} alteração(ões)
               </Button>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0"
-                title="Adicionar alteração"
-                onClick={() => {
-                  setLogsExpanded(true);
-                  setAddingLog(true);
-                }}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
+              {!readOnly && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  title="Adicionar alteração"
+                  onClick={() => {
+                    setLogsExpanded(true);
+                    setAddingLog(true);
+                  }}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              )}
             </div>
 
             {logsExpanded && (
               <div className="mt-2 space-y-2">
-                {addingLog && (
+                {addingLog && !readOnly && (
                   <div className="flex items-center gap-1 p-2 bg-muted/50 rounded">
                     <Input
                       value={newLogNotes}
@@ -519,7 +522,7 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, i
 
           {/* Link da peça (editável) */}
           <div onClick={(e) => e.stopPropagation()}>
-            {editingLink ? (
+            {!readOnly && editingLink ? (
               <div className="flex items-center gap-1">
                 <Input
                   value={linkValue}
@@ -546,17 +549,19 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, i
                   <span className="truncate">{creative.piece_link}</span>
                   <ExternalLink className="h-3 w-3 flex-shrink-0" />
                 </a>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                  onClick={() => setEditingLink(true)}
-                  title="Editar link"
-                >
-                  <ChevronRight className="h-3 w-3" />
-                </Button>
+                {!readOnly && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => setEditingLink(true)}
+                    title="Editar link"
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
-            ) : (
+            ) : !readOnly ? (
               <Button
                 variant="ghost"
                 size="sm"
@@ -566,25 +571,29 @@ export function KanbanCard({ creative, columnId, hasWarning, onUpdate, userId, i
                 <Plus className="h-3 w-3" />
                 Adicionar link da peça
               </Button>
-            )}
+            ) : null}
           </div>
 
           {/* Status Selector */}
           <div className="pt-1 border-t">
-            <Select value={creative.production_status || "solicitado"} onValueChange={handleStatusChange}>
-              <SelectTrigger className="h-7 text-xs">
-                <SelectValue>
-                  <Badge className={cn(status.color, "text-xs font-normal")}>{status.label}</Badge>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {PRODUCTION_STATUSES.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    <Badge className={cn(s.color, "text-xs font-normal")}>{s.label}</Badge>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {readOnly ? (
+              <Badge className={cn(status.color, "text-xs font-normal")}>{status.label}</Badge>
+            ) : (
+              <Select value={creative.production_status || "solicitado"} onValueChange={handleStatusChange}>
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue>
+                    <Badge className={cn(status.color, "text-xs font-normal")}>{status.label}</Badge>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {PRODUCTION_STATUSES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      <Badge className={cn(s.color, "text-xs font-normal")}>{s.label}</Badge>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -17,6 +17,7 @@ interface TaxonomyTableProps {
   defaultUrl?: string | null;
   userId: string;
   onUpdate: () => void;
+  readOnly?: boolean;
 }
 
 // Helper to build utm_content from format, message_slug and creative_id
@@ -33,7 +34,7 @@ function buildUtmContent(
   return parts.join('-');
 }
 
-export function TaxonomyTable({ data, planName, defaultUrl, userId, onUpdate }: TaxonomyTableProps) {
+export function TaxonomyTable({ data, planName, defaultUrl, userId, onUpdate, readOnly }: TaxonomyTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [editingUrl, setEditingUrl] = useState<string | null>(null);
   const [editingTerm, setEditingTerm] = useState<string | null>(null);
@@ -364,7 +365,7 @@ export function TaxonomyTable({ data, planName, defaultUrl, userId, onUpdate }: 
                       </div>
                     </TableCell>
                     <TableCell>
-                      {editingTerm === line.id ? (
+                      {!readOnly && editingTerm === line.id ? (
                         <div className="flex items-center gap-1">
                           <Input
                             value={termValue}
@@ -379,6 +380,8 @@ export function TaxonomyTable({ data, planName, defaultUrl, userId, onUpdate }: 
                             <X className="h-3 w-3" />
                           </Button>
                         </div>
+                      ) : readOnly ? (
+                        <code className="text-xs">{line.utm_term || '—'}</code>
                       ) : (
                         <Button
                           variant="ghost"
@@ -407,7 +410,7 @@ export function TaxonomyTable({ data, planName, defaultUrl, userId, onUpdate }: 
                       )}
                     </TableCell>
                     <TableCell>
-                      {editingUrl === line.id ? (
+                      {!readOnly && editingUrl === line.id ? (
                         <div className="flex items-center gap-1">
                           <Input
                             value={urlValue}
@@ -424,24 +427,30 @@ export function TaxonomyTable({ data, planName, defaultUrl, userId, onUpdate }: 
                         </div>
                       ) : (
                         <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`h-6 text-xs px-2 truncate max-w-[140px] ${isDefaultUrl ? 'italic text-muted-foreground' : ''}`}
-                            onClick={() => {
-                              setEditingUrl(line.id);
-                              setUrlValue(line.destination_url || '');
-                            }}
-                          >
-                            {displayUrl ? (
-                              <span className="truncate flex items-center gap-1">
-                                {displayUrl}
-                                {isDefaultUrl && <span className="text-xs">(padrão)</span>}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">+ URL</span>
-                            )}
-                          </Button>
+                          {readOnly ? (
+                            <span className={`text-xs truncate max-w-[140px] ${isDefaultUrl ? 'italic text-muted-foreground' : ''}`}>
+                              {displayUrl || '—'}
+                            </span>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`h-6 text-xs px-2 truncate max-w-[140px] ${isDefaultUrl ? 'italic text-muted-foreground' : ''}`}
+                              onClick={() => {
+                                setEditingUrl(line.id);
+                                setUrlValue(line.destination_url || '');
+                              }}
+                            >
+                              {displayUrl ? (
+                                <span className="truncate flex items-center gap-1">
+                                  {displayUrl}
+                                  {isDefaultUrl && <span className="text-xs">(padrão)</span>}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">+ URL</span>
+                              )}
+                            </Button>
+                          )}
                           {displayUrl && (
                             <a href={displayUrl} target="_blank" rel="noopener noreferrer">
                               <Button variant="ghost" size="icon" className="h-5 w-5">
@@ -465,25 +474,29 @@ export function TaxonomyTable({ data, planName, defaultUrl, userId, onUpdate }: 
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {line.utm_validated ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 text-xs text-destructive"
-                            onClick={() => handleInvalidate(line.id)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 text-xs"
-                            onClick={() => handleValidate(line.id)}
-                            title="Validar UTM"
-                          >
-                            <Check className="h-3 w-3" />
-                          </Button>
+                        {!readOnly && (
+                          <>
+                            {line.utm_validated ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-xs text-destructive"
+                                onClick={() => handleInvalidate(line.id)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 text-xs"
+                                onClick={() => handleValidate(line.id)}
+                                title="Validar UTM"
+                              >
+                                <Check className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </>
                         )}
                         <Button
                           variant="ghost"

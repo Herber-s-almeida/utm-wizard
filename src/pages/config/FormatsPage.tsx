@@ -8,6 +8,7 @@ import { useFormatsHierarchy, useFormats, FormatWithHierarchy, FormatCreativeTyp
 import { FormatWizardDialog } from '@/components/config/FormatWizardDialog';
 import { FormatDialog } from '@/components/config/FormatDialog';
 import { SpecificationEditDialog } from '@/components/config/SpecificationEditDialog';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +25,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 export default function FormatsPage() {
   const { data: formatsHierarchy, isLoading } = useFormatsHierarchy();
   const { remove: removeFormat, update: updateFormat, duplicate: duplicateFormat, activeItems } = useFormats();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditLib = canEditSection('library');
   
   // Wizard dialog state (for new formats)
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -113,12 +116,14 @@ export default function FormatsPage() {
           </div>
         </div>
 
-        <div className="flex justify-end mb-4">
-          <Button onClick={handleNewFormat}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Formato
-          </Button>
-        </div>
+        {canEditLib && (
+          <div className="flex justify-end mb-4">
+            <Button onClick={handleNewFormat}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Formato
+            </Button>
+          </div>
+        )}
 
         {isLoading ? (
           <Card>
@@ -152,6 +157,7 @@ export default function FormatsPage() {
                 openDimSection={openDimSection}
                 onToggleDimSection={toggleDimSection}
                 onEditSpecification={handleEditSpecification}
+                canEdit={canEditLib}
               />
             ))}
           </div>
@@ -228,6 +234,7 @@ interface FormatCardProps {
   openDimSection: Record<string, boolean>;
   onToggleDimSection: (id: string) => void;
   onEditSpecification: (spec: CreativeTypeSpecification) => void;
+  canEdit: boolean;
 }
 
 function FormatCard({
@@ -246,6 +253,7 @@ function FormatCard({
   openDimSection,
   onToggleDimSection,
   onEditSpecification,
+  canEdit: canEditLib,
 }: FormatCardProps) {
   return (
     <Card>
@@ -274,37 +282,39 @@ function FormatCard({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={onDuplicate}
-                title="Duplicar formato"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-              {!format.is_system && (
-                <>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={onEdit}
-                    title="Editar nome"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={onDelete}
-                    className="text-destructive"
-                    title="Excluir formato"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
-            </div>
+            {canEditLib && (
+              <div className="flex items-center gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={onDuplicate}
+                  title="Duplicar formato"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                {!format.is_system && (
+                  <>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={onEdit}
+                      title="Editar nome"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={onDelete}
+                      className="text-destructive"
+                      title="Excluir formato"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </CardHeader>
         

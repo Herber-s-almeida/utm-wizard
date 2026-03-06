@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit2, Trash2, Grid3X3, FileText, ListChecks, Settings2, Copy, Monitor, Radio, Tv, MapPin } from 'lucide-react';
 import { DetailTypeDialog } from '@/components/config/DetailTypeDialog';
 import { detailTypeSchemas, DetailCategory } from '@/utils/detailSchemas';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +43,8 @@ function isPredefined(type: LineDetailType): boolean {
 
 export default function DetailTypesPage() {
   const { types, isLoading, create, update, delete: deleteType } = useLineDetailTypes();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditLib = canEditSection('library');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState<LineDetailType | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -221,14 +224,18 @@ export default function DetailTypesPage() {
             <Edit2 className="h-3.5 w-3.5 mr-1" />
             Editar
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => handleDuplicate(type)} className="flex-1">
-            <Copy className="h-3.5 w-3.5 mr-1" />
-            Duplicar
-          </Button>
-          {!type.is_system && (
-            <Button variant="ghost" size="sm" onClick={() => handleDelete(type)} className="text-destructive hover:text-destructive">
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+          {canEditLib && (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => handleDuplicate(type)} className="flex-1">
+                <Copy className="h-3.5 w-3.5 mr-1" />
+                Duplicar
+              </Button>
+              {!type.is_system && (
+                <Button variant="ghost" size="sm" onClick={() => handleDelete(type)} className="text-destructive hover:text-destructive">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </>
           )}
         </div>
       </CardContent>
@@ -245,10 +252,12 @@ export default function DetailTypesPage() {
               Configure os tipos de detalhamento disponíveis para as linhas de mídia
             </p>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Tipo Personalizado
-          </Button>
+          {canEditLib && (
+            <Button onClick={handleCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Tipo Personalizado
+            </Button>
+          )}
         </div>
 
         {/* Explanatory Card */}
@@ -298,10 +307,12 @@ export default function DetailTypesPage() {
                     <p className="text-muted-foreground text-center mb-4">
                       Crie um tipo personalizado para meios que não sejam OOH, Rádio ou TV
                     </p>
-                    <Button onClick={handleCreate}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Criar Tipo
-                    </Button>
+                    {canEditLib && (
+                      <Button onClick={handleCreate}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Criar Tipo
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ) : (

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, memo } from 'react';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,8 @@ export default function LineDetailPage() {
   const { id: planSlug, lineId: mediaLineId } = useParams<{ id: string; lineId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditPlans = canEditSection('media_plans');
 
   // Fetch plan info from slug
   const { data: plan } = useQuery({
@@ -480,7 +483,7 @@ export default function LineDetailPage() {
                   Adicione um detalhamento para destrinchar esta linha de mídia
                 </p>
               </div>
-              <Button onClick={() => setShowNewDetailForm(true)}>
+              <Button onClick={() => setShowNewDetailForm(true)} disabled={!canEditPlans}>
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Detalhamento
               </Button>
@@ -516,13 +519,15 @@ export default function LineDetailPage() {
                       </TabsTrigger>
                     );
                   })}
-                  <TabsTrigger
-                    value="new"
-                    className="data-[state=active]:bg-muted gap-1 px-3 py-1.5"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Novo
-                  </TabsTrigger>
+                  {canEditPlans && (
+                    <TabsTrigger
+                      value="new"
+                      className="data-[state=active]:bg-muted gap-1 px-3 py-1.5"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Novo
+                    </TabsTrigger>
+                  )}
                 </TabsList>
               </div>
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Pencil, Trash2, TrendingUp } from 'lucide-react';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,8 @@ const UNIT_OPTIONS = [
 
 export default function KpisPage() {
   const { customKpis, isLoading, createKpi, updateKpi, deleteKpi, canCreateMore, maxKpis } = useCustomKpis();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditLib = canEditSection('library');
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingKpi, setEditingKpi] = useState<CustomKpi | null>(null);
@@ -134,10 +137,12 @@ export default function KpisPage() {
               Crie e gerencie seus KPIs customizados. {customKpis.length} de {maxKpis} criados.
             </p>
           </div>
-          <Button onClick={openCreateDialog} disabled={!canCreateMore} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Novo KPI
-          </Button>
+          {canEditLib && (
+            <Button onClick={openCreateDialog} disabled={!canCreateMore} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Novo KPI
+            </Button>
+          )}
         </div>
 
         <Card>
@@ -157,10 +162,12 @@ export default function KpisPage() {
               <div className="text-center py-8 text-muted-foreground">
                 <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-30" />
                 <p>Nenhum KPI personalizado criado ainda.</p>
-                <Button onClick={openCreateDialog} variant="outline" className="mt-4 gap-2">
-                  <Plus className="h-4 w-4" />
-                  Criar primeiro KPI
-                </Button>
+                {canEditLib && (
+                  <Button onClick={openCreateDialog} variant="outline" className="mt-4 gap-2">
+                    <Plus className="h-4 w-4" />
+                    Criar primeiro KPI
+                  </Button>
+                )}
               </div>
             ) : (
               <Table>
@@ -183,24 +190,26 @@ export default function KpisPage() {
                         {kpi.description || '—'}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => openEditDialog(kpi)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => setDeleteConfirmKpi(kpi)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        {canEditLib && (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => openEditDialog(kpi)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => setDeleteConfirmKpi(kpi)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
