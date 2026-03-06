@@ -938,6 +938,7 @@ export default function MediaResourcesPage() {
                             creativeId={creative.id}
                             currentStatus={creative.production_status}
                             onUpdate={refetch}
+                            readOnly={readOnly}
                           />
                         </TableCell>
                         <TableCell>
@@ -955,6 +956,7 @@ export default function MediaResourcesPage() {
                             creativeId={creative.id}
                             field="received_date"
                             onUpdate={refetch}
+                            readOnly={readOnly}
                           />
                         </TableCell>
                         <TableCell>
@@ -963,6 +965,7 @@ export default function MediaResourcesPage() {
                             logs={creative.change_logs || []}
                             userId={user?.id || ""}
                             onUpdate={refetch}
+                            readOnly={readOnly}
                           />
                         </TableCell>
                         <TableCell>
@@ -971,10 +974,11 @@ export default function MediaResourcesPage() {
                             approvedDate={creative.approved_date}
                             currentStatus={creative.production_status}
                             onUpdate={refetch}
+                            readOnly={readOnly}
                           />
                         </TableCell>
                         <TableCell>
-                          <PieceLinkCell creativeId={creative.id} link={creative.piece_link} onUpdate={refetch} />
+                          <PieceLinkCell creativeId={creative.id} link={creative.piece_link} onUpdate={refetch} readOnly={readOnly} />
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-xs">
                           {creative.media_line?.subdivision?.name || "—"}
