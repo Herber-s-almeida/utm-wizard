@@ -848,10 +848,12 @@ export default function MediaResourcesPage() {
             <h1 className="text-2xl font-bold">Recursos de Mídia</h1>
             {mediaPlan && <p className="text-muted-foreground text-sm">Plano: {mediaPlan.name}</p>}
           </div>
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => setNotificationDialogOpen(true)}>
-            <Users className="h-3.5 w-3.5" />
-            Notificar Seguidores
-          </Button>
+          {!readOnly && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => setNotificationDialogOpen(true)}>
+              <Users className="h-3.5 w-3.5" />
+              Notificar Seguidores
+            </Button>
+          )}
           <Link
             to={
               mediaPlan?.slug
