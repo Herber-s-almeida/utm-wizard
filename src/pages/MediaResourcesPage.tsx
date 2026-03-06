@@ -625,6 +625,8 @@ function PieceLinkCell({
 export default function MediaResourcesPage() {
   const { id: identifier } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const { canEdit: canEditSection } = useEnvironment();
+  const readOnly = !canEditSection('media_resources');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
