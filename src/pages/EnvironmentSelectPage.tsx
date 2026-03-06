@@ -74,7 +74,52 @@ export default function EnvironmentSelectPage() {
     // Small delay to show selection feedback
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    navigate('/media-plan-dashboard');
+    // Determine best landing page based on user's permissions in this environment
+    const landingPage = await getSmartLandingPage(environmentId);
+    navigate(landingPage);
+  };
+
+  const getSmartLandingPage = async (environmentId: string): Promise<string> => {
+    if (!user) return '/media-plan-dashboard';
+
+    try {
+      // Check if user is system admin
+      const { data: isSysAdmin } = await supabase.rpc('is_system_admin', { _user_id: user.id });
+      if (isSysAdmin) return '/media-plan-dashboard';
+
+      // Fetch user's role in this specific environment
+      const { data: role } = await supabase
+        .from('environment_roles')
+        .select('is_environment_admin, perm_media_plans, perm_finance, perm_executive_dashboard, perm_reports, perm_media_resources, perm_taxonomy, perm_library')
+        .eq('environment_id', environmentId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!role) return '/media-plan-dashboard';
+      if (role.is_environment_admin) return '/media-plan-dashboard';
+
+      // Priority-ordered list of sections and their routes
+      const sectionRoutes: { perm: string | null; path: string }[] = [
+        { perm: role.perm_media_plans, path: '/media-plan-dashboard' },
+        { perm: role.perm_finance, path: '/finance' },
+        { perm: role.perm_executive_dashboard, path: '/executive-dashboard' },
+        { perm: role.perm_reports, path: '/reports' },
+        { perm: role.perm_media_resources, path: '/media-resources' },
+        { perm: role.perm_taxonomy, path: '/taxonomy' },
+        { perm: role.perm_library, path: '/config/clients' },
+      ];
+
+      // Find the first section with at least 'view' access
+      for (const section of sectionRoutes) {
+        if (section.perm && section.perm !== 'none') {
+          return section.path;
+        }
+      }
+
+      return '/media-plan-dashboard';
+    } catch {
+      return '/media-plan-dashboard';
+    }
   };
 
   const handleSignOut = async () => {
