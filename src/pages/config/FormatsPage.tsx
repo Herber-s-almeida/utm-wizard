@@ -157,6 +157,7 @@ export default function FormatsPage() {
                 openDimSection={openDimSection}
                 onToggleDimSection={toggleDimSection}
                 onEditSpecification={handleEditSpecification}
+                canEdit={canEditLib}
               />
             ))}
           </div>
@@ -233,6 +234,7 @@ interface FormatCardProps {
   openDimSection: Record<string, boolean>;
   onToggleDimSection: (id: string) => void;
   onEditSpecification: (spec: CreativeTypeSpecification) => void;
+  canEdit: boolean;
 }
 
 function FormatCard({
@@ -251,6 +253,7 @@ function FormatCard({
   openDimSection,
   onToggleDimSection,
   onEditSpecification,
+  canEdit: canEditLib,
 }: FormatCardProps) {
   return (
     <Card>
