@@ -34,7 +34,8 @@ import { usePlanBySlug, getPlanUrl } from '@/hooks/usePlanBySlug';
 export default function MediaPlanReports() {
   const { id: identifier } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { currentEnvironmentId } = useEnvironment();
+  const { currentEnvironmentId, canEdit: canEditSection } = useEnvironment();
+  const canEditReports = canEditSection('reports');
   const navigate = useNavigate();
 
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -216,9 +217,11 @@ export default function MediaPlanReports() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={() => { setSelectedImport(null); setImportDialogOpen(true); }} className="gap-2">
-              <Plus className="w-4 h-4" />Adicionar Fonte de Dados
-            </Button>
+            {canEditReports && (
+              <Button onClick={() => { setSelectedImport(null); setImportDialogOpen(true); }} className="gap-2">
+                <Plus className="w-4 h-4" />Adicionar Fonte de Dados
+              </Button>
+            )}
           </div>
         </div>
 
@@ -265,13 +268,17 @@ export default function MediaPlanReports() {
                           <Button variant="ghost" size="icon" onClick={() => navigate(`${getPlanUrl(plan)}/reports/source/${importConfig.id}`)} title="Ver dados completos">
                             <ExternalLink className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleReimport(importConfig)} disabled={runImport.isPending}>
-                            <RefreshCw className={`w-4 h-4 ${runImport.isPending ? 'animate-spin' : ''}`} />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleEditImport(importConfig)}><Settings className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => { setImportToDelete(importConfig); setDeleteDialogOpen(true); }}>
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
+                          {canEditReports && (
+                            <>
+                              <Button variant="ghost" size="icon" onClick={() => handleReimport(importConfig)} disabled={runImport.isPending}>
+                                <RefreshCw className={`w-4 h-4 ${runImport.isPending ? 'animate-spin' : ''}`} />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleEditImport(importConfig)}><Settings className="w-4 h-4" /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => { setImportToDelete(importConfig); setDeleteDialogOpen(true); }}>
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -303,9 +310,11 @@ export default function MediaPlanReports() {
               <BarChart3 className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="font-medium mb-2">Nenhum dado importado</h3>
               <p className="text-sm text-muted-foreground mb-4">Adicione uma fonte de dados para começar a visualizar relatórios</p>
-              <Button onClick={() => { setSelectedImport(null); setImportDialogOpen(true); }}>
-                <Plus className="w-4 h-4 mr-2" />Adicionar Fonte de Dados
-              </Button>
+              {canEditReports && (
+                <Button onClick={() => { setSelectedImport(null); setImportDialogOpen(true); }}>
+                  <Plus className="w-4 h-4 mr-2" />Adicionar Fonte de Dados
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
