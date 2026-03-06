@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Pencil, Trash2, ArrowLeft, MapPin, Copy } from 'lucide-react';
 import { useTargets } from '@/hooks/useConfigData';
 import { TargetDialog } from '@/components/config/TargetDialog';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +21,8 @@ import { Badge } from '@/components/ui/badge';
 
 export default function TargetsPage() {
   const { activeItems: targets, data: allTargets, create, update, remove } = useTargets();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditLib = canEditSection('library');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [duplicatingItem, setDuplicatingItem] = useState<any>(null);
@@ -55,12 +58,14 @@ export default function TargetsPage() {
           </div>
         </div>
 
-        <div className="flex justify-end mb-4">
-          <Button onClick={() => { setEditingItem(null); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Criar nova segmentação
-          </Button>
-        </div>
+        {canEditLib && (
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => { setEditingItem(null); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Criar nova segmentação
+            </Button>
+          </div>
+        )}
 
         <div className="grid gap-3">
           {targets?.length === 0 ? (
@@ -96,17 +101,19 @@ export default function TargetsPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button variant="ghost" size="icon" onClick={() => { setDuplicatingItem(target); setEditingItem(null); setDialogOpen(true); }} title="Duplicar">
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => { setEditingItem(target); setDuplicatingItem(null); setDialogOpen(true); }} title="Editar">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(target.id)} className="text-destructive" title="Excluir">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {canEditLib && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" onClick={() => { setDuplicatingItem(target); setEditingItem(null); setDialogOpen(true); }} title="Duplicar">
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => { setEditingItem(target); setDuplicatingItem(null); setDialogOpen(true); }} title="Editar">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteId(target.id)} className="text-destructive" title="Excluir">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
                 </Card>

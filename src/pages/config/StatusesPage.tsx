@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2, ArrowLeft, Lock } from 'lucide-react';
 import { useStatuses } from '@/hooks/useStatuses';
 import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +21,8 @@ import {
 
 export default function StatusesPage() {
   const { activeItems: statuses, data: allStatuses, create, update, remove, isSystemStatus } = useStatuses();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditLib = canEditSection('library');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -57,12 +60,14 @@ export default function StatusesPage() {
           </div>
         </div>
 
-        <div className="flex justify-end mb-4">
-          <Button onClick={() => { setEditingItem(null); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Criar novo status
-          </Button>
-        </div>
+        {canEditLib && (
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => { setEditingItem(null); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Criar novo status
+            </Button>
+          </div>
+        )}
 
         <div className="grid gap-3">
           {statuses?.length === 0 ? (
@@ -92,7 +97,7 @@ export default function StatusesPage() {
                         )}
                       </div>
                     </div>
-                    {!isSystemStatus(status) && (
+                    {!isSystemStatus(status) && canEditLib && (
                       <div className="flex items-center gap-1">
                         <Button 
                           variant="ghost" 

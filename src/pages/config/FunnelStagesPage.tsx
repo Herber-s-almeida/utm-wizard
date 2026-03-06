@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, ArrowLeft, Lock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useFunnelStages } from '@/hooks/useConfigData';
 import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +21,8 @@ import {
 
 export default function FunnelStagesPage() {
   const { activeItems: stages, data: allStages, create, update, remove } = useFunnelStages();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditLib = canEditSection('library');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);

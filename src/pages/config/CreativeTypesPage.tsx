@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Pencil, Trash2, ArrowLeft, AlertTriangle, Copy } from 'lucide-react';
 import { useCreativeTypes } from '@/hooks/useCreativeTypes';
 import { CreativeTypeSimpleDialog } from '@/components/config/CreativeTypeSimpleDialog';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +21,8 @@ import { toast } from 'sonner';
 
 export default function CreativeTypesPage() {
   const { data: creativeTypes, isLoading, create, update, remove, duplicate, checkUsage } = useCreativeTypes();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditLib = canEditSection('library');
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState<{ id: string; name: string } | null>(null);
@@ -80,12 +83,14 @@ export default function CreativeTypesPage() {
           </div>
         </div>
 
-        <div className="flex justify-end mb-4">
-          <Button onClick={() => { setEditingType(null); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Tipo de Criativo
-          </Button>
-        </div>
+        {canEditLib && (
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => { setEditingType(null); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Tipo de Criativo
+            </Button>
+          </div>
+        )}
 
         {isLoading ? (
           <Card>
@@ -106,37 +111,39 @@ export default function CreativeTypesPage() {
                 <CardContent className="py-3 px-4">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{type.name}</span>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDuplicate(type.id)}
-                        title="Duplicar"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingType({ id: type.id, name: type.name });
-                          setDialogOpen(true);
-                        }}
-                        title="Editar"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive"
-                        onClick={() => handleDeleteClick(type)}
-                        disabled={isCheckingUsage}
-                        title="Excluir"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {canEditLib && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDuplicate(type.id)}
+                          title="Duplicar"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingType({ id: type.id, name: type.name });
+                            setDialogOpen(true);
+                          }}
+                          title="Editar"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => handleDeleteClick(type)}
+                          disabled={isCheckingUsage}
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

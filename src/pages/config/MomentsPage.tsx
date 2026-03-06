@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, ArrowLeft, Lock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useMoments } from '@/hooks/useConfigData';
 import { SimpleConfigDialog } from '@/components/config/SimpleConfigDialog';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +21,8 @@ import {
 
 export default function MomentsPage() {
   const { activeItems: moments, data: allMoments, create, update, remove } = useMoments();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditLib = canEditSection('library');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -51,12 +54,14 @@ export default function MomentsPage() {
           </div>
         </div>
 
-        <div className="flex justify-end mb-4">
-          <Button onClick={() => { setEditingItem(null); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Criar novo momento de campanha
-          </Button>
-        </div>
+        {canEditLib && (
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => { setEditingItem(null); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Criar novo momento de campanha
+            </Button>
+          </div>
+        )}
 
         <div className="grid gap-3">
           {moments?.length === 0 ? (
@@ -84,7 +89,7 @@ export default function MomentsPage() {
                           <p className="text-sm text-muted-foreground">{(moment as any).description}</p>
                         )}
                       </div>
-                      {!(moment as any).is_system && (
+                      {!(moment as any).is_system && canEditLib && (
                         <div className="flex items-center gap-1">
                           <Button variant="ghost" size="icon" onClick={() => { setEditingItem(moment); setDialogOpen(true); }}>
                             <Pencil className="h-4 w-4" />
