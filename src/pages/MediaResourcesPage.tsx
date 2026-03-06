@@ -453,11 +453,13 @@ function ApprovalCell({
   approvedDate,
   currentStatus,
   onUpdate,
+  readOnly = false,
 }: {
   creativeId: string;
   approvedDate: string | null;
   currentStatus: string | null;
   onUpdate: () => void;
+  readOnly?: boolean;
 }) {
   const isApproved = currentStatus === "aprovado" || !!approvedDate;
 
