@@ -55,6 +55,8 @@ export default function LineDetailPage() {
   const { id: planSlug, lineId: mediaLineId } = useParams<{ id: string; lineId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { canEdit: canEditSection } = useEnvironment();
+  const canEditPlans = canEditSection('media_plans');
 
   // Fetch plan info from slug
   const { data: plan } = useQuery({
