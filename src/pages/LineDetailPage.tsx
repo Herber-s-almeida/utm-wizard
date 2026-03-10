@@ -687,6 +687,7 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
   onFormatCreated: () => void;
   onCreativeCreated: () => void;
   planLines: Array<{ id: string; line_code: string | null; platform: string | null; budget: number | null }>;
+  canEdit?: boolean;
   siblingItems: Array<{
     id: string;
     data: Record<string, unknown>;
