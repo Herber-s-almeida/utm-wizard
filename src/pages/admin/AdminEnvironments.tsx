@@ -219,21 +219,22 @@ export default function AdminEnvironments() {
             ) : filteredEnvironments && filteredEnvironments.length > 0 ? (
               <div className="space-y-3">
                 {filteredEnvironments.map((env) => (
-                  <EnvironmentCard
-                    key={env.id}
-                    environment={env}
-                    isExpanded={expandedEnvs.has(env.id)}
-                    onToggleExpand={() => toggleExpand(env.id)}
-                    onEdit={() => setEditEnv(env)}
-                    onDelete={() => setDeleteEnvId(env.id)}
-                    onAddMember={() => setAddMemberEnv(env)}
-                    onRemoveMember={(member) => setRemoveMember({
-                      environmentId: env.id,
-                      userId: member.user_id,
-                      name: member.full_name || member.email || "usuário",
-                    })}
-                    onToggleAdmin={(member) => handleToggleAdmin(env, member)}
-                  />
+                    <EnvironmentCard
+                      key={env.id}
+                      environment={env}
+                      isExpanded={expandedEnvs.has(env.id)}
+                      isActiveEnvironment={env.id === currentEnvironmentId}
+                      onToggleExpand={() => toggleExpand(env.id)}
+                      onEdit={() => setEditEnv(env)}
+                      onDelete={() => setDeleteEnvId(env.id)}
+                      onAddMember={() => setAddMemberEnv(env)}
+                      onRemoveMember={(member) => setRemoveMember({
+                        environmentId: env.id,
+                        userId: member.user_id,
+                        name: member.full_name || member.email || "usuário",
+                      })}
+                      onToggleAdmin={(member) => handleToggleAdmin(env, member)}
+                    />
                 ))}
               </div>
             ) : (
