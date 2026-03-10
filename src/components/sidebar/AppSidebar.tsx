@@ -1019,6 +1019,7 @@ export function AppSidebar() {
                       }}
                       onDelete={() => subdivisions.remove.mutate(sub.id)}
                       className="flex-1 min-w-0"
+                      readOnly={!canEditLibrary}
                     />
                   </div>
                   <CollapsibleContent className="pl-6">
