@@ -11,7 +11,6 @@ import { toast } from 'sonner';
 import { LayoutDashboard, Mail, Lock, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
-import { supabase } from '@/integrations/supabase/client';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
