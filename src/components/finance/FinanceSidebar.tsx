@@ -146,7 +146,7 @@ export function FinanceSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { isViewingOtherEnvironment, userEnvironments, currentEnvironmentId } = useEnvironment();
+  const { isViewingOtherEnvironment, userEnvironments, currentEnvironmentId, canView } = useEnvironment();
   const { data: currentProfile } = useCurrentProfile();
   const { isAdmin } = useSystemAdmin();
   const { logoUrl } = useEnvironmentLogo();
