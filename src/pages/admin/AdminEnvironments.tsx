@@ -71,6 +71,7 @@ export default function AdminEnvironments() {
   } | null>(null);
   const [expandedEnvs, setExpandedEnvs] = useState<Set<string>>(new Set());
 
+  const { currentEnvironmentId } = useEnvironment();
   const { data: environments, isLoading: envsLoading } = useAdminEnvironments();
   const { data: requests, isLoading: requestsLoading } = useAccessRequests();
   const deleteEnvironment = useDeleteEnvironment();
