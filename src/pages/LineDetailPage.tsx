@@ -633,6 +633,7 @@ export default function LineDetailPage() {
                     onCreativeCreated={handleCreativeCreated}
                     planLines={planLines}
                     siblingItems={siblingItems}
+                    canEdit={canEditPlans}
                   />
                 </TabsContent>
               )}
@@ -667,6 +668,7 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
   onCreativeCreated,
   planLines,
   siblingItems,
+  canEdit = false,
 }: {
   detail: LineDetail;
   getDetailCategory: (d: LineDetail) => DetailCategory | null;
@@ -685,6 +687,7 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
   onFormatCreated: () => void;
   onCreativeCreated: () => void;
   planLines: Array<{ id: string; line_code: string | null; platform: string | null; budget: number | null }>;
+  canEdit?: boolean;
   siblingItems: Array<{
     id: string;
     data: Record<string, unknown>;
@@ -781,6 +784,7 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
           </TabsTrigger>
         </TabsList>
 
+        {canEdit && (
         <Button
           variant="ghost"
           size="sm"
@@ -790,6 +794,7 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
           <Trash2 className="h-3.5 w-3.5 mr-1" />
           Excluir
         </Button>
+        )}
       </div>
 
       <TabsContent value="items" className="flex-1 flex flex-col min-h-0 m-0 p-0">

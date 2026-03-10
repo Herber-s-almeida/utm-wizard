@@ -75,7 +75,7 @@ export function AppSidebar() {
   const { isAdmin } = useSystemAdmin();
   const { isViewingOtherEnvironment, userEnvironments, currentEnvironmentId } = useEnvironment();
   const { data: currentProfile } = useCurrentProfile();
-  const { canView, isEnvironmentAdmin } = useEnvironmentPermissions();
+  const { canView, canEdit, isEnvironmentAdmin } = useEnvironmentPermissions();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -161,6 +161,10 @@ export function AppSidebar() {
   };
 
   const isActive = (path: string) => location.pathname === path;
+  
+  // Permission flags for CRUD
+  const canEditLibrary = canEdit('library');
+  const canEditPlans = canEdit('media_plans');
 
   // Get parent subdivisions (only active items)
   const parentSubdivisions = subdivisions.activeItems?.filter(s => !s.parent_id) || [];
@@ -556,6 +560,7 @@ export function AppSidebar() {
                       slug={plan.slug}
                       name={plan.name}
                       onDelete={() => softDelete.mutate(plan.id)}
+                      readOnly={!canEditPlans}
                     />
                   ))}
                   {(draftPlans.data?.length || 0) > MAX_ITEMS && (
@@ -585,6 +590,7 @@ export function AppSidebar() {
                       slug={plan.slug}
                       name={plan.name}
                       onDelete={() => softDelete.mutate(plan.id)}
+                      readOnly={!canEditPlans}
                     />
                   ))}
                   {(activePlans.data?.length || 0) > MAX_ITEMS && (
@@ -614,6 +620,7 @@ export function AppSidebar() {
                       slug={plan.slug}
                       name={plan.name}
                       onDelete={() => softDelete.mutate(plan.id)}
+                      readOnly={!canEditPlans}
                     />
                   ))}
                   {(finishedPlans.data?.length || 0) > MAX_ITEMS && (
@@ -627,6 +634,7 @@ export function AppSidebar() {
               </Collapsible>
 
               {/* Criar novo plano */}
+              {canEditPlans && (
               <Link to="/media-plans/new">
                 <Button 
                   variant="ghost" 
@@ -637,6 +645,7 @@ export function AppSidebar() {
                   Novo plano
                 </Button>
               </Link>
+              )}
             </CollapsibleContent>
           </Collapsible>
             </CollapsibleContent>
@@ -949,8 +958,10 @@ export function AppSidebar() {
                     setClientDialogOpen(true);
                   }}
                   onDelete={() => clients.remove.mutate(client.id)}
+                  readOnly={!canEditLibrary}
                 />
               ))}
+              {canEditLibrary && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -960,6 +971,7 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
+              )}
               {(clients.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/clients">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
@@ -1007,6 +1019,7 @@ export function AppSidebar() {
                       }}
                       onDelete={() => subdivisions.remove.mutate(sub.id)}
                       className="flex-1 min-w-0"
+                      readOnly={!canEditLibrary}
                     />
                   </div>
                   <CollapsibleContent className="pl-6">
@@ -1019,11 +1032,13 @@ export function AppSidebar() {
                           setSubdivisionDialogOpen(true);
                         }}
                         onDelete={() => subdivisions.remove.mutate(child.id)}
+                        readOnly={!canEditLibrary}
                       />
                     ))}
                   </CollapsibleContent>
                 </Collapsible>
               ))}
+              {canEditLibrary && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1033,6 +1048,7 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
+              )}
               {parentSubdivisions.length > MAX_ITEMS && (
                 <Link to="/config/subdivisions">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
@@ -1069,8 +1085,10 @@ export function AppSidebar() {
                     setMomentDialogOpen(true);
                   }}
                   onDelete={() => moments.remove.mutate(moment.id)}
+                  readOnly={!canEditLibrary}
                 />
               ))}
+              {canEditLibrary && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1080,6 +1098,7 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
+              )}
               {(moments.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/moments">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
@@ -1116,8 +1135,10 @@ export function AppSidebar() {
                     setFunnelStageDialogOpen(true);
                   }}
                   onDelete={() => funnelStages.remove.mutate(stage.id)}
+                  readOnly={!canEditLibrary}
                 />
               ))}
+              {canEditLibrary && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1127,6 +1148,7 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
+              )}
               {(funnelStages.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/funnel-stages">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
@@ -1163,8 +1185,10 @@ export function AppSidebar() {
                     setMediumDialogOpen(true);
                   }}
                   onDelete={() => mediums.remove.mutate(medium.id)}
+                  readOnly={!canEditLibrary}
                 />
               ))}
+              {canEditLibrary && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1174,6 +1198,7 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
+              )}
               {(mediums.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/mediums">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
@@ -1221,6 +1246,7 @@ export function AppSidebar() {
                       }}
                       onDelete={() => vehicles.remove.mutate(vehicle.id)}
                       className="flex-1 min-w-0"
+                      readOnly={!canEditLibrary}
                     />
                   </div>
                   <CollapsibleContent className="pl-6">
@@ -1234,8 +1260,10 @@ export function AppSidebar() {
                           setChannelDialogOpen(true);
                         }}
                         onDelete={() => channels.remove.mutate(channel.id)}
+                        readOnly={!canEditLibrary}
                       />
                     ))}
+                    {canEditLibrary && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1249,9 +1277,11 @@ export function AppSidebar() {
                       <Plus className="h-2.5 w-2.5" />
                       Novo
                     </Button>
+                    )}
                   </CollapsibleContent>
                 </Collapsible>
               ))}
+              {canEditLibrary && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1261,6 +1291,7 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
+              )}
               {(vehicles.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/vehicles">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
@@ -1307,8 +1338,10 @@ export function AppSidebar() {
                         setSegmentDialogOpen(true);
                       }}
                       onDelete={() => behavioralSegmentations.remove.mutate(segment.id)}
+                      readOnly={!canEditLibrary}
                     />
                   ))}
+                  {canEditLibrary && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1321,6 +1354,7 @@ export function AppSidebar() {
                     <Plus className="h-2.5 w-2.5" />
                     Novo
                   </Button>
+                  )}
                   {(behavioralSegmentations.activeItems?.length || 0) > MAX_ITEMS && (
                     <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
                       ... ver todos ({behavioralSegmentations.activeItems?.length})
@@ -1348,8 +1382,10 @@ export function AppSidebar() {
                         setTargetDialogOpen(true);
                       }}
                       onDelete={() => targets.remove.mutate(target.id)}
+                      readOnly={!canEditLibrary}
                     />
                   ))}
+                  {canEditLibrary && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1362,6 +1398,7 @@ export function AppSidebar() {
                     <Plus className="h-2.5 w-2.5" />
                     Novo
                   </Button>
+                  )}
                   {(targets.activeItems?.length || 0) > MAX_ITEMS && (
                     <Link to="/config/targets">
                       <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
@@ -1436,6 +1473,7 @@ export function AppSidebar() {
                       )}
                     </Collapsible>
                   ))}
+                  {canEditLibrary && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1445,6 +1483,7 @@ export function AppSidebar() {
                     <Plus className="h-2.5 w-2.5" />
                     Novo
                   </Button>
+                  )}
                   {(formatsHierarchy.data?.length || 0) > MAX_ITEMS && (
                     <Link to="/config/formats">
                       <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
@@ -1477,6 +1516,7 @@ export function AppSidebar() {
                       <span className="truncate">{ct.name}</span>
                     </div>
                   ))}
+                  {canEditLibrary && (
                   <Link to="/config/creative-types">
                     <Button
                       variant="ghost"
@@ -1487,6 +1527,7 @@ export function AppSidebar() {
                       Novo
                     </Button>
                   </Link>
+                  )}
                   {(creativeTypesGlobal.data?.length || 0) > MAX_ITEMS && (
                     <Link to="/config/creative-types">
                       <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
@@ -1521,6 +1562,7 @@ export function AppSidebar() {
                   <span className="truncate">{objective.name}</span>
                 </div>
               ))}
+              {canEditLibrary && (
               <Link to="/config/objectives">
                 <Button
                   variant="ghost"
@@ -1531,6 +1573,7 @@ export function AppSidebar() {
                   Novo
                 </Button>
               </Link>
+              )}
               {(mediaObjectives.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/objectives">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
@@ -1564,6 +1607,7 @@ export function AppSidebar() {
                   name={status.name}
                   onEdit={() => setEditingStatus(status)}
                   onDelete={() => statuses.remove.mutate(status.id)}
+                  readOnly={!canEditLibrary}
                 />
               ))}
               {statuses.activeItems?.filter(s => s.is_system).slice(0, MAX_ITEMS).map(status => (
@@ -1572,6 +1616,7 @@ export function AppSidebar() {
                   <span className="text-[10px]">(padrão)</span>
                 </div>
               ))}
+              {canEditLibrary && (
               <Link to="/config/statuses">
                 <Button
                   variant="ghost"
@@ -1582,6 +1627,7 @@ export function AppSidebar() {
                   Novo
                 </Button>
               </Link>
+              )}
             </CollapsibleContent>
           </Collapsible>
 
@@ -1608,6 +1654,7 @@ export function AppSidebar() {
                   <span className="ml-1 text-[10px]">({kpi.unit})</span>
                 </div>
               ))}
+              {canEditLibrary && (
               <Link to="/config/kpis">
                 <Button
                   variant="ghost"
@@ -1618,6 +1665,7 @@ export function AppSidebar() {
                   Novo
                 </Button>
               </Link>
+              )}
               {(customKpis?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/kpis">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
@@ -1650,6 +1698,7 @@ export function AppSidebar() {
                   <span className="truncate">{detailType.name}</span>
                 </div>
               ))}
+              {canEditLibrary && (
               <Link to="/config/detail-types">
                 <Button
                   variant="ghost"
@@ -1660,6 +1709,7 @@ export function AppSidebar() {
                   Novo
                 </Button>
               </Link>
+              )}
               {(lineDetailTypes?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/detail-types">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">

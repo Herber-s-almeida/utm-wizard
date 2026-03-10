@@ -32,6 +32,8 @@ interface PlanItemRowProps {
   className?: string;
   /** Which section this row is in - determines active state and link target */
   section?: SectionContext;
+  /** When true, hide edit and delete buttons */
+  readOnly?: boolean;
 }
 
 export function PlanItemRow({
@@ -44,6 +46,7 @@ export function PlanItemRow({
   isTrash = false,
   className,
   section = 'plans',
+  readOnly = false,
 }: PlanItemRowProps) {
   const location = useLocation();
   const planIdentifier = slug || id;
@@ -101,6 +104,7 @@ export function PlanItemRow({
           <TooltipContent side="right">{name}</TooltipContent>
         )}
       </Tooltip>
+      {!readOnly && (
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         {isTrash ? (
           <>
@@ -175,6 +179,7 @@ export function PlanItemRow({
           </>
         )}
       </div>
+      )}
     </div>
   );
 }
