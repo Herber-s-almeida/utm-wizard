@@ -1038,6 +1038,7 @@ export function AppSidebar() {
                   </CollapsibleContent>
                 </Collapsible>
               ))}
+              {canEditLibrary && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1047,6 +1048,7 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
+              )}
               {parentSubdivisions.length > MAX_ITEMS && (
                 <Link to="/config/subdivisions">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
