@@ -1085,8 +1085,10 @@ export function AppSidebar() {
                     setMomentDialogOpen(true);
                   }}
                   onDelete={() => moments.remove.mutate(moment.id)}
+                  readOnly={!canEditLibrary}
                 />
               ))}
+              {canEditLibrary && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1096,6 +1098,7 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
+              )}
               {(moments.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/moments">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
