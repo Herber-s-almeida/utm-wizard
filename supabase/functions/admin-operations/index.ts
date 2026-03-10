@@ -312,6 +312,7 @@ serve(async (req) => {
         await adminClient.from("performance_alerts").delete().eq("environment_id", environmentId);
 
         // Media plan children (deepest first)
+        await adminClient.from("line_detail_line_links").delete().eq("environment_id", environmentId);
         await adminClient.from("line_detail_items").delete().eq("environment_id", environmentId);
         await adminClient.from("line_detail_insertions").delete().eq("environment_id", environmentId);
         await adminClient.from("line_targets").delete().eq("environment_id", environmentId);
