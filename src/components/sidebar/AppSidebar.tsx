@@ -971,6 +971,7 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
+              )}
               {(clients.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/clients">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
