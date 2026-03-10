@@ -163,8 +163,18 @@ export function FinanceSidebar() {
   // Sempre usar o nome do ambiente atual, nunca dados do perfil pessoal
   const environmentName = currentEnv?.environment_name || 'Carregando...';
 
-  // Check if user has access to any non-finance section (to show "Voltar ao AdsPlanning Pro")
-  const hasNonFinanceAccess = canView('media_plans') || canView('executive_dashboard') || canView('reports') || canView('media_resources') || canView('taxonomy') || canView('library');
+  // Determine first accessible non-finance route
+  const nonFinanceRoutes = [
+    { section: 'media_plans' as const, path: '/media-plan-dashboard' },
+    { section: 'executive_dashboard' as const, path: '/executive-dashboard' },
+    { section: 'reports' as const, path: '/reports' },
+    { section: 'media_resources' as const, path: '/media-resources' },
+    { section: 'taxonomy' as const, path: '/taxonomy' },
+    { section: 'library' as const, path: '/config/clients' },
+  ];
+  const firstNonFinanceRoute = nonFinanceRoutes.find(r => canView(r.section));
+  const hasNonFinanceAccess = !!firstNonFinanceRoute;
+  const backToAdsPath = firstNonFinanceRoute?.path || '/media-plan-dashboard';
 
   const isActive = (url: string) => {
     if (url === "/finance") {
@@ -303,7 +313,7 @@ export function FinanceSidebar() {
             <div className="mt-auto pt-4">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Link to="/media-plans">
+                  <Link to={backToAdsPath}>
                     <Button variant="ghost" size="icon" className="h-9 w-9">
                       <ArrowLeft className="h-4 w-4" />
                     </Button>
@@ -419,7 +429,7 @@ export function FinanceSidebar() {
               {/* Back to AdsPlanning Pro link */}
               {hasNonFinanceAccess && (
                 <div className="mb-4">
-                  <Link to="/media-plans">
+                  <Link to={backToAdsPath}>
                     <Button 
                       variant="ghost" 
                       size="sm" 
