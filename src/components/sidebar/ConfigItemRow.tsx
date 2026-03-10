@@ -119,6 +119,7 @@ export function ConfigItemRow({
           </AlertDialog>
         )}
       </div>
+      )}
       {children}
     </div>
   );

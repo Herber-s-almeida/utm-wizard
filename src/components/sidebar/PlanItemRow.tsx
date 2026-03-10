@@ -179,6 +179,7 @@ export function PlanItemRow({
           </>
         )}
       </div>
+      )}
     </div>
   );
 }
