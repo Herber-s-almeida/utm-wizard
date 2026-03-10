@@ -560,6 +560,7 @@ export function AppSidebar() {
                       slug={plan.slug}
                       name={plan.name}
                       onDelete={() => softDelete.mutate(plan.id)}
+                      readOnly={!canEditPlans}
                     />
                   ))}
                   {(draftPlans.data?.length || 0) > MAX_ITEMS && (
