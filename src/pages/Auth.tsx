@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { LayoutDashboard, Mail, Lock, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
 
 const loginSchema = z.object({
@@ -49,14 +49,14 @@ type AuthMode = 'login' | 'forgot' | 'reset';
 // Helper function to determine user destination after login
 async function getUserDestination(userId: string): Promise<string> {
   // 1. Check if user is a system user (has their own environment)
-  const { data: profile } = await supabase
+  const { data: profile } = await supabaseClient
     .from('profiles')
     .select('is_system_user, company')
     .eq('user_id', userId)
     .single();
 
   // 2. Get all environments user has access to
-  const { data: environments } = await supabase.rpc('get_user_environments_v2', {
+  const { data: environments } = await supabaseClient.rpc('get_user_environments_v2', {
     _user_id: userId,
   });
 
@@ -84,11 +84,11 @@ async function getUserDestination(userId: string): Promise<string> {
     }
     
     // Check if user is system admin
-    const { data: isSysAdmin } = await supabase.rpc('is_system_admin', { _user_id: userId });
+    const { data: isSysAdmin } = await supabaseClient.rpc('is_system_admin', { _user_id: userId });
     if (isSysAdmin) return '/media-plan-dashboard';
     
     // Fetch permissions to find the best landing page
-    const { data: role } = await supabase
+    const { data: role } = await supabaseClient
       .from('environment_roles')
       .select('perm_media_plans, perm_finance, perm_executive_dashboard, perm_reports, perm_media_resources, perm_taxonomy, perm_library')
       .eq('environment_id', env.environment_id)
