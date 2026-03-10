@@ -248,7 +248,7 @@ serve(async (req) => {
       }
 
       case "delete_environment": {
-        const { environmentId } = payload;
+        const { environmentId, forceDelete } = payload;
 
         if (!environmentId) {
           return new Response(
@@ -257,32 +257,90 @@ serve(async (req) => {
           );
         }
 
-        // Check if environment has data
+        // Count environment data for confirmation
         const { count: planCount } = await adminClient
           .from("media_plans")
           .select("id", { count: "exact", head: true })
           .eq("environment_id", environmentId);
 
-        if (planCount && planCount > 0) {
+        if (planCount && planCount > 0 && !forceDelete) {
+          // Return data summary so UI can ask for confirmation
+          const { count: lineCount } = await adminClient.from("media_lines").select("id", { count: "exact", head: true }).eq("environment_id", environmentId);
+          const { count: docCount } = await adminClient.from("financial_documents").select("id", { count: "exact", head: true }).eq("environment_id", environmentId);
           return new Response(
-            JSON.stringify({ error: `Ambiente possui ${planCount} plano(s) de mídia. Exclua os dados antes de remover o ambiente.` }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({
+              requiresConfirmation: true,
+              summary: {
+                plans: planCount || 0,
+                lines: lineCount || 0,
+                documents: docCount || 0,
+              },
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
-        // Delete environment roles first
-        await adminClient
-          .from("environment_roles")
-          .delete()
-          .eq("environment_id", environmentId);
+        // Cascade delete all environment data in dependency order
+        // Financial data
+        await adminClient.from("financial_audit_log").delete().eq("environment_id", environmentId);
+        await adminClient.from("financial_alert_configs").delete().eq("environment_id", environmentId);
+        await adminClient.from("financial_actuals").delete().eq("environment_id", environmentId);
+        await adminClient.from("financial_forecasts").delete().eq("environment_id", environmentId);
+        await adminClient.from("financial_documents").delete().eq("environment_id", environmentId);
+        await adminClient.from("financial_vendors").delete().eq("environment_id", environmentId);
+        await adminClient.from("financial_payments").delete().eq("environment_id", environmentId);
+        await adminClient.from("financial_revenues").delete().eq("environment_id", environmentId);
+        
+        // Finance library
+        await adminClient.from("finance_account_managers").delete().eq("environment_id", environmentId);
+        await adminClient.from("finance_accounts").delete().eq("environment_id", environmentId);
+        await adminClient.from("finance_campaign_projects").delete().eq("environment_id", environmentId);
+        await adminClient.from("finance_cost_centers").delete().eq("environment_id", environmentId);
+        await adminClient.from("finance_document_types").delete().eq("environment_id", environmentId);
+        await adminClient.from("finance_expense_classifications").delete().eq("environment_id", environmentId);
+        await adminClient.from("finance_macro_classifications").delete().eq("environment_id", environmentId);
+        await adminClient.from("finance_packages").delete().eq("environment_id", environmentId);
+        await adminClient.from("finance_request_types").delete().eq("environment_id", environmentId);
+        await adminClient.from("finance_statuses").delete().eq("environment_id", environmentId);
+        await adminClient.from("finance_teams").delete().eq("environment_id", environmentId);
 
-        // Delete pending invites
-        await adminClient
-          .from("pending_environment_invites")
-          .delete()
-          .eq("environment_id", environmentId);
+        // Media plan related (child tables first)
+        await adminClient.from("media_line_monthly_budgets").delete().eq("environment_id", environmentId);
+        await adminClient.from("plan_budget_distributions").delete().eq("environment_id", environmentId);
+        await adminClient.from("line_detail_items").delete().eq("environment_id", environmentId);
+        await adminClient.from("line_details").delete().eq("environment_id", environmentId);
+        await adminClient.from("media_creatives").delete().eq("environment_id", environmentId);
+        await adminClient.from("media_lines").delete().eq("environment_id", environmentId);
+        // Plan versions, roles, permissions, followers
+        // Use subquery approach - delete by plan IDs
+        const { data: planIds } = await adminClient.from("media_plans").select("id").eq("environment_id", environmentId);
+        if (planIds && planIds.length > 0) {
+          const ids = planIds.map(p => p.id);
+          await adminClient.from("media_plan_versions").delete().in("media_plan_id", ids);
+          await adminClient.from("plan_roles").delete().in("media_plan_id", ids);
+          await adminClient.from("plan_permissions").delete().in("media_plan_id", ids);
+          await adminClient.from("plan_followers").delete().in("media_plan_id", ids);
+        }
+        await adminClient.from("media_plans").delete().eq("environment_id", environmentId);
 
-        // Delete the environment
+        // Library / config data
+        await adminClient.from("channels").delete().eq("environment_id", environmentId);
+        await adminClient.from("vehicles").delete().eq("environment_id", environmentId);
+        await adminClient.from("clients").delete().eq("environment_id", environmentId);
+        await adminClient.from("creative_templates").delete().eq("environment_id", environmentId);
+        await adminClient.from("creative_type_specifications").delete().eq("environment_id", environmentId);
+        await adminClient.from("custom_kpis").delete().eq("environment_id", environmentId);
+        await adminClient.from("behavioral_segmentations").delete().eq("environment_id", environmentId);
+        await adminClient.from("data_sources").delete().eq("environment_id", environmentId);
+
+        // Performance data
+        await adminClient.from("performance_data").delete().eq("environment_id", environmentId);
+
+        // Environment members and invites
+        await adminClient.from("environment_roles").delete().eq("environment_id", environmentId);
+        await adminClient.from("pending_environment_invites").delete().eq("environment_id", environmentId);
+
+        // Delete the environment itself
         const { error } = await adminClient
           .from("environments")
           .delete()
