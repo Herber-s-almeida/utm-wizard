@@ -961,6 +961,7 @@ export function AppSidebar() {
                   readOnly={!canEditLibrary}
                 />
               ))}
+              {canEditLibrary && (
               <Button
                 variant="ghost"
                 size="sm"
