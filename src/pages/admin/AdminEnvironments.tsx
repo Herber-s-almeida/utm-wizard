@@ -111,11 +111,24 @@ export default function AdminEnvironments() {
     });
   };
 
-  const handleDeleteEnvironment = () => {
-    if (deleteEnvId) {
-      deleteEnvironment.mutate(deleteEnvId);
-      setDeleteEnvId(null);
+  const [deleteDataSummary, setDeleteDataSummary] = useState<{ plans: number; lines: number; documents: number } | null>(null);
+
+  const handleDeleteEnvironment = async () => {
+    if (!deleteEnvId) return;
+    
+    if (!deleteDataSummary) {
+      // First step: check if confirmation is needed
+      const result = await deleteEnvironment.mutateAsync({ environmentId: deleteEnvId });
+      if (result?.requiresConfirmation) {
+        setDeleteDataSummary(result.summary);
+        return;
+      }
+    } else {
+      // Second step: force delete confirmed
+      await deleteEnvironment.mutateAsync({ environmentId: deleteEnvId, forceDelete: true });
     }
+    setDeleteEnvId(null);
+    setDeleteDataSummary(null);
   };
 
   const handleRemoveMember = () => {
