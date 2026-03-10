@@ -1654,6 +1654,7 @@ export function AppSidebar() {
                   <span className="ml-1 text-[10px]">({kpi.unit})</span>
                 </div>
               ))}
+              {canEditLibrary && (
               <Link to="/config/kpis">
                 <Button
                   variant="ghost"
@@ -1664,6 +1665,7 @@ export function AppSidebar() {
                   Novo
                 </Button>
               </Link>
+              )}
               {(customKpis?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/kpis">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
