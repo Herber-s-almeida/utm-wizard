@@ -299,18 +299,20 @@ export function FinanceSidebar() {
           ))}
 
           {/* Back to AdsPlanning */}
-          <div className="mt-auto pt-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link to="/media-plans">
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Voltar ao AdsPlanning Pro</TooltipContent>
-            </Tooltip>
-          </div>
+          {hasNonFinanceAccess && (
+            <div className="mt-auto pt-4">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/media-plans">
+                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Voltar ao AdsPlanning Pro</TooltipContent>
+              </Tooltip>
+            </div>
+          )}
         </div>
       ) : (
         <>
