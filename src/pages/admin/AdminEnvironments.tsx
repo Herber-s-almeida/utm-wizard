@@ -3,12 +3,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Search, 
-  Building2, 
-  Plus, 
-  ClipboardList, 
-  ChevronDown, 
+import {
+  Search,
+  Building2,
+  Plus,
+  ClipboardList,
+  ChevronDown,
   ChevronRight,
   Shield,
   User,
@@ -20,10 +20,10 @@ import {
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { 
-  Collapsible, 
-  CollapsibleContent, 
-  CollapsibleTrigger 
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger
 } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
@@ -42,8 +42,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { 
-  useAdminEnvironments, 
+import {
+  useAdminEnvironments,
   useDeleteEnvironment,
   useRemoveEnvironmentMember,
   useUpdateEnvironmentMember,
@@ -55,6 +55,7 @@ import { AccessRequestsTable } from "@/components/admin/AccessRequestsTable";
 import { CreateEnvironmentDialog } from "@/components/admin/CreateEnvironmentDialog";
 import { EditEnvironmentDialog } from "@/components/admin/EditEnvironmentDialog";
 import { AddMemberToEnvironmentDialog } from "@/components/admin/AddMemberToEnvironmentDialog";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { cn } from "@/lib/utils";
 
 export default function AdminEnvironments() {
