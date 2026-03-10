@@ -290,12 +290,33 @@ serve(async (req) => {
       }
 
       case "delete_environment": {
-        const { environmentId, forceDelete } = payload;
+        const { environmentId, forceDelete, activeEnvironmentId } = payload;
 
         if (!environmentId) {
           return new Response(
             JSON.stringify({ error: "ID do ambiente é obrigatório" }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        if (activeEnvironmentId && activeEnvironmentId === environmentId) {
+          return new Response(
+            JSON.stringify({ error: "Não é possível excluir o ambiente ativo no momento. Troque de ambiente e tente novamente." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: environment, error: environmentError } = await adminClient
+          .from("environments")
+          .select("id, name")
+          .eq("id", environmentId)
+          .maybeSingle();
+
+        if (environmentError) throw environmentError;
+        if (!environment) {
+          return new Response(
+            JSON.stringify({ error: "Ambiente não encontrado" }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
@@ -306,9 +327,15 @@ serve(async (req) => {
           .eq("environment_id", environmentId);
 
         if (planCount && planCount > 0 && !forceDelete) {
-          // Return data summary so UI can ask for confirmation
-          const { count: lineCount } = await adminClient.from("media_lines").select("id", { count: "exact", head: true }).eq("environment_id", environmentId);
-          const { count: docCount } = await adminClient.from("financial_documents").select("id", { count: "exact", head: true }).eq("environment_id", environmentId);
+          const { count: lineCount } = await adminClient
+            .from("media_lines")
+            .select("id", { count: "exact", head: true })
+            .eq("environment_id", environmentId);
+          const { count: docCount } = await adminClient
+            .from("financial_documents")
+            .select("id", { count: "exact", head: true })
+            .eq("environment_id", environmentId);
+
           return new Response(
             JSON.stringify({
               requiresConfirmation: true,
@@ -322,9 +349,58 @@ serve(async (req) => {
           );
         }
 
+        const { data: roleMembers } = await adminClient
+          .from("environment_roles")
+          .select("user_id, accepted_at")
+          .eq("environment_id", environmentId)
+          .not("accepted_at", "is", null);
+
+        const memberUserIds = Array.from(new Set((roleMembers || []).map((member) => member.user_id)));
+
+        let recipientProfiles: Array<{ user_id: string; full_name: string | null }> = [];
+        let emailMap: Record<string, string> = {};
+
+        if (memberUserIds.length > 0) {
+          const [{ data: profilesData }, { data: authUsersData }] = await Promise.all([
+            adminClient
+              .from("profiles")
+              .select("user_id, full_name")
+              .in("user_id", memberUserIds),
+            adminClient.auth.admin.listUsers(),
+          ]);
+
+          recipientProfiles = profilesData || [];
+          for (const authUser of authUsersData?.users || []) {
+            if (authUser.email && memberUserIds.includes(authUser.id)) {
+              emailMap[authUser.id] = authUser.email;
+            }
+          }
+        }
+
+        const recipients = memberUserIds
+          .map((userId) => ({
+            userId,
+            email: emailMap[userId],
+            fullName: recipientProfiles.find((profile) => profile.user_id === userId)?.full_name || null,
+          }))
+          .filter((recipient) => !!recipient.email);
+
+        if (recipients.length > 0) {
+          await Promise.allSettled(
+            recipients.map((recipient) =>
+              sendEmail({
+                to: recipient.email,
+                subject: `Ambiente excluído: ${environment.name} - ${EMAIL_CONFIG.systemName}`,
+                html: buildEnvironmentDeletionEmail({
+                  environmentName: environment.name,
+                  recipientName: recipient.fullName,
+                }),
+              })
+            )
+          );
+        }
+
         // Cascade delete all environment data in dependency order (children first)
-        
-        // Financial: payments before documents, audit log first
         await adminClient.from("financial_audit_log").delete().eq("environment_id", environmentId);
         await adminClient.from("financial_alert_configs").delete().eq("environment_id", environmentId);
         await adminClient.from("financial_payments").delete().eq("environment_id", environmentId);
@@ -333,8 +409,7 @@ serve(async (req) => {
         await adminClient.from("financial_revenues").delete().eq("environment_id", environmentId);
         await adminClient.from("financial_documents").delete().eq("environment_id", environmentId);
         await adminClient.from("financial_vendors").delete().eq("environment_id", environmentId);
-        
-        // Finance library
+
         await adminClient.from("finance_expense_classifications").delete().eq("environment_id", environmentId);
         await adminClient.from("finance_macro_classifications").delete().eq("environment_id", environmentId);
         await adminClient.from("finance_account_managers").delete().eq("environment_id", environmentId);
@@ -347,13 +422,10 @@ serve(async (req) => {
         await adminClient.from("finance_statuses").delete().eq("environment_id", environmentId);
         await adminClient.from("finance_teams").delete().eq("environment_id", environmentId);
 
-        // Reports - report_data/report_column_mappings cascade from report_imports
-        // report_metrics cascade from report_periods/media_lines
         await adminClient.from("report_imports").delete().eq("environment_id", environmentId);
         await adminClient.from("report_periods").delete().eq("environment_id", environmentId);
         await adminClient.from("performance_alerts").delete().eq("environment_id", environmentId);
 
-        // Media plan children (deepest first)
         await adminClient.from("line_detail_line_links").delete().eq("environment_id", environmentId);
         await adminClient.from("line_detail_items").delete().eq("environment_id", environmentId);
         await adminClient.from("line_detail_insertions").delete().eq("environment_id", environmentId);
@@ -363,8 +435,7 @@ serve(async (req) => {
         await adminClient.from("line_details").delete().eq("environment_id", environmentId);
         await adminClient.from("media_creatives").delete().eq("environment_id", environmentId);
         await adminClient.from("media_lines").delete().eq("environment_id", environmentId);
-        
-        // Plan-level children
+
         const { data: planIds } = await adminClient.from("media_plans").select("id").eq("environment_id", environmentId);
         if (planIds && planIds.length > 0) {
           const ids = planIds.map((p: { id: string }) => p.id);
@@ -377,7 +448,6 @@ serve(async (req) => {
         await adminClient.from("plan_subdivisions").delete().eq("environment_id", environmentId);
         await adminClient.from("media_plans").delete().eq("environment_id", environmentId);
 
-        // Config / Library (after media_lines which references them)
         await adminClient.from("status_transitions").delete().eq("environment_id", environmentId);
         await adminClient.from("channels").delete().eq("environment_id", environmentId);
         await adminClient.from("vehicles").delete().eq("environment_id", environmentId);
@@ -397,16 +467,10 @@ serve(async (req) => {
         await adminClient.from("statuses").delete().eq("environment_id", environmentId);
         await adminClient.from("line_detail_types").delete().eq("environment_id", environmentId);
 
-        // Invites
+        await adminClient.from("invite_audit_log").delete().eq("environment_id", environmentId);
         await adminClient.from("pending_environment_invites").delete().eq("environment_id", environmentId);
 
-        // Invites (NO ACTION FK)
-        await adminClient.from("pending_environment_invites").delete().eq("environment_id", environmentId);
-
-        // DO NOT delete environment_roles manually - the trigger blocks last-admin removal.
-        // environment_roles has ON DELETE CASCADE from environments, so it will be cleaned up automatically.
-
-        // Delete the environment itself
+        // environment_roles é limpo no final ao apagar o ambiente
         const { error } = await adminClient
           .from("environments")
           .delete()
@@ -415,7 +479,7 @@ serve(async (req) => {
         if (error) throw error;
 
         return new Response(
-          JSON.stringify({ success: true }),
+          JSON.stringify({ success: true, notifiedUsers: recipients.length }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
