@@ -88,7 +88,7 @@ async function getUserDestination(userId: string): Promise<string> {
     if (isSysAdmin) return '/media-plan-dashboard';
     
     // Fetch permissions to find the best landing page
-    const { data: role } = await supabase
+    const { data: role } = await supabaseClient
       .from('environment_roles')
       .select('perm_media_plans, perm_finance, perm_executive_dashboard, perm_reports, perm_media_resources, perm_taxonomy, perm_library')
       .eq('environment_id', env.environment_id)
