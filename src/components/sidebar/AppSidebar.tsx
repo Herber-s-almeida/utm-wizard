@@ -1032,6 +1032,7 @@ export function AppSidebar() {
                           setSubdivisionDialogOpen(true);
                         }}
                         onDelete={() => subdivisions.remove.mutate(child.id)}
+                        readOnly={!canEditLibrary}
                       />
                     ))}
                   </CollapsibleContent>
