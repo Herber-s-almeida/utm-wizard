@@ -111,11 +111,24 @@ export default function AdminEnvironments() {
     });
   };
 
-  const handleDeleteEnvironment = () => {
-    if (deleteEnvId) {
-      deleteEnvironment.mutate(deleteEnvId);
-      setDeleteEnvId(null);
+  const [deleteDataSummary, setDeleteDataSummary] = useState<{ plans: number; lines: number; documents: number } | null>(null);
+
+  const handleDeleteEnvironment = async () => {
+    if (!deleteEnvId) return;
+    
+    if (!deleteDataSummary) {
+      // First step: check if confirmation is needed
+      const result = await deleteEnvironment.mutateAsync({ environmentId: deleteEnvId });
+      if (result?.requiresConfirmation) {
+        setDeleteDataSummary(result.summary);
+        return;
+      }
+    } else {
+      // Second step: force delete confirmed
+      await deleteEnvironment.mutateAsync({ environmentId: deleteEnvId, forceDelete: true });
     }
+    setDeleteEnvId(null);
+    setDeleteDataSummary(null);
   };
 
   const handleRemoveMember = () => {
@@ -262,12 +275,30 @@ export default function AdminEnvironments() {
         )}
 
         {/* Delete Environment Confirmation */}
-        <AlertDialog open={!!deleteEnvId} onOpenChange={(open) => !open && setDeleteEnvId(null)}>
+        <AlertDialog open={!!deleteEnvId} onOpenChange={(open) => { if (!open) { setDeleteEnvId(null); setDeleteDataSummary(null); } }}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Excluir ambiente?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação não pode ser desfeita. Todos os membros perderão acesso a este ambiente.
+              <AlertDialogTitle>
+                {deleteDataSummary ? "⚠️ Confirmar exclusão total" : "Excluir ambiente?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                {deleteDataSummary ? (
+                  <>
+                    <p className="font-semibold text-destructive">
+                      Este ambiente possui dados que serão permanentemente excluídos:
+                    </p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>{deleteDataSummary.plans} plano(s) de mídia</li>
+                      <li>{deleteDataSummary.lines} linha(s) de mídia</li>
+                      <li>{deleteDataSummary.documents} documento(s) financeiro(s)</li>
+                    </ul>
+                    <p className="font-semibold mt-2">
+                      Esta ação é irreversível. Todos os dados, membros e configurações serão apagados.
+                    </p>
+                  </>
+                ) : (
+                  <p>Esta ação não pode ser desfeita. Todos os membros perderão acesso a este ambiente.</p>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -276,7 +307,7 @@ export default function AdminEnvironments() {
                 onClick={handleDeleteEnvironment}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Excluir
+                {deleteDataSummary ? "Excluir tudo permanentemente" : "Excluir"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

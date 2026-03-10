@@ -122,12 +122,14 @@ export function useDeleteEnvironment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (environmentId: string) => {
-      return callAdminOperation("delete_environment", { environmentId });
+    mutationFn: async ({ environmentId, forceDelete }: { environmentId: string; forceDelete?: boolean }) => {
+      return callAdminOperation("delete_environment", { environmentId, forceDelete });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data?.requiresConfirmation) return; // Don't show success for confirmation step
       queryClient.invalidateQueries({ queryKey: ["admin-environments"] });
-      toast.success("Ambiente excluído com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["user-environments-v2"] });
+      toast.success("Ambiente excluído com sucesso! Todos os dados foram removidos.");
     },
     onError: (error: Error) => {
       toast.error(`Erro ao excluir ambiente: ${error.message}`);
