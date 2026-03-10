@@ -1246,6 +1246,7 @@ export function AppSidebar() {
                       }}
                       onDelete={() => vehicles.remove.mutate(vehicle.id)}
                       className="flex-1 min-w-0"
+                      readOnly={!canEditLibrary}
                     />
                   </div>
                   <CollapsibleContent className="pl-6">
@@ -1259,8 +1260,10 @@ export function AppSidebar() {
                           setChannelDialogOpen(true);
                         }}
                         onDelete={() => channels.remove.mutate(channel.id)}
+                        readOnly={!canEditLibrary}
                       />
                     ))}
+                    {canEditLibrary && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1274,9 +1277,11 @@ export function AppSidebar() {
                       <Plus className="h-2.5 w-2.5" />
                       Novo
                     </Button>
+                    )}
                   </CollapsibleContent>
                 </Collapsible>
               ))}
+              {canEditLibrary && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1286,6 +1291,7 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
+              )}
               {(vehicles.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/vehicles">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
