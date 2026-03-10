@@ -305,14 +305,11 @@ serve(async (req) => {
         await adminClient.from("finance_statuses").delete().eq("environment_id", environmentId);
         await adminClient.from("finance_teams").delete().eq("environment_id", environmentId);
 
-        // Reports data (report_data → report_imports, report_data → media_lines)
-        await adminClient.from("report_data").delete().eq("environment_id", environmentId);
-        await adminClient.from("report_column_mappings").delete().eq("environment_id", environmentId);
+        // Reports - report_data/report_column_mappings cascade from report_imports
+        // report_metrics cascade from report_periods/media_lines
         await adminClient.from("report_imports").delete().eq("environment_id", environmentId);
         await adminClient.from("report_periods").delete().eq("environment_id", environmentId);
-        await adminClient.from("report_metrics").delete().eq("environment_id", environmentId);
         await adminClient.from("performance_alerts").delete().eq("environment_id", environmentId);
-        await adminClient.from("performance_data").delete().eq("environment_id", environmentId);
 
         // Media plan children (deepest first)
         await adminClient.from("line_detail_items").delete().eq("environment_id", environmentId);
