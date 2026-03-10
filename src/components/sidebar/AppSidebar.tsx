@@ -1473,6 +1473,7 @@ export function AppSidebar() {
                       )}
                     </Collapsible>
                   ))}
+                  {canEditLibrary && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1482,6 +1483,7 @@ export function AppSidebar() {
                     <Plus className="h-2.5 w-2.5" />
                     Novo
                   </Button>
+                  )}
                   {(formatsHierarchy.data?.length || 0) > MAX_ITEMS && (
                     <Link to="/config/formats">
                       <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
