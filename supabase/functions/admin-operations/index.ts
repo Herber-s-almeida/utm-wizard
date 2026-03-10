@@ -1,10 +1,52 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.89.0";
+import { EMAIL_CONFIG, sendEmail } from "../_shared/email-config.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+function buildEnvironmentDeletionEmail(params: {
+  environmentName: string;
+  recipientName?: string | null;
+}) {
+  const greeting = params.recipientName ? `Olá, ${params.recipientName}` : "Olá";
+
+  return `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>${EMAIL_CONFIG.systemName}</title>
+      </head>
+      <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 16px;">
+          <tr>
+            <td align="center">
+              <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.08);">
+                <tr>
+                  <td style="padding:24px 32px;background:#18181b;color:#ffffff;">
+                    <h1 style="margin:0;font-size:22px;font-weight:700;">Acesso ao ambiente removido</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:32px; color:#27272a; font-size:15px; line-height:1.7;">
+                    <p style="margin:0 0 16px;">${greeting},</p>
+                    <p style="margin:0 0 16px;">O ambiente <strong>${params.environmentName}</strong> foi excluído por um administrador do sistema.</p>
+                    <p style="margin:0 0 16px;">Com isso, todo o acesso a esse ambiente e aos seus dados foi removido.</p>
+                    <p style="margin:0; color:#71717a;">Se você acredita que isso ocorreu por engano, entre em contato com o administrador responsável.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
