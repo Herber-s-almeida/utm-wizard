@@ -1562,6 +1562,7 @@ export function AppSidebar() {
                   <span className="truncate">{objective.name}</span>
                 </div>
               ))}
+              {canEditLibrary && (
               <Link to="/config/objectives">
                 <Button
                   variant="ghost"
@@ -1572,6 +1573,7 @@ export function AppSidebar() {
                   Novo
                 </Button>
               </Link>
+              )}
               {(mediaObjectives.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/objectives">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
