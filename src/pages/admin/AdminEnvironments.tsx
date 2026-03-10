@@ -360,6 +360,7 @@ export default function AdminEnvironments() {
 interface EnvironmentCardProps {
   environment: AdminEnvironment;
   isExpanded: boolean;
+  isActiveEnvironment: boolean;
   onToggleExpand: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -371,6 +372,7 @@ interface EnvironmentCardProps {
 function EnvironmentCard({
   environment,
   isExpanded,
+  isActiveEnvironment,
   onToggleExpand,
   onEdit,
   onDelete,
