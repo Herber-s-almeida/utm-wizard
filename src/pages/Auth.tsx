@@ -84,7 +84,7 @@ async function getUserDestination(userId: string): Promise<string> {
     }
     
     // Check if user is system admin
-    const { data: isSysAdmin } = await supabase.rpc('is_system_admin', { _user_id: userId });
+    const { data: isSysAdmin } = await supabaseClient.rpc('is_system_admin', { _user_id: userId });
     if (isSysAdmin) return '/media-plan-dashboard';
     
     // Fetch permissions to find the best landing page
