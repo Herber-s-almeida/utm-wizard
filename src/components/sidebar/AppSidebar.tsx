@@ -1607,6 +1607,7 @@ export function AppSidebar() {
                   name={status.name}
                   onEdit={() => setEditingStatus(status)}
                   onDelete={() => statuses.remove.mutate(status.id)}
+                  readOnly={!canEditLibrary}
                 />
               ))}
               {statuses.activeItems?.filter(s => s.is_system).slice(0, MAX_ITEMS).map(status => (
@@ -1615,6 +1616,7 @@ export function AppSidebar() {
                   <span className="text-[10px]">(padrão)</span>
                 </div>
               ))}
+              {canEditLibrary && (
               <Link to="/config/statuses">
                 <Button
                   variant="ghost"
@@ -1625,6 +1627,7 @@ export function AppSidebar() {
                   Novo
                 </Button>
               </Link>
+              )}
             </CollapsibleContent>
           </Collapsible>
 
