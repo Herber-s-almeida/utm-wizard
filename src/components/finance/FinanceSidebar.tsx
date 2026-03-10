@@ -417,18 +417,20 @@ export function FinanceSidebar() {
               </div>
 
               {/* Back to AdsPlanning Pro link */}
-              <div className="mb-4">
-                <Link to="/media-plans">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="w-full justify-start gap-2 h-8 text-xs"
-                  >
-                    <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
-                    <span>Voltar ao AdsPlanning Pro</span>
-                  </Button>
-                </Link>
-              </div>
+              {hasNonFinanceAccess && (
+                <div className="mb-4">
+                  <Link to="/media-plans">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-start gap-2 h-8 text-xs"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+                      <span>Voltar ao AdsPlanning Pro</span>
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </ScrollArea>
 
