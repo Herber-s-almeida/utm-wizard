@@ -668,6 +668,7 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
   onCreativeCreated,
   planLines,
   siblingItems,
+  canEdit = false,
 }: {
   detail: LineDetail;
   getDetailCategory: (d: LineDetail) => DetailCategory | null;
