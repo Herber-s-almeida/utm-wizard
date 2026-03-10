@@ -280,79 +280,85 @@ serve(async (req) => {
           );
         }
 
-        // Cascade delete all environment data in dependency order
-        // Financial data
+        // Cascade delete all environment data in dependency order (children first)
+        
+        // Financial: payments before documents, audit log first
         await adminClient.from("financial_audit_log").delete().eq("environment_id", environmentId);
         await adminClient.from("financial_alert_configs").delete().eq("environment_id", environmentId);
+        await adminClient.from("financial_payments").delete().eq("environment_id", environmentId);
         await adminClient.from("financial_actuals").delete().eq("environment_id", environmentId);
         await adminClient.from("financial_forecasts").delete().eq("environment_id", environmentId);
+        await adminClient.from("financial_revenues").delete().eq("environment_id", environmentId);
         await adminClient.from("financial_documents").delete().eq("environment_id", environmentId);
         await adminClient.from("financial_vendors").delete().eq("environment_id", environmentId);
-        await adminClient.from("financial_payments").delete().eq("environment_id", environmentId);
-        await adminClient.from("financial_revenues").delete().eq("environment_id", environmentId);
         
         // Finance library
+        await adminClient.from("finance_expense_classifications").delete().eq("environment_id", environmentId);
+        await adminClient.from("finance_macro_classifications").delete().eq("environment_id", environmentId);
         await adminClient.from("finance_account_managers").delete().eq("environment_id", environmentId);
         await adminClient.from("finance_accounts").delete().eq("environment_id", environmentId);
         await adminClient.from("finance_campaign_projects").delete().eq("environment_id", environmentId);
         await adminClient.from("finance_cost_centers").delete().eq("environment_id", environmentId);
         await adminClient.from("finance_document_types").delete().eq("environment_id", environmentId);
-        await adminClient.from("finance_expense_classifications").delete().eq("environment_id", environmentId);
-        await adminClient.from("finance_macro_classifications").delete().eq("environment_id", environmentId);
         await adminClient.from("finance_packages").delete().eq("environment_id", environmentId);
         await adminClient.from("finance_request_types").delete().eq("environment_id", environmentId);
         await adminClient.from("finance_statuses").delete().eq("environment_id", environmentId);
         await adminClient.from("finance_teams").delete().eq("environment_id", environmentId);
 
-        // Media plan related (child tables first)
+        // Reports data (report_data → report_imports, report_data → media_lines)
+        await adminClient.from("report_data").delete().eq("environment_id", environmentId);
+        await adminClient.from("report_column_mappings").delete().eq("environment_id", environmentId);
+        await adminClient.from("report_imports").delete().eq("environment_id", environmentId);
+        await adminClient.from("report_periods").delete().eq("environment_id", environmentId);
+        await adminClient.from("report_metrics").delete().eq("environment_id", environmentId);
+        await adminClient.from("performance_alerts").delete().eq("environment_id", environmentId);
+        await adminClient.from("performance_data").delete().eq("environment_id", environmentId);
+
+        // Media plan children (deepest first)
+        await adminClient.from("line_detail_items").delete().eq("environment_id", environmentId);
+        await adminClient.from("line_detail_insertions").delete().eq("environment_id", environmentId);
+        await adminClient.from("line_targets").delete().eq("environment_id", environmentId);
         await adminClient.from("media_line_monthly_budgets").delete().eq("environment_id", environmentId);
         await adminClient.from("plan_budget_distributions").delete().eq("environment_id", environmentId);
-        await adminClient.from("line_detail_items").delete().eq("environment_id", environmentId);
         await adminClient.from("line_details").delete().eq("environment_id", environmentId);
         await adminClient.from("media_creatives").delete().eq("environment_id", environmentId);
         await adminClient.from("media_lines").delete().eq("environment_id", environmentId);
-        // Plan versions, roles, permissions, followers
-        // Use subquery approach - delete by plan IDs
+        
+        // Plan-level children
         const { data: planIds } = await adminClient.from("media_plans").select("id").eq("environment_id", environmentId);
         if (planIds && planIds.length > 0) {
-          const ids = planIds.map(p => p.id);
+          const ids = planIds.map((p: { id: string }) => p.id);
           await adminClient.from("media_plan_versions").delete().in("media_plan_id", ids);
           await adminClient.from("plan_roles").delete().in("media_plan_id", ids);
           await adminClient.from("plan_permissions").delete().in("media_plan_id", ids);
           await adminClient.from("plan_followers").delete().in("media_plan_id", ids);
+          await adminClient.from("plan_custom_kpis").delete().in("media_plan_id", ids);
         }
+        await adminClient.from("plan_subdivisions").delete().eq("environment_id", environmentId);
         await adminClient.from("media_plans").delete().eq("environment_id", environmentId);
 
-        // Library / config data
+        // Config / Library (after media_lines which references them)
+        await adminClient.from("status_transitions").delete().eq("environment_id", environmentId);
         await adminClient.from("channels").delete().eq("environment_id", environmentId);
         await adminClient.from("vehicles").delete().eq("environment_id", environmentId);
-        await adminClient.from("clients").delete().eq("environment_id", environmentId);
-        await adminClient.from("creative_templates").delete().eq("environment_id", environmentId);
-        await adminClient.from("creative_type_specifications").delete().eq("environment_id", environmentId);
-        await adminClient.from("custom_kpis").delete().eq("environment_id", environmentId);
-        await adminClient.from("behavioral_segmentations").delete().eq("environment_id", environmentId);
-        await adminClient.from("data_sources").delete().eq("environment_id", environmentId);
-
-        // Performance and reports data
-        await adminClient.from("performance_data").delete().eq("environment_id", environmentId);
-        await adminClient.from("performance_alerts").delete().eq("environment_id", environmentId);
-        await adminClient.from("report_imports").delete().eq("environment_id", environmentId);
-        await adminClient.from("report_periods").delete().eq("environment_id", environmentId);
-        await adminClient.from("status_transitions").delete().eq("environment_id", environmentId);
-
-        // Additional config tables
         await adminClient.from("mediums").delete().eq("environment_id", environmentId);
         await adminClient.from("formats").delete().eq("environment_id", environmentId);
         await adminClient.from("format_creative_types").delete().eq("environment_id", environmentId);
+        await adminClient.from("creative_type_specifications").delete().eq("environment_id", environmentId);
+        await adminClient.from("creative_templates").delete().eq("environment_id", environmentId);
+        await adminClient.from("clients").delete().eq("environment_id", environmentId);
+        await adminClient.from("custom_kpis").delete().eq("environment_id", environmentId);
+        await adminClient.from("behavioral_segmentations").delete().eq("environment_id", environmentId);
+        await adminClient.from("data_sources").delete().eq("environment_id", environmentId);
         await adminClient.from("funnel_stages").delete().eq("environment_id", environmentId);
         await adminClient.from("media_objectives").delete().eq("environment_id", environmentId);
         await adminClient.from("targets").delete().eq("environment_id", environmentId);
         await adminClient.from("moments").delete().eq("environment_id", environmentId);
         await adminClient.from("statuses").delete().eq("environment_id", environmentId);
         await adminClient.from("line_detail_types").delete().eq("environment_id", environmentId);
-        await adminClient.from("line_detail_insertions").delete().eq("environment_id", environmentId);
-        await adminClient.from("line_targets").delete().eq("environment_id", environmentId);
-        await adminClient.from("plan_subdivisions").delete().eq("environment_id", environmentId);
+
+        // Invites
+        await adminClient.from("pending_environment_invites").delete().eq("environment_id", environmentId);
 
         // Invites (NO ACTION FK)
         await adminClient.from("pending_environment_invites").delete().eq("environment_id", environmentId);
