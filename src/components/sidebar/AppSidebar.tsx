@@ -1516,6 +1516,7 @@ export function AppSidebar() {
                       <span className="truncate">{ct.name}</span>
                     </div>
                   ))}
+                  {canEditLibrary && (
                   <Link to="/config/creative-types">
                     <Button
                       variant="ghost"
@@ -1526,6 +1527,7 @@ export function AppSidebar() {
                       Novo
                     </Button>
                   </Link>
+                  )}
                   {(creativeTypesGlobal.data?.length || 0) > MAX_ITEMS && (
                     <Link to="/config/creative-types">
                       <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
