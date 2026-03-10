@@ -161,6 +161,10 @@ export function AppSidebar() {
   };
 
   const isActive = (path: string) => location.pathname === path;
+  
+  // Permission flags for CRUD
+  const canEditLibrary = canEdit('library');
+  const canEditPlans = canEdit('media_plans');
 
   // Get parent subdivisions (only active items)
   const parentSubdivisions = subdivisions.activeItems?.filter(s => !s.parent_id) || [];
