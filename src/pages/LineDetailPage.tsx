@@ -781,6 +781,7 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
           </TabsTrigger>
         </TabsList>
 
+        {canEditPlans && (
         <Button
           variant="ghost"
           size="sm"
@@ -790,6 +791,7 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
           <Trash2 className="h-3.5 w-3.5 mr-1" />
           Excluir
         </Button>
+        )}
       </div>
 
       <TabsContent value="items" className="flex-1 flex flex-col min-h-0 m-0 p-0">
