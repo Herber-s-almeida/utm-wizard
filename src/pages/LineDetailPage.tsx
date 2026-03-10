@@ -784,7 +784,7 @@ const ActiveDetailContent = memo(function ActiveDetailContent({
           </TabsTrigger>
         </TabsList>
 
-        {canEditPlans && (
+        {canEdit && (
         <Button
           variant="ghost"
           size="sm"
