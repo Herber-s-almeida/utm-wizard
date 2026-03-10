@@ -163,8 +163,18 @@ export function FinanceSidebar() {
   // Sempre usar o nome do ambiente atual, nunca dados do perfil pessoal
   const environmentName = currentEnv?.environment_name || 'Carregando...';
 
-  // Check if user has access to any non-finance section (to show "Voltar ao AdsPlanning Pro")
-  const hasNonFinanceAccess = canView('media_plans') || canView('executive_dashboard') || canView('reports') || canView('media_resources') || canView('taxonomy') || canView('library');
+  // Determine first accessible non-finance route
+  const nonFinanceRoutes = [
+    { section: 'media_plans' as const, path: '/media-plan-dashboard' },
+    { section: 'executive_dashboard' as const, path: '/executive-dashboard' },
+    { section: 'reports' as const, path: '/reports' },
+    { section: 'media_resources' as const, path: '/media-resources' },
+    { section: 'taxonomy' as const, path: '/taxonomy' },
+    { section: 'library' as const, path: '/config/clients' },
+  ];
+  const firstNonFinanceRoute = nonFinanceRoutes.find(r => canView(r.section));
+  const hasNonFinanceAccess = !!firstNonFinanceRoute;
+  const backToAdsPath = firstNonFinanceRoute?.path || '/media-plan-dashboard';
 
   const isActive = (url: string) => {
     if (url === "/finance") {
