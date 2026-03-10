@@ -163,6 +163,9 @@ export function FinanceSidebar() {
   // Sempre usar o nome do ambiente atual, nunca dados do perfil pessoal
   const environmentName = currentEnv?.environment_name || 'Carregando...';
 
+  // Check if user has access to any non-finance section (to show "Voltar ao AdsPlanning Pro")
+  const hasNonFinanceAccess = canView('media_plans') || canView('executive_dashboard') || canView('reports') || canView('media_resources') || canView('taxonomy') || canView('library');
+
   const isActive = (url: string) => {
     if (url === "/finance") {
       return location.pathname === "/finance";
