@@ -634,6 +634,7 @@ export function AppSidebar() {
               </Collapsible>
 
               {/* Criar novo plano */}
+              {canEditPlans && (
               <Link to="/media-plans/new">
                 <Button 
                   variant="ghost" 
@@ -644,6 +645,7 @@ export function AppSidebar() {
                   Novo plano
                 </Button>
               </Link>
+              )}
             </CollapsibleContent>
           </Collapsible>
             </CollapsibleContent>
