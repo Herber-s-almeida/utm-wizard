@@ -290,10 +290,16 @@ export default function AdminEnvironments() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {deleteDataSummary ? "⚠️ Confirmar exclusão total" : "Excluir ambiente?"}
+                {isDeletingActiveEnvironment
+                  ? "Ambiente ativo não pode ser excluído"
+                  : deleteDataSummary
+                    ? "⚠️ Confirmar exclusão total"
+                    : "Excluir ambiente?"}
               </AlertDialogTitle>
               <AlertDialogDescription className="space-y-2">
-                {deleteDataSummary ? (
+                {isDeletingActiveEnvironment ? (
+                  <p>Você não pode excluir o ambiente em que está logado no momento. Troque de ambiente antes de continuar.</p>
+                ) : deleteDataSummary ? (
                   <>
                     <p className="font-semibold text-destructive">
                       Este ambiente possui dados que serão permanentemente excluídos:
@@ -314,12 +320,14 @@ export default function AdminEnvironments() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteEnvironment}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {deleteDataSummary ? "Excluir tudo permanentemente" : "Excluir"}
-              </AlertDialogAction>
+              {!isDeletingActiveEnvironment && (
+                <AlertDialogAction
+                  onClick={handleDeleteEnvironment}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleteDataSummary ? "Excluir tudo permanentemente" : "Excluir"}
+                </AlertDialogAction>
+              )}
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
