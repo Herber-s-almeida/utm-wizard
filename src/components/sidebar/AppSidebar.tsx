@@ -75,7 +75,7 @@ export function AppSidebar() {
   const { isAdmin } = useSystemAdmin();
   const { isViewingOtherEnvironment, userEnvironments, currentEnvironmentId } = useEnvironment();
   const { data: currentProfile } = useCurrentProfile();
-  const { canView, isEnvironmentAdmin } = useEnvironmentPermissions();
+  const { canView, canEdit, isEnvironmentAdmin } = useEnvironmentPermissions();
   const location = useLocation();
   const navigate = useNavigate();
   
