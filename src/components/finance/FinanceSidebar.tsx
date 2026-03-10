@@ -429,7 +429,7 @@ export function FinanceSidebar() {
               {/* Back to AdsPlanning Pro link */}
               {hasNonFinanceAccess && (
                 <div className="mb-4">
-                  <Link to="/media-plans">
+                  <Link to={backToAdsPath}>
                     <Button 
                       variant="ghost" 
                       size="sm" 
