@@ -3,12 +3,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Search, 
-  Building2, 
-  Plus, 
-  ClipboardList, 
-  ChevronDown, 
+import {
+  Search,
+  Building2,
+  Plus,
+  ClipboardList,
+  ChevronDown,
   ChevronRight,
   Shield,
   User,
@@ -20,10 +20,10 @@ import {
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { 
-  Collapsible, 
-  CollapsibleContent, 
-  CollapsibleTrigger 
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger
 } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
@@ -42,8 +42,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { 
-  useAdminEnvironments, 
+import {
+  useAdminEnvironments,
   useDeleteEnvironment,
   useRemoveEnvironmentMember,
   useUpdateEnvironmentMember,
@@ -55,6 +55,7 @@ import { AccessRequestsTable } from "@/components/admin/AccessRequestsTable";
 import { CreateEnvironmentDialog } from "@/components/admin/CreateEnvironmentDialog";
 import { EditEnvironmentDialog } from "@/components/admin/EditEnvironmentDialog";
 import { AddMemberToEnvironmentDialog } from "@/components/admin/AddMemberToEnvironmentDialog";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { cn } from "@/lib/utils";
 
 export default function AdminEnvironments() {
@@ -70,6 +71,7 @@ export default function AdminEnvironments() {
   } | null>(null);
   const [expandedEnvs, setExpandedEnvs] = useState<Set<string>>(new Set());
 
+  const { currentEnvironmentId } = useEnvironment();
   const { data: environments, isLoading: envsLoading } = useAdminEnvironments();
   const { data: requests, isLoading: requestsLoading } = useAccessRequests();
   const deleteEnvironment = useDeleteEnvironment();
@@ -112,20 +114,28 @@ export default function AdminEnvironments() {
   };
 
   const [deleteDataSummary, setDeleteDataSummary] = useState<{ plans: number; lines: number; documents: number } | null>(null);
+  const isDeletingActiveEnvironment = deleteEnvId !== null && deleteEnvId === currentEnvironmentId;
 
   const handleDeleteEnvironment = async () => {
-    if (!deleteEnvId) return;
-    
+    if (!deleteEnvId || isDeletingActiveEnvironment) return;
+
     if (!deleteDataSummary) {
       // First step: check if confirmation is needed
-      const result = await deleteEnvironment.mutateAsync({ environmentId: deleteEnvId });
+      const result = await deleteEnvironment.mutateAsync({
+        environmentId: deleteEnvId,
+        activeEnvironmentId: currentEnvironmentId,
+      });
       if (result?.requiresConfirmation) {
         setDeleteDataSummary(result.summary);
         return;
       }
     } else {
       // Second step: force delete confirmed
-      await deleteEnvironment.mutateAsync({ environmentId: deleteEnvId, forceDelete: true });
+      await deleteEnvironment.mutateAsync({
+        environmentId: deleteEnvId,
+        forceDelete: true,
+        activeEnvironmentId: currentEnvironmentId,
+      });
     }
     setDeleteEnvId(null);
     setDeleteDataSummary(null);
@@ -209,21 +219,22 @@ export default function AdminEnvironments() {
             ) : filteredEnvironments && filteredEnvironments.length > 0 ? (
               <div className="space-y-3">
                 {filteredEnvironments.map((env) => (
-                  <EnvironmentCard
-                    key={env.id}
-                    environment={env}
-                    isExpanded={expandedEnvs.has(env.id)}
-                    onToggleExpand={() => toggleExpand(env.id)}
-                    onEdit={() => setEditEnv(env)}
-                    onDelete={() => setDeleteEnvId(env.id)}
-                    onAddMember={() => setAddMemberEnv(env)}
-                    onRemoveMember={(member) => setRemoveMember({
-                      environmentId: env.id,
-                      userId: member.user_id,
-                      name: member.full_name || member.email || "usuário",
-                    })}
-                    onToggleAdmin={(member) => handleToggleAdmin(env, member)}
-                  />
+                    <EnvironmentCard
+                      key={env.id}
+                      environment={env}
+                      isExpanded={expandedEnvs.has(env.id)}
+                      isActiveEnvironment={env.id === currentEnvironmentId}
+                      onToggleExpand={() => toggleExpand(env.id)}
+                      onEdit={() => setEditEnv(env)}
+                      onDelete={() => setDeleteEnvId(env.id)}
+                      onAddMember={() => setAddMemberEnv(env)}
+                      onRemoveMember={(member) => setRemoveMember({
+                        environmentId: env.id,
+                        userId: member.user_id,
+                        name: member.full_name || member.email || "usuário",
+                      })}
+                      onToggleAdmin={(member) => handleToggleAdmin(env, member)}
+                    />
                 ))}
               </div>
             ) : (
@@ -279,10 +290,16 @@ export default function AdminEnvironments() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {deleteDataSummary ? "⚠️ Confirmar exclusão total" : "Excluir ambiente?"}
+                {isDeletingActiveEnvironment
+                  ? "Ambiente ativo não pode ser excluído"
+                  : deleteDataSummary
+                    ? "⚠️ Confirmar exclusão total"
+                    : "Excluir ambiente?"}
               </AlertDialogTitle>
               <AlertDialogDescription className="space-y-2">
-                {deleteDataSummary ? (
+                {isDeletingActiveEnvironment ? (
+                  <p>Você não pode excluir o ambiente em que está logado no momento. Troque de ambiente antes de continuar.</p>
+                ) : deleteDataSummary ? (
                   <>
                     <p className="font-semibold text-destructive">
                       Este ambiente possui dados que serão permanentemente excluídos:
@@ -303,12 +320,14 @@ export default function AdminEnvironments() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteEnvironment}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {deleteDataSummary ? "Excluir tudo permanentemente" : "Excluir"}
-              </AlertDialogAction>
+              {!isDeletingActiveEnvironment && (
+                <AlertDialogAction
+                  onClick={handleDeleteEnvironment}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleteDataSummary ? "Excluir tudo permanentemente" : "Excluir"}
+                </AlertDialogAction>
+              )}
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -341,6 +360,7 @@ export default function AdminEnvironments() {
 interface EnvironmentCardProps {
   environment: AdminEnvironment;
   isExpanded: boolean;
+  isActiveEnvironment: boolean;
   onToggleExpand: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -352,6 +372,7 @@ interface EnvironmentCardProps {
 function EnvironmentCard({
   environment,
   isExpanded,
+  isActiveEnvironment,
   onToggleExpand,
   onEdit,
   onDelete,
@@ -416,10 +437,11 @@ function EnvironmentCard({
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={onDelete}
-                    className="text-destructive focus:text-destructive"
+                    disabled={isActiveEnvironment}
+                    className="text-destructive focus:text-destructive disabled:pointer-events-none disabled:opacity-50"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir ambiente
+                    {isActiveEnvironment ? "Ambiente ativo" : "Excluir ambiente"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

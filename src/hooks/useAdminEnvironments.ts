@@ -21,6 +21,12 @@ export interface AdminEnvironment {
   member_count: number;
 }
 
+interface DeleteEnvironmentParams {
+  environmentId: string;
+  forceDelete?: boolean;
+  activeEnvironmentId?: string | null;
+}
+
 async function callAdminOperation(action: string, payload?: Record<string, unknown>) {
   const { data, error } = await supabase.functions.invoke("admin-operations", {
     body: { action, payload },
@@ -122,8 +128,12 @@ export function useDeleteEnvironment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ environmentId, forceDelete }: { environmentId: string; forceDelete?: boolean }) => {
-      return callAdminOperation("delete_environment", { environmentId, forceDelete });
+    mutationFn: async ({ environmentId, forceDelete, activeEnvironmentId }: DeleteEnvironmentParams) => {
+      return callAdminOperation("delete_environment", {
+        environmentId,
+        forceDelete,
+        activeEnvironmentId,
+      });
     },
     onSuccess: (data) => {
       if (data?.requiresConfirmation) return; // Don't show success for confirmation step
