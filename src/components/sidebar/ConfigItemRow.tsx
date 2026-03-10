@@ -26,6 +26,8 @@ interface ConfigItemRowProps {
   deleteWarning?: string;
   className?: string;
   children?: React.ReactNode;
+  /** When true, hide edit and delete buttons */
+  readOnly?: boolean;
 }
 
 export function ConfigItemRow({
@@ -36,6 +38,7 @@ export function ConfigItemRow({
   deleteWarning,
   className,
   children,
+  readOnly = false,
 }: ConfigItemRowProps) {
   return (
     <div className={cn("group flex items-center justify-between py-1 pl-2 pr-1 rounded-md hover:bg-sidebar-accent/50 min-w-0", className)}>
