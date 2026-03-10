@@ -958,6 +958,7 @@ export function AppSidebar() {
                     setClientDialogOpen(true);
                   }}
                   onDelete={() => clients.remove.mutate(client.id)}
+                  readOnly={!canEditLibrary}
                 />
               ))}
               <Button
