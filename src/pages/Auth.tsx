@@ -49,7 +49,7 @@ type AuthMode = 'login' | 'forgot' | 'reset';
 // Helper function to determine user destination after login
 async function getUserDestination(userId: string): Promise<string> {
   // 1. Check if user is a system user (has their own environment)
-  const { data: profile } = await supabase
+  const { data: profile } = await supabaseClient
     .from('profiles')
     .select('is_system_user, company')
     .eq('user_id', userId)
