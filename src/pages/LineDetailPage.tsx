@@ -633,6 +633,7 @@ export default function LineDetailPage() {
                     onCreativeCreated={handleCreativeCreated}
                     planLines={planLines}
                     siblingItems={siblingItems}
+                    canEdit={canEditPlans}
                   />
                 </TabsContent>
               )}
