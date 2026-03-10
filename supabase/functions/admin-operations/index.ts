@@ -333,12 +333,32 @@ serve(async (req) => {
         await adminClient.from("behavioral_segmentations").delete().eq("environment_id", environmentId);
         await adminClient.from("data_sources").delete().eq("environment_id", environmentId);
 
-        // Performance data
+        // Performance and reports data
         await adminClient.from("performance_data").delete().eq("environment_id", environmentId);
+        await adminClient.from("performance_alerts").delete().eq("environment_id", environmentId);
+        await adminClient.from("report_imports").delete().eq("environment_id", environmentId);
+        await adminClient.from("report_periods").delete().eq("environment_id", environmentId);
+        await adminClient.from("status_transitions").delete().eq("environment_id", environmentId);
 
-        // Environment members and invites
-        await adminClient.from("environment_roles").delete().eq("environment_id", environmentId);
+        // Additional config tables
+        await adminClient.from("mediums").delete().eq("environment_id", environmentId);
+        await adminClient.from("formats").delete().eq("environment_id", environmentId);
+        await adminClient.from("format_creative_types").delete().eq("environment_id", environmentId);
+        await adminClient.from("funnel_stages").delete().eq("environment_id", environmentId);
+        await adminClient.from("media_objectives").delete().eq("environment_id", environmentId);
+        await adminClient.from("targets").delete().eq("environment_id", environmentId);
+        await adminClient.from("moments").delete().eq("environment_id", environmentId);
+        await adminClient.from("statuses").delete().eq("environment_id", environmentId);
+        await adminClient.from("line_detail_types").delete().eq("environment_id", environmentId);
+        await adminClient.from("line_detail_insertions").delete().eq("environment_id", environmentId);
+        await adminClient.from("line_targets").delete().eq("environment_id", environmentId);
+        await adminClient.from("plan_subdivisions").delete().eq("environment_id", environmentId);
+
+        // Invites (NO ACTION FK)
         await adminClient.from("pending_environment_invites").delete().eq("environment_id", environmentId);
+
+        // DO NOT delete environment_roles manually - the trigger blocks last-admin removal.
+        // environment_roles has ON DELETE CASCADE from environments, so it will be cleaned up automatically.
 
         // Delete the environment itself
         const { error } = await adminClient
