@@ -52,6 +52,7 @@ export function ConfigItemRow({
           <TooltipContent side="right">{name}</TooltipContent>
         )}
       </Tooltip>
+      {!readOnly && (
       <div className="flex items-center gap-0 shrink-0 ml-1">
         <Button 
           size="icon" 
