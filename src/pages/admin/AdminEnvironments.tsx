@@ -437,10 +437,11 @@ function EnvironmentCard({
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={onDelete}
-                    className="text-destructive focus:text-destructive"
+                    disabled={isActiveEnvironment}
+                    className="text-destructive focus:text-destructive disabled:pointer-events-none disabled:opacity-50"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir ambiente
+                    {isActiveEnvironment ? "Ambiente ativo" : "Excluir ambiente"}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

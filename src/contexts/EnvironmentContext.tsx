@@ -203,15 +203,25 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
     return myRole?.role_invite ?? false;
   }, [isSystemAdmin, myRole]);
 
-  // Auto-select environment when user loads
+  // Auto-select environment when user loads or when access changes
   useEffect(() => {
     if (isLoadingEnvironments) return;
-    if (currentEnvironmentId !== null) return;
     if (userEnvironments.length === 0) return;
-    
+
+    const currentEnvIsAccessible = currentEnvironmentId
+      ? userEnvironments.some(env => env.environment_id === currentEnvironmentId)
+      : false;
+
+    if (currentEnvironmentId && currentEnvIsAccessible) return;
+
+    if (currentEnvironmentId && !currentEnvIsAccessible) {
+      localStorage.removeItem('selectedEnvironmentId');
+      setCurrentEnvironmentId(null);
+    }
+
     // Check if there's a stored environment preference
     const storedEnvId = localStorage.getItem('selectedEnvironmentId');
-    
+
     if (storedEnvId) {
       // Verify the stored environment is still accessible
       const storedEnv = userEnvironments.find(env => env.environment_id === storedEnvId);
@@ -219,16 +229,16 @@ export function EnvironmentProvider({ children, currentUserId }: EnvironmentProv
         console.log('Using stored environment:', storedEnv.environment_name);
         setCurrentEnvironmentId(storedEnvId);
         return;
-      } else {
-        // Stored environment no longer accessible, clear it
-        localStorage.removeItem('selectedEnvironmentId');
       }
+
+      // Stored environment no longer accessible, clear it
+      localStorage.removeItem('selectedEnvironmentId');
     }
-    
+
     // Prefer environments where user is admin, otherwise first available
     const adminEnv = userEnvironments.find(env => env.is_environment_admin);
     const envToSelect = adminEnv || userEnvironments[0];
-    
+
     if (envToSelect) {
       console.log('Auto-selecting environment:', envToSelect.environment_name);
       setCurrentEnvironmentId(envToSelect.environment_id);
