@@ -71,10 +71,47 @@ async function getUserDestination(userId: string): Promise<string> {
     return '/settings/setup';
   }
 
-  // 5. If user has exactly one environment, go to dashboard
+  // 5. If user has exactly one environment, determine best landing page
   if (envCount === 1) {
+    const env = environments[0];
     // Store the environment ID for the context to pick up
-    localStorage.setItem('selectedEnvironmentId', environments[0].environment_id);
+    localStorage.setItem('selectedEnvironmentId', env.environment_id);
+    
+    // If user is admin, go to media plan dashboard
+    if (env.is_environment_admin) {
+      return '/media-plan-dashboard';
+    }
+    
+    // Check if user is system admin
+    const { data: isSysAdmin } = await supabase.rpc('is_system_admin', { _user_id: userId });
+    if (isSysAdmin) return '/media-plan-dashboard';
+    
+    // Fetch permissions to find the best landing page
+    const { data: role } = await supabase
+      .from('environment_roles')
+      .select('perm_media_plans, perm_finance, perm_executive_dashboard, perm_reports, perm_media_resources, perm_taxonomy, perm_library')
+      .eq('environment_id', env.environment_id)
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (role) {
+      const sectionRoutes: { perm: string | null; path: string }[] = [
+        { perm: role.perm_media_plans, path: '/media-plan-dashboard' },
+        { perm: role.perm_finance, path: '/finance' },
+        { perm: role.perm_executive_dashboard, path: '/executive-dashboard' },
+        { perm: role.perm_reports, path: '/reports' },
+        { perm: role.perm_media_resources, path: '/media-resources' },
+        { perm: role.perm_taxonomy, path: '/taxonomy' },
+        { perm: role.perm_library, path: '/config/clients' },
+      ];
+      
+      for (const section of sectionRoutes) {
+        if (section.perm && section.perm !== 'none') {
+          return section.path;
+        }
+      }
+    }
+    
     return '/media-plan-dashboard';
   }
 
