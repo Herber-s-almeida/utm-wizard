@@ -1135,8 +1135,10 @@ export function AppSidebar() {
                     setFunnelStageDialogOpen(true);
                   }}
                   onDelete={() => funnelStages.remove.mutate(stage.id)}
+                  readOnly={!canEditLibrary}
                 />
               ))}
+              {canEditLibrary && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -1146,6 +1148,7 @@ export function AppSidebar() {
                 <Plus className="h-3 w-3" />
                 Novo
               </Button>
+              )}
               {(funnelStages.activeItems?.length || 0) > MAX_ITEMS && (
                 <Link to="/config/funnel-stages">
                   <Button variant="ghost" size="sm" className="w-full justify-start h-6 text-[10px] text-muted-foreground">
