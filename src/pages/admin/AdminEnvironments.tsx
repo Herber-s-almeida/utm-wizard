@@ -114,20 +114,28 @@ export default function AdminEnvironments() {
   };
 
   const [deleteDataSummary, setDeleteDataSummary] = useState<{ plans: number; lines: number; documents: number } | null>(null);
+  const isDeletingActiveEnvironment = deleteEnvId !== null && deleteEnvId === currentEnvironmentId;
 
   const handleDeleteEnvironment = async () => {
-    if (!deleteEnvId) return;
-    
+    if (!deleteEnvId || isDeletingActiveEnvironment) return;
+
     if (!deleteDataSummary) {
       // First step: check if confirmation is needed
-      const result = await deleteEnvironment.mutateAsync({ environmentId: deleteEnvId });
+      const result = await deleteEnvironment.mutateAsync({
+        environmentId: deleteEnvId,
+        activeEnvironmentId: currentEnvironmentId,
+      });
       if (result?.requiresConfirmation) {
         setDeleteDataSummary(result.summary);
         return;
       }
     } else {
       // Second step: force delete confirmed
-      await deleteEnvironment.mutateAsync({ environmentId: deleteEnvId, forceDelete: true });
+      await deleteEnvironment.mutateAsync({
+        environmentId: deleteEnvId,
+        forceDelete: true,
+        activeEnvironmentId: currentEnvironmentId,
+      });
     }
     setDeleteEnvId(null);
     setDeleteDataSummary(null);
