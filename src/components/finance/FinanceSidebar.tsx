@@ -146,7 +146,7 @@ export function FinanceSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { isViewingOtherEnvironment, userEnvironments, currentEnvironmentId } = useEnvironment();
+  const { isViewingOtherEnvironment, userEnvironments, currentEnvironmentId, canView } = useEnvironment();
   const { data: currentProfile } = useCurrentProfile();
   const { isAdmin } = useSystemAdmin();
   const { logoUrl } = useEnvironmentLogo();
@@ -162,6 +162,9 @@ export function FinanceSidebar() {
 
   // Sempre usar o nome do ambiente atual, nunca dados do perfil pessoal
   const environmentName = currentEnv?.environment_name || 'Carregando...';
+
+  // Check if user has access to any non-finance section (to show "Voltar ao AdsPlanning Pro")
+  const hasNonFinanceAccess = canView('media_plans') || canView('executive_dashboard') || canView('reports') || canView('media_resources') || canView('taxonomy') || canView('library');
 
   const isActive = (url: string) => {
     if (url === "/finance") {
@@ -296,18 +299,20 @@ export function FinanceSidebar() {
           ))}
 
           {/* Back to AdsPlanning */}
-          <div className="mt-auto pt-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link to="/media-plans">
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">Voltar ao AdsPlanning Pro</TooltipContent>
-            </Tooltip>
-          </div>
+          {hasNonFinanceAccess && (
+            <div className="mt-auto pt-4">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link to="/media-plans">
+                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Voltar ao AdsPlanning Pro</TooltipContent>
+              </Tooltip>
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -412,18 +417,20 @@ export function FinanceSidebar() {
               </div>
 
               {/* Back to AdsPlanning Pro link */}
-              <div className="mb-4">
-                <Link to="/media-plans">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="w-full justify-start gap-2 h-8 text-xs"
-                  >
-                    <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
-                    <span>Voltar ao AdsPlanning Pro</span>
-                  </Button>
-                </Link>
-              </div>
+              {hasNonFinanceAccess && (
+                <div className="mb-4">
+                  <Link to="/media-plans">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-start gap-2 h-8 text-xs"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+                      <span>Voltar ao AdsPlanning Pro</span>
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </ScrollArea>
 
