@@ -56,7 +56,7 @@ async function getUserDestination(userId: string): Promise<string> {
     .single();
 
   // 2. Get all environments user has access to
-  const { data: environments } = await supabase.rpc('get_user_environments_v2', {
+  const { data: environments } = await supabaseClient.rpc('get_user_environments_v2', {
     _user_id: userId,
   });
 
