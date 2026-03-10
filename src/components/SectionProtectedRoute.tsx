@@ -1,11 +1,41 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useEnvironment, EnvironmentSection, PermissionLevel } from '@/contexts/EnvironmentContext';
 import { Loader2, ShieldX } from 'lucide-react';
+import { toast } from 'sonner';
 
 // Re-export types for convenience
 export type { EnvironmentSection, PermissionLevel } from '@/contexts/EnvironmentContext';
+
+/** Priority-ordered list of sections and their landing routes */
+const SECTION_ROUTES: { section: EnvironmentSection; path: string }[] = [
+  { section: 'media_plans', path: '/media-plan-dashboard' },
+  { section: 'finance', path: '/finance' },
+  { section: 'executive_dashboard', path: '/executive-dashboard' },
+  { section: 'reports', path: '/reports' },
+  { section: 'media_resources', path: '/media-resources' },
+  { section: 'taxonomy', path: '/taxonomy' },
+  { section: 'library', path: '/config/clients' },
+];
+
+/**
+ * Find the first accessible route for the current user based on permissions.
+ * Excludes a specific section to avoid redirect loops.
+ */
+function findFirstAccessibleRoute(
+  getPermission: (section: EnvironmentSection) => PermissionLevel,
+  excludeSection?: EnvironmentSection
+): string | null {
+  for (const route of SECTION_ROUTES) {
+    if (route.section === excludeSection) continue;
+    const level = getPermission(route.section);
+    if (level !== 'none') {
+      return route.path;
+    }
+  }
+  return null;
+}
 
 interface SectionProtectedRouteProps {
   children: ReactNode;
@@ -16,19 +46,18 @@ interface SectionProtectedRouteProps {
 
 /**
  * Protects routes based on environment section permissions.
- * 
- * @param section - The environment section to check permission for
- * @param minLevel - Minimum permission level required ('view' by default)
- * @param fallbackPath - Where to redirect if access denied (defaults to /dashboard)
+ * When access is denied, redirects to the first available section.
  */
 export function SectionProtectedRoute({ 
   children, 
   section, 
   minLevel = 'view',
-  fallbackPath = '/media-plan-dashboard'
+  fallbackPath
 }: SectionProtectedRouteProps) {
   const { user, loading: authLoading } = useAuth();
   const { getPermission, isEnvironmentAdmin, isSystemAdmin, isLoadingPermissions } = useEnvironment();
+  const [showDenied, setShowDenied] = useState(false);
+  const [redirectPath, setRedirectPath] = useState<string | null>(null);
 
   // Still loading auth or permissions
   if (authLoading || isLoadingPermissions) {
@@ -53,24 +82,18 @@ export function SectionProtectedRoute({
   }
 
   const currentLevel = getPermission(section);
-  
-  // Check if user has sufficient permission
   const hasAccess = checkPermissionLevel(currentLevel, minLevel);
   
   if (!hasAccess) {
-    // Show access denied message briefly, then redirect
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4 text-center max-w-md px-4">
-          <ShieldX className="w-12 h-12 text-destructive" />
-          <h2 className="text-xl font-semibold">Acesso Negado</h2>
-          <p className="text-muted-foreground">
-            Você não tem permissão para acessar esta seção.
-          </p>
-          <Navigate to={fallbackPath} replace />
-        </div>
-      </div>
-    );
+    // Find the best redirect target
+    const target = fallbackPath || findFirstAccessibleRoute(getPermission, section) || '/account';
+    
+    toast.error('Acesso Negado', {
+      description: 'Você não tem permissão para acessar esta seção. Redirecionando...',
+      duration: 3000,
+    });
+
+    return <Navigate to={target} replace />;
   }
 
   return <>{children}</>;
@@ -102,3 +125,6 @@ export function withSectionProtection(
     );
   };
 }
+
+/** Export for reuse in other components (e.g., post-login redirect) */
+export { findFirstAccessibleRoute, SECTION_ROUTES };
