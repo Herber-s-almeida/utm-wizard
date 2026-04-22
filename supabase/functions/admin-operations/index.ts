@@ -782,6 +782,41 @@ serve(async (req) => {
         );
       }
 
+      case "reset_user_password": {
+        const { email, password } = payload;
+
+        if (!email || typeof email !== "string" || !password || typeof password !== "string") {
+          return new Response(
+            JSON.stringify({ error: "Email e nova senha são obrigatórios" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { data: authUsers, error: listError } = await adminClient.auth.admin.listUsers();
+        if (listError) throw listError;
+
+        const targetUser = authUsers?.users.find(
+          (authUser) => authUser.email?.toLowerCase() === email.toLowerCase()
+        );
+
+        if (!targetUser) {
+          return new Response(
+            JSON.stringify({ error: "Usuário não encontrado" }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { error: updateError } = await adminClient.auth.admin.updateUserById(targetUser.id, {
+          password,
+        });
+        if (updateError) throw updateError;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       case "get_user_plans": {
         const { userId } = payload;
         
