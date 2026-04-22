@@ -761,6 +761,51 @@ serve(async (req) => {
         );
       }
 
+      case "reset_user_password": {
+        const { email, password } = payload;
+
+        if (!email || typeof email !== "string") {
+          return new Response(
+            JSON.stringify({ error: "Email é obrigatório" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        if (!password || typeof password !== "string" || password.length < 6) {
+          return new Response(
+            JSON.stringify({ error: "Senha inválida" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+        const { data: authUsers, error: listError } = await adminClient.auth.admin.listUsers();
+        if (listError) throw listError;
+
+        const targetUser = authUsers?.users.find(
+          (authUser) => authUser.email?.toLowerCase() === normalizedEmail
+        );
+
+        if (!targetUser) {
+          return new Response(
+            JSON.stringify({ error: "Usuário não encontrado" }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const { error: updateError } = await adminClient.auth.admin.updateUserById(targetUser.id, {
+          password,
+          email_confirm: true,
+        });
+
+        if (updateError) throw updateError;
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       case "delete_user": {
         const { userId } = payload;
         
