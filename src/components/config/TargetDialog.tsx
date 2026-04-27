@@ -14,6 +14,7 @@ import { useBrazilianCities, BrazilianCity } from '@/hooks/useBrazilianCities';
 import { useBehavioralSegmentations, BehavioralSegmentation } from '@/hooks/useConfigData';
 import { useClients } from '@/hooks/useClients';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
+import { toSlug } from '@/utils/utmGenerator';
 
 interface Location {
   city: string;
