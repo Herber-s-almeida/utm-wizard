@@ -684,7 +684,9 @@ export default function EditMediaPlan() {
         break;
       case 'funnel_stage':
         const currentFunnels = state.funnelStages[parentPath] || [];
-        setFunnelStages(parentPath, currentFunnels.filter(f => f.id !== id));
+        const nextFunnels = currentFunnels.filter(f => f.id !== id);
+        setFunnelStages(parentPath, nextFunnels);
+        setFunnelOrder(nextFunnels.map(f => f.id));
         break;
     }
   };
@@ -693,6 +695,7 @@ export default function EditMediaPlan() {
     switch (level) {
       case 'funnel_stage':
         setFunnelStages(parentPath, items);
+        setFunnelOrder(items.map(i => i.id));
         break;
     }
   };
