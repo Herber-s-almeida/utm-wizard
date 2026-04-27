@@ -5,20 +5,33 @@
 
 import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER } from '@/types/hierarchy';
 
+export const UTM_SLUG_PATTERN = /^[A-Za-z0-9._-]+$/;
+export const UTM_SLUG_ALLOWED_TEXT = 'letras, números, hífens (-), underscores (_) e pontos (.)';
+
+// Sanitizes user input for UTM slug fields without removing valid trailing characters while typing.
+export function sanitizeSlugInput(text: string | null | undefined): string {
+  if (!text) return '';
+
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/\s+/g, '-') // Replace whitespace with hyphens
+    .replace(/[^A-Za-z0-9._-]/g, ''); // Keep only letters, digits, '.', '_' and '-'
+}
+
+export function isValidUtmSlug(text: string | null | undefined): boolean {
+  return !!text && UTM_SLUG_PATTERN.test(text);
+}
+
 // Convert text to UTM-safe slug format.
 // Allowed characters: A-Z, a-z, 0-9, hyphen (-), underscore (_) and dot (.).
 // Preserves original casing. Removes accents and replaces whitespace with hyphens.
 export function toSlug(text: string | null | undefined): string {
   if (!text) return '';
 
-  return text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .trim()
-    .replace(/\s+/g, '-') // Replace whitespace with hyphens
-    .replace(/[^A-Za-z0-9._-]/g, '') // Keep only letters, digits, '.', '_' and '-'
+  return sanitizeSlugInput(text)
     .replace(/-+/g, '-') // Collapse multiple hyphens
-    .replace(/^[-_.]+|[-_.]+$/g, ''); // Trim leading/trailing separators
+    .replace(/^-+|-+$/g, ''); // Trim leading/trailing hyphens caused by spaces
 }
 
 export interface UTMParams {
