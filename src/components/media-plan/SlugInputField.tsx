@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 import { RefreshCw } from 'lucide-react';
-import { toSlug } from '@/utils/utmGenerator';
+import { sanitizeSlugInput, toSlug } from '@/utils/utmGenerator';
 
 interface SlugInputFieldProps {
   name: string;
@@ -48,11 +48,7 @@ export function SlugInputField({ name, slug, onNameChange, onSlugChange }: SlugI
   }, [localSlug, slugManuallyEdited, autoSlug, onSlugChange]);
 
   const handleSlugChange = (value: string) => {
-    // Allow letters (any case), digits, '.', '_' and '-'. Replace whitespace with '-'.
-    const sanitized = value
-      .replace(/\s+/g, '-')
-      .replace(/[^A-Za-z0-9._-]/g, '');
-    setLocalSlug(sanitized);
+    setLocalSlug(sanitizeSlugInput(value));
     setSlugManuallyEdited(true);
   };
 
