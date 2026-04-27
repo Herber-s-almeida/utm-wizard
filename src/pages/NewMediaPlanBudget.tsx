@@ -493,6 +493,11 @@ export default function NewMediaPlanBudget() {
 
   const handleLevelReorder = (level: HierarchyLevel, parentKey: string, items: BudgetAllocation[]) => {
     setAllocationsForLevel(level, parentKey, items);
+    // Keep global funnelOrder in sync with the user's chosen order of funnel stages.
+    // The funnel stage IDs are shared across all parent paths within the plan.
+    if (level === 'funnel_stage') {
+      setFunnelOrder(items.map(item => item.id));
+    }
   };
 
   const handleCreateItem = async (level: HierarchyLevel, name: string) => {
