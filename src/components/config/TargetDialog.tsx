@@ -52,17 +52,7 @@ interface TargetDialogProps {
 }
 
 // Função para gerar slug a partir do nome
-function toSlug(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-    .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
-    .replace(/\s+/g, '-') // Espaços viram hífens
-    .replace(/-+/g, '-') // Remove hífens duplicados
-    .slice(0, 30);
-}
+
 
 export function TargetDialog({
   open,
