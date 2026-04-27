@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Channel } from '@/hooks/useConfigData';
-import { toSlug } from '@/utils/utmGenerator';
+import { isValidUtmSlug, sanitizeSlugInput, toSlug, UTM_SLUG_ALLOWED_TEXT } from '@/utils/utmGenerator';
 import { toast } from 'sonner';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 
@@ -74,8 +74,8 @@ export function ChannelDialog({
     }
 
     // Validate slug format
-    if (!finalSlug || !/^[a-z0-9-]+$/.test(finalSlug)) {
-      toast.error('Slug inválido. Use apenas letras minúsculas, números e hífens.');
+    if (!isValidUtmSlug(finalSlug)) {
+      toast.error(`Slug inválido. Use apenas ${UTM_SLUG_ALLOWED_TEXT}.`);
       return;
     }
 
@@ -135,21 +135,21 @@ export function ChannelDialog({
           </div>
 
           <div className="space-y-2">
-            <LabelWithTooltip htmlFor="channel-slug" tooltip="Será usado como utm_medium nas URLs de rastreamento. Apenas letras minúsculas, números e hífens.">
+            <LabelWithTooltip htmlFor="channel-slug" tooltip="Será usado como utm_medium nas URLs de rastreamento. Permite letras maiúsculas/minúsculas, números, hífens, underscores e pontos.">
               Medium Slug (utm_medium)
             </LabelWithTooltip>
             <Input
               id="channel-slug"
               value={slug}
               onChange={(e) => {
-                setSlug(toSlug(e.target.value));
+                setSlug(sanitizeSlugInput(e.target.value));
                 setSlugManuallyEdited(true);
               }}
               placeholder="search"
               className="font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Gerado automaticamente do nome, mas pode ser editado.
+              Gerado automaticamente do nome, mas pode ser editado. Permite A-Z, 0-9, -, _ e .
             </p>
           </div>
 

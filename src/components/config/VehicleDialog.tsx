@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Medium } from '@/hooks/useConfigData';
-import { toSlug } from '@/utils/utmGenerator';
+import { isValidUtmSlug, sanitizeSlugInput, toSlug, UTM_SLUG_ALLOWED_TEXT } from '@/utils/utmGenerator';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 
 interface Channel {
@@ -91,7 +91,7 @@ export function VehicleDialog({
 
   const handleChannelSlugChange = (index: number, value: string) => {
     const newChannels = [...channels];
-    newChannels[index].slug = toSlug(value);
+    newChannels[index].slug = sanitizeSlugInput(value);
     newChannels[index].slugManuallyEdited = true;
     setChannels(newChannels);
   };
@@ -154,8 +154,8 @@ export function VehicleDialog({
     }
 
     // Validate slug format
-    if (!finalSlug || !/^[a-z0-9-]+$/.test(finalSlug)) {
-      toast.error('Slug inválido. Use apenas letras minúsculas, números e hífens.');
+    if (!isValidUtmSlug(finalSlug)) {
+      toast.error(`Slug inválido. Use apenas ${UTM_SLUG_ALLOWED_TEXT}.`);
       return;
     }
 
@@ -303,21 +303,21 @@ export function VehicleDialog({
           </div>
 
           <div className="space-y-2">
-            <LabelWithTooltip htmlFor="slug" tooltip="Será usado como utm_source nas URLs de rastreamento. Apenas letras minúsculas, números e hífens.">
+            <LabelWithTooltip htmlFor="slug" tooltip="Será usado como utm_source nas URLs de rastreamento. Permite letras maiúsculas/minúsculas, números, hífens, underscores e pontos.">
               Source Slug (utm_source)
             </LabelWithTooltip>
             <Input
               id="slug"
               value={slug}
               onChange={(e) => {
-                setSlug(toSlug(e.target.value));
+                setSlug(sanitizeSlugInput(e.target.value));
                 setSlugManuallyEdited(true);
               }}
               placeholder="google-ads"
               className="font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Gerado automaticamente do nome, mas pode ser editado.
+              Gerado automaticamente do nome, mas pode ser editado. Permite A-Z, 0-9, -, _ e .
             </p>
           </div>
 
