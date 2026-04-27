@@ -5,18 +5,20 @@
 
 import { HierarchyLevel, DEFAULT_HIERARCHY_ORDER } from '@/types/hierarchy';
 
-// Convert text to slug format (lowercase, no special chars, hyphens for spaces)
+// Convert text to UTM-safe slug format.
+// Allowed characters: A-Z, a-z, 0-9, hyphen (-), underscore (_) and dot (.).
+// Preserves original casing. Removes accents and replaces whitespace with hyphens.
 export function toSlug(text: string | null | undefined): string {
   if (!text) return '';
-  
+
   return text
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .toLowerCase()
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/[^a-z0-9-]/g, '') // Remove non-alphanumeric (except hyphens)
+    .trim()
+    .replace(/\s+/g, '-') // Replace whitespace with hyphens
+    .replace(/[^A-Za-z0-9._-]/g, '') // Keep only letters, digits, '.', '_' and '-'
     .replace(/-+/g, '-') // Collapse multiple hyphens
-    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+    .replace(/^[-_.]+|[-_.]+$/g, ''); // Trim leading/trailing separators
 }
 
 export interface UTMParams {
