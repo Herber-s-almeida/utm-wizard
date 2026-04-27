@@ -17,7 +17,7 @@ import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
-import { toSlug } from '@/utils/utmGenerator';
+import { sanitizeSlugInput, toSlug } from '@/utils/utmGenerator';
 
 export default function NewMediaPlanManual() {
   const { user } = useAuth();
@@ -94,8 +94,7 @@ export default function NewMediaPlanManual() {
   };
 
   const handleSlugChange = (value: string) => {
-    // Only allow valid slug characters
-    const sanitized = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    const sanitized = sanitizeSlugInput(value);
     setFormData(prev => ({ ...prev, utm_campaign_slug: sanitized }));
   };
 
