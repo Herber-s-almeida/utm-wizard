@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Medium } from '@/hooks/useConfigData';
-import { toSlug } from '@/utils/utmGenerator';
+import { isValidUtmSlug, sanitizeSlugInput, toSlug, UTM_SLUG_ALLOWED_TEXT } from '@/utils/utmGenerator';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
 
 interface Channel {
@@ -91,7 +91,7 @@ export function VehicleDialog({
 
   const handleChannelSlugChange = (index: number, value: string) => {
     const newChannels = [...channels];
-    newChannels[index].slug = toSlug(value);
+    newChannels[index].slug = sanitizeSlugInput(value);
     newChannels[index].slugManuallyEdited = true;
     setChannels(newChannels);
   };
@@ -154,8 +154,8 @@ export function VehicleDialog({
     }
 
     // Validate slug format
-    if (!finalSlug || !/^[a-z0-9-]+$/.test(finalSlug)) {
-      toast.error('Slug inválido. Use apenas letras minúsculas, números e hífens.');
+    if (!isValidUtmSlug(finalSlug)) {
+      toast.error(`Slug inválido. Use apenas ${UTM_SLUG_ALLOWED_TEXT}.`);
       return;
     }
 
