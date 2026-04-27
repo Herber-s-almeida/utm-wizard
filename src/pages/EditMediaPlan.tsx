@@ -861,6 +861,7 @@ export default function EditMediaPlan() {
           objectives: state.planData.objectives.length > 0 ? state.planData.objectives : null,
           kpis: Object.keys(state.planData.kpis).length > 0 ? state.planData.kpis : null,
           hierarchy_order: planHierarchyOrder, // Now we save the updated hierarchy
+          funnel_order: state.funnelOrder.length > 0 ? state.funnelOrder : null,
         })
         .eq('id', planId);
 
