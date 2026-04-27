@@ -303,21 +303,21 @@ export function VehicleDialog({
           </div>
 
           <div className="space-y-2">
-            <LabelWithTooltip htmlFor="slug" tooltip="Será usado como utm_source nas URLs de rastreamento. Apenas letras minúsculas, números e hífens.">
+            <LabelWithTooltip htmlFor="slug" tooltip="Será usado como utm_source nas URLs de rastreamento. Permite letras maiúsculas/minúsculas, números, hífens, underscores e pontos.">
               Source Slug (utm_source)
             </LabelWithTooltip>
             <Input
               id="slug"
               value={slug}
               onChange={(e) => {
-                setSlug(toSlug(e.target.value));
+                setSlug(sanitizeSlugInput(e.target.value));
                 setSlugManuallyEdited(true);
               }}
               placeholder="google-ads"
               className="font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Gerado automaticamente do nome, mas pode ser editado.
+              Gerado automaticamente do nome, mas pode ser editado. Permite A-Z, 0-9, -, _ e .
             </p>
           </div>
 
