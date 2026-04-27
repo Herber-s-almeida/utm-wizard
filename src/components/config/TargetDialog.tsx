@@ -14,7 +14,7 @@ import { useBrazilianCities, BrazilianCity } from '@/hooks/useBrazilianCities';
 import { useBehavioralSegmentations, BehavioralSegmentation } from '@/hooks/useConfigData';
 import { useClients } from '@/hooks/useClients';
 import { LabelWithTooltip } from '@/components/ui/info-tooltip';
-import { toSlug } from '@/utils/utmGenerator';
+import { sanitizeSlugInput, toSlug } from '@/utils/utmGenerator';
 
 interface Location {
   city: string;
@@ -174,7 +174,7 @@ export function TargetDialog({
   }, [open, initialData]);
 
   const handleSlugChange = (value: string) => {
-    setSlug(toSlug(value));
+    setSlug(sanitizeSlugInput(value));
     setSlugManuallyEdited(true);
   };
 
@@ -427,7 +427,6 @@ export function TargetDialog({
               value={slug}
               onChange={(e) => handleSlugChange(e.target.value)}
               placeholder="jovens-urbanos"
-              maxLength={30}
             />
             <p className="text-xs text-muted-foreground">
               Prévia: <code className="bg-muted px-1 rounded">utm_term={slug || 'seu-slug'}</code>
