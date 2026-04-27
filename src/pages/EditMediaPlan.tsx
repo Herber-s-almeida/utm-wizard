@@ -642,7 +642,9 @@ export default function EditMediaPlan() {
           toast.error(`Máximo de ${MAX_ITEMS_PER_LEVEL.funnel_stage} fases do funil`);
           return;
         }
-        setFunnelStages(parentPath, [...currentFunnels, item]);
+        const nextFunnels = [...currentFunnels, item];
+        setFunnelStages(parentPath, nextFunnels);
+        setFunnelOrder(nextFunnels.map(f => f.id));
         break;
     }
   };
