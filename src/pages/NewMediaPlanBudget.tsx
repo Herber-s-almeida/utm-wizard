@@ -109,6 +109,7 @@ export default function NewMediaPlanBudget() {
     setSubdivisions, 
     setMoments, 
     setFunnelStages, 
+    setFunnelOrder,
     setTemporalGranularity, 
     libraryData, 
     libraryMutations, 
