@@ -357,7 +357,8 @@ export default function EditMediaPlan() {
       }
 
       // Initialize wizard with loaded data, starting at step 0 (Structure)
-      initializeFromPlan(planData, subdivisionAllocations, momentAllocations, funnelAllocations, 0, loadedHierarchyOrder, hierarchyConfig);
+      const loadedFunnelOrder = ((plan as any).funnel_order as string[] | null) ?? [];
+      initializeFromPlan(planData, subdivisionAllocations, momentAllocations, funnelAllocations, 0, loadedHierarchyOrder, hierarchyConfig, loadedFunnelOrder);
     } catch (error) {
       console.error('Error loading plan:', error);
       toast.error('Erro ao carregar plano');
