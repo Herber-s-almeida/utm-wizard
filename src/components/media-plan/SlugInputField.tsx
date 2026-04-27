@@ -48,8 +48,10 @@ export function SlugInputField({ name, slug, onNameChange, onSlugChange }: SlugI
   }, [localSlug, slugManuallyEdited, autoSlug, onSlugChange]);
 
   const handleSlugChange = (value: string) => {
-    // Only allow valid slug characters
-    const sanitized = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    // Allow letters (any case), digits, '.', '_' and '-'. Replace whitespace with '-'.
+    const sanitized = value
+      .replace(/\s+/g, '-')
+      .replace(/[^A-Za-z0-9._-]/g, '');
     setLocalSlug(sanitized);
     setSlugManuallyEdited(true);
   };
