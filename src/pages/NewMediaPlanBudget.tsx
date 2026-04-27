@@ -109,6 +109,7 @@ export default function NewMediaPlanBudget() {
     setSubdivisions, 
     setMoments, 
     setFunnelStages, 
+    setFunnelOrder,
     setTemporalGranularity, 
     libraryData, 
     libraryMutations, 
@@ -476,6 +477,9 @@ export default function NewMediaPlanBudget() {
     }
     
     setAllocationsForLevel(level, parentKey, [...current, item]);
+    if (level === 'funnel_stage') {
+      setFunnelOrder([...current, item].map(i => i.id));
+    }
   };
 
   const handleLevelUpdate = (level: HierarchyLevel, parentKey: string, id: string, percentage: number, dates?: { start_date?: string; end_date?: string }) => {
@@ -487,11 +491,20 @@ export default function NewMediaPlanBudget() {
 
   const handleLevelRemove = (level: HierarchyLevel, parentKey: string, id: string) => {
     const current = getAllocationsForLevel(level, parentKey);
-    setAllocationsForLevel(level, parentKey, current.filter(item => item.id !== id));
+    const next = current.filter(item => item.id !== id);
+    setAllocationsForLevel(level, parentKey, next);
+    if (level === 'funnel_stage') {
+      setFunnelOrder(next.map(i => i.id));
+    }
   };
 
   const handleLevelReorder = (level: HierarchyLevel, parentKey: string, items: BudgetAllocation[]) => {
     setAllocationsForLevel(level, parentKey, items);
+    // Keep global funnelOrder in sync with the user's chosen order of funnel stages.
+    // The funnel stage IDs are shared across all parent paths within the plan.
+    if (level === 'funnel_stage') {
+      setFunnelOrder(items.map(item => item.id));
+    }
   };
 
   const handleCreateItem = async (level: HierarchyLevel, name: string) => {
