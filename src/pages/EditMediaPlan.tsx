@@ -135,7 +135,7 @@ export default function EditMediaPlan() {
   const originalHierarchyOrder = useMemo(() => getHierarchyOrder(originalHierarchyConfig), [originalHierarchyConfig]);
   const { customKpis } = useCustomKpis();
 
-  const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations, initializeFromPlan, getLibraryForLevel, getCreateMutationForLevel, setHierarchyOrder: setWizardHierarchyOrder, setHierarchyConfig: setWizardHierarchyConfig, reset: resetWizard } = wizard;
+  const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setFunnelOrder, setTemporalGranularity, libraryData, libraryMutations, initializeFromPlan, getLibraryForLevel, getCreateMutationForLevel, setHierarchyOrder: setWizardHierarchyOrder, setHierarchyConfig: setWizardHierarchyConfig, reset: resetWizard } = wizard;
 
   // Generate wizard steps dynamically based on planHierarchyOrder (includes step 0 for structure)
   const wizardSteps = useMemo(() => {
