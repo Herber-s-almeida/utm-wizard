@@ -135,7 +135,7 @@ export default function EditMediaPlan() {
   const originalHierarchyOrder = useMemo(() => getHierarchyOrder(originalHierarchyConfig), [originalHierarchyConfig]);
   const { customKpis } = useCustomKpis();
 
-  const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setTemporalGranularity, libraryData, libraryMutations, initializeFromPlan, getLibraryForLevel, getCreateMutationForLevel, setHierarchyOrder: setWizardHierarchyOrder, setHierarchyConfig: setWizardHierarchyConfig, reset: resetWizard } = wizard;
+  const { state, goToStep, updatePlanData, setSubdivisions, setMoments, setFunnelStages, setFunnelOrder, setTemporalGranularity, libraryData, libraryMutations, initializeFromPlan, getLibraryForLevel, getCreateMutationForLevel, setHierarchyOrder: setWizardHierarchyOrder, setHierarchyConfig: setWizardHierarchyConfig, reset: resetWizard } = wizard;
 
   // Generate wizard steps dynamically based on planHierarchyOrder (includes step 0 for structure)
   const wizardSteps = useMemo(() => {
@@ -357,7 +357,8 @@ export default function EditMediaPlan() {
       }
 
       // Initialize wizard with loaded data, starting at step 0 (Structure)
-      initializeFromPlan(planData, subdivisionAllocations, momentAllocations, funnelAllocations, 0, loadedHierarchyOrder, hierarchyConfig);
+      const loadedFunnelOrder = ((plan as any).funnel_order as string[] | null) ?? [];
+      initializeFromPlan(planData, subdivisionAllocations, momentAllocations, funnelAllocations, 0, loadedHierarchyOrder, hierarchyConfig, loadedFunnelOrder);
     } catch (error) {
       console.error('Error loading plan:', error);
       toast.error('Erro ao carregar plano');
@@ -641,7 +642,9 @@ export default function EditMediaPlan() {
           toast.error(`Máximo de ${MAX_ITEMS_PER_LEVEL.funnel_stage} fases do funil`);
           return;
         }
-        setFunnelStages(parentPath, [...currentFunnels, item]);
+        const nextFunnels = [...currentFunnels, item];
+        setFunnelStages(parentPath, nextFunnels);
+        setFunnelOrder(nextFunnels.map(f => f.id));
         break;
     }
   };
@@ -681,7 +684,9 @@ export default function EditMediaPlan() {
         break;
       case 'funnel_stage':
         const currentFunnels = state.funnelStages[parentPath] || [];
-        setFunnelStages(parentPath, currentFunnels.filter(f => f.id !== id));
+        const nextFunnels = currentFunnels.filter(f => f.id !== id);
+        setFunnelStages(parentPath, nextFunnels);
+        setFunnelOrder(nextFunnels.map(f => f.id));
         break;
     }
   };
@@ -690,6 +695,7 @@ export default function EditMediaPlan() {
     switch (level) {
       case 'funnel_stage':
         setFunnelStages(parentPath, items);
+        setFunnelOrder(items.map(i => i.id));
         break;
     }
   };
@@ -855,6 +861,7 @@ export default function EditMediaPlan() {
           objectives: state.planData.objectives.length > 0 ? state.planData.objectives : null,
           kpis: Object.keys(state.planData.kpis).length > 0 ? state.planData.kpis : null,
           hierarchy_order: planHierarchyOrder, // Now we save the updated hierarchy
+          funnel_order: state.funnelOrder.length > 0 ? state.funnelOrder : null,
         })
         .eq('id', planId);
 
