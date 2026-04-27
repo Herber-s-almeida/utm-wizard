@@ -477,6 +477,9 @@ export default function NewMediaPlanBudget() {
     }
     
     setAllocationsForLevel(level, parentKey, [...current, item]);
+    if (level === 'funnel_stage') {
+      setFunnelOrder([...current, item].map(i => i.id));
+    }
   };
 
   const handleLevelUpdate = (level: HierarchyLevel, parentKey: string, id: string, percentage: number, dates?: { start_date?: string; end_date?: string }) => {
@@ -488,7 +491,11 @@ export default function NewMediaPlanBudget() {
 
   const handleLevelRemove = (level: HierarchyLevel, parentKey: string, id: string) => {
     const current = getAllocationsForLevel(level, parentKey);
-    setAllocationsForLevel(level, parentKey, current.filter(item => item.id !== id));
+    const next = current.filter(item => item.id !== id);
+    setAllocationsForLevel(level, parentKey, next);
+    if (level === 'funnel_stage') {
+      setFunnelOrder(next.map(i => i.id));
+    }
   };
 
   const handleLevelReorder = (level: HierarchyLevel, parentKey: string, items: BudgetAllocation[]) => {
