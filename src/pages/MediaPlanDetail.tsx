@@ -1339,6 +1339,14 @@ export default function MediaPlanDetail() {
           onDismiss={() => setUnsavedAlertDismissed(true)}
           planId={planId}
           onVersionSaved={() => setUnsavedAlertDismissed(true)}
+          onDontShowAgain={(ts) => {
+            try {
+              if (unsavedDismissKey) window.localStorage.setItem(unsavedDismissKey, ts);
+            } catch {
+              /* ignore */
+            }
+            setUnsavedAlertDismissed(true);
+          }}
         />
       )}
     </DashboardLayout>
