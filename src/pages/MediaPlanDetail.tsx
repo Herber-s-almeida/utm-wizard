@@ -129,7 +129,23 @@ export default function MediaPlanDetail() {
   const [filterByAlerts, setFilterByAlerts] = useState(false);
   const [alertsVisible, setAlertsVisible] = useState(false);
   const [isGeneratingHierarchy, setIsGeneratingHierarchy] = useState(false);
-  const [unsavedAlertDismissed, setUnsavedAlertDismissed] = useState(false);
+  const unsavedDismissKey = planId ? `unsaved-version-alert-dismissed:${planId}` : '';
+  const isDismissedToday = (key: string): boolean => {
+    if (!key || typeof window === 'undefined') return false;
+    try {
+      const stored = window.localStorage.getItem(key);
+      if (!stored) return false;
+      return new Date(stored).toDateString() === new Date().toDateString();
+    } catch {
+      return false;
+    }
+  };
+  const [unsavedAlertDismissed, setUnsavedAlertDismissed] = useState<boolean>(() =>
+    isDismissedToday(unsavedDismissKey)
+  );
+  useEffect(() => {
+    setUnsavedAlertDismissed(isDismissedToday(unsavedDismissKey));
+  }, [unsavedDismissKey]);
 
   // Library data for display
   const subdivisions = useSubdivisions();
