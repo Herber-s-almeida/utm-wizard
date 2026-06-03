@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Save, Loader2, AlertTriangle } from 'lucide-react';
 import { usePlanVersions } from '@/hooks/usePlanVersions';
 
@@ -28,6 +29,7 @@ interface UnsavedVersionAlertProps {
   onDismiss: () => void;
   planId: string;
   onVersionSaved?: () => void;
+  onDontShowAgain?: (timestamp: string) => void;
 }
 
 export function UnsavedVersionAlert({
@@ -35,9 +37,11 @@ export function UnsavedVersionAlert({
   onDismiss,
   planId,
   onVersionSaved,
+  onDontShowAgain,
 }: UnsavedVersionAlertProps) {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [changeLog, setChangeLog] = useState('');
+  const [dontShowAgain, setDontShowAgain] = useState(false);
   const { createVersion, isCreating } = usePlanVersions(planId);
 
   const handleSaveVersion = () => {
@@ -57,9 +61,19 @@ export function UnsavedVersionAlert({
     setSaveDialogOpen(true);
   };
 
+  const handleDismiss = () => {
+    if (dontShowAgain && onDontShowAgain) {
+      onDontShowAgain(new Date().toISOString());
+    }
+    onDismiss();
+  };
+
   return (
     <>
-      <AlertDialog open={open && !saveDialogOpen} onOpenChange={(v) => !v && onDismiss()}>
+      <AlertDialog
+        open={open && !saveDialogOpen}
+        onOpenChange={(v) => !v && handleDismiss()}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <div className="flex items-center gap-3 mb-2">
@@ -73,8 +87,23 @@ export function UnsavedVersionAlert({
               Salvar uma versão garante que você possa restaurar este estado posteriormente.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          <div className="flex items-center gap-2 py-2">
+            <Checkbox
+              id="dontShowAgainToday"
+              checked={dontShowAgain}
+              onCheckedChange={(v) => setDontShowAgain(v === true)}
+            />
+            <Label
+              htmlFor="dontShowAgainToday"
+              className="text-sm font-normal cursor-pointer"
+            >
+              Não exibir mais hoje
+            </Label>
+          </div>
+
           <AlertDialogFooter>
-            <AlertDialogCancel>Continuar sem Salvar</AlertDialogCancel>
+            <AlertDialogCancel onClick={handleDismiss}>Continuar sem Salvar</AlertDialogCancel>
             <AlertDialogAction onClick={handleOpenSaveDialog}>
               <Save className="w-4 h-4 mr-2" />
               Salvar Versão Agora
