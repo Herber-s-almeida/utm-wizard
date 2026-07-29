@@ -7,6 +7,8 @@ import { Plus, Pencil, Trash2, ArrowLeft, AlertTriangle, Copy } from 'lucide-rea
 import { useCreativeTypes } from '@/hooks/useCreativeTypes';
 import { CreativeTypeSimpleDialog } from '@/components/config/CreativeTypeSimpleDialog';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
+import { useSystemAdmin } from '@/hooks/useSystemAdmin';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +24,9 @@ import { toast } from 'sonner';
 export default function CreativeTypesPage() {
   const { data: creativeTypes, isLoading, create, update, remove, duplicate, checkUsage } = useCreativeTypes();
   const { canEdit: canEditSection } = useEnvironment();
-  const canEditLib = canEditSection('library');
+  const { isAdmin: isSystemAdmin } = useSystemAdmin();
+  const canEditLib = canEditSection('library') && isSystemAdmin;
+
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState<{ id: string; name: string } | null>(null);

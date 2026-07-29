@@ -85,13 +85,7 @@ export default function AuthRegister() {
     setInviteInfo(null);
     
     try {
-      const { data: invite, error } = await supabase
-        .from('pending_environment_invites')
-        .select('email, environment_owner_id, environment_id, expires_at, status')
-        .eq('invite_token', token)
-        .eq('status', 'invited')
-        .gt('expires_at', new Date().toISOString())
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('get_invite_by_token', { _token: token });
 
       if (error) {
         console.error('Error validating token:', error);
@@ -100,6 +94,8 @@ export default function AuthRegister() {
         setMode('request');
         return;
       }
+
+      const invite = Array.isArray(data) ? data[0] : data;
 
       if (!invite) {
         setEmailError('Convite inválido, expirado ou já utilizado. Você pode solicitar acesso ao sistema.');
@@ -113,38 +109,13 @@ export default function AuthRegister() {
       setTokenValidated(true);
       setMode('invite');
 
-      // Get environment name
-      let environmentName = 'Ambiente';
-      
-      if (invite.environment_id) {
-        const { data: env } = await supabase
-          .from('environments')
-          .select('name')
-          .eq('id', invite.environment_id)
-          .maybeSingle();
-        
-        if (env?.name) {
-          environmentName = env.name;
-        }
-      }
-      
-      // Fallback to owner profile
-      if (environmentName === 'Ambiente') {
-        const { data: ownerProfile } = await supabase
-          .from('profiles')
-          .select('company, full_name')
-          .eq('user_id', invite.environment_owner_id)
-          .maybeSingle();
-        
-        environmentName = ownerProfile?.company || ownerProfile?.full_name || 'Ambiente';
-      }
-
       setInviteInfo({
-        environmentName,
+        environmentName: invite.environment_name || 'Ambiente',
         environmentOwnerId: invite.environment_owner_id,
         email: invite.email,
       });
       setEmailChecked(true);
+
     } catch (err) {
       console.error('Error validating token:', err);
       setEmailError('Erro ao validar convite. Tente novamente.');
@@ -175,13 +146,8 @@ export default function AuthRegister() {
 
     try {
       // Check if there's a pending invite for this email
-      const { data: invite, error } = await supabase
-        .from('pending_environment_invites')
-        .select('environment_owner_id, environment_id, expires_at, status')
-        .eq('email', emailToCheck.toLowerCase())
-        .eq('status', 'invited')
-        .gt('expires_at', new Date().toISOString())
-        .maybeSingle();
+      const { data, error } = await supabase
+        .rpc('get_invite_by_email', { _email: emailToCheck.toLowerCase() });
 
       if (error) {
         console.error('Error checking invite:', error);
@@ -189,6 +155,8 @@ export default function AuthRegister() {
         setEmailChecked(true);
         return;
       }
+
+      const invite = Array.isArray(data) ? data[0] : data;
 
       if (!invite) {
         // No invite found - switch to request mode
@@ -200,18 +168,12 @@ export default function AuthRegister() {
       // Invite found
       setMode('invite');
 
-      // Get environment owner name
-      const { data: ownerProfile } = await supabase
-        .from('profiles')
-        .select('company, full_name')
-        .eq('user_id', invite.environment_owner_id)
-        .maybeSingle();
-
       setInviteInfo({
-        environmentName: ownerProfile?.company || ownerProfile?.full_name || 'Ambiente',
+        environmentName: invite.environment_name || 'Ambiente',
         environmentOwnerId: invite.environment_owner_id,
       });
       setEmailChecked(true);
+
     } catch (err) {
       console.error('Error checking email:', err);
       setEmailError('Erro ao verificar convite. Tente novamente.');
@@ -240,18 +202,17 @@ export default function AuthRegister() {
       }
 
       // Re-check if email has a valid invite before creating account
-      const { data: invite, error: inviteError } = await supabase
-        .from('pending_environment_invites')
-        .select('id')
-        .eq('email', email.toLowerCase())
-        .gt('expires_at', new Date().toISOString())
-        .maybeSingle();
+      const { data: inviteData, error: inviteError } = await supabase
+        .rpc('get_invite_by_email', { _email: email.toLowerCase() });
+
+      const invite = Array.isArray(inviteData) ? inviteData[0] : inviteData;
 
       if (inviteError || !invite) {
         toast.error('Você não possui um convite válido para criar conta. Solicite acesso ao sistema.');
         setLoading(false);
         return;
       }
+
 
       const { error } = await signUp(email, password, fullName);
       if (error) {
