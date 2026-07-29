@@ -123,20 +123,17 @@ export default function AuthJoin() {
       }
 
       // Re-check if email has a valid invite before creating account
-      const { data: invite, error: inviteError } = await supabase
-        .from('pending_environment_invites')
-        .select('id')
-        .eq('email', email.toLowerCase())
-        .eq('invite_type', 'environment_member')
-        .eq('status', 'invited')
-        .gt('expires_at', new Date().toISOString())
-        .maybeSingle();
+      const { data: inviteData, error: inviteError } = await supabase
+        .rpc('get_invite_by_email', { _email: email.toLowerCase() });
 
-      if (inviteError || !invite) {
+      const invite = Array.isArray(inviteData) ? inviteData[0] : inviteData;
+
+      if (inviteError || !invite || invite.invite_type !== 'environment_member') {
         toast.error('O convite não é mais válido. Solicite um novo convite ao administrador.');
         setLoading(false);
         return;
       }
+
 
       const { error } = await signUp(email, password, fullName);
       if (error) {
