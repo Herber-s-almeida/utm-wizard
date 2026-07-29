@@ -22,7 +22,9 @@ import { toast } from 'sonner';
 export default function CreativeTypesPage() {
   const { data: creativeTypes, isLoading, create, update, remove, duplicate, checkUsage } = useCreativeTypes();
   const { canEdit: canEditSection } = useEnvironment();
-  const canEditLib = canEditSection('library');
+  const { isAdmin: isSystemAdmin } = useSystemAdmin();
+  const canEditLib = canEditSection('library') && isSystemAdmin;
+
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState<{ id: string; name: string } | null>(null);
