@@ -202,18 +202,17 @@ export default function AuthRegister() {
       }
 
       // Re-check if email has a valid invite before creating account
-      const { data: invite, error: inviteError } = await supabase
-        .from('pending_environment_invites')
-        .select('id')
-        .eq('email', email.toLowerCase())
-        .gt('expires_at', new Date().toISOString())
-        .maybeSingle();
+      const { data: inviteData, error: inviteError } = await supabase
+        .rpc('get_invite_by_email', { _email: email.toLowerCase() });
+
+      const invite = Array.isArray(inviteData) ? inviteData[0] : inviteData;
 
       if (inviteError || !invite) {
         toast.error('Você não possui um convite válido para criar conta. Solicite acesso ao sistema.');
         setLoading(false);
         return;
       }
+
 
       const { error } = await signUp(email, password, fullName);
       if (error) {
