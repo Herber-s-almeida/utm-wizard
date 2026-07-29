@@ -4431,10 +4431,6 @@ export type Database = {
         Args: { _owner_user_id: string }
         Returns: boolean
       }
-      can_access_user_data_for_write: {
-        Args: { _owner_user_id: string }
-        Returns: boolean
-      }
       can_edit_plan: { Args: { _plan_id: string }; Returns: boolean }
       can_invite_environment_member: {
         Args: { _environment_owner_id: string }
@@ -4444,12 +4440,20 @@ export type Database = {
         Args: { _environment_id: string; _user_id: string }
         Returns: boolean
       }
+      can_manage_environment_logo: {
+        Args: { _environment_id: string }
+        Returns: boolean
+      }
       can_manage_member_role: {
         Args: {
           _environment_id: string
           _manager_user_id: string
           _target_user_id: string
         }
+        Returns: boolean
+      }
+      can_read_environment_files: {
+        Args: { _environment_id: string }
         Returns: boolean
       }
       can_remove_environment_member: {
@@ -4474,6 +4478,10 @@ export type Database = {
         Returns: boolean
       }
       can_view_plan: { Args: { _plan_id: string }; Returns: boolean }
+      can_write_user_data_section: {
+        Args: { _owner_user_id: string; _sections: string[] }
+        Returns: boolean
+      }
       cleanup_old_auto_backups: { Args: never; Returns: number }
       count_environment_members: {
         Args: { _environment_owner_id: string }
@@ -4550,6 +4558,27 @@ export type Database = {
       get_environment_role: {
         Args: { _environment_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["environment_role"]
+      }
+      get_invite_by_email: {
+        Args: { _email: string }
+        Returns: {
+          environment_id: string
+          environment_name: string
+          environment_owner_id: string
+          expires_at: string
+          invite_type: string
+        }[]
+      }
+      get_invite_by_token: {
+        Args: { _token: string }
+        Returns: {
+          email: string
+          environment_id: string
+          environment_name: string
+          environment_owner_id: string
+          expires_at: string
+          invite_type: string
+        }[]
       }
       get_plan_role: {
         Args: { _plan_id: string; _user_id: string }
