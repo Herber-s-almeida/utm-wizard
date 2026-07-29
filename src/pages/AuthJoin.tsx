@@ -75,14 +75,7 @@ export default function AuthJoin() {
     setErrorMessage(null);
     
     try {
-      const { data: invite, error } = await supabase
-        .from('pending_environment_invites')
-        .select('email, environment_owner_id, environment_id, expires_at, status, invite_type')
-        .eq('invite_token', token)
-        .eq('status', 'invited')
-        .eq('invite_type', 'environment_member')
-        .gt('expires_at', new Date().toISOString())
-        .maybeSingle();
+      const { data, error } = await supabase.rpc('get_invite_by_token', { _token: token });
 
       if (error) {
         console.error('Error validating token:', error);
@@ -91,7 +84,9 @@ export default function AuthJoin() {
         return;
       }
 
-      if (!invite) {
+      const invite = Array.isArray(data) ? data[0] : data;
+
+      if (!invite || invite.invite_type !== 'environment_member') {
         setPageState('invalid');
         setErrorMessage('Convite inválido, expirado ou já utilizado. Solicite um novo convite ao administrador do ambiente.');
         return;
@@ -100,39 +95,14 @@ export default function AuthJoin() {
       // Pre-fill email from invite
       setEmail(invite.email);
 
-      // Get environment name
-      let environmentName = 'Ambiente';
-      
-      if (invite.environment_id) {
-        const { data: env } = await supabase
-          .from('environments')
-          .select('name')
-          .eq('id', invite.environment_id)
-          .maybeSingle();
-        
-        if (env?.name) {
-          environmentName = env.name;
-        }
-      }
-      
-      // Fallback to owner profile
-      if (environmentName === 'Ambiente') {
-        const { data: ownerProfile } = await supabase
-          .from('profiles')
-          .select('company, full_name')
-          .eq('user_id', invite.environment_owner_id)
-          .maybeSingle();
-        
-        environmentName = ownerProfile?.company || ownerProfile?.full_name || 'Ambiente';
-      }
-
       setInviteInfo({
-        environmentName,
+        environmentName: invite.environment_name || 'Ambiente',
         environmentOwnerId: invite.environment_owner_id,
         environmentId: invite.environment_id,
         email: invite.email,
       });
       setPageState('valid');
+
     } catch (err) {
       console.error('Error validating token:', err);
       setPageState('invalid');
