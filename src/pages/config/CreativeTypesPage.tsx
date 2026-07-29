@@ -7,6 +7,8 @@ import { Plus, Pencil, Trash2, ArrowLeft, AlertTriangle, Copy } from 'lucide-rea
 import { useCreativeTypes } from '@/hooks/useCreativeTypes';
 import { CreativeTypeSimpleDialog } from '@/components/config/CreativeTypeSimpleDialog';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
+import { useSystemAdmin } from '@/hooks/useSystemAdmin';
+
 import {
   AlertDialog,
   AlertDialogAction,
