@@ -7,6 +7,9 @@ import {
   ShieldCheck, BarChart3, Wallet, LayoutDashboard, Workflow, BookA, type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
 
 interface Section {
   id: string;
@@ -414,6 +417,61 @@ Financeiro ◄─────────────────┴──► Re
   },
 ];
 
+const PRINT_CSS = `
+  @page { size: A4; margin: 18mm 16mm 20mm; @bottom-center { content: counter(page); font-size: 9pt; color: #888; } }
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Helvetica, Arial, sans-serif; color: #1f2937; font-size: 10.5pt; line-height: 1.55; margin: 0; }
+  .cover { height: 240mm; display: flex; flex-direction: column; justify-content: center; page-break-after: always; border-left: 6px solid #2563eb; padding-left: 14mm; }
+  .cover h1 { font-size: 30pt; margin: 0 0 8px; color: #111827; }
+  .cover p { font-size: 13pt; color: #4b5563; margin: 4px 0; }
+  .toc { page-break-after: always; }
+  .toc h2 { font-size: 18pt; border-bottom: 2px solid #2563eb; padding-bottom: 6px; }
+  .toc ol { list-style: none; padding: 0; }
+  .toc li { padding: 7px 0; border-bottom: 1px dotted #cbd5e1; display: flex; justify-content: space-between; }
+  .toc a { color: #111827; text-decoration: none; }
+  .toc small { color: #6b7280; }
+  section { page-break-before: always; }
+  section h2 { font-size: 17pt; color: #111827; margin: 0 0 2px; border-bottom: 2px solid #2563eb; padding-bottom: 6px; }
+  section .desc { color: #6b7280; margin: 4px 0 14px; font-style: italic; }
+  h4 { font-size: 11.5pt; color: #111827; margin: 16px 0 6px; page-break-after: avoid; }
+  ul, ol { padding-left: 20px; margin: 6px 0; } li { margin: 3px 0; }
+  strong { color: #111827; }
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 8px; }
+  th, td { border: 1px solid #d1d5db; padding: 6px; text-align: left; vertical-align: top; }
+  th { background: #eff6ff; } tr { page-break-inside: avoid; }
+  pre { background: #f3f4f6; border-radius: 6px; padding: 12px; font-size: 7.5pt; white-space: pre; overflow: hidden; page-break-inside: avoid; }
+  dl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; } dt { font-weight: 600; } dd { margin: 0; color: #4b5563; }
+  div[class*="border-primary"] { border: 1px solid #93c5fd; background: #eff6ff; padding: 10px; border-radius: 6px; margin-top: 12px; }
+`;
+
+function exportPdf() {
+  const date = new Date().toLocaleDateString('pt-BR');
+  const toc = sections
+    .map((s) => `<li><a href="#${s.id}">${s.title}</a><small>${s.description}</small></li>`)
+    .join('');
+  const body = sections
+    .map(
+      (s) =>
+        `<section id="${s.id}"><h2>${s.title}</h2><p class="desc">${s.description}</p>${renderToStaticMarkup(<>{s.content}</>)}</section>`,
+    )
+    .join('');
+  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Documentação do Sistema - AdsPlanning Pro</title><style>${PRINT_CSS}</style></head><body>
+    <div class="cover"><h1>Documentação do Sistema</h1><p>AdsPlanning Pro</p><p>Como o sistema cria, gerencia e utiliza os planos de mídia</p><p style="margin-top:24px;font-size:10pt">Gerado em ${date}</p></div>
+    <div class="toc"><h2>Índice</h2><ol>${toc}</ol></div>${body}</body></html>`;
+  const win = window.open('', '_blank');
+  if (!win) {
+    alert('Permita pop-ups para exportar o PDF.');
+    return;
+  }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  setTimeout(() => {
+    win.focus();
+    win.print();
+  }, 500);
+}
+
 export default function SystemDocumentationPage() {
   const goTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -424,10 +482,14 @@ export default function SystemDocumentationPage() {
           <div className="p-3 rounded-lg bg-primary/10">
             <BookOpen className="h-8 w-8 text-primary" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold tracking-tight">Documentação do Sistema</h1>
             <p className="text-muted-foreground">Como o AdsPlanning Pro cria, gerencia e utiliza os planos de mídia</p>
           </div>
+          <Button onClick={exportPdf}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar PDF
+          </Button>
         </div>
 
         <ScrollArea className="h-[calc(100vh-180px)]">
