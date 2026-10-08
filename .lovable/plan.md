@@ -1,28 +1,25 @@
-## Objetivo
+# Reescrever a Documentação do Sistema
 
-Permitir ao usuário silenciar o diálogo "Versão não salva" até o próximo dia, persistindo a escolha por plano com timestamp.
+Atualizar a página "Documentação do Sistema" (Admin) com conteúdo completo e atual, focado em como o plano de mídia é criado, gerenciado e usado. Detalhes de acessos ficam resumidos.
 
-## Mudanças
+## Nova estrutura (com índice clicável no topo)
 
-### 1. `src/components/media-plan/UnsavedVersionAlert.tsx`
-- Adicionar `Checkbox` (shadcn) com label **"Não exibir mais hoje"** dentro do `AlertDialog`, abaixo da descrição.
-- Novo estado local `dontShowAgain`.
-- Receber novo prop opcional `onDontShowAgain?: (timestamp: string) => void`.
-- Quando o usuário clicar em **"Continuar sem Salvar"** (ou fechar o diálogo) com o checkbox marcado, chamar `onDontShowAgain(new Date().toISOString())` antes de `onDismiss()`.
-- Se clicar em **"Salvar Versão Agora"**, ignorar o checkbox (não precisa silenciar pois a versão será salva).
+1. **Visão geral** — o que é o AdsPlanning Pro, ambientes (multi-empresa), módulos.
+2. **Biblioteca de recursos** — Clientes, Subdivisões, Momentos, Fases do Funil, Meios, Veículos, Canais, Segmentações, Objetivos, Formatos > Tipos de Criativo > Especificações, Status, KPIs personalizados. Para cada um: para que serve, onde aparece no plano, slug/UTM, arquivamento e bloqueio de exclusão quando em uso.
+3. **Criação do plano** — caminhos (manual, assistente de orçamento, importação de planilha); dados básicos, slug UTM, datas, orçamento total.
+4. **Hierarquia e orçamento** — ordem configurável (subdivisão/momento/fase), "distribuir orçamento" vs "agregar", ordem do funil respeitada no agrupamento, cascata de valores, 4 casas decimais, valor em R$ como referência, momento "geral" padrão.
+5. **Linhas de mídia** — campos, código da linha, limites de data, orçamento mensal, taxas e fee, linhas "Sem Classificação", códigos duplicados entre momentos.
+6. **Detalhamento** — tipos (OOH, Rádio, TV, personalizado), itens, grade de inserções e auto-pintura, motor financeiro (Bruto, Líquido, Honorários, Produção), IDs sequenciais, linhas vinculadas e visão consolidada.
+7. **Criativos e recursos de mídia** — ID automático, especificações, histórico de alterações, Kanban, seguidores e notificações por e-mail.
+8. **Taxonomia e UTMs** — regras de slug atualizadas (letras maiúsculas/minúsculas, números, `-`, `_`, `.`), montagem de utm_source/medium/campaign/content/term, exportação.
+9. **Governança do plano** — status e transições, versões manuais/automáticas, alerta de versão não salva com "não exibir hoje", alertas inteligentes, lixeira e exclusão definitiva, duplicação.
+10. **Relatórios e performance** — importação, mapeamento de colunas, métricas, dashboard e cruzamento com linhas.
+11. **Financeiro** — documentos, pagamentos, previsões, realizados, receitas, biblioteca financeira e ligação com planos.
+12. **Dashboard executivo e configurações do ambiente** — temas, logo, membros (resumo).
+13. **Fluxo ponta a ponta** — diagrama do caminho Biblioteca → Plano → Hierarquia → Linhas → Detalhamento/Criativos → UTMs → Relatórios/Financeiro.
+14. **Glossário**.
 
-### 2. `src/pages/MediaPlanDetail.tsx`
-- Criar helpers em torno de `localStorage` com chave `unsaved-version-alert-dismissed:<planId>` armazenando ISO timestamp.
-- Função `isDismissedToday(planId)` que retorna `true` se o timestamp salvo for do mesmo dia local (`toDateString()` igual ao de `new Date()`). No próximo dia o alerta volta a aparecer automaticamente.
-- Inicializar `unsavedAlertDismissed` com `isDismissedToday(planId)` (via `useState(() => …)`) e revalidar em `useEffect` quando `planId` muda.
-- Passar callback `onDontShowAgain={(ts) => { localStorage.setItem(key, ts); setUnsavedAlertDismissed(true); }}` ao `UnsavedVersionAlert`.
-- Manter o comportamento atual de `onDismiss` (esconde só na sessão se o checkbox não estiver marcado).
-
-### Comportamento resultante
-- Marcou "Não exibir mais hoje" + Continuar sem Salvar → diálogo só reaparece no próximo dia (ou se o plano voltar a estado salvo e depois ficar unsaved novamente após meia-noite).
-- Não marcou → comportamento atual (some até refresh / próxima entrada na página).
-- Por plano: a preferência é independente entre planos diferentes.
-
-### Notas técnicas
-- Sem alterações no backend nem em schema; persistência local apenas (preferência de UI por dispositivo/navegador).
-- Sem alterações em outros consumidores; o novo prop é opcional.
+## Detalhes técnicos
+- Arquivo: `src/pages/admin/SystemDocumentationPage.tsx`, reescrito integralmente mantendo o layout em cards e cores do tema.
+- Conteúdo baseado na leitura dos hooks/páginas atuais (wizard, distribuição de orçamento, detalhamento, utmGenerator, finance) para garantir exatidão.
+- Seções divididas em componentes menores no mesmo arquivo para facilitar manutenção.
