@@ -466,11 +466,10 @@ function exportPdf() {
   win.document.open();
   win.document.write(html);
   win.document.close();
-  win.onload = () => {
+  setTimeout(() => {
     win.focus();
     win.print();
-  };
-  setTimeout(() => { try { win.focus(); win.print(); } catch { /* ignore */ } }, 600);
+  }, 500);
 }
 
 export default function SystemDocumentationPage() {
